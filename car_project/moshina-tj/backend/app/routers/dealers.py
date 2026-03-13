@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import Dealer, Listing, User
+from app.models import Dealer, Listing, ListingStatus, User
 from app.schemas import (
     ApiResponse,
     DealerCreate,
@@ -34,7 +34,7 @@ def get_dealer(dealer_id: str, db: Session = Depends(get_db)):
     listings = (
         db.query(Listing)
         .options(joinedload(Listing.images))
-        .filter(Listing.user_id == dealer.user_id, Listing.is_active == True)
+        .filter(Listing.user_id == dealer.user_id, Listing.status == ListingStatus.active)
         .order_by(Listing.created_at.desc())
         .all()
     )

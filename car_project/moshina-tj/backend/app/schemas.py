@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, Generic, Optional, TypeVar
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 from app.models import Currency, FuelType, ListingStatus, ListingType, TransmissionType, UserRole
 
@@ -121,19 +121,19 @@ class ImageResponse(BaseModel):
 
 class ListingCreate(BaseModel):
     type: ListingType
-    brand: str = Field(..., max_length=100)
-    model: str = Field(..., max_length=100)
+    brand: str
+    model: str
     year: int
     price: Decimal
     currency: Currency = Currency.USD
-    mileage: Optional[int] = Field(default=None, ge=0, le=9_999_999)
+    mileage: Optional[int] = None
     fuel: Optional[FuelType] = None
     transmission: Optional[TransmissionType] = None
-    color: Optional[str] = Field(default=None, max_length=50)
-    city: str = Field(..., max_length=100)
-    description: Optional[str] = Field(default=None, max_length=5000)
+    color: Optional[str] = None
+    city: str
+    description: Optional[str] = None
     installment_available: bool = False
-    image_urls: list[str] = Field(default=[], max_length=20)
+    image_urls: list[str] = []
     rental_rules: Optional[RentalRules] = None
 
     @field_validator("year")
@@ -162,17 +162,17 @@ class ListingCreate(BaseModel):
 class ListingUpdate(BaseModel):
     """All fields optional — only provided fields will be updated."""
     type: Optional[ListingType] = None
-    brand: Optional[str] = Field(default=None, max_length=100)
-    model: Optional[str] = Field(default=None, max_length=100)
+    brand: Optional[str] = None
+    model: Optional[str] = None
     year: Optional[int] = None
     price: Optional[Decimal] = None
     currency: Optional[Currency] = None
-    mileage: Optional[int] = Field(default=None, ge=0, le=9_999_999)
+    mileage: Optional[int] = None
     fuel: Optional[FuelType] = None
     transmission: Optional[TransmissionType] = None
-    color: Optional[str] = Field(default=None, max_length=50)
-    city: Optional[str] = Field(default=None, max_length=100)
-    description: Optional[str] = Field(default=None, max_length=5000)
+    color: Optional[str] = None
+    city: Optional[str] = None
+    description: Optional[str] = None
     installment_available: Optional[bool] = None
     rental_rules: Optional[RentalRules] = None
 
@@ -231,11 +231,11 @@ class AdminStats(BaseModel):
 # ---------------------------------------------------------------------------
 
 class DealerCreate(BaseModel):
-    business_name: str = Field(..., max_length=200)
-    city: Optional[str] = Field(default=None, max_length=100)
-    address: Optional[str] = Field(default=None, max_length=300)
-    phone: Optional[str] = Field(default=None, max_length=20)
-    description: Optional[str] = Field(default=None, max_length=2000)
+    business_name: str
+    city: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    description: Optional[str] = None
 
     @field_validator("business_name")
     @classmethod
