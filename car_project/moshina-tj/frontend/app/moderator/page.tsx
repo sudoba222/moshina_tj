@@ -672,6 +672,15 @@ export default function ModeratorPage() {
         height: '52px', background: 'var(--card)', borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', padding: '0 20px', gap: '20px', flexShrink: 0,
       }}>
+        {/* Back button */}
+        <button onClick={handleEndSession}
+          style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--border)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          Назад
+        </button>
+
         {/* Title */}
         <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
           Модерация
@@ -1166,7 +1175,7 @@ export default function ModeratorPage() {
                       onMouseEnter={(e) => { if (listing && !actionLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'none' }}
                     >
-                      Дубл
+                      Дубль
                     </button>
                   </div>
                 )
