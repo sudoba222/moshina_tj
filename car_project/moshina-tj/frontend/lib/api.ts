@@ -11,6 +11,29 @@ import type {
   AdminStats,
 } from '@/types'
 
+export interface ModerationSession {
+  id: string
+  moderator_id: string
+  started_at: string
+  ended_at: string | null
+  approved_count: number
+  rejected_count: number
+  skipped_count: number
+  limit: number
+  is_active: boolean
+}
+
+export interface ModeratorActivity {
+  user_id: string
+  name: string | null
+  phone: string
+  posts_today: number
+  posts_last_30min: number
+  sessions_today: number
+  has_active_session: boolean
+  active_since: string | null
+}
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
 const api = axios.create({ baseURL: BASE_URL })
@@ -142,12 +165,26 @@ export const adminApi = {
     api.put<ApiResponse<Listing>>(`/admin/listings/${id}/deactivate`),
 
   // Moderation
-  getPendingListings: (page = 1) =>
-    api.get<ApiResponse<PaginatedListings>>('/admin/moderation/pending', { params: { page } }),
+  getPendingListings: (page = 1, limit = 10) =>
+    api.get<ApiResponse<PaginatedListings>>('/admin/moderation/pending', { params: { page, limit } }),
   approveListing: (id: string) =>
     api.put<ApiResponse<Listing>>(`/admin/moderation/${id}/approve`),
   rejectListing: (id: string, reason: string) =>
     api.put<ApiResponse<Listing>>(`/admin/moderation/${id}/reject`, { reason }),
+  skipListing: (id: string) =>
+    api.post<ApiResponse<null>>(`/admin/moderation/${id}/skip`),
+
+  // Moderation sessions
+  startSession: () =>
+    api.post<ApiResponse<ModerationSession>>('/admin/moderation/session/start'),
+  endSession: () =>
+    api.post<ApiResponse<ModerationSession>>('/admin/moderation/session/end'),
+  getActiveSession: () =>
+    api.get<ApiResponse<ModerationSession | null>>('/admin/moderation/session/active'),
+
+  // Moderator activity
+  getModeratorActivity: () =>
+    api.get<ApiResponse<ModeratorActivity[]>>('/admin/moderator-activity'),
 
   // Dealers
   getDealers: (page = 1, verified?: boolean) =>

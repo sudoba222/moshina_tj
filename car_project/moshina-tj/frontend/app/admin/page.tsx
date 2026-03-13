@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -11,8 +11,9 @@ import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { AdminStats, User, Listing, Dealer, UserRole } from '@/types'
+import type { ModeratorActivity } from '@/lib/api'
 
-type Tab = 'stats' | 'users' | 'listings' | 'moderation' | 'dealers'
+type Tab = 'stats' | 'users' | 'listings' | 'moderation' | 'dealers' | 'moderators'
 
 const ALLOWED_ROLES: UserRole[] = ['admin', 'moderator', 'manager']
 const ALL_ROLES: UserRole[] = ['user', 'dealer', 'moderator', 'manager', 'support', 'admin']
@@ -106,6 +107,11 @@ export default function AdminPage() {
   const [dealersLoading, setDealersLoading] = useState(false)
   const [dealerVerifiedFilter, setDealerVerifiedFilter] = useState<'' | 'verified' | 'unverified'>('')
 
+  // ─── Moderator activity ───────────────────────────────────────────────────
+  const [moderatorActivity, setModeratorActivity] = useState<ModeratorActivity[]>([])
+  const [moderatorActivityLoading, setModeratorActivityLoading] = useState(false)
+  const moderatorActivityIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   // ─── Guards ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { router.replace('/auth/login'); return }
@@ -193,6 +199,33 @@ export default function AdminPage() {
   useEffect(() => {
     if (tab === 'dealers') fetchDealers()
   }, [tab, fetchDealers])
+
+  // ─── Moderator activity fetch ─────────────────────────────────────────────
+  const fetchModeratorActivity = useCallback(() => {
+    setModeratorActivityLoading(true)
+    adminApi.getModeratorActivity()
+      .then((res) => setModeratorActivity(res.data.data))
+      .catch(() => {})
+      .finally(() => setModeratorActivityLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'moderators') {
+      fetchModeratorActivity()
+      moderatorActivityIntervalRef.current = setInterval(fetchModeratorActivity, 30000)
+    } else {
+      if (moderatorActivityIntervalRef.current) {
+        clearInterval(moderatorActivityIntervalRef.current)
+        moderatorActivityIntervalRef.current = null
+      }
+    }
+    return () => {
+      if (moderatorActivityIntervalRef.current) {
+        clearInterval(moderatorActivityIntervalRef.current)
+        moderatorActivityIntervalRef.current = null
+      }
+    }
+  }, [tab, fetchModeratorActivity])
 
   // ─── Actions ──────────────────────────────────────────────────────────────
   async function updateRole(userId: string, role: string) {
@@ -284,6 +317,7 @@ export default function AdminPage() {
     { key: 'listings', label: t('admin.listings', lang) },
     { key: 'moderation', label: `${lang === 'ru' ? 'Модерация' : 'Тасдиқ'}${stats ? ` (${stats.pending_listings})` : ''}` },
     { key: 'dealers', label: lang === 'ru' ? 'Дилеры' : 'Фурӯшандагон' },
+    { key: 'moderators', label: lang === 'ru' ? 'Модераторы' : 'Модераторон' },
   ]
 
   return (
@@ -705,6 +739,99 @@ export default function AdminPage() {
               {dealersPages > 1 && (
                 <div style={{ marginTop: '24px' }}>
                   <Pagination page={dealersPage} pages={dealersPages} onPageChange={setDealersPage} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Moderators ── */}
+          {tab === 'moderators' && (
+            <div className="animate-fade-in">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                    {lang === 'ru' ? 'Активность модераторов' : 'Фаъолияти модераторон'}
+                  </h2>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                    {lang === 'ru' ? 'Обновляется каждые 30 секунд' : 'Ҳар 30 сония навсозӣ мешавад'}
+                  </p>
+                </div>
+                <button
+                  onClick={fetchModeratorActivity}
+                  style={{ padding: '8px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}
+                >
+                  {lang === 'ru' ? 'Обновить' : 'Янавкунӣ'}
+                </button>
+              </div>
+
+              {moderatorActivityLoading && moderatorActivity.length === 0 ? (
+                <div style={{ height: '200px', borderRadius: '12px' }} className="skeleton" />
+              ) : moderatorActivity.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+                  <p style={{ fontSize: '15px', fontWeight: 600 }}>
+                    {lang === 'ru' ? 'Нет данных о модераторах' : 'Маълумоте нест'}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '700px' }}>
+                    <thead style={{ background: 'var(--surface)' }}>
+                      <tr>
+                        <th style={thStyle}>{lang === 'ru' ? 'Модератор' : 'Модератор'}</th>
+                        <th style={thStyle}>{lang === 'ru' ? 'Статус' : 'Ҳолат'}</th>
+                        <th style={thStyle}>{lang === 'ru' ? 'За сегодня' : 'Имрӯз'}</th>
+                        <th style={thStyle}>{lang === 'ru' ? 'За 30 мин.' : '30 дақ.'}</th>
+                        <th style={thStyle}>{lang === 'ru' ? 'Сессий сегодня' : 'Сессия имрӯз'}</th>
+                        <th style={thStyle}>{lang === 'ru' ? 'Активен с' : 'Фаъол аз'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {moderatorActivity.map((mod) => (
+                        <tr
+                          key={mod.user_id}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface)' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                        >
+                          <td style={tdStyle}>
+                            <div style={{ fontWeight: 700 }}>{mod.name ?? '—'}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{mod.phone}</div>
+                          </td>
+                          <td style={tdStyle}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <div style={{
+                                width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                                background: mod.has_active_session ? '#16a34a' : 'var(--text-muted)',
+                                boxShadow: mod.has_active_session ? '0 0 0 2px rgba(22,163,74,0.25)' : 'none',
+                              }} />
+                              <span style={{ fontSize: '12px', fontWeight: 600, color: mod.has_active_session ? '#16a34a' : 'var(--text-muted)' }}>
+                                {mod.has_active_session
+                                  ? (lang === 'ru' ? 'В сессии' : 'Дар сессия')
+                                  : (lang === 'ru' ? 'Не активен' : 'Ғайрифаъол')}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={tdStyle}>
+                            <span style={{ fontWeight: 700, color: mod.posts_today > 0 ? 'var(--text)' : 'var(--text-muted)' }}>
+                              {mod.posts_today}
+                            </span>
+                          </td>
+                          <td style={tdStyle}>
+                            <span style={{ fontWeight: 700, color: mod.posts_last_30min > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
+                              {mod.posts_last_30min}
+                            </span>
+                          </td>
+                          <td style={{ ...tdStyle, color: 'var(--text-muted)' }}>
+                            {mod.sessions_today}
+                          </td>
+                          <td style={{ ...tdStyle, color: 'var(--text-muted)' }}>
+                            {mod.active_since
+                              ? new Date(mod.active_since).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+                              : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

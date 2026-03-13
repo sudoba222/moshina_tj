@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.sql import func
 
 from app.auth import get_current_user
 from app.database import get_db
@@ -298,6 +299,14 @@ def approve_listing(listing_id: str, db: Session = Depends(get_db), current_user
     listing.is_active = True
     listing.rejection_reason = None
     listing.moderated_by = current_user.id
+    # Update session stats
+    from app.models import ModerationSession
+    active_session = db.query(ModerationSession).filter(
+        ModerationSession.moderator_id == current_user.id,
+        ModerationSession.is_active == True
+    ).first()
+    if active_session:
+        active_session.posts_approved += 1
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing approved")
@@ -317,6 +326,14 @@ def reject_listing(
     listing.is_active = False
     listing.rejection_reason = payload.reason
     listing.moderated_by = current_user.id
+    # Update session stats
+    from app.models import ModerationSession
+    active_session = db.query(ModerationSession).filter(
+        ModerationSession.moderator_id == current_user.id,
+        ModerationSession.is_active == True
+    ).first()
+    if active_session:
+        active_session.posts_rejected += 1
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing rejected")
@@ -369,3 +386,137 @@ def unverify_dealer(dealer_id: str, db: Session = Depends(get_db), _: User = Dep
     db.commit()
     db.refresh(dealer)
     return ApiResponse(success=True, data=DealerResponse.model_validate(dealer), message="Dealer unverified")
+
+
+# ---------------------------------------------------------------------------
+# Moderation sessions
+# ---------------------------------------------------------------------------
+
+@router.post("/moderation/session/start", response_model=ApiResponse[dict])
+def start_session(db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
+    """Start a new moderation session. Ends any existing active session first."""
+    from app.models import ModerationSession
+    # End any existing active session
+    existing = db.query(ModerationSession).filter(
+        ModerationSession.moderator_id == current_user.id,
+        ModerationSession.is_active == True
+    ).first()
+    if existing:
+        existing.is_active = False
+        existing.ended_at = func.now()
+
+    session = ModerationSession(moderator_id=current_user.id)
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return ApiResponse(success=True, data={"session_id": str(session.id), "started_at": session.started_at.isoformat()}, message="Session started")
+
+
+@router.post("/moderation/session/end", response_model=ApiResponse[dict])
+def end_session(db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
+    """End the current active moderation session."""
+    from app.models import ModerationSession
+    session = db.query(ModerationSession).filter(
+        ModerationSession.moderator_id == current_user.id,
+        ModerationSession.is_active == True
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="No active session")
+    session.is_active = False
+    session.ended_at = func.now()
+    db.commit()
+    db.refresh(session)
+    total = session.posts_approved + session.posts_rejected + session.posts_skipped
+    return ApiResponse(success=True, data={
+        "session_id": str(session.id),
+        "posts_approved": session.posts_approved,
+        "posts_rejected": session.posts_rejected,
+        "posts_skipped": session.posts_skipped,
+        "total": total,
+    }, message="Session ended")
+
+
+@router.get("/moderation/session/active", response_model=ApiResponse[dict])
+def get_active_session(db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
+    """Get the current moderator's active session, if any."""
+    from app.models import ModerationSession
+    session = db.query(ModerationSession).filter(
+        ModerationSession.moderator_id == current_user.id,
+        ModerationSession.is_active == True
+    ).first()
+    if not session:
+        return ApiResponse(success=True, data=None, message="No active session")
+    total = session.posts_approved + session.posts_rejected + session.posts_skipped
+    return ApiResponse(success=True, data={
+        "session_id": str(session.id),
+        "started_at": session.started_at.isoformat(),
+        "posts_approved": session.posts_approved,
+        "posts_rejected": session.posts_rejected,
+        "posts_skipped": session.posts_skipped,
+        "total": total,
+    }, message="Active session found")
+
+
+@router.post("/moderation/{listing_id}/skip", response_model=ApiResponse[dict])
+def skip_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
+    """Skip a listing (move to back of queue) and track in session."""
+    from app.models import ModerationSession
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    active_session = db.query(ModerationSession).filter(
+        ModerationSession.moderator_id == current_user.id,
+        ModerationSession.is_active == True
+    ).first()
+    if active_session:
+        active_session.posts_skipped += 1
+        db.commit()
+    return ApiResponse(success=True, data={"listing_id": listing_id}, message="Listing skipped")
+
+
+@router.get("/moderator-activity", response_model=ApiResponse[list])
+def moderator_activity(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """
+    For admin/manager: shows each moderator's activity.
+    Returns per-moderator stats: total sessions, posts moderated today, posts in last 30 min.
+    """
+    from app.models import ModerationSession
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    thirty_min_ago = now - timedelta(minutes=30)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    moderators = db.query(User).filter(User.role == UserRole.moderator).all()
+    result = []
+    for mod in moderators:
+        sessions_today = db.query(ModerationSession).filter(
+            ModerationSession.moderator_id == mod.id,
+            ModerationSession.started_at >= today_start,
+        ).all()
+
+        posts_today = sum(s.posts_approved + s.posts_rejected + s.posts_skipped for s in sessions_today)
+
+        recent_sessions = db.query(ModerationSession).filter(
+            ModerationSession.moderator_id == mod.id,
+            ModerationSession.started_at >= thirty_min_ago,
+        ).all()
+        posts_last_30min = sum(s.posts_approved + s.posts_rejected + s.posts_skipped for s in recent_sessions)
+
+        active_session = db.query(ModerationSession).filter(
+            ModerationSession.moderator_id == mod.id,
+            ModerationSession.is_active == True,
+        ).first()
+
+        result.append({
+            "moderator_id": str(mod.id),
+            "moderator_name": mod.name or mod.phone,
+            "phone": mod.phone,
+            "is_online": active_session is not None,
+            "posts_today": posts_today,
+            "posts_last_30min": posts_last_30min,
+            "sessions_today": len(sessions_today),
+            "active_session_started_at": active_session.started_at.isoformat() if active_session else None,
+        })
+
+    return ApiResponse(success=True, data=result, message="Moderator activity fetched")

@@ -419,16 +419,36 @@ function DashboardListingRow({
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
           <Link href={`/car/${listing.id}`} style={{ fontSize: '14px', fontWeight: 700, color: listing.is_active ? 'var(--text)' : 'var(--text-muted)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {listing.brand} {listing.model} {listing.year}
           </Link>
-          {!listing.is_active && (
+          {listing.status === 'pending' && (
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#b45309', background: 'rgba(234,179,8,0.15)', padding: '1px 7px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              В модерации
+            </span>
+          )}
+          {listing.status === 'active' && (
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.12)', padding: '1px 7px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              Активно
+            </span>
+          )}
+          {listing.status === 'rejected' && (
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent)', background: 'rgba(200,56,8,0.1)', padding: '1px 7px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              Отклонено
+            </span>
+          )}
+          {!listing.is_active && listing.status !== 'pending' && listing.status !== 'rejected' && (
             <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--tag-bg)', padding: '1px 6px', borderRadius: '4px', flexShrink: 0 }}>
               {t('dashboard.inactive_badge', lang)}
             </span>
           )}
         </div>
+        {listing.status === 'rejected' && listing.rejection_reason && (
+          <p style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '2px', marginBottom: '2px', fontStyle: 'italic' }}>
+            {listing.rejection_reason}
+          </p>
+        )}
         <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700, color: 'var(--accent)' }}>{formatPrice(listing.price, listing.currency)}</span>
           <span>{listing.city}</span>

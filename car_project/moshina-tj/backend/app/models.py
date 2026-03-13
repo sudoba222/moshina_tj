@@ -190,6 +190,21 @@ class ListingImage(Base):
     listing = relationship("Listing", back_populates="images")
 
 
+class ModerationSession(Base):
+    __tablename__ = "moderation_sessions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    moderator_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    started_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    ended_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    posts_approved = Column(Integer, nullable=False, default=0, server_default="0")
+    posts_rejected = Column(Integer, nullable=False, default=0, server_default="0")
+    posts_skipped = Column(Integer, nullable=False, default=0, server_default="0")
+    is_active = Column(Boolean, nullable=False, default=True, server_default="true")
+
+    moderator = relationship("User", foreign_keys=[moderator_id])
+
+
 class Dealer(Base):
     __tablename__ = "dealers"
 
