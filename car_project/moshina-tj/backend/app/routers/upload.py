@@ -1,15 +1,16 @@
-import shutil
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from fastapi.staticfiles import StaticFiles
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.auth import get_current_user
 from app.models import User
 from app.schemas import ApiResponse
 
 router = APIRouter(prefix="/upload", tags=["upload"])
+limiter = Limiter(key_func=get_remote_address)
 
 UPLOADS_DIR = Path(__file__).resolve().parents[2] / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
@@ -20,7 +21,9 @@ _EXTENSIONS = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
 
 @router.post("/image", response_model=ApiResponse[dict])
+@limiter.limit("20/hour")
 async def upload_image(
+    request: Request,
     file: UploadFile,
     current_user: User = Depends(get_current_user),
 ):

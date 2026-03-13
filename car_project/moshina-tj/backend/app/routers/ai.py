@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel
 
 from app.config import settings
-from app.main import limiter
+from app.limiter import limiter
 from app.schemas import ApiResponse
 
 router = APIRouter(prefix="/ai", tags=["ai"])

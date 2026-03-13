@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, field_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
@@ -21,10 +21,28 @@ class ChangePasswordPayload(BaseModel):
     current_password: str
     new_password: str
 
+    @field_validator("new_password")
+    @classmethod
+    def new_password_min_length(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        if len(v) > 128:
+            raise ValueError("Password must be at most 128 characters")
+        return v
+
 
 class UpdateProfilePayload(BaseModel):
     name: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+    @field_validator("name")
+    @classmethod
+    def name_max_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if len(v) > 100:
+                raise ValueError("Name must be at most 100 characters")
+        return v
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 limiter = Limiter(key_func=get_remote_address)
@@ -35,7 +53,8 @@ limiter = Limiter(key_func=get_remote_address)
     response_model=ApiResponse[AuthResponse],
     status_code=status.HTTP_201_CREATED,
 )
-def register(payload: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("3/hour")
+def register(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.phone == payload.phone).first()
     if existing:
         raise HTTPException(
@@ -71,6 +90,11 @@ def login(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid phone number or password",
+        )
+    if user.is_banned:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is suspended",
         )
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}))

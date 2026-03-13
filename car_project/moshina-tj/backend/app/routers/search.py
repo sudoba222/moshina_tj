@@ -15,7 +15,9 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import Float, Integer, cast, func, literal, or_, text, union
 from sqlalchemy.orm import Session, joinedload
 
@@ -26,6 +28,7 @@ from app.schemas import ApiResponse, ListingResponse
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/search", tags=["search"])
+limiter = Limiter(key_func=get_remote_address)
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -53,8 +56,10 @@ def _active_base(db: Session):
 # ---------------------------------------------------------------------------
 
 @router.get("", response_model=ApiResponse[list[ListingResponse]])
+@limiter.limit("30/minute")
 def search_listings(
-    q: str = Query(..., min_length=1, description="Search term — brand, model, or city"),
+    request: Request,
+    q: str = Query(..., min_length=1, max_length=100, description="Search term — brand, model, or city"),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
@@ -159,8 +164,10 @@ def search_listings(
 # ---------------------------------------------------------------------------
 
 @router.get("/suggestions", response_model=ApiResponse[list[str]])
+@limiter.limit("60/minute")
 def search_suggestions(
-    q: str = Query(..., min_length=1, description="Partial search term for autocomplete"),
+    request: Request,
+    q: str = Query(..., min_length=1, max_length=100, description="Partial search term for autocomplete"),
     db: Session = Depends(get_db),
 ):
     """
@@ -249,8 +256,10 @@ def search_suggestions(
 # ---------------------------------------------------------------------------
 
 @router.get("/did-you-mean", response_model=ApiResponse[Optional[str]])
+@limiter.limit("30/minute")
 def did_you_mean(
-    q: str = Query(..., min_length=1, description="Query to find a spelling correction for"),
+    request: Request,
+    q: str = Query(..., min_length=1, max_length=100, description="Query to find a spelling correction for"),
     db: Session = Depends(get_db),
 ):
     """
@@ -332,7 +341,9 @@ def did_you_mean(
 # ---------------------------------------------------------------------------
 
 @router.get("/recommendations", response_model=ApiResponse[list[ListingResponse]])
+@limiter.limit("30/minute")
 def recommendations(
+    request: Request,
     listing_id: Optional[UUID] = Query(
         default=None,
         description="When provided, return similar listings (same brand or city) "
