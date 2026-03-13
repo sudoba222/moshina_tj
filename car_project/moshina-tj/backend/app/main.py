@@ -14,7 +14,7 @@ from app.routers import admin, ai, auth, dealers, listings, search, upload, user
 _IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
 
 app = FastAPI(
-    title="MOSHINA.TJ API",
+    title="AVTOMARKET.TJ API",
     version="1.0.0",
     description="Car marketplace API for Tajikistan",
     docs_url=None if _IS_PRODUCTION else "/docs",

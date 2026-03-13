@@ -21,7 +21,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <Link href="/" style={{ display: 'inline-flex', alignItems: 'baseline', gap: '1px' }}>
-              <span style={{ fontWeight: 800, fontSize: '17px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>MOSHINA</span>
+              <span style={{ fontWeight: 800, fontSize: '17px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>AVTOMARKET</span>
               <span style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text-muted)' }}>.TJ</span>
             </Link>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px', maxWidth: '200px', lineHeight: 1.5 }}>

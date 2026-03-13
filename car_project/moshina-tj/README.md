@@ -1,4 +1,4 @@
-# MOSHINA.TJ
+# AVTOMARKET.TJ
 
 Automotive marketplace for Tajikistan — buy, rent, and finance cars.
 Bilingual (Russian + Tajik), dark/light mode, mobile-first.
@@ -78,7 +78,7 @@ App: http://localhost:3000
 | `CLOUDINARY_CLOUD_NAME` | Your Cloudinary cloud name | `mycloud` |
 | `CLOUDINARY_API_KEY` | Cloudinary API key | `123456789012345` |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret | `abcdefg...` |
-| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:3000,https://moshina.tj` |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:3000,https://avtomarket.tj` |
 | `ANTHROPIC_API_KEY` | Claude AI key for description refinement (optional) | `sk-ant-...` |
 
 ### Frontend (`frontend/.env.local`)

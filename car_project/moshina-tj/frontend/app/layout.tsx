@@ -12,11 +12,11 @@ const syne = Syne({
 })
 
 export const metadata: Metadata = {
-  title: 'MOSHINA.TJ — Авторынок Таджикистана',
+  title: 'AVTOMARKET.TJ — Авторынок Таджикистана',
   description: 'Покупка, аренда и рассрочка автомобилей по всему Таджикистану',
   keywords: 'авто, машина, Таджикистан, купить машину, аренда, рассрочка, Душанбе',
   openGraph: {
-    title: 'MOSHINA.TJ — Авторынок Таджикистана',
+    title: 'AVTOMARKET.TJ — Авторынок Таджикистана',
     description: 'Покупка, аренда и рассрочка автомобилей по всему Таджикистану',
     type: 'website',
     locale: 'ru_TJ',

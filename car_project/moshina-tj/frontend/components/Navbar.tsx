@@ -81,7 +81,7 @@ export default function Navbar() {
             style={{ flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: '1px' }}
           >
             <span style={{ fontWeight: 800, fontSize: '20px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>
-              MOSHINA
+              AVTOMARKET
             </span>
             <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-muted)' }}>
               .TJ

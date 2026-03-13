@@ -268,7 +268,7 @@ const strings = {
     rent:        { ru: 'Аренда',                   tj: 'Иҷора' },
     dealers:     { ru: 'Дилеры',                   tj: 'Намоишгоҳ' },
     installment: { ru: 'Рассрочка',                tj: 'Қарз' },
-    rights:      { ru: '© 2025 MOSHINA.TJ — Все права защищены', tj: '© 2025 MOSHINA.TJ — Ҳама ҳуқуқҳо ҳифз шудаанд' },
+    rights:      { ru: '© 2025 AVTOMARKET.TJ — Все права защищены', tj: '© 2025 AVTOMARKET.TJ — Ҳама ҳуқуқҳо ҳифз шудаанд' },
   },
   stats: {
     listings: { ru: 'объявлений',  tj: 'эълон' },

@@ -67,7 +67,7 @@ export default function LoginPage() {
       {/* Logo */}
       <Link href="/" style={{ marginBottom: '32px', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
         <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>
-          MOSHINA
+          AVTOMARKET
         </span>
         <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-muted)' }}>
           .TJ
