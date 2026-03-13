@@ -103,7 +103,7 @@ export default function ModeratorPage() {
   const router = useRouter()
   const { user } = useAuth()
 
-  type Screen = 'loading' | 'start' | 'workspace' | 'summary'
+  type Screen = 'loading' | 'start' | 'workspace' | 'summary' | 'stats'
 
   const [screen, setScreen] = useState<Screen>('loading')
   const [session, setSession] = useState<ModerationSession | null>(null)
@@ -112,9 +112,24 @@ export default function ModeratorPage() {
   const [listingLoading, setListingLoading] = useState(false)
   const [similarListings, setSimilarListings] = useState<Listing[]>([])
 
-  // Timer
+  // Session filters (start screen)
+  const [filterTimer, setFilterTimer] = useState<number | null>(null)
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+  const [filterType, setFilterType] = useState<'sale' | 'rent' | null>(null)
+  const [filterCity, setFilterCity] = useState('')
+  const [filterBrand, setFilterBrand] = useState('')
+
+  // Stats / history
+  const [statsData, setStatsData] = useState<any>(null)
+  const [historyData, setHistoryData] = useState<any[]>([])
+  const [statsLoading, setStatsLoading] = useState(false)
+
+  // Timer (elapsed or countdown)
   const [elapsed, setElapsed] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [timerMinutes, setTimerMinutes] = useState<number | null>(null)
+  const autoEndedRef = useRef(false)
 
   // Photo carousel
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -172,11 +187,22 @@ export default function ModeratorPage() {
   }, [user])
 
   // ── Timer ─────────────────────────────────────────────────────────────────
-  function startTimer(startedAt: string) {
+  function startTimer(startedAt: string, minutes?: number | null) {
     const startMs = new Date(startedAt).getTime()
     if (timerRef.current) clearInterval(timerRef.current)
+    autoEndedRef.current = false
+    if (minutes) setTimerMinutes(minutes)
     timerRef.current = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startMs) / 1000))
+      const e = Math.floor((Date.now() - startMs) / 1000)
+      setElapsed(e)
+      if (minutes && !autoEndedRef.current && e >= minutes * 60) {
+        autoEndedRef.current = true
+        clearInterval(timerRef.current!)
+        adminApi.endSession(true).then((res) => {
+          setSession(res.data.data)
+          setScreen('summary')
+        }).catch(() => setScreen('summary'))
+      }
     }, 1000)
   }
 
@@ -228,7 +254,7 @@ export default function ModeratorPage() {
     setPhotoIdx(0)
     if (editDebounceRef.current) clearTimeout(editDebounceRef.current)
     try {
-      const res = await adminApi.getPendingListings(1, 1)
+      const res = await adminApi.getPendingListings(1, 1, true)
       const items = res.data.data.items
       if (items.length > 0) {
         setListing(items[0])
@@ -258,13 +284,34 @@ export default function ModeratorPage() {
   // ── Session start ──────────────────────────────────────────────────────────
   async function handleStartSession() {
     try {
-      const res = await adminApi.startSession()
+      const res = await adminApi.startSession({
+        timer_minutes: filterTimer,
+        filter_date_from: filterDateFrom ? new Date(filterDateFrom).toISOString() : null,
+        filter_date_to: filterDateTo ? new Date(filterDateTo).toISOString() : null,
+        filter_type: filterType,
+        filter_city: filterCity || null,
+        filter_brand: filterBrand || null,
+      })
       const newSession = res.data.data
       setSession(newSession)
       setScreen('workspace')
-      startTimer(newSession.started_at)
+      startTimer(newSession.started_at, filterTimer)
       fetchNextListing()
     } catch {}
+  }
+
+  // ── Load stats ────────────────────────────────────────────────────────────
+  async function loadStats() {
+    setStatsLoading(true)
+    try {
+      const [sRes, hRes] = await Promise.all([
+        adminApi.getModeratorStats(),
+        adminApi.getSessionHistory(),
+      ])
+      setStatsData(sRes.data.data)
+      setHistoryData(hRes.data.data ?? [])
+    } catch {}
+    setStatsLoading(false)
   }
 
   // ── Session end ────────────────────────────────────────────────────────────
@@ -359,49 +406,184 @@ export default function ModeratorPage() {
     )
   }
 
-  // ── Screen: start ──────────────────────────────────────────────────────────
-  if (screen === 'start') {
+  // ── Shared tab bar (start / stats screens) ────────────────────────────────
+  function TabBar() {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--background)' }}>
-        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '48px 40px', maxWidth: '400px', width: '100%', textAlign: 'center' }}>
-          <div style={{ width: '64px', height: '64px', background: 'var(--accent)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: '#fff' }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 11l3 3L22 4" />
-              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-            </svg>
-          </div>
-
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
-            Сессия модерации
-          </h1>
-
-          <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
-            В очереди: <strong style={{ color: 'var(--text-primary)' }}>{pendingTotal}</strong> объявлений
-          </p>
-
-          <button
-            onClick={handleStartSession}
-            style={{
-              width: '100%', padding: '14px', background: 'var(--accent)', color: '#fff',
-              fontWeight: 800, fontSize: '16px', borderRadius: '12px', border: 'none',
-              cursor: 'pointer', letterSpacing: '0.02em',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
-          >
-            Начать сессию
+      <div style={{ display: 'flex', gap: '4px', padding: '16px 24px 0', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
+        {(['start', 'stats'] as const).map((s) => (
+          <button key={s} onClick={() => { if (s === 'stats') { setScreen('stats'); loadStats() } else setScreen('start') }}
+            style={{ padding: '8px 20px', borderRadius: '8px 8px 0 0', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
+              background: screen === s ? 'var(--background)' : 'transparent',
+              color: screen === s ? 'var(--text-primary)' : 'var(--text-secondary)',
+              borderBottom: screen === s ? '2px solid var(--accent)' : '2px solid transparent',
+            }}>
+            {s === 'start' ? 'Модерация' : 'Статистика'}
           </button>
+        ))}
+      </div>
+    )
+  }
 
-          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '16px' }}>
-            Лимит сессии: {SESSION_LIMIT} объявлений
-          </p>
+  // ── Screen: start ──────────────────────────────────────────────────────────
+  if (screen === 'start' || screen === 'stats') {
+    const btnBase: React.CSSProperties = { padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, transition: 'all 0.15s' }
+    const btnActive: React.CSSProperties = { ...btnBase, background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' }
+    const btnInactive: React.CSSProperties = { ...btnBase, background: 'var(--card)', color: 'var(--text-secondary)' }
 
-          <div style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-            <Link href="/dashboard" style={{ fontSize: '13px', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-              Вернуться в личный кабинет
-            </Link>
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--background)' }}>
+        <TabBar />
+
+        {screen === 'stats' ? (
+          // ── Stats view ──────────────────────────────────────────────────
+          <div style={{ maxWidth: '900px', margin: '32px auto', padding: '0 24px' }}>
+            {statsLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '60px' }}>
+                <div style={{ width: '28px', height: '28px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              </div>
+            ) : statsData ? (<>
+              {/* Stat cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '32px' }}>
+                {[
+                  { label: 'Всего сессий', value: statsData.total_sessions },
+                  { label: 'Сегодня проверено', value: statsData.today?.total ?? 0 },
+                  { label: 'За неделю', value: statsData.this_week?.total ?? 0 },
+                  { label: 'Среднее за сессию', value: statsData.avg_posts_per_session },
+                ].map((c) => (
+                  <div key={c.label} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
+                    <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)' }}>{c.value}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{c.label}</div>
+                  </div>
+                ))}
+              </div>
+              {/* History table */}
+              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '14px' }}>История сессий</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--background)' }}>
+                        {['Дата', 'Длит.', 'Всего', 'Одобрено', 'Отклонено', 'Пропущено', 'Фильтры', 'Статус'].map((h) => (
+                          <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyData.map((s: any, i: number) => {
+                        const dur = s.duration_seconds != null ? `${Math.floor(s.duration_seconds/60).toString().padStart(2,'0')}:${(s.duration_seconds%60).toString().padStart(2,'0')}` : '—'
+                        const filters = [s.filters?.type, s.filters?.city, s.filters?.brand].filter(Boolean).join(' · ') || '—'
+                        const dt = new Date(s.started_at).toLocaleString('ru-RU', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+                        return (
+                          <tr key={s.session_id} style={{ borderTop: '1px solid var(--border)', background: i%2===0 ? 'transparent' : 'var(--background)' }}>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{dt}</td>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{dur}</td>
+                            <td style={{ padding: '10px 14px', fontWeight: 700 }}>{s.total}</td>
+                            <td style={{ padding: '10px 14px', color: '#16a34a', fontWeight: 600 }}>{s.posts_approved}</td>
+                            <td style={{ padding: '10px 14px', color: '#ef4444', fontWeight: 600 }}>{s.posts_rejected}</td>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{s.posts_skipped}</td>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: '12px' }}>{filters}</td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                                background: s.is_active ? 'rgba(22,163,74,0.1)' : 'var(--background)',
+                                color: s.is_active ? '#16a34a' : 'var(--text-secondary)',
+                                border: `1px solid ${s.is_active ? 'rgba(22,163,74,0.3)' : 'var(--border)'}` }}>
+                                {s.is_active ? 'Активна' : s.auto_ended ? 'По таймеру' : 'Завершена'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      {historyData.length === 0 && (
+                        <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>Сессий пока нет</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>) : (
+              <div style={{ textAlign: 'center', paddingTop: '60px', color: 'var(--text-secondary)' }}>Нет данных</div>
+            )}
           </div>
-        </div>
+        ) : (
+          // ── Start view with filters ──────────────────────────────────────
+          <div style={{ maxWidth: '680px', margin: '40px auto', padding: '0 24px' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
+                <div>
+                  <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px' }}>Начать сессию модерации</h1>
+                  <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>В очереди: <strong style={{ color: 'var(--text-primary)' }}>{pendingTotal}</strong> объявлений · Лимит: {SESSION_LIMIT}</p>
+                </div>
+              </div>
+
+              {/* Timer */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Таймер сессии</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {([null, 10, 20, 30] as const).map((m) => (
+                    <button key={String(m)} onClick={() => setFilterTimer(m)}
+                      style={filterTimer === m ? btnActive : btnInactive}>
+                      {m == null ? 'Без лимита' : `${m} мин`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Type */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Тип объявления</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {([null, 'sale', 'rent'] as const).map((t) => (
+                    <button key={String(t)} onClick={() => setFilterType(t)}
+                      style={filterType === t ? btnActive : btnInactive}>
+                      {t == null ? 'Все' : t === 'sale' ? 'Продажа' : 'Аренда'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Дата подачи от</div>
+                  <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--text-primary)', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Дата подачи до</div>
+                  <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--text-primary)', fontSize: '13px' }} />
+                </div>
+              </div>
+
+              {/* City + Brand */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '28px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Город</div>
+                  <input type="text" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Все города"
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--text-primary)', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Марка</div>
+                  <input type="text" value={filterBrand} onChange={(e) => setFilterBrand(e.target.value)} placeholder="Все марки"
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--text-primary)', fontSize: '13px' }} />
+                </div>
+              </div>
+
+              <button onClick={handleStartSession}
+                style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: '15px', borderRadius: '12px', border: 'none', cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}>
+                Начать сессию
+              </button>
+
+              <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                <Link href="/dashboard" style={{ fontSize: '13px', color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                  Вернуться в личный кабинет
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -513,10 +695,22 @@ export default function ModeratorPage() {
         <div style={{ flex: 1 }} />
 
         {/* Timer */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-          <IconClock />
-          {formatElapsed(elapsed)}
-        </div>
+        {timerMinutes ? (() => {
+          const remaining = timerMinutes * 60 - elapsed
+          const display = remaining > 0 ? formatElapsed(remaining) : '00:00'
+          const urgent = remaining < 120 && remaining > 0
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: urgent ? '#ef4444' : 'var(--text-secondary)' }}>
+              <IconClock />
+              {display} осталось
+            </div>
+          )
+        })() : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+            <IconClock />
+            {formatElapsed(elapsed)}
+          </div>
+        )}
 
         {/* End session */}
         <button

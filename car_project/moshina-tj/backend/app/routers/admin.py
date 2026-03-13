@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, or_
 
 from app.auth import get_current_user
 from app.database import get_db
@@ -266,22 +266,61 @@ def deactivate_listing(listing_id: str, db: Session = Depends(get_db), _: User =
 # Moderation queue — approve / reject
 # ---------------------------------------------------------------------------
 
+_LOCK_EXPIRY_MINUTES = 15
+
 @router.get("/moderation/pending", response_model=ApiResponse[ListingListResponse])
 def pending_listings(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
+    claim: bool = Query(default=False),
     db: Session = Depends(get_db),
-    _: User = Depends(require_moderator),
+    current_user: User = Depends(require_moderator),
 ):
-    """All listings awaiting review, ordered oldest-first (FIFO queue)."""
+    """All listings awaiting review, oldest-first. Excludes listings locked by other active moderators."""
+    from datetime import datetime, timedelta, timezone
+    from app.models import ModerationSession
+
+    now = datetime.now(timezone.utc)
+    lock_cutoff = now - timedelta(minutes=_LOCK_EXPIRY_MINUTES)
+
+    active_session = db.query(ModerationSession).filter(
+        ModerationSession.moderator_id == current_user.id,
+        ModerationSession.is_active == True,
+    ).first()
+
     query = (
         db.query(Listing)
         .options(joinedload(Listing.images))
-        .filter(Listing.status == ListingStatus.pending)
+        .filter(
+            Listing.status == ListingStatus.pending,
+            or_(
+                Listing.locked_by == None,
+                Listing.locked_by == current_user.id,
+                Listing.locked_at < lock_cutoff,
+            ),
+        )
     )
+
+    if active_session:
+        if active_session.filter_date_from:
+            query = query.filter(Listing.created_at >= active_session.filter_date_from)
+        if active_session.filter_date_to:
+            query = query.filter(Listing.created_at <= active_session.filter_date_to)
+        if active_session.filter_type:
+            query = query.filter(Listing.type == active_session.filter_type)
+        if active_session.filter_city:
+            query = query.filter(Listing.city.ilike(f"%{active_session.filter_city}%"))
+        if active_session.filter_brand:
+            query = query.filter(Listing.brand.ilike(f"%{active_session.filter_brand}%"))
+
     total = query.count()
     pages = math.ceil(total / limit) if total > 0 else 1
     items = query.order_by(Listing.created_at.asc()).offset((page - 1) * limit).limit(limit).all()
+
+    if claim and items:
+        items[0].locked_by = current_user.id
+        items[0].locked_at = now
+        db.commit()
 
     return ApiResponse(
         success=True,
@@ -299,6 +338,8 @@ def approve_listing(listing_id: str, db: Session = Depends(get_db), current_user
     listing.is_active = True
     listing.rejection_reason = None
     listing.moderated_by = current_user.id
+    listing.locked_by = None
+    listing.locked_at = None
     # Update session stats
     from app.models import ModerationSession
     active_session = db.query(ModerationSession).filter(
@@ -326,6 +367,8 @@ def reject_listing(
     listing.is_active = False
     listing.rejection_reason = payload.reason
     listing.moderated_by = current_user.id
+    listing.locked_by = None
+    listing.locked_at = None
     # Update session stats
     from app.models import ModerationSession
     active_session = db.query(ModerationSession).filter(
@@ -423,10 +466,30 @@ def moderator_edit_listing(
 # Moderation sessions
 # ---------------------------------------------------------------------------
 
+class SessionStartPayload(BaseModel):
+    timer_minutes: Optional[int] = None   # 10, 20, 30, or None = unlimited
+    filter_date_from: Optional[str] = None  # ISO date string
+    filter_date_to: Optional[str] = None
+    filter_type: Optional[str] = None     # "sale", "rent", or None
+    filter_city: Optional[str] = None
+    filter_brand: Optional[str] = None
+
+
 @router.post("/moderation/session/start", response_model=ApiResponse[dict])
-def start_session(db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
-    """Start a new moderation session. Ends any existing active session first."""
+def start_session(
+    payload: SessionStartPayload = SessionStartPayload(),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_moderator),
+):
+    """Start a new moderation session with optional filters. Ends any existing active session first."""
     from app.models import ModerationSession
+    from datetime import datetime, timezone
+
+    # Release locks held by this moderator
+    db.query(Listing).filter(Listing.locked_by == current_user.id).update(
+        {"locked_by": None, "locked_at": None}
+    )
+
     # End any existing active session
     existing = db.query(ModerationSession).filter(
         ModerationSession.moderator_id == current_user.id,
@@ -436,15 +499,51 @@ def start_session(db: Session = Depends(get_db), current_user: User = Depends(re
         existing.is_active = False
         existing.ended_at = func.now()
 
-    session = ModerationSession(moderator_id=current_user.id)
+    date_from = None
+    date_to = None
+    if payload.filter_date_from:
+        try:
+            date_from = datetime.fromisoformat(payload.filter_date_from.replace("Z", "+00:00"))
+        except Exception:
+            pass
+    if payload.filter_date_to:
+        try:
+            date_to = datetime.fromisoformat(payload.filter_date_to.replace("Z", "+00:00"))
+        except Exception:
+            pass
+
+    session = ModerationSession(
+        moderator_id=current_user.id,
+        timer_minutes=payload.timer_minutes,
+        filter_date_from=date_from,
+        filter_date_to=date_to,
+        filter_type=payload.filter_type,
+        filter_city=payload.filter_city,
+        filter_brand=payload.filter_brand,
+    )
     db.add(session)
     db.commit()
     db.refresh(session)
-    return ApiResponse(success=True, data={"session_id": str(session.id), "started_at": session.started_at.isoformat()}, message="Session started")
+    return ApiResponse(success=True, data={
+        "session_id": str(session.id),
+        "started_at": session.started_at.isoformat(),
+        "timer_minutes": session.timer_minutes,
+        "filters": {
+            "date_from": session.filter_date_from.isoformat() if session.filter_date_from else None,
+            "date_to": session.filter_date_to.isoformat() if session.filter_date_to else None,
+            "type": session.filter_type,
+            "city": session.filter_city,
+            "brand": session.filter_brand,
+        }
+    }, message="Session started")
 
 
 @router.post("/moderation/session/end", response_model=ApiResponse[dict])
-def end_session(db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
+def end_session(
+    auto_ended: bool = Query(default=False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_moderator),
+):
     """End the current active moderation session."""
     from app.models import ModerationSession
     session = db.query(ModerationSession).filter(
@@ -453,8 +552,13 @@ def end_session(db: Session = Depends(get_db), current_user: User = Depends(requ
     ).first()
     if not session:
         raise HTTPException(status_code=404, detail="No active session")
+    # Release any locks held by this moderator
+    db.query(Listing).filter(Listing.locked_by == current_user.id).update(
+        {"locked_by": None, "locked_at": None}
+    )
     session.is_active = False
     session.ended_at = func.now()
+    session.auto_ended = auto_ended
     db.commit()
     db.refresh(session)
     total = session.posts_approved + session.posts_rejected + session.posts_skipped
@@ -490,18 +594,20 @@ def get_active_session(db: Session = Depends(get_db), current_user: User = Depen
 
 @router.post("/moderation/{listing_id}/skip", response_model=ApiResponse[dict])
 def skip_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
-    """Skip a listing (move to back of queue) and track in session."""
+    """Skip a listing (release lock, increment skip counter) and track in session."""
     from app.models import ModerationSession
-    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     active_session = db.query(ModerationSession).filter(
         ModerationSession.moderator_id == current_user.id,
         ModerationSession.is_active == True
     ).first()
+    listing.locked_by = None
+    listing.locked_at = None
     if active_session:
         active_session.posts_skipped += 1
-        db.commit()
+    db.commit()
     return ApiResponse(success=True, data={"listing_id": listing_id}, message="Listing skipped")
 
 
@@ -551,3 +657,78 @@ def moderator_activity(db: Session = Depends(get_db), _: User = Depends(require_
         })
 
     return ApiResponse(success=True, data=result, message="Moderator activity fetched")
+
+
+@router.get("/moderation/session/history", response_model=ApiResponse[list])
+def session_history(db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
+    """All past sessions for the current moderator, newest first (max 50)."""
+    from app.models import ModerationSession
+    sessions = (
+        db.query(ModerationSession)
+        .filter(ModerationSession.moderator_id == current_user.id)
+        .order_by(ModerationSession.started_at.desc())
+        .limit(50)
+        .all()
+    )
+    result = []
+    for s in sessions:
+        total = s.posts_approved + s.posts_rejected + s.posts_skipped
+        duration_sec = None
+        if s.ended_at and s.started_at:
+            duration_sec = int((s.ended_at - s.started_at).total_seconds())
+        result.append({
+            "session_id": str(s.id),
+            "started_at": s.started_at.isoformat(),
+            "ended_at": s.ended_at.isoformat() if s.ended_at else None,
+            "duration_seconds": duration_sec,
+            "posts_approved": s.posts_approved,
+            "posts_rejected": s.posts_rejected,
+            "posts_skipped": s.posts_skipped,
+            "total": total,
+            "is_active": s.is_active,
+            "auto_ended": s.auto_ended,
+            "timer_minutes": s.timer_minutes,
+            "filters": {
+                "date_from": s.filter_date_from.isoformat() if s.filter_date_from else None,
+                "date_to": s.filter_date_to.isoformat() if s.filter_date_to else None,
+                "type": s.filter_type,
+                "city": s.filter_city,
+                "brand": s.filter_brand,
+            },
+        })
+    return ApiResponse(success=True, data=result, message="Session history fetched")
+
+
+@router.get("/moderation/stats", response_model=ApiResponse[dict])
+def moderator_stats(db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
+    """Aggregated lifetime + today + week stats for the current moderator."""
+    from app.models import ModerationSession
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_ago = now - timedelta(days=7)
+
+    def _sum(sessions):
+        return {
+            "approved": sum(s.posts_approved for s in sessions),
+            "rejected": sum(s.posts_rejected for s in sessions),
+            "skipped": sum(s.posts_skipped for s in sessions),
+            "total": sum(s.posts_approved + s.posts_rejected + s.posts_skipped for s in sessions),
+            "sessions": len(sessions),
+        }
+
+    all_s = db.query(ModerationSession).filter(ModerationSession.moderator_id == current_user.id, ModerationSession.is_active == False).all()
+    today_s = [s for s in all_s if s.started_at >= today]
+    week_s  = [s for s in all_s if s.started_at >= week_ago]
+
+    all_stats   = _sum(all_s)
+    avg = round(all_stats["total"] / len(all_s), 1) if all_s else 0
+
+    return ApiResponse(success=True, data={
+        "all_time": all_stats,
+        "today": _sum(today_s),
+        "this_week": _sum(week_s),
+        "avg_posts_per_session": avg,
+        "total_sessions": len(all_s),
+    }, message="Moderator stats fetched")

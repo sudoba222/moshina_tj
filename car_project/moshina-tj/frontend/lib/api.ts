@@ -165,8 +165,8 @@ export const adminApi = {
     api.put<ApiResponse<Listing>>(`/admin/listings/${id}/deactivate`),
 
   // Moderation
-  getPendingListings: (page = 1, limit = 10) =>
-    api.get<ApiResponse<PaginatedListings>>('/admin/moderation/pending', { params: { page, limit } }),
+  getPendingListings: (page = 1, limit = 10, claim = false) =>
+    api.get<ApiResponse<PaginatedListings>>('/admin/moderation/pending', { params: { page, limit, claim } }),
   approveListing: (id: string) =>
     api.put<ApiResponse<Listing>>(`/admin/moderation/${id}/approve`),
   rejectListing: (id: string, reason: string) =>
@@ -175,10 +175,14 @@ export const adminApi = {
     api.post<ApiResponse<null>>(`/admin/moderation/${id}/skip`),
 
   // Moderation sessions
-  startSession: () =>
-    api.post<ApiResponse<ModerationSession>>('/admin/moderation/session/start'),
-  endSession: () =>
-    api.post<ApiResponse<ModerationSession>>('/admin/moderation/session/end'),
+  startSession: (filters?: { timer_minutes?: number | null; filter_date_from?: string | null; filter_date_to?: string | null; filter_type?: string | null; filter_city?: string | null; filter_brand?: string | null }) =>
+    api.post<ApiResponse<ModerationSession>>('/admin/moderation/session/start', filters ?? {}),
+  endSession: (autoEnded = false) =>
+    api.post<ApiResponse<ModerationSession>>(`/admin/moderation/session/end?auto_ended=${autoEnded}`),
+  getModeratorStats: () =>
+    api.get<ApiResponse<any>>('/admin/moderation/stats'),
+  getSessionHistory: () =>
+    api.get<ApiResponse<any[]>>('/admin/moderation/session/history'),
   getActiveSession: () =>
     api.get<ApiResponse<ModerationSession | null>>('/admin/moderation/session/active'),
 

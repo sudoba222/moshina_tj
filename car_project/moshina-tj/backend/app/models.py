@@ -156,6 +156,8 @@ class Listing(Base):
         onupdate=func.now(),
     )
     rental_rules = Column(JSON, nullable=True)
+    locked_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    locked_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="listings", foreign_keys=[user_id])
@@ -201,6 +203,13 @@ class ModerationSession(Base):
     posts_rejected = Column(Integer, nullable=False, default=0, server_default="0")
     posts_skipped = Column(Integer, nullable=False, default=0, server_default="0")
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
+    timer_minutes = Column(Integer, nullable=True)
+    filter_date_from = Column(TIMESTAMP(timezone=True), nullable=True)
+    filter_date_to = Column(TIMESTAMP(timezone=True), nullable=True)
+    filter_type = Column(String(20), nullable=True)
+    filter_city = Column(String(100), nullable=True)
+    filter_brand = Column(String(100), nullable=True)
+    auto_ended = Column(Boolean, nullable=False, default=False, server_default='false')
 
     moderator = relationship("User", foreign_keys=[moderator_id])
 
