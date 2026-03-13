@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Environment variables — never commit real credentials
+backend/.env
+frontend/.env.local
+*.env
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic
+alembic/versions/*.pyc
+
+# Next.js
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+
+# Uploads (local dev only)
+backend/uploads/
+
+# Logs
+*.log
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+junit.xml
+
+# Type checking cache
+.mypy_cache/
+.ruff_cache/

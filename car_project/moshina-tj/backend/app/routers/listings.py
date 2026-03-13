@@ -1,0 +1,287 @@
+import math
+from decimal import Decimal
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, update
+from sqlalchemy.orm import Session, joinedload
+
+from app.auth import get_current_user
+from app.database import get_db
+from app.models import Currency, FuelType, Listing, ListingImage, ListingStatus, ListingType, TransmissionType, User, UserRole
+from app.schemas import (
+    ApiResponse,
+    ListingCreate,
+    ListingListResponse,
+    ListingResponse,
+    ListingUpdate,
+)
+
+router = APIRouter(prefix="/listings", tags=["listings"])
+
+_MAX_LIMIT = 100
+
+
+def _get_listing_or_404(listing_id: str, db: Session) -> Listing:
+    listing = (
+        db.query(Listing)
+        .options(joinedload(Listing.images))
+        .filter(Listing.id == listing_id)
+        .first()
+    )
+    if not listing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+    return listing
+
+
+def _assert_owner_or_admin(listing: Listing, current_user: User) -> None:
+    if listing.user_id != current_user.id and current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify this listing",
+        )
+
+
+@router.get("", response_model=ApiResponse[ListingListResponse])
+def list_listings(
+    db: Session = Depends(get_db),
+    type: Optional[ListingType] = None,
+    city: Optional[str] = None,
+    brand: Optional[str] = None,
+    model: Optional[str] = None,
+    min_price: Optional[Decimal] = None,
+    max_price: Optional[Decimal] = None,
+    min_year: Optional[int] = None,
+    max_year: Optional[int] = None,
+    max_mileage: Optional[int] = None,
+    color: Optional[str] = None,
+    installment: Optional[bool] = None,
+    fuel: Optional[FuelType] = None,
+    transmission: Optional[TransmissionType] = None,
+    currency: Optional[Currency] = None,
+    sort: Optional[str] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=_MAX_LIMIT),
+):
+    query = (
+        db.query(Listing)
+        .options(joinedload(Listing.images))
+        .filter(Listing.status == ListingStatus.active)
+    )
+
+    if type:
+        query = query.filter(Listing.type == type)
+    if city:
+        query = query.filter(Listing.city.ilike(f"%{city}%"))
+    if brand:
+        query = query.filter(Listing.brand.ilike(f"%{brand}%"))
+    if model:
+        query = query.filter(Listing.model.ilike(f"%{model}%"))
+    if min_price is not None:
+        query = query.filter(Listing.price >= min_price)
+    if max_price is not None:
+        query = query.filter(Listing.price <= max_price)
+    if min_year is not None:
+        query = query.filter(Listing.year >= min_year)
+    if max_year is not None:
+        query = query.filter(Listing.year <= max_year)
+    if max_mileage is not None:
+        query = query.filter(Listing.mileage <= max_mileage)
+    if color:
+        query = query.filter(Listing.color.ilike(f"%{color}%"))
+    if installment is not None:
+        query = query.filter(Listing.installment_available == installment)
+    if fuel:
+        query = query.filter(Listing.fuel == fuel)
+    if transmission:
+        query = query.filter(Listing.transmission == transmission)
+    if currency:
+        query = query.filter(Listing.currency == currency)
+
+    # Sorting
+    if sort == "price_asc":
+        query = query.order_by(Listing.price.asc())
+    elif sort == "price_desc":
+        query = query.order_by(Listing.price.desc())
+    elif sort == "views":
+        query = query.order_by(Listing.views.desc())
+    else:
+        query = query.order_by(Listing.created_at.desc())
+
+    total = query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    items = (
+        query
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    return ApiResponse(
+        success=True,
+        data=ListingListResponse(
+            items=[ListingResponse.model_validate(item) for item in items],
+            total=total,
+            page=page,
+            pages=pages,
+        ),
+        message="Listings fetched",
+    )
+
+
+@router.get("/featured", response_model=ApiResponse[list[ListingResponse]])
+def featured_listings(db: Session = Depends(get_db)):
+    listings = (
+        db.query(Listing)
+        .options(joinedload(Listing.images))
+        .filter(Listing.status == ListingStatus.active)
+        .order_by(Listing.views.desc())
+        .limit(8)
+        .all()
+    )
+    return ApiResponse(
+        success=True,
+        data=[ListingResponse.model_validate(l) for l in listings],
+        message="Featured listings fetched",
+    )
+
+
+@router.get("/{listing_id}", response_model=ApiResponse[ListingResponse])
+def get_listing(listing_id: str, db: Session = Depends(get_db)):
+    listing = _get_listing_or_404(listing_id, db)
+
+    # Atomic view increment — avoids a read-modify-write race condition
+    db.execute(
+        update(Listing)
+        .where(Listing.id == listing_id)
+        .values(views=Listing.views + 1)
+    )
+    db.commit()
+    db.refresh(listing)
+
+    return ApiResponse(
+        success=True,
+        data=ListingResponse.model_validate(listing),
+        message="Listing fetched",
+    )
+
+
+@router.post("", response_model=ApiResponse[ListingResponse], status_code=status.HTTP_201_CREATED)
+def create_listing(
+    payload: ListingCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    is_dealer = (
+        current_user.dealer_profile is not None
+        and current_user.dealer_profile.verified
+    )
+
+    listing = Listing(
+        user_id=current_user.id,
+        type=payload.type,
+        brand=payload.brand,
+        model=payload.model,
+        year=payload.year,
+        price=payload.price,
+        currency=payload.currency,
+        mileage=payload.mileage,
+        fuel=payload.fuel,
+        transmission=payload.transmission,
+        color=payload.color,
+        city=payload.city,
+        description=payload.description,
+        installment_available=payload.installment_available,
+        is_dealer_listing=is_dealer,
+        rental_rules=payload.rental_rules.model_dump(mode="json") if payload.rental_rules else None,
+        status=ListingStatus.pending,
+        is_active=False,
+    )
+    db.add(listing)
+    db.flush()  # Get listing.id before committing
+
+    for index, url in enumerate(payload.image_urls):
+        image = ListingImage(
+            listing_id=listing.id,
+            url=url,
+            is_primary=(index == 0),
+            order_index=index,
+        )
+        db.add(image)
+
+    db.commit()
+    db.refresh(listing)
+
+    return ApiResponse(
+        success=True,
+        data=ListingResponse.model_validate(listing),
+        message="Listing created",
+    )
+
+
+@router.put("/{listing_id}", response_model=ApiResponse[ListingResponse])
+def update_listing(
+    listing_id: str,
+    payload: ListingUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    listing = _get_listing_or_404(listing_id, db)
+    _assert_owner_or_admin(listing, current_user)
+
+    update_data = payload.model_dump(exclude_unset=True, mode="json")
+    for field, value in update_data.items():
+        # rental_rules arrives as a JSON-serializable dict — assign directly
+        setattr(listing, field, value)
+
+    db.commit()
+    db.refresh(listing)
+
+    return ApiResponse(
+        success=True,
+        data=ListingResponse.model_validate(listing),
+        message="Listing updated",
+    )
+
+
+@router.put("/{listing_id}/activate", response_model=ApiResponse[ListingResponse])
+def activate_listing(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    listing = _get_listing_or_404(listing_id, db)
+    _assert_owner_or_admin(listing, current_user)
+    listing.is_active = True
+    db.commit()
+    db.refresh(listing)
+    return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing activated")
+
+
+@router.put("/{listing_id}/deactivate", response_model=ApiResponse[ListingResponse])
+def deactivate_listing(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    listing = _get_listing_or_404(listing_id, db)
+    _assert_owner_or_admin(listing, current_user)
+    listing.is_active = False
+    db.commit()
+    db.refresh(listing)
+    return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing deactivated")
+
+
+@router.delete("/{listing_id}", response_model=ApiResponse[None])
+def delete_listing(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    listing = _get_listing_or_404(listing_id, db)
+    _assert_owner_or_admin(listing, current_user)
+
+    listing.is_active = False
+    db.commit()
+
+    return ApiResponse(success=True, data=None, message="Listing deactivated")
