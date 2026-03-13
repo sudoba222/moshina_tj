@@ -127,6 +127,14 @@ export default function ModeratorPage() {
   // Action loading
   const [actionLoading, setActionLoading] = useState(false)
 
+  // Inline edit state
+  const [editBrand, setEditBrand] = useState('')
+  const [editModel, setEditModel] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [savedFlash, setSavedFlash] = useState(false)
+  const editDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savedFlashRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // ── Auth guard ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { router.replace('/auth/login'); return }
@@ -178,12 +186,47 @@ export default function ModeratorPage() {
     }
   }, [])
 
+  // Sync editable fields when listing changes
+  useEffect(() => {
+    if (listing) {
+      setEditBrand(listing.brand)
+      setEditModel(listing.model)
+      setEditDescription(listing.description ?? '')
+      setSavedFlash(false)
+      if (editDebounceRef.current) clearTimeout(editDebounceRef.current)
+      if (savedFlashRef.current) clearTimeout(savedFlashRef.current)
+    }
+  }, [listing?.id])
+
+  // Debounced save for inline edit
+  function triggerEditSave(brand: string, model: string, description: string) {
+    if (!listing) return
+    if (editDebounceRef.current) clearTimeout(editDebounceRef.current)
+    editDebounceRef.current = setTimeout(async () => {
+      const originalBrand = listing.brand
+      const originalModel = listing.model
+      const originalDescription = listing.description ?? ''
+      const patch: { brand?: string; model?: string; description?: string } = {}
+      if (brand !== originalBrand) patch.brand = brand
+      if (model !== originalModel) patch.model = model
+      if (description !== originalDescription) patch.description = description
+      if (Object.keys(patch).length === 0) return
+      try {
+        await adminApi.moderatorEditListing(listing.id, patch)
+        setSavedFlash(true)
+        if (savedFlashRef.current) clearTimeout(savedFlashRef.current)
+        savedFlashRef.current = setTimeout(() => setSavedFlash(false), 2000)
+      } catch {}
+    }, 800)
+  }
+
   // ── Fetch next listing ─────────────────────────────────────────────────────
   const fetchNextListing = useCallback(async () => {
     setListingLoading(true)
     setRejectOpen(false)
     setRejectReason('')
     setPhotoIdx(0)
+    if (editDebounceRef.current) clearTimeout(editDebounceRef.current)
     try {
       const res = await adminApi.getPendingListings(1, 1)
       const items = res.data.data.items
@@ -278,6 +321,19 @@ export default function ModeratorPage() {
       await fetchNextListing()
     } catch {}
     setRejectLoading(false)
+  }
+
+  // ── Duplicate reject ───────────────────────────────────────────────────────
+  async function handleDuplicate(similarId: string) {
+    if (!listing) return
+    setActionLoading(true)
+    const reason = `Дубликат объявления. Уже существует: /car/${similarId}`
+    try {
+      await adminApi.rejectListing(listing.id, reason)
+      advanceSession('reject')
+      await fetchNextListing()
+    } catch {}
+    setActionLoading(false)
   }
 
   // ── Skip ───────────────────────────────────────────────────────────────────
@@ -683,11 +739,52 @@ export default function ModeratorPage() {
                 )}
               </div>
 
-              {/* Heading */}
+              {/* Heading — editable brand + model */}
               <div>
-                <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 4px' }}>
-                  {listing.brand} {listing.model} {listing.year}
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    value={editBrand}
+                    onChange={(e) => {
+                      setEditBrand(e.target.value)
+                      triggerEditSave(e.target.value, editModel, editDescription)
+                    }}
+                    style={{
+                      fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)',
+                      background: 'var(--card)', border: '1px solid var(--border)',
+                      borderRadius: '6px', padding: '4px 8px', outline: 'none',
+                      width: '140px', minWidth: '80px',
+                    }}
+                    aria-label="Марка"
+                  />
+                  <input
+                    type="text"
+                    value={editModel}
+                    onChange={(e) => {
+                      setEditModel(e.target.value)
+                      triggerEditSave(editBrand, e.target.value, editDescription)
+                    }}
+                    style={{
+                      fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)',
+                      background: 'var(--card)', border: '1px solid var(--border)',
+                      borderRadius: '6px', padding: '4px 8px', outline: 'none',
+                      width: '160px', minWidth: '80px',
+                    }}
+                    aria-label="Модель"
+                  />
+                  <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {listing.year}
+                  </span>
+                  {savedFlash && (
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700, color: '#16a34a',
+                      background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)',
+                      borderRadius: '6px', padding: '2px 8px',
+                    }}>
+                      Сохранено
+                    </span>
+                  )}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--accent)' }}>
                     {formatPrice(listing.price, listing.currency)}
@@ -740,19 +837,26 @@ export default function ModeratorPage() {
                 )}
               </div>
 
-              {/* Description */}
-              {listing.description && (
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Описание</div>
-                  <div style={{
-                    background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px',
-                    padding: '12px 14px', fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.6,
-                    maxHeight: '200px', overflowY: 'auto',
-                  }}>
-                    {listing.description}
-                  </div>
-                </div>
-              )}
+              {/* Description — editable */}
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Описание</div>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => {
+                    setEditDescription(e.target.value)
+                    triggerEditSave(editBrand, editModel, e.target.value)
+                  }}
+                  placeholder="Описание отсутствует..."
+                  rows={5}
+                  style={{
+                    width: '100%', background: 'var(--card)', border: '1px solid var(--border)',
+                    borderRadius: '10px', padding: '12px 14px', fontSize: '13px',
+                    color: 'var(--text-primary)', lineHeight: 1.6,
+                    outline: 'none', resize: 'vertical', boxSizing: 'border-box',
+                    minHeight: '100px',
+                  }}
+                />
+              </div>
 
               {/* Rental rules */}
               {listing.type === 'rent' && listing.rental_rules && (
@@ -819,35 +923,58 @@ export default function ModeratorPage() {
               {similarListings.map((sim) => {
                 const simPrimary = sim.images.find((i) => i.is_primary) ?? sim.images[0]
                 return (
-                  <Link
+                  <div
                     key={sim.id}
-                    href={`/car/${sim.id}`}
-                    target="_blank"
-                    style={{ textDecoration: 'none', display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '10px', background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '10px' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
+                    style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '10px' }}
                   >
-                    <div style={{ width: '60px', height: '46px', borderRadius: '6px', overflow: 'hidden', background: 'var(--border)', flexShrink: 0, position: 'relative' }}>
-                      {simPrimary ? (
-                        <Image src={simPrimary.url} alt="" fill sizes="60px" style={{ objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', opacity: 0.5 }}>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h1l2-3h10l2 3h1a2 2 0 012 2v6a2 2 0 01-2 2h-2" /><circle cx="7.5" cy="17" r="2.5" /><circle cx="16.5" cy="17" r="2.5" /></svg>
+                    {/* Card info row */}
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <div style={{ width: '60px', height: '46px', borderRadius: '6px', overflow: 'hidden', background: 'var(--border)', flexShrink: 0, position: 'relative' }}>
+                        {simPrimary ? (
+                          <Image src={simPrimary.url} alt="" fill sizes="60px" style={{ objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', opacity: 0.5 }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h1l2-3h10l2 3h1a2 2 0 012 2v6a2 2 0 01-2 2h-2" /><circle cx="7.5" cy="17" r="2.5" /><circle cx="16.5" cy="17" r="2.5" /></svg>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <Link
+                          href={`/car/${sim.id}`}
+                          target="_blank"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {sim.brand} {sim.model} {sim.year}
+                          </div>
+                        </Link>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginTop: '2px' }}>
+                          {formatPrice(sim.price, sim.currency)}
                         </div>
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {sim.brand} {sim.model} {sim.year}
-                      </div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginTop: '2px' }}>
-                        {formatPrice(sim.price, sim.currency)}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                        {new Date(sim.created_at).toLocaleDateString('ru-RU')}
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {new Date(sim.created_at).toLocaleDateString('ru-RU')}
+                        </div>
                       </div>
                     </div>
-                  </Link>
+                    {/* Duplicate button */}
+                    <button
+                      onClick={() => handleDuplicate(sim.id)}
+                      disabled={!listing || actionLoading}
+                      style={{
+                        width: '100%', padding: '5px 0',
+                        background: 'none',
+                        color: listing && !actionLoading ? '#ef4444' : 'var(--text-secondary)',
+                        border: `1px solid ${listing && !actionLoading ? '#ef4444' : 'var(--border)'}`,
+                        borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                        cursor: listing && !actionLoading ? 'pointer' : 'not-allowed',
+                        letterSpacing: '0.03em',
+                      }}
+                      onMouseEnter={(e) => { if (listing && !actionLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'none' }}
+                    >
+                      Дубл
+                    </button>
+                  </div>
                 )
               })}
             </div>

@@ -8,6 +8,21 @@ interface CarCardProps {
   listing: Listing
   lang: Lang
   className?: string
+  moderatorMode?: boolean
+}
+
+const STATUS_STRIPE: Record<string, string> = {
+  pending: '#f59e0b',
+  active: '#22c55e',
+  rejected: '#ef4444',
+  draft: '#6b7280',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'На модерации',
+  active: 'Активно',
+  rejected: 'Отклонено',
+  draft: 'Черновик',
 }
 
 function formatMileage(km: number): string {
@@ -42,8 +57,10 @@ function StarIcon() {
   )
 }
 
-export default function CarCard({ listing, lang, className }: CarCardProps) {
+export default function CarCard({ listing, lang, className, moderatorMode = false }: CarCardProps) {
   const primaryImage = listing.images.find((img) => img.is_primary) ?? listing.images[0]
+  const stripeColor = moderatorMode ? (STATUS_STRIPE[listing.status] ?? '#6b7280') : null
+  const statusLabel = moderatorMode ? (STATUS_LABEL[listing.status] ?? listing.status) : null
 
   return (
     <Link href={`/car/${listing.id}`} style={{ display: 'block', textDecoration: 'none' }} className={className}>
@@ -56,6 +73,7 @@ export default function CarCard({ listing, lang, className }: CarCardProps) {
           overflow: 'hidden',
           cursor: 'pointer',
           transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.18s ease',
+          ...(stripeColor ? { borderLeft: `4px solid ${stripeColor}` } : {}),
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-4px)'
@@ -121,6 +139,24 @@ export default function CarCard({ listing, lang, className }: CarCardProps) {
               </span>
             )}
           </div>
+
+          {/* Moderator status badge */}
+          {moderatorMode && statusLabel && stripeColor && (
+            <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
+              <span style={{
+                background: stripeColor,
+                color: '#fff',
+                fontSize: '10px',
+                fontWeight: 700,
+                padding: '2px 7px',
+                borderRadius: '20px',
+                letterSpacing: '0.03em',
+                whiteSpace: 'nowrap',
+              }}>
+                {statusLabel}
+              </span>
+            </div>
+          )}
 
           {listing.is_dealer_listing && (
             <div style={{ position: 'absolute', bottom: '8px', left: '8px' }}>

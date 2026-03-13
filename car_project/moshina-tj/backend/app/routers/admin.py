@@ -389,6 +389,37 @@ def unverify_dealer(dealer_id: str, db: Session = Depends(get_db), _: User = Dep
 
 
 # ---------------------------------------------------------------------------
+# Moderator inline edit — patch brand/model/description before approving
+# ---------------------------------------------------------------------------
+
+class ModeratorListingPatch(BaseModel):
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    description: Optional[str] = None
+
+@router.patch("/moderation/{listing_id}/edit", response_model=ApiResponse[ListingResponse])
+def moderator_edit_listing(
+    listing_id: str,
+    payload: ModeratorListingPatch,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_moderator),
+):
+    """Allows a moderator to fix brand, model, or description inline before approving."""
+    listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    if payload.brand is not None:
+        listing.brand = payload.brand.strip()
+    if payload.model is not None:
+        listing.model = payload.model.strip()
+    if payload.description is not None:
+        listing.description = payload.description.strip()
+    db.commit()
+    db.refresh(listing)
+    return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing updated")
+
+
+# ---------------------------------------------------------------------------
 # Moderation sessions
 # ---------------------------------------------------------------------------
 

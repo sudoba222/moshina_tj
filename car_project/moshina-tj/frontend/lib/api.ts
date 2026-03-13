@@ -182,6 +182,20 @@ export const adminApi = {
   getActiveSession: () =>
     api.get<ApiResponse<ModerationSession | null>>('/admin/moderation/session/active'),
 
+  // Moderator inline edit
+  moderatorEditListing: async (id: string, patch: { brand?: string; model?: string; description?: string }) => {
+    const token = Cookies.get('token')
+    const res = await fetch(`${BASE_URL}/admin/moderation/${id}/edit`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(patch),
+    })
+    return res.json()
+  },
+
   // Moderator activity
   getModeratorActivity: () =>
     api.get<ApiResponse<ModeratorActivity[]>>('/admin/moderator-activity'),
