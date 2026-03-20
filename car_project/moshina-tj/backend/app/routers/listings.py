@@ -31,7 +31,7 @@ _MAX_LIMIT = 100
 def _get_listing_or_404(listing_id: str, db: Session) -> Listing:
     listing = (
         db.query(Listing)
-        .options(joinedload(Listing.images))
+        .options(joinedload(Listing.images), joinedload(Listing.user))
         .filter(Listing.id == listing_id)
         .first()
     )
@@ -71,7 +71,7 @@ def list_listings(
 ):
     query = (
         db.query(Listing)
-        .options(joinedload(Listing.images))
+        .options(joinedload(Listing.images), joinedload(Listing.user))
         .filter(Listing.status == ListingStatus.active)
     )
 
@@ -144,7 +144,7 @@ def featured_listings(db: Session = Depends(get_db)):
 
     listings = (
         db.query(Listing)
-        .options(joinedload(Listing.images))
+        .options(joinedload(Listing.images), joinedload(Listing.user))
         .filter(Listing.status == ListingStatus.active)
         .order_by(Listing.views.desc())
         .limit(8)

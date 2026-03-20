@@ -36,6 +36,7 @@ const strings = {
     rent:        { ru: 'АРЕНДА',         tj: 'ИҶОРА' },
     installment: { ru: 'РАССРОЧКА',      tj: 'ҚАРЗ' },
     dealer:      { ru: 'ДИЛЕР',          tj: 'НАМОИШГОҲ' },
+    postedBy:    { ru: 'Продавец',       tj: 'Фурӯшанда' },
   },
   catalog: {
     title:       { ru: 'Каталог автомобилей',  tj: 'Каталоги мошинҳо' },

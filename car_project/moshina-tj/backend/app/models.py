@@ -1,6 +1,7 @@
 import enum
 import uuid as _uuid
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import (
     Boolean,
@@ -180,6 +181,13 @@ class Listing(Base):
         cascade="all, delete-orphan",
         order_by="ListingImage.order_index",
     )
+
+    @property
+    def user_name(self) -> Optional[str]:
+        try:
+            return self.user.name if self.user else None
+        except Exception:
+            return None
 
 
 class ListingImage(Base):

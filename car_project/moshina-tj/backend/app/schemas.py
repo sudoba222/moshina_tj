@@ -247,6 +247,7 @@ class ListingResponse(BaseModel):
     updated_at: datetime
     images: list[ImageResponse] = []
     rental_rules: Optional[Dict[str, Any]] = None
+    user_name: Optional[str] = None
 
 
 class ListingListResponse(BaseModel):

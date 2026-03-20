@@ -56,6 +56,7 @@ export interface Listing {
   rental_rules?: RentalRules
   is_favorited?: boolean
   favorites_count?: number
+  user_name?: string | null
 }
 
 export interface PaginatedListings {

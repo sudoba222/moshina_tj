@@ -36,6 +36,17 @@ function formatMileage(km: number): string {
   return km.toLocaleString('ru-RU') + ' км'
 }
 
+function formatDate(iso: string, lang: string): string {
+  const date = new Date(iso)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / 86400000)
+  if (diffDays === 0) return lang === 'ru' ? 'Сегодня' : 'Имрӯз'
+  if (diffDays === 1) return lang === 'ru' ? 'Вчера' : 'Дирӯз'
+  if (diffDays < 7) return lang === 'ru' ? `${diffDays} дн. назад` : `${diffDays} рӯз пеш`
+  return date.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'tg-TJ', { day: 'numeric', month: 'short' })
+}
+
 function formatPrice(price: number, currency: string): string {
   if (currency === 'USD') {
     return '$' + price.toLocaleString('en-US')
@@ -326,6 +337,25 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{listing.city}</span>
             </div>
           )}
+
+          {/* Date + poster row */}
+          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              {formatDate(listing.created_at, lang)}
+            </span>
+            {listing.user_name && (
+              <span style={{
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: '120px',
+              }}>
+                {listing.user_name}
+              </span>
+            )}
+          </div>
         </div>
       </article>
     </Link>
