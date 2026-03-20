@@ -1,7 +1,7 @@
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, field_validator
@@ -921,3 +921,126 @@ def apple_auth(
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
         message="Apple authentication successful",
     )
+
+
+# ─── Google OAuth redirect flow ───────────────────────────────────────────────
+
+@router.get("/google/redirect")
+async def google_oauth_redirect() -> Any:
+    """Redirect the user to Google's OAuth consent page."""
+    import os, urllib.parse
+    from fastapi.responses import RedirectResponse as _RedirectResponse
+
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    if not client_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google OAuth is not configured on this server",
+        )
+    redirect_uri = os.getenv(
+        "GOOGLE_REDIRECT_URI",
+        "https://tajcar-api.onrender.com/api/v1/auth/google/callback",
+    )
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "online",
+        "prompt": "select_account",
+    }
+    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+    return _RedirectResponse(url)
+
+
+@router.get("/google/callback")
+async def google_oauth_callback(
+    code: str = "",
+    error: str = "",
+    db: Session = Depends(get_db),
+) -> Any:
+    """Exchange the OAuth code for user info, find/create user, redirect to frontend."""
+    import os
+    import httpx
+    from fastapi.responses import RedirectResponse as _RedirectResponse
+
+    frontend_url = os.getenv("FRONTEND_URL", "https://tajcar-frontend.vercel.app")
+    client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    redirect_uri = os.getenv(
+        "GOOGLE_REDIRECT_URI",
+        "https://tajcar-api.onrender.com/api/v1/auth/google/callback",
+    )
+
+    if error or not code:
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_cancelled")
+
+    # Exchange authorization code for access token
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            token_resp = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "redirect_uri": redirect_uri,
+                    "grant_type": "authorization_code",
+                },
+            )
+            token_data = token_resp.json()
+    except Exception:
+        logger.exception("Google token exchange failed")
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
+
+    access_token = token_data.get("access_token")
+    if not access_token:
+        logger.error("Google token exchange returned no access_token: %s", token_data)
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
+
+    # Fetch user info from Google
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            userinfo_resp = await client.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            userinfo = userinfo_resp.json()
+    except Exception:
+        logger.exception("Google userinfo fetch failed")
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
+
+    google_sub: str = userinfo.get("id", "")
+    email: Optional[str] = userinfo.get("email")
+    name: Optional[str] = userinfo.get("name")
+
+    if not google_sub:
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
+
+    # Find or create user (same logic as POST /auth/google)
+    user = db.query(User).filter(User.google_id == google_sub, User.is_deleted == False).first()
+    if not user and email:
+        user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
+        if user:
+            user.google_id = google_sub
+    if not user:
+        user = User(
+            phone=f"google_{secrets.token_hex(8)}",
+            name=name,
+            email=email,
+            google_id=google_sub,
+            password_hash=hash_password(secrets.token_hex(32)),
+            email_verified=bool(email),
+        )
+        db.add(user)
+
+    if user.is_banned:
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=banned")
+
+    db.commit()
+    db.refresh(user)
+
+    jwt_token = create_access_token({"sub": str(user.id)}, token_version=user.token_version)
+
+    # Redirect to frontend callback page with token in query param
+    return _RedirectResponse(f"{frontend_url}/auth/callback?token={jwt_token}")

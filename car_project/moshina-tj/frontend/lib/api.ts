@@ -118,8 +118,10 @@ export const authApi = {
     api.post<ApiResponse<{ deep_link: string }>>('/auth/send-otp-telegram', { phone }),
 
   // ── Profile ────────────────────────────────────────────────────────────────
-  me: () =>
-    api.get<ApiResponse<User>>('/auth/me'),
+  me: (token?: string) =>
+    token
+      ? api.get<ApiResponse<User>>('/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      : api.get<ApiResponse<User>>('/auth/me'),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put<ApiResponse<null>>('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
   updateProfile: (data: { name?: string; phone?: string; email?: string }) =>

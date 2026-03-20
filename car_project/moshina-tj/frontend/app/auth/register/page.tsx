@@ -1,7 +1,6 @@
 'use client'
 import { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, FormEvent } from 'react'
 import Link from 'next/link'
-import Script from 'next/script'
 import { useRouter } from 'next/navigation'
 import { authApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
@@ -527,38 +526,7 @@ function OrDivider({ label }: { label: string }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function RegisterPage() {
   const { lang } = useLang()
-  const { login } = useAuth()
-  const router = useRouter()
   const [tab, setTab] = useState<'phone' | 'email'>('phone')
-  const [googleError, setGoogleError] = useState('')
-  const googleBtnRef = useRef<HTMLDivElement>(null)
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-
-  function initGoogleButton() {
-    if (!googleClientId || !googleBtnRef.current) return
-    const google = (window as Window & { google?: { accounts: { id: { initialize: (cfg: Record<string, unknown>) => void; renderButton: (el: HTMLElement, cfg: Record<string, unknown>) => void } } } }).google
-    if (!google?.accounts?.id) return
-    google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: async (response: { credential: string }) => {
-        try {
-          const res = await authApi.googleLogin(response.credential)
-          const data = res.data.data!
-          login(data.token.access_token, data.user)
-          router.push('/')
-        } catch {
-          setGoogleError(lang === 'ru' ? 'Ошибка входа через Google' : 'Хато ҳангоми вуруд тавассути Google')
-        }
-      },
-    })
-    google.accounts.id.renderButton(googleBtnRef.current, {
-      type: 'standard',
-      theme: 'outline',
-      size: 'large',
-      width: googleBtnRef.current.offsetWidth || 340,
-      text: 'signup_with',
-    })
-  }
 
   const tabBtn = (active: boolean): React.CSSProperties => ({
     flex: 1, padding: '10px', border: 'none', borderRadius: '8px', fontFamily: 'var(--font)',
@@ -598,34 +566,31 @@ export default function RegisterPage() {
         <div style={{ marginTop: '20px' }}>
           <OrDivider label={t('auth.orContinueWith', lang)} />
           <div style={{ marginTop: '12px' }}>
-            {googleClientId ? (
-              <div ref={googleBtnRef} style={{ width: '100%', minHeight: '44px', display: 'flex', justifyContent: 'center' }} />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setGoogleError(lang === 'ru' ? 'Добавьте NEXT_PUBLIC_GOOGLE_CLIENT_ID в .env.local' : 'NEXT_PUBLIC_GOOGLE_CLIENT_ID илова кунед')}
-                style={{
-                  width: '100%', background: 'var(--surface)', color: 'var(--text)',
-                  border: '1px solid var(--border)', borderRadius: '12px', padding: '13px',
-                  fontSize: '15px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                }}
-              >
-                <GoogleIcon />
-                {t('auth.continueGoogle', lang)}
-              </button>
-            )}
-            {googleError && (
-              <p role="alert" style={{ fontSize: '12px', color: 'var(--color-error)', textAlign: 'center', marginTop: '8px', fontWeight: 600 }}>
-                {googleError}
-              </p>
-            )}
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL ?? 'https://tajcar-api.onrender.com/api/v1'}/auth/google/redirect`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                width: '100%',
+                background: 'var(--surface)',
+                color: 'var(--text)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '13px',
+                fontSize: '15px',
+                fontWeight: 600,
+                fontFamily: 'var(--font)',
+                textDecoration: 'none',
+                boxSizing: 'border-box',
+              }}
+            >
+              <GoogleIcon />
+              {t('auth.continueGoogle', lang)}
+            </a>
           </div>
         </div>
-
-        {googleClientId && (
-          <Script src="https://accounts.google.com/gsi/client" onLoad={initGoogleButton} strategy="afterInteractive" />
-        )}
 
         <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--text-muted)' }}>
           {lang === 'ru' ? 'Уже есть аккаунт?' : 'Аккаунт дорӣ?'}{' '}
