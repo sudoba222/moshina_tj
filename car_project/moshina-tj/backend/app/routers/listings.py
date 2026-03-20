@@ -209,9 +209,23 @@ def create_listing(
     db.flush()  # Get listing.id before committing
 
     for index, url in enumerate(payload.image_urls):
+        url_str = str(url)
+        # Extract cloudinary public_id from URL if it's a Cloudinary URL
+        cloudinary_id: str | None = None
+        if "cloudinary.com" in url_str:
+            # URL format: .../upload/v{version}/{public_id}.{ext}
+            try:
+                path = url_str.split("/upload/", 1)[1]
+                # Strip version segment (v1234567890/)
+                if path.startswith("v") and "/" in path:
+                    path = path.split("/", 1)[1]
+                cloudinary_id = path.rsplit(".", 1)[0]  # remove extension
+            except Exception:
+                pass
         image = ListingImage(
             listing_id=listing.id,
-            url=url,
+            url=url_str,
+            cloudinary_id=cloudinary_id,
             is_primary=(index == 0),
             order_index=index,
         )

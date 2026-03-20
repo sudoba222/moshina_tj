@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, Generic, Optional, TypeVar
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 from app.models import Currency, FuelType, ListingStatus, ListingType, TransmissionType, UserRole
 
@@ -144,7 +144,7 @@ class ListingCreate(BaseModel):
     city: str
     description: Optional[str] = None
     installment_available: bool = False
-    image_urls: list[AnyHttpUrl] = []
+    image_urls: list[str] = []
     rental_rules: Optional[RentalRules] = None
 
     @field_validator("year")
