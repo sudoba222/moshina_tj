@@ -382,7 +382,8 @@ def verify_otp(request: Request, payload: VerifyOtpPayload, background_tasks: Ba
     # Consume the OTP — must not be reusable
     otp.is_used = True
 
-    user = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
+    # Include soft-deleted users so we don't hit a unique constraint on re-insert
+    user = db.query(User).filter(User.phone == payload.phone).first()
 
     # Look up most recent used TelegramToken for this phone to get Telegram name/chat_id
     tg_token = (
@@ -394,14 +395,24 @@ def verify_otp(request: Request, payload: VerifyOtpPayload, background_tasks: Ba
     tg_name = tg_token.telegram_name if tg_token else None
     tg_chat_id = tg_token.telegram_chat_id if tg_token else None
 
+    # If telegram_chat_id is already owned by a different user, don't reuse it
+    if tg_chat_id:
+        existing_tg_user = db.query(User).filter(User.telegram_chat_id == tg_chat_id).first()
+        if existing_tg_user and (user is None or str(existing_tg_user.id) != str(user.id) if user else True):
+            tg_chat_id = None
+
     if user:
-        # Existing user — log in
+        # Existing (or previously deleted) user — restore if deleted, then log in
+        if user.is_deleted:
+            user.is_deleted = False
+            user.deleted_at = None
         if user.is_banned:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
         # Save telegram_chat_id if we have it and user doesn't
         if tg_chat_id and not user.telegram_chat_id:
             user.telegram_chat_id = tg_chat_id
         db.commit()
+        db.refresh(user)
     else:
         # New user — register; prefer payload name, fall back to Telegram name
         name = (payload.name or "").strip() or tg_name or None
