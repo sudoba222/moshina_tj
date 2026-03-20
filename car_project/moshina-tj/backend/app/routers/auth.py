@@ -471,7 +471,7 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
 
     # Create user with email_verified=False
     user = User(
-        phone=f"email_{secrets.token_hex(8)}",  # placeholder — phone required by schema
+        phone=f"email_{secrets.token_hex(4)}",  # placeholder — phone required by schema
         name=payload.name,
         email=payload.email,
         password_hash=hash_password(payload.password),
@@ -794,7 +794,7 @@ def google_auth(
     # 3. Create new user
     if not user:
         user = User(
-            phone=f"google_{secrets.token_hex(8)}",
+            phone=f"google_{secrets.token_hex(4)}",
             name=name,
             email=email,
             google_id=google_sub,
@@ -899,7 +899,7 @@ def apple_auth(
     # 3. Create new user
     if not user:
         user = User(
-            phone=f"apple_{secrets.token_hex(8)}",
+            phone=f"apple_{secrets.token_hex(4)}",
             name=payload.name,
             email=email,
             apple_id=apple_sub,
@@ -1037,7 +1037,7 @@ async def google_oauth_callback(
         if not user:
             is_new_user = True
             user = User(
-                phone=f"google_{secrets.token_hex(8)}",
+                phone=f"google_{secrets.token_hex(4)}",
                 name=name,
                 email=email,
                 google_id=google_sub,
