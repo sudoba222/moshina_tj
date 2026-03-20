@@ -1,0 +1,29 @@
+# Claude Code — never commit these
+car_project/memory/
+car_project/CLAUDE.md
+car_project/.idea/
+car_project/.DS_Store
+car_project/**/.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.env
+.env.local
+.env.*.local
+
+# Next.js
+car_project/moshina-tj/frontend/.next/
+car_project/moshina-tj/frontend/node_modules/
+car_project/moshina-tj/frontend/tsconfig.tsbuildinfo
+
+# Misc session files
+car_project/*.txt
+car_project/LAUNCH_GUIDE.md
+car_project/LAUNCH_PLAN.md
+car_project/QA_TEST_PLAN.md
+car_project/moshina-claude-code-prompt.md
