@@ -18,6 +18,7 @@ from app.auth import (
 )
 from app.database import get_db
 from app.email_service import send_email_otp
+import asyncio
 from app.models import OtpCode, TelegramToken, User
 from app.schemas import ApiResponse, AuthResponse, Token, UserCreate, UserResponse
 
@@ -384,14 +385,27 @@ def verify_otp(request: Request, payload: VerifyOtpPayload, db: Session = Depend
 
     user = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
 
+    # Look up most recent used TelegramToken for this phone to get Telegram name/chat_id
+    tg_token = (
+        db.query(TelegramToken)
+        .filter(TelegramToken.phone == payload.phone, TelegramToken.is_used == True)
+        .order_by(TelegramToken.created_at.desc())
+        .first()
+    )
+    tg_name = tg_token.telegram_name if tg_token else None
+    tg_chat_id = tg_token.telegram_chat_id if tg_token else None
+
     if user:
         # Existing user — log in
         if user.is_banned:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
+        # Save telegram_chat_id if we have it and user doesn't
+        if tg_chat_id and not user.telegram_chat_id:
+            user.telegram_chat_id = tg_chat_id
         db.commit()
     else:
-        # New user — register
-        name = (payload.name or "").strip() or None
+        # New user — register; prefer payload name, fall back to Telegram name
+        name = (payload.name or "").strip() or tg_name or None
         chosen_password = payload.password.strip() if payload.password else None
         if not chosen_password or len(chosen_password) < 6:
             chosen_password = secrets.token_hex(16)  # random if not provided
@@ -400,10 +414,17 @@ def verify_otp(request: Request, payload: VerifyOtpPayload, db: Session = Depend
             name=name,
             password_hash=hash_password(chosen_password),
             phone_verified=True,
+            telegram_chat_id=tg_chat_id,
         )
         db.add(user)
         db.commit()
         db.refresh(user)
+
+    # Fire-and-forget: send welcome message to bot
+    chat_id_for_bot = tg_chat_id or user.telegram_chat_id
+    if chat_id_for_bot:
+        from app.routers.telegram_webhook import send_welcome_message
+        asyncio.create_task(send_welcome_message(chat_id_for_bot, user.name))
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
     return ApiResponse(

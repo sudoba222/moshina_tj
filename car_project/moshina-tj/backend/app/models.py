@@ -328,6 +328,8 @@ class TelegramToken(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     is_used = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    telegram_name = Column(String(200), nullable=True)     # first_name from Telegram
+    telegram_chat_id = Column(String(32), nullable=True)   # chat_id from Telegram
 
 
 class Favorite(Base):

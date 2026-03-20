@@ -186,14 +186,14 @@ function PhoneTab({ lang }: { lang: string }) {
 
   async function handleSendOtpTelegram() {
     setError('')
-    if (!name.trim()) { setError(lang === 'ru' ? 'Введите имя' : 'Номро ворид кунед'); return }
     if (!phone.trim()) { setError(lang === 'ru' ? 'Введите номер телефона' : 'Рақами телефонро ворид кунед'); return }
-    if (!password.trim()) { setError(lang === 'ru' ? 'Введите пароль' : 'Рамзро ворид кунед'); return }
-    if (password.length < 6) { setError(lang === 'ru' ? 'Пароль минимум 6 символов' : 'Рамз бояд ҳадди ақал 6 аломат бошад'); return }
     try {
       setLoading(true)
       const res = await authApi.sendOtpTelegram(fullPhone)
-      setTelegramDeepLink(res.data.data?.deep_link ?? null)
+      const link = res.data.data?.deep_link ?? null
+      setTelegramDeepLink(link)
+      // Open Telegram immediately — user goes to bot, gets OTP, comes back to enter it
+      if (link) window.open(link, '_blank', 'noopener,noreferrer')
       setStep(2); startCountdown()
     } catch (err) {
       setError(extractApiError(err, lang === 'ru' ? 'Ошибка. Попробуйте позже.' : 'Хато. Баъдтар кӯшиш кунед.'))
@@ -302,35 +302,33 @@ function PhoneTab({ lang }: { lang: string }) {
       <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', marginBottom: '8px', textAlign: 'center' }}>
         {lang === 'ru' ? 'Введите код' : 'Рамзро ворид кунед'}
       </h2>
-      <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: telegramDeepLink ? '12px' : '28px' }}>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '28px' }}>
         {telegramDeepLink
-          ? t('auth.telegramSent', lang as import('@/types').Lang)
+          ? (lang === 'ru'
+            ? 'Telegram открыт — бот отправит вам код. Введите его ниже.'
+            : 'Telegram кушода шуд — бот рамзро мефиристад. Онро дар поён ворид кунед.')
           : (lang === 'ru' ? `Код отправлен на +992${phone}` : `Рамз ба +992${phone} фиристода шуд`)
         }
       </p>
 
-      {/* Telegram deep link button */}
+      {/* Telegram: show re-open button in case user closed it */}
       {telegramDeepLink && (
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
           <a
             href={telegramDeepLink}
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: '8px',
-              background: '#229ED9', color: '#fff', borderRadius: '10px',
-              padding: '10px 20px', fontSize: '14px', fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              color: '#229ED9', fontSize: '13px', fontWeight: 600,
               textDecoration: 'none',
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#229ED9">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.93c-.12.56-.47.7-.94.44l-2.62-1.93-1.26 1.21c-.14.14-.26.26-.52.26l.19-2.66 4.82-4.36c.21-.19-.05-.3-.32-.11L7.93 14.7l-2.56-.8c-.56-.17-.57-.56.12-.83l10.01-3.86c.46-.17.87.11.14.59z"/>
             </svg>
-            {t('auth.openTelegram', lang as import('@/types').Lang)}
+            {lang === 'ru' ? 'Открыть бот снова' : 'Боти Telegram-ро дубора кушоед'}
           </a>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
-            {lang === 'ru' ? 'Затем введите код ниже' : 'Сипас рамзро дар поён ворид кунед'}
-          </p>
         </div>
       )}
 
