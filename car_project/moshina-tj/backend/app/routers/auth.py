@@ -925,7 +925,7 @@ def apple_auth(
 # ─── Google OAuth redirect flow ───────────────────────────────────────────────
 
 @router.get("/google/redirect")
-async def google_oauth_redirect() -> Any:
+def google_oauth_redirect() -> Any:
     """Redirect the user to Google's OAuth consent page."""
     import os, urllib.parse
     from fastapi.responses import RedirectResponse as _RedirectResponse
@@ -954,7 +954,7 @@ async def google_oauth_redirect() -> Any:
 
 
 @router.get("/google/callback")
-async def google_oauth_callback(
+def google_oauth_callback(
     code: str = "",
     error: str = "",
     db: Session = Depends(get_db),
@@ -975,10 +975,10 @@ async def google_oauth_callback(
     if error or not code:
         return _RedirectResponse(f"{frontend_url}/auth/login?error=google_cancelled")
 
-    # Exchange authorization code for access token
+    # Exchange authorization code for access token (sync httpx — avoids greenlet mismatch)
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            token_resp = await client.post(
+        with httpx.Client(timeout=10) as client:
+            token_resp = client.post(
                 "https://oauth2.googleapis.com/token",
                 data={
                     "code": code,
@@ -1001,8 +1001,8 @@ async def google_oauth_callback(
 
     # Fetch user info from Google
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            userinfo_resp = await client.get(
+        with httpx.Client(timeout=10) as client:
+            userinfo_resp = client.get(
                 "https://www.googleapis.com/oauth2/v2/userinfo",
                 headers={"Authorization": f"Bearer {access_token}"},
             )

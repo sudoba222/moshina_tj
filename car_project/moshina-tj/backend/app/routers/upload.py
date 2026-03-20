@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 
 from app.auth import get_current_user
+from app.config import settings
 from app.models import User
 from app.schemas import ApiResponse
 
@@ -15,6 +16,10 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 _ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 _MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 _EXTENSIONS = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+
+
+def _use_cloudinary() -> bool:
+    return bool(settings.cloudinary_cloud_name and settings.cloudinary_api_key and settings.cloudinary_api_secret)
 
 
 @router.post("/image", response_model=ApiResponse[dict])
@@ -35,7 +40,45 @@ async def upload_image(
             detail="File exceeds maximum allowed size of 10 MB",
         )
 
-    ext = _EXTENSIONS[file.content_type]
+    if _use_cloudinary():
+        return _upload_to_cloudinary(contents, file.content_type)
+    else:
+        return _upload_to_local(contents, file.content_type)
+
+
+def _upload_to_cloudinary(contents: bytes, content_type: str) -> ApiResponse:
+    import cloudinary
+    import cloudinary.uploader
+    import io
+
+    cloudinary.config(
+        cloud_name=settings.cloudinary_cloud_name,
+        api_key=settings.cloudinary_api_key,
+        api_secret=settings.cloudinary_api_secret,
+        secure=True,
+    )
+
+    resource_type = "image"
+    result = cloudinary.uploader.upload(
+        io.BytesIO(contents),
+        folder="tajcar",
+        resource_type=resource_type,
+        quality="auto",
+        fetch_format="auto",
+    )
+
+    return ApiResponse(
+        success=True,
+        data={
+            "url": result["secure_url"],
+            "cloudinary_id": result["public_id"],
+        },
+        message="Image uploaded successfully",
+    )
+
+
+def _upload_to_local(contents: bytes, content_type: str) -> ApiResponse:
+    ext = _EXTENSIONS[content_type]
     filename = f"{uuid.uuid4().hex}{ext}"
     dest = UPLOADS_DIR / filename
 
