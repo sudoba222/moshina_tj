@@ -139,6 +139,11 @@ const strings = {
     telegramStep:     { ru: 'Откройте Telegram и получите код', tj: 'Telegram-ро кушоед ва рамзро гиред' },
     openTelegram:     { ru: 'Открыть Telegram',             tj: 'Telegram кушодан' },
     telegramSent:     { ru: 'Код отправлен в Telegram',     tj: 'Рамз ба Telegram фиристода шуд' },
+    almostDone:       { ru: 'Почти готово!',                tj: 'Қариб тамом!' },
+    confirmName:      { ru: 'Подтвердите или измените ваше имя', tj: 'Номи худро тасдиқ ё тағйир диҳед' },
+    nameRequired:     { ru: 'Укажите ваше имя',             tj: 'Номатонро нависед' },
+    namePlaceholder:  { ru: 'Ваше имя',                     tj: 'Номи шумо' },
+    next:             { ru: 'Далее',                        tj: 'Идома' },
   },
   post: {
     title:        { ru: 'Подать объявление',    tj: 'Эълон диҳед' },

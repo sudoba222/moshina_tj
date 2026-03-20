@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, field_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -18,7 +18,6 @@ from app.auth import (
 )
 from app.database import get_db
 from app.email_service import send_email_otp
-import asyncio
 from app.models import OtpCode, TelegramToken, User
 from app.schemas import ApiResponse, AuthResponse, Token, UserCreate, UserResponse
 
@@ -336,7 +335,7 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
 
 @router.post("/verify-otp", response_model=ApiResponse[AuthResponse])
 @limiter.limit("10/hour")
-def verify_otp(request: Request, payload: VerifyOtpPayload, db: Session = Depends(get_db)):
+def verify_otp(request: Request, payload: VerifyOtpPayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Verify OTP code.
 
     - If user exists with this phone: log them in.
@@ -420,11 +419,11 @@ def verify_otp(request: Request, payload: VerifyOtpPayload, db: Session = Depend
         db.commit()
         db.refresh(user)
 
-    # Fire-and-forget: send welcome message to bot
+    # Send welcome message to bot in the background (non-blocking)
     chat_id_for_bot = tg_chat_id or user.telegram_chat_id
     if chat_id_for_bot:
         from app.routers.telegram_webhook import send_welcome_message
-        asyncio.create_task(send_welcome_message(chat_id_for_bot, user.name))
+        background_tasks.add_task(send_welcome_message, chat_id_for_bot, user.name)
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
     return ApiResponse(
@@ -932,10 +931,11 @@ async def google_oauth_redirect() -> Any:
     from fastapi.responses import RedirectResponse as _RedirectResponse
 
     client_id = os.getenv("GOOGLE_CLIENT_ID")
-    if not client_id:
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    if not client_id or not client_secret:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Google OAuth is not configured on this server",
+            detail="Google OAuth is not configured on this server (missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET)",
         )
     redirect_uri = os.getenv(
         "GOOGLE_REDIRECT_URI",
@@ -995,8 +995,9 @@ async def google_oauth_callback(
 
     access_token = token_data.get("access_token")
     if not access_token:
+        google_err = token_data.get("error", "unknown")
         logger.error("Google token exchange returned no access_token: %s", token_data)
-        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed&detail={google_err}")
 
     # Fetch user info from Google
     try:
@@ -1018,12 +1019,14 @@ async def google_oauth_callback(
         return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
 
     # Find or create user (same logic as POST /auth/google)
+    is_new_user = False
     user = db.query(User).filter(User.google_id == google_sub, User.is_deleted == False).first()
     if not user and email:
         user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
         if user:
             user.google_id = google_sub
     if not user:
+        is_new_user = True
         user = User(
             phone=f"google_{secrets.token_hex(8)}",
             name=name,
@@ -1042,5 +1045,13 @@ async def google_oauth_callback(
 
     jwt_token = create_access_token({"sub": str(user.id)}, token_version=user.token_version)
 
-    # Redirect to frontend callback page with token in query param
+    # New users (or users with no name) → name setup page
+    import urllib.parse as _up
+    if is_new_user or not user.name:
+        encoded_name = _up.quote(name or "", safe="")
+        return _RedirectResponse(
+            f"{frontend_url}/auth/google-setup?token={jwt_token}&name={encoded_name}"
+        )
+
+    # Existing users → straight to callback (auto-login)
     return _RedirectResponse(f"{frontend_url}/auth/callback?token={jwt_token}")

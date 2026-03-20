@@ -124,8 +124,10 @@ export const authApi = {
       : api.get<ApiResponse<User>>('/auth/me'),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put<ApiResponse<null>>('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
-  updateProfile: (data: { name?: string; phone?: string; email?: string }) =>
-    api.put<ApiResponse<User>>('/auth/profile', data),
+  updateProfile: (data: { name?: string; phone?: string; email?: string }, token?: string) =>
+    token
+      ? api.put<ApiResponse<User>>('/auth/profile', data, { headers: { Authorization: `Bearer ${token}` } })
+      : api.put<ApiResponse<User>>('/auth/profile', data),
   forgotPassword: (identifier: string) =>
     api.post<ApiResponse<{ dev_code?: string }>>('/auth/forgot-password', { identifier }),
   resetPassword: (identifier: string, code: string, newPassword: string) =>

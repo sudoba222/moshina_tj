@@ -1,7 +1,7 @@
 'use client'
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { authApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
@@ -85,8 +85,9 @@ function OrDivider({ label }: { label: string }) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login } = useAuth()
   const { lang } = useLang()
 
@@ -95,6 +96,21 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const err = searchParams.get('error')
+    const detail = searchParams.get('detail')
+    if (err === 'google_cancelled') {
+      setError(lang === 'ru' ? 'Вход через Google отменён' : 'Воридшавӣ тавассути Google бекор шуд')
+    } else if (err === 'google_failed') {
+      const msg = detail ? `Google: ${detail}` : (lang === 'ru' ? 'Ошибка входа через Google. Попробуйте другой способ.' : 'Хатои воридшавӣ тавассути Google.')
+      setError(msg)
+    } else if (err === 'banned') {
+      setError(lang === 'ru' ? 'Аккаунт заблокирован' : 'Ҳисоб баста шудааст')
+    } else if (err === 'oauth_failed') {
+      setError(lang === 'ru' ? 'Ошибка авторизации. Попробуйте ещё раз.' : 'Хатои иҷозат. Дубора кӯшиш кунед.')
+    }
+  }, [searchParams, lang])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -241,5 +257,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   )
 }

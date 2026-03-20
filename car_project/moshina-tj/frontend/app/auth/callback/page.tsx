@@ -1,10 +1,10 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { authApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 
-export default function AuthCallbackPage() {
+function AuthCallbackInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login } = useAuth()
@@ -18,7 +18,6 @@ export default function AuthCallbackPage() {
       return
     }
 
-    // Fetch the current user using the token, then store auth state
     authApi.me(token)
       .then((res) => {
         const user = res.data.data
@@ -48,5 +47,13 @@ export default function AuthCallbackPage() {
         Входим...
       </p>
     </div>
+  )
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthCallbackInner />
+    </Suspense>
   )
 }
