@@ -39,37 +39,37 @@ USERS = [
     {
         "phone": "+992900000001",
         "name": "Алишер Рахимов",
-        "password": "moshina123",
+        "password": "tajcar123",
         "role": UserRole.user,
     },
     {
         "phone": "+992900000002",
         "name": "Баходур Салимов",
-        "password": "moshina123",
+        "password": "tajcar123",
         "role": UserRole.dealer,
     },
     {
         "phone": "+992900000003",
         "name": "Admin Moshina",
-        "password": "moshina123",
+        "password": "tajcar123",
         "role": UserRole.admin,
     },
     {
         "phone": "+992900000004",
         "name": "Moderator Moshina",
-        "password": "moshina123",
+        "password": "tajcar123",
         "role": UserRole.moderator,
     },
     {
         "phone": "+992900000005",
         "name": "Manager Moshina",
-        "password": "moshina123",
+        "password": "tajcar123",
         "role": UserRole.manager,
     },
     {
         "phone": "+992900000006",
         "name": "Support Moshina",
-        "password": "moshina123",
+        "password": "tajcar123",
         "role": UserRole.support,
     },
 ]

@@ -31,12 +31,13 @@ def verify_password(plain: str, hashed: str) -> bool:
 _bearer_scheme = HTTPBearer()
 
 
-def create_access_token(data: dict) -> str:
+def create_access_token(data: dict, token_version: int = 0) -> str:
     payload = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
     payload["exp"] = expire
+    payload["ver"] = token_version
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
@@ -67,7 +68,7 @@ def get_current_user(
             detail="Token payload missing subject",
         )
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -77,6 +78,13 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is suspended",
+        )
+    # Reject tokens issued before the user's token_version was bumped
+    if payload.get("ver", 0) != user.token_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     return user
 
@@ -116,10 +124,12 @@ def get_current_user_optional(
             return None
         user = (
             db.query(User)
-            .filter(User.id == user_id)
+            .filter(User.id == user_id, User.is_deleted == False)
             .options(joinedload(User.dealer_profile))
             .first()
         )
+        if user and user.is_banned:
+            return None
         return user
-    except Exception:
+    except JWTError:
         return None

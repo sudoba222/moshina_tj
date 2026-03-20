@@ -1,10 +1,13 @@
 """
-Search router — provides four endpoints:
+Search router — provides these endpoints:
 
-    GET /search                  Multi-strategy full-text + fuzzy search
-    GET /search/suggestions      Autocomplete brand/model names
-    GET /search/did-you-mean     Spelling correction for a query
-    GET /search/recommendations  Top-viewed or contextually similar listings
+    GET  /search                  Multi-strategy full-text + fuzzy search
+    GET  /search/suggestions      Structured autocomplete (brand/model/city)
+    GET  /search/did-you-mean     Spelling correction for a query
+    GET  /search/recommendations  Multi-signal scored similar listings
+    GET  /search/popular          Top searched queries (past 30 days)
+    GET  /search/trending         Top brands & cities by new listings (7 days)
+    POST /search/log              Client-side search event logging
 
 PostgreSQL extensions required (handled by migration c3d4e5f6a7b8):
     pg_trgm        — similarity(), word_similarity(), trigram indexes
@@ -12,40 +15,65 @@ PostgreSQL extensions required (handled by migration c3d4e5f6a7b8):
 """
 
 import logging
-from typing import Optional
+import time
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import Float, Integer, cast, func, literal, or_, text, union
+from fastapi import APIRouter, Body, Depends, Query, Request
+from app.limiter import limiter
+from sqlalchemy import Float, Integer, cast, desc, func, literal, or_, text, union
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Listing, ListingStatus
-from app.schemas import ApiResponse, ListingResponse
+from app.models import Listing, ListingStatus, SearchLog
+from app.schemas import ApiResponse, ListingResponse, SuggestionItem
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/search", tags=["search"])
 
 # ---------------------------------------------------------------------------
+# Module-level cache for /popular
+# ---------------------------------------------------------------------------
+_popular_cache: Dict[str, Any] = {}   # keys: "ts" (float), "data" (list[str])
+_POPULAR_CACHE_TTL = 600              # 10 minutes in seconds
+
+# ---------------------------------------------------------------------------
+# Thresholds
+# ---------------------------------------------------------------------------
+_TRGM_SIMILARITY_THRESHOLD = 0.2
+_SUGGESTION_THRESHOLD = 0.3
+_DYM_SIMILARITY_GOOD_ENOUGH = 0.8
+_DYM_SIMILARITY_MIN = 0.3
+_DYM_EDIT_RATIO_MAX = 0.5
+
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
-
-# Minimum trigram similarity threshold for the fuzzy fallback pass.
-_TRGM_SIMILARITY_THRESHOLD = 0.2
-
-# Minimum word-similarity score used in /suggestions.
-_SUGGESTION_THRESHOLD = 0.3
-
-# Levenshtein / similarity thresholds for /did-you-mean.
-_DYM_SIMILARITY_GOOD_ENOUGH = 0.8   # skip correction — query already matches well
-_DYM_SIMILARITY_MIN = 0.3           # candidate must be at least this similar
-_DYM_EDIT_RATIO_MAX = 0.5           # edit distance must be <= len(q) * this
-
 
 def _active_base(db: Session):
     """Return a base query restricted to active listings."""
     return db.query(Listing).filter(Listing.status == ListingStatus.active)
+
+
+def _log_search(db: Session, query: str, results_count: int, user_id=None) -> None:
+    """
+    Insert a SearchLog row. Wrapped in try/except so that any logging
+    failure never breaks the search response.
+    """
+    try:
+        entry = SearchLog(
+            query=query,
+            results_count=results_count,
+            user_id=user_id,
+        )
+        db.add(entry)
+        db.commit()
+    except Exception:
+        logger.exception("Failed to write SearchLog for query=%r", query)
+        db.rollback()
 
 
 # ---------------------------------------------------------------------------
@@ -65,21 +93,34 @@ def search_listings(
     2. pg_trgm trigram similarity  — typo-tolerant, similarity > 0.2
     3. ILIKE                       — last-resort substring match
 
-    Only active listings are returned. Images are eager-loaded via joinedload
-    to prevent N+1 queries.
+    Includes description and year in the tsvector for broader matching.
+    Exact brand/model matches are boosted to the top of results.
+    Logs every search for analytics.
+    Only active listings are returned. Images are eager-loaded via joinedload.
     """
     q = q.strip()
+    q_lower = q.lower()
 
     # ------------------------------------------------------------------
     # Strategy 1: tsvector full-text search
+    # Includes brand, model, city, description, and year (cast to text).
     # ------------------------------------------------------------------
     search_vector = func.to_tsvector(
         "simple",
-        func.concat_ws(" ", Listing.brand, Listing.model, Listing.city),
+        func.coalesce(Listing.brand, "")
+        + " "
+        + func.coalesce(Listing.model, "")
+        + " "
+        + func.coalesce(Listing.city, "")
+        + " "
+        + func.coalesce(Listing.description, "")
+        + " "
+        + cast(Listing.year, text("text")),
     )
     ts_query = func.plainto_tsquery("simple", q)
     ts_rank_expr = func.ts_rank(search_vector, ts_query)
 
+    # Exact brand/model match gets a boost multiplier applied in Python below
     listings = (
         _active_base(db)
         .options(joinedload(Listing.images))
@@ -90,6 +131,9 @@ def search_listings(
     )
 
     if listings:
+        # Boost exact brand/model matches to the front
+        listings = _boost_exact(listings, q_lower)
+        _log_search(db, q, len(listings))
         return ApiResponse(
             success=True,
             data=[ListingResponse.model_validate(l) for l in listings],
@@ -98,7 +142,6 @@ def search_listings(
 
     # ------------------------------------------------------------------
     # Strategy 2: trigram similarity (pg_trgm)
-    # Handles typos and close spellings. similarity() returns 0..1.
     # ------------------------------------------------------------------
     brand_sim = func.similarity(Listing.brand, q)
     model_sim = func.similarity(Listing.model, q)
@@ -121,6 +164,8 @@ def search_listings(
     )
 
     if listings:
+        listings = _boost_exact(listings, q_lower)
+        _log_search(db, q, len(listings))
         return ApiResponse(
             success=True,
             data=[ListingResponse.model_validate(l) for l in listings],
@@ -129,7 +174,6 @@ def search_listings(
 
     # ------------------------------------------------------------------
     # Strategy 3: ILIKE substring match
-    # Broadest net — returns anything that contains the query string.
     # ------------------------------------------------------------------
     pattern = f"%{q}%"
     listings = (
@@ -140,6 +184,7 @@ def search_listings(
                 Listing.brand.ilike(pattern),
                 Listing.model.ilike(pattern),
                 Listing.city.ilike(pattern),
+                Listing.description.ilike(pattern),
             )
         )
         .order_by(Listing.views.desc())
@@ -147,6 +192,7 @@ def search_listings(
         .all()
     )
 
+    _log_search(db, q, len(listings))
     return ApiResponse(
         success=True,
         data=[ListingResponse.model_validate(l) for l in listings],
@@ -154,88 +200,175 @@ def search_listings(
     )
 
 
+def _boost_exact(listings: list, q_lower: str) -> list:
+    """
+    Stable-sort: listings whose brand or model exactly matches the query
+    (case-insensitive) are moved to the front. Order within each group is
+    preserved (Python sort is stable).
+    """
+    return sorted(
+        listings,
+        key=lambda l: 0 if (l.brand.lower() == q_lower or l.model.lower() == q_lower) else 1,
+    )
+
+
 # ---------------------------------------------------------------------------
 # GET /search/suggestions
 # ---------------------------------------------------------------------------
 
-@router.get("/suggestions", response_model=ApiResponse[list[str]])
+@router.get("/suggestions", response_model=ApiResponse[list[SuggestionItem]])
 def search_suggestions(
     q: str = Query(..., min_length=1, description="Partial search term for autocomplete"),
     db: Session = Depends(get_db),
 ):
     """
-    Returns up to 10 distinct autocomplete suggestions drawn from the brand and
-    model columns of active listings.
+    Returns up to 12 structured autocomplete suggestions drawn from brand,
+    model, and city columns of active listings.
 
-    Two candidate sets are combined before deduplication:
-      - Trigram word-similarity > 0.3  (handles typos mid-word)
-      - Exact prefix match via ILIKE   (fast, no typo tolerance)
+    Each suggestion carries:
+      - term: the suggestion text
+      - type: "brand", "model", or "city"
+      - count: number of active listings for that term
 
-    Results are sorted by descending word_similarity so the most relevant
-    suggestion appears first.
+    Caps: 4 brands + 4 models + 4 cities maximum. Sorted by match score desc
+    then count desc within each type.
     """
     q = q.strip()
     prefix_pattern = f"{q}%"
+    CAP = 4
 
-    # word_similarity matches the query against individual words in the column
-    # value, which works better than full similarity() for partial tokens.
     brand_ws = func.word_similarity(q, Listing.brand)
     model_ws = func.word_similarity(q, Listing.model)
+    city_ws  = func.word_similarity(q, Listing.city)
 
-    # --- Brand candidates ---
+    # ---- Brand candidates (trigram + prefix) ----
     brand_trgm = (
         db.query(Listing.brand.label("term"), brand_ws.label("score"))
-        .filter(
-            Listing.status == ListingStatus.active,
-            brand_ws > _SUGGESTION_THRESHOLD,
-        )
+        .filter(Listing.status == ListingStatus.active, brand_ws > _SUGGESTION_THRESHOLD)
         .distinct()
     )
-
     brand_prefix = (
         db.query(Listing.brand.label("term"), literal(1.0).label("score"))
-        .filter(
-            Listing.status == ListingStatus.active,
-            Listing.brand.ilike(prefix_pattern),
-        )
+        .filter(Listing.status == ListingStatus.active, Listing.brand.ilike(prefix_pattern))
         .distinct()
     )
-
-    # --- Model candidates ---
-    model_trgm = (
-        db.query(Listing.model.label("term"), model_ws.label("score"))
-        .filter(
-            Listing.status == ListingStatus.active,
-            model_ws > _SUGGESTION_THRESHOLD,
-        )
-        .distinct()
-    )
-
-    model_prefix = (
-        db.query(Listing.model.label("term"), literal(1.0).label("score"))
-        .filter(
-            Listing.status == ListingStatus.active,
-            Listing.model.ilike(prefix_pattern),
-        )
-        .distinct()
-    )
-
-    # UNION merges all four candidate sets; duplicates on (term, score) are
-    # collapsed. We then pick distinct terms sorted by best score descending.
-    combined = union(brand_trgm, brand_prefix, model_trgm, model_prefix).subquery()
-
-    rows = (
+    brand_combined = union(brand_trgm, brand_prefix).subquery()
+    brand_rows = (
         db.query(
-            combined.c.term,
-            func.max(cast(combined.c.score, Float)).label("best_score"),
+            brand_combined.c.term,
+            func.max(cast(brand_combined.c.score, Float)).label("best_score"),
         )
-        .group_by(combined.c.term)
-        .order_by(func.max(cast(combined.c.score, Float)).desc())
-        .limit(10)
+        .group_by(brand_combined.c.term)
+        .order_by(
+            func.max(cast(brand_combined.c.score, Float)).desc(),
+        )
+        .limit(CAP)
         .all()
     )
 
-    suggestions = [row.term for row in rows if row.term]
+    # ---- Model candidates (trigram + prefix) ----
+    model_trgm = (
+        db.query(Listing.model.label("term"), model_ws.label("score"))
+        .filter(Listing.status == ListingStatus.active, model_ws > _SUGGESTION_THRESHOLD)
+        .distinct()
+    )
+    model_prefix = (
+        db.query(Listing.model.label("term"), literal(1.0).label("score"))
+        .filter(Listing.status == ListingStatus.active, Listing.model.ilike(prefix_pattern))
+        .distinct()
+    )
+    model_combined = union(model_trgm, model_prefix).subquery()
+    model_rows = (
+        db.query(
+            model_combined.c.term,
+            func.max(cast(model_combined.c.score, Float)).label("best_score"),
+        )
+        .group_by(model_combined.c.term)
+        .order_by(
+            func.max(cast(model_combined.c.score, Float)).desc(),
+        )
+        .limit(CAP)
+        .all()
+    )
+
+    # ---- City candidates (trigram + prefix) ----
+    city_trgm = (
+        db.query(Listing.city.label("term"), city_ws.label("score"))
+        .filter(Listing.status == ListingStatus.active, city_ws > _SUGGESTION_THRESHOLD)
+        .distinct()
+    )
+    city_prefix = (
+        db.query(Listing.city.label("term"), literal(1.0).label("score"))
+        .filter(Listing.status == ListingStatus.active, Listing.city.ilike(prefix_pattern))
+        .distinct()
+    )
+    city_combined = union(city_trgm, city_prefix).subquery()
+    city_rows = (
+        db.query(
+            city_combined.c.term,
+            func.max(cast(city_combined.c.score, Float)).label("best_score"),
+        )
+        .group_by(city_combined.c.term)
+        .order_by(
+            func.max(cast(city_combined.c.score, Float)).desc(),
+        )
+        .limit(CAP)
+        .all()
+    )
+
+    # ---- Build result with counts ----
+    suggestions: list[SuggestionItem] = []
+    seen: set[tuple[str, str]] = set()
+
+    def _count_listings(field, value: str) -> int:
+        return (
+            db.query(func.count(Listing.id))
+            .filter(Listing.status == ListingStatus.active, field == value)
+            .scalar()
+            or 0
+        )
+
+    for row in brand_rows:
+        if not row.term:
+            continue
+        key = (row.term.lower(), "brand")
+        if key not in seen:
+            seen.add(key)
+            suggestions.append(
+                SuggestionItem(
+                    term=row.term,
+                    type="brand",
+                    count=_count_listings(Listing.brand, row.term),
+                )
+            )
+
+    for row in model_rows:
+        if not row.term:
+            continue
+        key = (row.term.lower(), "model")
+        if key not in seen:
+            seen.add(key)
+            suggestions.append(
+                SuggestionItem(
+                    term=row.term,
+                    type="model",
+                    count=_count_listings(Listing.model, row.term),
+                )
+            )
+
+    for row in city_rows:
+        if not row.term:
+            continue
+        key = (row.term.lower(), "city")
+        if key not in seen:
+            seen.add(key)
+            suggestions.append(
+                SuggestionItem(
+                    term=row.term,
+                    type="city",
+                    count=_count_listings(Listing.city, row.term),
+                )
+            )
 
     return ApiResponse(
         success=True,
@@ -268,15 +401,11 @@ def did_you_mean(
     q_lower = q.lower()
     max_edit_distance = max(1, int(len(q) * _DYM_EDIT_RATIO_MAX))
 
-    # levenshtein() is provided by the fuzzystrmatch extension.
-    # similarity() is provided by pg_trgm.
     brand_edit = func.levenshtein(func.lower(Listing.brand), q_lower)
     model_edit = func.levenshtein(func.lower(Listing.model), q_lower)
     brand_sim  = func.similarity(Listing.brand, q)
     model_sim  = func.similarity(Listing.model, q)
 
-    # Collect one best candidate per column, then pick the global winner.
-    # Using func.least/greatest keeps this in a single round-trip.
     brand_rows = (
         db.query(
             Listing.brand.label("term"),
@@ -309,14 +438,12 @@ def did_you_mean(
         .all()
     )
 
-    # Merge the two candidates and pick the one with the highest similarity.
     candidates = brand_rows + model_rows
     if not candidates:
         return ApiResponse(success=True, data=None, message="No correction found")
 
     best = max(candidates, key=lambda r: r.sim)
 
-    # If the query already matches closely enough, skip the suggestion.
     if best.sim >= _DYM_SIMILARITY_GOOD_ENOUGH:
         return ApiResponse(success=True, data=None, message="Query already matches well")
 
@@ -328,6 +455,133 @@ def did_you_mean(
 
 
 # ---------------------------------------------------------------------------
+# GET /search/popular
+# ---------------------------------------------------------------------------
+
+@router.get("/popular", response_model=ApiResponse[list[str]])
+def popular_searches(db: Session = Depends(get_db)):
+    """
+    Returns top 10 most searched queries from the past 30 days by frequency.
+
+    Falls back to top brands by listing count if SearchLog has fewer than 5
+    entries. Result is cached in memory for 10 minutes.
+    """
+    now = time.monotonic()
+    if _popular_cache.get("ts") and (now - _popular_cache["ts"]) < _POPULAR_CACHE_TTL:
+        return ApiResponse(
+            success=True,
+            data=_popular_cache["data"],
+            message="Popular searches fetched",
+        )
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+
+    log_count = (
+        db.query(func.count(SearchLog.id))
+        .filter(SearchLog.created_at >= cutoff)
+        .scalar()
+        or 0
+    )
+
+    if log_count >= 5:
+        rows = (
+            db.query(SearchLog.query, func.count(SearchLog.id).label("freq"))
+            .filter(SearchLog.created_at >= cutoff)
+            .group_by(SearchLog.query)
+            .order_by(desc("freq"))
+            .limit(10)
+            .all()
+        )
+        result = [row.query for row in rows]
+    else:
+        # Fallback: top brands by listing count
+        rows = (
+            db.query(Listing.brand, func.count(Listing.id).label("cnt"))
+            .filter(Listing.status == ListingStatus.active)
+            .group_by(Listing.brand)
+            .order_by(desc("cnt"))
+            .limit(10)
+            .all()
+        )
+        result = [row.brand for row in rows]
+
+    _popular_cache["ts"] = now
+    _popular_cache["data"] = result
+
+    return ApiResponse(
+        success=True,
+        data=result,
+        message="Popular searches fetched",
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /search/trending
+# ---------------------------------------------------------------------------
+
+@router.get("/trending", response_model=ApiResponse[dict])
+def trending(db: Session = Depends(get_db)):
+    """
+    Returns top 5 brands and top 5 cities with the most new active listings
+    created in the past 7 days.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+
+    brand_rows = (
+        db.query(Listing.brand, func.count(Listing.id).label("cnt"))
+        .filter(
+            Listing.status == ListingStatus.active,
+            Listing.created_at >= cutoff,
+        )
+        .group_by(Listing.brand)
+        .order_by(desc("cnt"))
+        .limit(5)
+        .all()
+    )
+
+    city_rows = (
+        db.query(Listing.city, func.count(Listing.id).label("cnt"))
+        .filter(
+            Listing.status == ListingStatus.active,
+            Listing.created_at >= cutoff,
+        )
+        .group_by(Listing.city)
+        .order_by(desc("cnt"))
+        .limit(5)
+        .all()
+    )
+
+    data = {
+        "brands": [{"term": r.brand, "count": r.cnt} for r in brand_rows],
+        "cities": [{"term": r.city,  "count": r.cnt} for r in city_rows],
+    }
+
+    return ApiResponse(success=True, data=data, message="Trending fetched")
+
+
+# ---------------------------------------------------------------------------
+# POST /search/log
+# ---------------------------------------------------------------------------
+
+@router.post("/log", response_model=ApiResponse[None])
+@limiter.limit("30/minute")
+def log_search_event(
+    request: Request,
+    query: str = Body(..., embed=True, min_length=1, max_length=500),
+    results_count: int = Body(..., embed=True, ge=0),
+    db: Session = Depends(get_db),
+):
+    """
+    Logs a client-side search event for analytics.
+
+    No auth required — user_id is always null from this endpoint.
+    The main /search endpoint handles authenticated logging inline.
+    """
+    _log_search(db, query.strip(), results_count, user_id=None)
+    return ApiResponse(success=True, data=None, message="Logged")
+
+
+# ---------------------------------------------------------------------------
 # GET /search/recommendations
 # ---------------------------------------------------------------------------
 
@@ -335,39 +589,59 @@ def did_you_mean(
 def recommendations(
     listing_id: Optional[UUID] = Query(
         default=None,
-        description="When provided, return similar listings (same brand or city) "
-                    "excluding this listing. When omitted, return global top-viewed.",
+        description="When provided, return similar listings scored by multiple signals "
+                    "excluding this listing. When omitted, return a mix of top-viewed "
+                    "and recently created listings.",
     ),
     db: Session = Depends(get_db),
 ):
     """
     Returns up to 8 recommended listings.
 
-    Behaviour:
-      - No listing_id → global top 8 by view count (homepage feed).
-      - listing_id provided → listings sharing the same brand OR city as the
-        given listing, ordered by views, excluding that listing itself.
+    With listing_id:
+      Fetches up to 100 candidates (same brand OR same city), scores each
+      one in Python using a weighted multi-signal model, returns top 8.
+      Supplements with global top-viewed if fewer than 4 scored results.
+
+      Scoring weights:
+        +40  same brand
+        +20  same city
+        +15  price within ±30% of anchor
+        +10  year within ±3 of anchor
+        +10  same fuel type
+        +5   same transmission
+        +0-10 view popularity: min(views / 10, 10)
+
+    Without listing_id:
+      Mix of top 4 by views + top 4 recently created (past 14 days).
+      Deduplicated if overlap. Total up to 8.
 
     Images are eager-loaded via joinedload to prevent N+1 queries.
     """
     base = _active_base(db).options(joinedload(Listing.images))
 
     if listing_id is not None:
-        # Fetch the anchor listing to read its brand and city.
         anchor = (
-            db.query(Listing.brand, Listing.city)
+            db.query(
+                Listing.brand,
+                Listing.city,
+                Listing.price,
+                Listing.year,
+                Listing.fuel,
+                Listing.transmission,
+            )
             .filter(Listing.id == listing_id)
             .first()
         )
 
         if anchor is None:
-            # Anchor not found or not active — fall back to global top-viewed.
             logger.warning(
-                "recommendations: listing_id %s not found, falling back to global top-viewed",
+                "recommendations: listing_id %s not found, falling back to global mix",
                 listing_id,
             )
         else:
-            listings = (
+            # Fetch up to 100 candidates sharing brand or city
+            candidates = (
                 base
                 .filter(
                     Listing.id != listing_id,
@@ -376,26 +650,82 @@ def recommendations(
                         Listing.city  == anchor.city,
                     ),
                 )
-                .order_by(Listing.views.desc())
-                .limit(8)
+                .limit(100)
                 .all()
             )
+
+            anchor_price = float(anchor.price) if anchor.price else None
+            anchor_year  = anchor.year
+
+            def _score(listing: Listing) -> float:
+                score = 0.0
+                if listing.brand == anchor.brand:
+                    score += 40
+                if listing.city == anchor.city:
+                    score += 20
+                if anchor_price and listing.price:
+                    ratio = abs(float(listing.price) - anchor_price) / anchor_price
+                    if ratio <= 0.30:
+                        score += 15
+                if anchor_year and listing.year:
+                    if abs(listing.year - anchor_year) <= 3:
+                        score += 10
+                if anchor.fuel and listing.fuel == anchor.fuel:
+                    score += 10
+                if anchor.transmission and listing.transmission == anchor.transmission:
+                    score += 5
+                # View popularity bonus: max 10 points
+                score += min(listing.views / 10.0, 10.0)
+                return score
+
+            scored = sorted(candidates, key=_score, reverse=True)[:8]
+
+            if len(scored) < 4:
+                # Supplement with global top-viewed excluding already-selected ids
+                selected_ids = {l.id for l in scored} | {listing_id}
+                supplement = (
+                    base
+                    .filter(Listing.id.notin_(selected_ids))
+                    .order_by(Listing.views.desc())
+                    .limit(8 - len(scored))
+                    .all()
+                )
+                scored = scored + supplement
+
             return ApiResponse(
                 success=True,
-                data=[ListingResponse.model_validate(l) for l in listings],
-                message=f"{len(listings)} recommendation(s) found",
+                data=[ListingResponse.model_validate(l) for l in scored],
+                message=f"{len(scored)} recommendation(s) found",
             )
 
-    # Global top-viewed fallback (no listing_id, or anchor not found).
-    listings = (
+    # ------------------------------------------------------------------
+    # Global mix: top-viewed + recently created, deduplicated
+    # ------------------------------------------------------------------
+    top_viewed = (
         base
         .order_by(Listing.views.desc())
-        .limit(8)
+        .limit(4)
         .all()
     )
 
+    recent_cutoff = datetime.now(timezone.utc) - timedelta(days=14)
+    top_viewed_ids = {l.id for l in top_viewed}
+
+    recent = (
+        base
+        .filter(
+            Listing.created_at >= recent_cutoff,
+            Listing.id.notin_(top_viewed_ids),
+        )
+        .order_by(Listing.created_at.desc())
+        .limit(4)
+        .all()
+    )
+
+    mixed = top_viewed + recent   # already deduplicated via notin_
+
     return ApiResponse(
         success=True,
-        data=[ListingResponse.model_validate(l) for l in listings],
-        message=f"{len(listings)} recommendation(s) found",
+        data=[ListingResponse.model_validate(l) for l in mixed],
+        message=f"{len(mixed)} recommendation(s) found",
     )

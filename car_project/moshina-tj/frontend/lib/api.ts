@@ -2,13 +2,19 @@ import axios from 'axios'
 import Cookies from 'js-cookie'
 import type {
   ApiResponse,
+  AuditLog,
   AuthData,
+  ListingAnalytics,
+  ManagerStats,
   PaginatedListings,
   Listing,
+  SessionHistoryItem,
+  SupportStats,
   User,
   Dealer,
   UserPublicProfile,
   AdminStats,
+  PaginatedResponse,
 } from '@/types'
 
 export interface ModerationSession {
@@ -24,14 +30,14 @@ export interface ModerationSession {
 }
 
 export interface ModeratorActivity {
-  user_id: string
-  name: string | null
+  moderator_id: string
+  moderator_name: string | null
   phone: string
+  is_online: boolean
   posts_today: number
   posts_last_30min: number
   sessions_today: number
-  has_active_session: boolean
-  active_since: string | null
+  active_session_started_at: string | null
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
@@ -83,16 +89,47 @@ export const listingsApi = {
 }
 
 export const authApi = {
+  // ── Phone (OTP) ────────────────────────────────────────────────────────────
   login: (phone: string, password: string) =>
     api.post<ApiResponse<AuthData>>('/auth/login', { phone, password }),
   register: (phone: string, name: string, password: string) =>
     api.post<ApiResponse<AuthData>>('/auth/register', { phone, name, password }),
+  sendOtp: (phone: string) =>
+    api.post<ApiResponse<{ dev_code?: string }>>('/auth/send-otp', { phone }),
+  verifyOtp: (phone: string, code: string, name?: string, password?: string) =>
+    api.post<ApiResponse<AuthData>>('/auth/verify-otp', { phone, code, name, password }),
+
+  // ── Email ──────────────────────────────────────────────────────────────────
+  registerEmail: (email: string, name: string, password: string) =>
+    api.post<ApiResponse<{ dev_code?: string }>>('/auth/register-email', { email, name, password }),
+  loginEmail: (email: string, password: string) =>
+    api.post<ApiResponse<AuthData>>('/auth/login-email', { email, password }),
+  verifyEmailOtp: (email: string, code: string) =>
+    api.post<ApiResponse<AuthData>>('/auth/verify-email-otp', { email, code }),
+  resendEmailOtp: (email: string) =>
+    api.post<ApiResponse<{ dev_code?: string }>>('/auth/resend-email-otp', { email }),
+
+  // ── Social / OAuth ─────────────────────────────────────────────────────────
+  googleLogin: (idToken: string) =>
+    api.post<ApiResponse<AuthData>>('/auth/google', { id_token: idToken }),
+  appleLogin: (identityToken: string, name?: string) =>
+    api.post<ApiResponse<AuthData>>('/auth/apple', { identity_token: identityToken, name }),
+  sendOtpTelegram: (phone: string) =>
+    api.post<ApiResponse<{ deep_link: string }>>('/auth/send-otp-telegram', { phone }),
+
+  // ── Profile ────────────────────────────────────────────────────────────────
   me: () =>
     api.get<ApiResponse<User>>('/auth/me'),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put<ApiResponse<null>>('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
   updateProfile: (data: { name?: string; phone?: string; email?: string }) =>
     api.put<ApiResponse<User>>('/auth/profile', data),
+  forgotPassword: (identifier: string) =>
+    api.post<ApiResponse<{ dev_code?: string }>>('/auth/forgot-password', { identifier }),
+  resetPassword: (identifier: string, code: string, newPassword: string) =>
+    api.post<ApiResponse<null>>('/auth/reset-password', { identifier, code, new_password: newPassword }),
+  logout: () =>
+    api.post<ApiResponse<null>>('/auth/logout'),
 }
 
 export const dealersApi = {
@@ -102,17 +139,34 @@ export const dealersApi = {
     api.get<ApiResponse<{ dealer: Dealer; listings: Listing[] }>>(`/dealers/${id}`),
 }
 
+export interface SuggestionItem {
+  term: string
+  type: 'brand' | 'model' | 'city'
+  count: number
+}
+
+export interface TrendingData {
+  brands: { term: string; count: number }[]
+  cities: { term: string; count: number }[]
+}
+
 export const searchApi = {
   query: (q: string) =>
     api.get<ApiResponse<Listing[]>>('/search', { params: { q } }),
   suggestions: (q: string) =>
-    api.get<ApiResponse<string[]>>('/search/suggestions', { params: { q } }),
+    api.get<ApiResponse<SuggestionItem[]>>('/search/suggestions', { params: { q } }),
   didYouMean: (q: string) =>
     api.get<ApiResponse<string | null>>('/search/did-you-mean', { params: { q } }),
   recommendations: (listingId?: string) =>
     api.get<ApiResponse<Listing[]>>('/search/recommendations', {
       params: listingId ? { listing_id: listingId } : {},
     }),
+  popular: () =>
+    api.get<ApiResponse<string[]>>('/search/popular'),
+  trending: () =>
+    api.get<ApiResponse<TrendingData>>('/search/trending'),
+  logSearch: (query: string, results_count: number) =>
+    api.post<ApiResponse<null>>('/search/log', { query, results_count }).catch(() => {}),
 }
 
 export const uploadApi = {
@@ -155,6 +209,10 @@ export const adminApi = {
     api.put<ApiResponse<User>>(`/admin/users/${userId}/unban`),
   deleteUser: (userId: string) =>
     api.delete<ApiResponse<null>>(`/admin/users/${userId}`),
+  createUser: (data: { phone: string; name?: string; password: string; role: string }) =>
+    api.post<ApiResponse<User>>('/admin/users', data),
+  editUser: (userId: string, data: { name?: string; phone?: string; email?: string }) =>
+    api.put<ApiResponse<User>>(`/admin/users/${userId}`, data),
 
   // Listings
   getListings: (listing_status?: string, page = 1, search?: string) =>
@@ -163,6 +221,14 @@ export const adminApi = {
     api.put<ApiResponse<Listing>>(`/admin/listings/${id}/activate`),
   deactivateListing: (id: string) =>
     api.put<ApiResponse<Listing>>(`/admin/listings/${id}/deactivate`),
+  editListing: (id: string, data: {
+    brand?: string; model?: string; year?: number; price?: number; currency?: string;
+    city?: string; mileage?: number; fuel?: string; transmission?: string;
+    color?: string; description?: string; installment_available?: boolean; status?: string;
+  }) =>
+    api.put<ApiResponse<Listing>>(`/admin/listings/${id}`, data),
+  deleteListing: (id: string) =>
+    api.delete<ApiResponse<null>>(`/admin/listings/${id}`),
 
   // Moderation
   getPendingListings: (page = 1, limit = 10, claim = false) =>
@@ -171,23 +237,22 @@ export const adminApi = {
     api.put<ApiResponse<Listing>>(`/admin/moderation/${id}/approve`),
   rejectListing: (id: string, reason: string) =>
     api.put<ApiResponse<Listing>>(`/admin/moderation/${id}/reject`, { reason }),
-  skipListing: (id: string) =>
-    api.post<ApiResponse<null>>(`/admin/moderation/${id}/skip`),
-
   // Moderation sessions
   startSession: (filters?: { timer_minutes?: number | null; filter_date_from?: string | null; filter_date_to?: string | null; filter_type?: string | null; filter_city?: string | null; filter_brand?: string | null }) =>
     api.post<ApiResponse<ModerationSession>>('/admin/moderation/session/start', filters ?? {}),
   endSession: (autoEnded = false) =>
     api.post<ApiResponse<ModerationSession>>(`/admin/moderation/session/end?auto_ended=${autoEnded}`),
   getModeratorStats: () =>
-    api.get<ApiResponse<any>>('/admin/moderation/stats'),
-  getSessionHistory: () =>
-    api.get<ApiResponse<any[]>>('/admin/moderation/session/history'),
+    api.get<ApiResponse<Record<string, unknown>>>('/admin/moderation/stats'),
   getActiveSession: () =>
     api.get<ApiResponse<ModerationSession | null>>('/admin/moderation/session/active'),
 
-  // Moderator inline edit
-  moderatorEditListing: async (id: string, patch: { brand?: string; model?: string; description?: string }) => {
+  // Moderator inline edit (expanded fields)
+  moderatorEditListing: async (id: string, patch: {
+    brand?: string; model?: string; description?: string;
+    price?: number; currency?: string; year?: number; city?: string;
+    mileage?: number; fuel?: string; transmission?: string; color?: string;
+  }) => {
     const token = Cookies.get('token')
     const res = await fetch(`${BASE_URL}/admin/moderation/${id}/edit`, {
       method: 'PATCH',
@@ -200,9 +265,46 @@ export const adminApi = {
     return res.json()
   },
 
+  // Skip with reason
+  skipListing: (id: string, reason?: string) =>
+    api.post<ApiResponse<null>>(`/admin/moderation/${id}/skip`, { reason }),
+
+  // Moderator note
+  addModeratorNote: (id: string, note: string) =>
+    api.post<ApiResponse<{ listing_id: string; note: string }>>(`/admin/moderation/${id}/note`, { note }),
+
+  // Bulk moderation
+  bulkApproveListings: (listing_ids: string[]) =>
+    api.post<ApiResponse<{ approved: number }>>('/admin/moderation/bulk-approve', { listing_ids }),
+  bulkRejectListings: (listing_ids: string[], reason: string) =>
+    api.post<ApiResponse<{ rejected: number }>>('/admin/moderation/bulk-reject', { listing_ids, reason }),
+
+  // Audit logs
+  getAuditLogs: (page = 1, action?: string, target_type?: string) =>
+    api.get<ApiResponse<{ items: AuditLog[]; total: number; page: number; pages: number }>>(
+      '/admin/audit-logs',
+      { params: { page, action: action || undefined, target_type: target_type || undefined } }
+    ),
+
+  // Manager trend stats
+  getManagerStats: () =>
+    api.get<ApiResponse<ManagerStats>>('/admin/manager/stats'),
+
+  // Support stats
+  getSupportStats: () =>
+    api.get<ApiResponse<SupportStats>>('/admin/support/stats'),
+
+  // Listing analytics
+  getListingStats: () =>
+    api.get<ApiResponse<ListingAnalytics>>('/admin/listings/stats'),
+
   // Moderator activity
   getModeratorActivity: () =>
     api.get<ApiResponse<ModeratorActivity[]>>('/admin/moderator-activity'),
+
+  // Session history (typed)
+  getSessionHistory: () =>
+    api.get<ApiResponse<SessionHistoryItem[]>>('/admin/moderation/session/history'),
 
   // Dealers
   getDealers: (page = 1, verified?: boolean) =>
@@ -214,6 +316,98 @@ export const adminApi = {
     api.put<ApiResponse<Dealer>>(`/admin/dealers/${dealerId}/verify`),
   unverifyDealer: (dealerId: string) =>
     api.put<ApiResponse<Dealer>>(`/admin/dealers/${dealerId}/unverify`),
+}
+
+export const favoritesApi = {
+  toggle: (listingId: string) =>
+    api.post<ApiResponse<{ favorited: boolean }>>(`/listings/${listingId}/favorite`),
+  list: (page = 1) =>
+    api.get<ApiResponse<PaginatedResponse<Listing>>>(`/users/me/favorites?page=${page}`),
+}
+
+export interface CarBrand {
+  id: string
+  name: string
+  slug: string
+  logo_url: string | null
+  country: string | null
+  is_popular: boolean
+  is_active?: boolean
+  model_count?: number
+}
+
+export interface CarModelItem {
+  id: string
+  name: string
+}
+
+export interface CarCategory {
+  id: string
+  name_ru: string
+  name_tj: string
+  slug: string
+  icon_url: string | null
+  description_ru: string | null
+  description_tj: string | null
+  filter_config: Record<string, unknown> | null
+  display_order: number
+  is_active?: boolean
+}
+
+export interface AdBanner {
+  id: string
+  title_ru: string
+  title_tj: string
+  subtitle_ru: string | null
+  subtitle_tj: string | null
+  image_url: string
+  link_url: string | null
+  is_active?: boolean
+  display_order: number
+}
+
+export const catalogApi = {
+  getBrands: (popular_only = false, search?: string) =>
+    api.get<ApiResponse<CarBrand[]>>('/catalog/brands', { params: { popular_only, search: search || undefined } }),
+  getModels: (brandId: string) =>
+    api.get<ApiResponse<CarModelItem[]>>(`/catalog/brands/${brandId}/models`),
+  getCategories: () =>
+    api.get<ApiResponse<CarCategory[]>>('/catalog/categories'),
+
+  // Admin
+  adminGetBrands: (page = 1, search?: string) =>
+    api.get<ApiResponse<{ items: CarBrand[]; total: number; page: number; pages: number }>>('/catalog/admin/brands', { params: { page, search: search || undefined } }),
+  adminCreateBrand: (data: { name: string; slug: string; country?: string; logo_url?: string; is_popular?: boolean }) =>
+    api.post<ApiResponse<CarBrand>>('/catalog/admin/brands', data),
+  adminUpdateBrand: (id: string, data: Partial<CarBrand>) =>
+    api.put<ApiResponse<CarBrand>>(`/catalog/admin/brands/${id}`, data),
+  adminDeleteBrand: (id: string) =>
+    api.delete<ApiResponse<null>>(`/catalog/admin/brands/${id}`),
+  adminAddModel: (brandId: string, name: string) =>
+    api.post<ApiResponse<CarModelItem>>(`/catalog/admin/brands/${brandId}/models`, { name }),
+  adminDeleteModel: (brandId: string, modelId: string) =>
+    api.delete<ApiResponse<null>>(`/catalog/admin/brands/${brandId}/models/${modelId}`),
+
+  adminGetCategories: () =>
+    api.get<ApiResponse<CarCategory[]>>('/catalog/admin/categories'),
+  adminCreateCategory: (data: Partial<CarCategory>) =>
+    api.post<ApiResponse<CarCategory>>('/catalog/admin/categories', data),
+  adminUpdateCategory: (id: string, data: Partial<CarCategory>) =>
+    api.put<ApiResponse<CarCategory>>(`/catalog/admin/categories/${id}`, data),
+  adminDeleteCategory: (id: string) =>
+    api.delete<ApiResponse<null>>(`/catalog/admin/categories/${id}`),
+
+  // Banners
+  getBanners: () =>
+    api.get<ApiResponse<AdBanner[]>>('/catalog/banners'),
+  adminGetBanners: () =>
+    api.get<ApiResponse<AdBanner[]>>('/catalog/admin/banners'),
+  adminCreateBanner: (data: Omit<AdBanner, 'id' | 'is_active'>) =>
+    api.post<ApiResponse<AdBanner>>('/catalog/admin/banners', data),
+  adminUpdateBanner: (id: string, data: Partial<AdBanner>) =>
+    api.put<ApiResponse<AdBanner>>(`/catalog/admin/banners/${id}`, data),
+  adminDeleteBanner: (id: string) =>
+    api.delete<ApiResponse<null>>(`/catalog/admin/banners/${id}`),
 }
 
 export default api

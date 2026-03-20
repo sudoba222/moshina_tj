@@ -15,14 +15,14 @@ export default function Footer() {
 
   return (
     <footer style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', marginTop: 'auto' }}>
-      <div className="max-w-7xl mx-auto px-4 md:px-6" style={{ padding: '28px 16px' }}>
+      <div className="max-w-7xl mx-auto px-4 md:px-6 footer-inner" style={{ padding: '28px 16px' }}>
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
 
           {/* Brand */}
           <div>
             <Link href="/" style={{ display: 'inline-flex', alignItems: 'baseline', gap: '1px' }}>
-              <span style={{ fontWeight: 800, fontSize: '17px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>AVTOMARKET</span>
-              <span style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text-muted)' }}>.TJ</span>
+              <span style={{ fontWeight: 800, fontSize: '17px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>TajCar</span>
+              <span style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text-muted)' }}>.tj</span>
             </Link>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px', maxWidth: '200px', lineHeight: 1.5 }}>
               {t('footer.tagline', lang)}

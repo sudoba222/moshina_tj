@@ -9,9 +9,11 @@ import { adminApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
-import type { AdminStats, Listing, UserRole } from '@/types'
+import type { ManagerStats, Listing, UserRole } from '@/types'
+import type { ModeratorActivity } from '@/lib/api'
 
-type Tab = 'stats' | 'listings'
+type Tab = 'stats' | 'listings' | 'moderators'
+type Period = 'today' | 'week' | 'month' | 'total'
 
 const ALLOWED_ROLES: UserRole[] = ['manager', 'admin']
 
@@ -73,8 +75,13 @@ export default function ManagerPage() {
   const [tab, setTab] = useState<Tab>('stats')
 
   // Stats
-  const [stats, setStats] = useState<AdminStats | null>(null)
+  const [stats, setStats] = useState<ManagerStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
+  const [period, setPeriod] = useState<Period>('today')
+
+  // Moderators
+  const [moderators, setModerators] = useState<ModeratorActivity[]>([])
+  const [moderatorsLoading, setModeratorsLoading] = useState(false)
 
   // Listings
   const [listings, setListings] = useState<Listing[]>([])
@@ -94,12 +101,19 @@ export default function ManagerPage() {
     if (!user || !ALLOWED_ROLES.includes(user.role)) return
     if (tab === 'stats' && !stats) {
       setStatsLoading(true)
-      adminApi.getStats()
+      adminApi.getManagerStats()
         .then((res) => setStats(res.data.data))
         .catch(() => {})
         .finally(() => setStatsLoading(false))
     }
-  }, [tab, user, stats])
+    if (tab === 'moderators' && moderators.length === 0) {
+      setModeratorsLoading(true)
+      adminApi.getModeratorActivity()
+        .then((res) => setModerators(res.data.data))
+        .catch(() => {})
+        .finally(() => setModeratorsLoading(false))
+    }
+  }, [tab, user, stats, moderators.length])
 
   const fetchListings = useCallback(() => {
     if (!user || !ALLOWED_ROLES.includes(user.role)) return
@@ -145,9 +159,21 @@ export default function ManagerPage() {
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) return null
 
+  function UsersIcon() {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 00-3-3.87" />
+        <path d="M16 3.13a4 4 0 010 7.75" />
+      </svg>
+    )
+  }
+
   const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: 'stats',    label: lang === 'ru' ? 'Статистика' : 'Омор',      icon: <ChartIcon /> },
-    { key: 'listings', label: lang === 'ru' ? 'Объявления' : 'Эълонҳо',   icon: <ListIcon /> },
+    { key: 'stats',      label: t('manager.statsTab', lang),      icon: <ChartIcon /> },
+    { key: 'listings',   label: t('manager.listingsTab', lang),   icon: <ListIcon /> },
+    { key: 'moderators', label: t('manager.moderatorsTab', lang), icon: <UsersIcon /> },
   ]
 
   const FILTER_OPTIONS: { value: 'all' | 'active' | 'inactive'; label: string }[] = [
@@ -198,85 +224,88 @@ export default function ManagerPage() {
           {/* Stats Tab */}
           {tab === 'stats' && (
             <div className="animate-fade-in-up">
+              {/* Period selector */}
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                {(['today', 'week', 'month', 'total'] as Period[]).map((p) => {
+                  const labels: Record<Period, string> = {
+                    today: t('manager.today', lang),
+                    week: t('manager.week', lang),
+                    month: t('manager.month', lang),
+                    total: t('manager.allTime', lang),
+                  }
+                  return (
+                    <button key={p} onClick={() => setPeriod(p)} style={{
+                      padding: '7px 18px', borderRadius: '100px', fontWeight: 600, fontSize: '13px',
+                      background: period === p ? 'var(--accent)' : 'var(--card)',
+                      color: period === p ? 'var(--color-white)' : 'var(--text-muted)',
+                      border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s',
+                    }}>
+                      {labels[p]}
+                    </button>
+                  )
+                })}
+              </div>
+
               {statsLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {Array.from({ length: 5 }).map((_, i) => (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
                       <div style={{ height: '32px', width: '60%', borderRadius: '6px', marginBottom: '8px' }} className="skeleton" />
                       <div style={{ height: '12px', width: '80%', borderRadius: '4px' }} className="skeleton" />
                     </div>
                   ))}
                 </div>
-              ) : stats ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {[
-                    { label: lang === 'ru' ? 'Пользователей'  : 'Корбарон',       value: stats.total_users },
-                    { label: lang === 'ru' ? 'Всего объявл.'  : 'Ҳамаи эълонҳо',  value: stats.total_listings },
-                    { label: lang === 'ru' ? 'Активных'       : 'Фаъол',           value: stats.active_listings },
-                    { label: lang === 'ru' ? 'На проверке'    : 'Дар назорат',     value: stats.pending_listings },
-                    { label: lang === 'ru' ? 'Дилеров'        : 'Намоишгоҳ',      value: stats.total_dealers },
-                  ].map((s, i) => (
-                    <div
-                      key={s.label}
-                      className={`animate-fade-in-up delay-${Math.min(i + 1, 8) as 1|2|3|4|5|6|7|8}`}
-                      style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}
-                    >
-                      <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent)' }}>
-                        {s.value.toLocaleString()}
-                      </span>
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                        {s.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
+              ) : stats ? (() => {
+                type PeriodData = { new_users?: number; new_listings?: number; approved?: number; rejected?: number; users?: number; listings?: number; active?: number; pending?: number; dealers?: number }
+                const data: PeriodData = period === 'total' ? stats.total : stats[period]
+                const cards = period === 'total'
+                  ? [
+                      { label: t('manager.allTime', lang) + ' — ' + t('support.totalUsers', lang), value: data.users ?? 0, color: 'var(--accent)' },
+                      { label: t('support.totalListings', lang), value: data.listings ?? 0, color: 'var(--accent)' },
+                      { label: t('support.activeListings', lang), value: data.active ?? 0, color: 'var(--color-online)' },
+                      { label: t('support.pendingListings', lang), value: data.pending ?? 0, color: 'var(--color-warning-alt)' },
+                      { label: t('support.rejectedListings', lang), value: data.rejected ?? 0, color: 'var(--color-error)' },
+                      { label: t('support.totalDealers', lang), value: data.dealers ?? 0, color: 'var(--accent)' },
+                    ]
+                  : [
+                      { label: t('manager.newUsers', lang), value: data.new_users ?? 0, color: 'var(--accent)' },
+                      { label: t('manager.newListings', lang), value: data.new_listings ?? 0, color: 'var(--accent)' },
+                      { label: t('manager.approved', lang), value: data.approved ?? 0, color: 'var(--color-online)' },
+                      { label: t('manager.rejected', lang), value: data.rejected ?? 0, color: 'var(--color-error)' },
+                    ]
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {cards.map((card, i) => (
+                      <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                        <span style={{ fontSize: '28px', fontWeight: 800, color: card.color, display: 'block', marginBottom: '6px' }}>
+                          {card.value.toLocaleString()}
+                        </span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>{card.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })() : (
                 <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)', fontSize: '15px' }}>
                   {t('common.noData', lang)}
                 </div>
               )}
 
-              {/* Quick links */}
-              <div style={{ marginTop: '36px' }}>
-                <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)', marginBottom: '16px' }}>
-                  {lang === 'ru' ? 'Быстрые действия' : 'Амалҳои зуд'}
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setTab('listings')}
-                    style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', cursor: 'pointer', transition: 'border-color 0.15s ease' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
-                  >
-                    <span style={{ color: 'var(--accent)' }}><ListIcon /></span>
-                    <div style={{ textAlign: 'left' }}>
-                      <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
-                        {lang === 'ru' ? 'Управление объявлениями' : 'Идоракунии эълонҳо'}
-                      </p>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {lang === 'ru' ? 'Активировать, деактивировать, просматривать' : 'Фаъол кардан, хомӯш кардан, дидан'}
-                      </p>
-                    </div>
-                  </button>
-
-                  <Link
-                    href="/catalog"
-                    style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', textDecoration: 'none', transition: 'border-color 0.15s ease' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
-                  >
-                    <span style={{ color: 'var(--accent)' }}><ExternalLinkIcon /></span>
-                    <div>
-                      <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
-                        {lang === 'ru' ? 'Открыть каталог' : 'Кушодани каталог'}
-                      </p>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {lang === 'ru' ? 'Просмотр всех объявлений на сайте' : 'Дидани ҳамаи эълонҳо дар сайт'}
-                      </p>
-                    </div>
-                  </Link>
+              {/* Pending queue summary */}
+              {stats && stats.total.pending > 0 && (
+                <div style={{
+                  marginTop: '24px', padding: '16px 20px', background: 'rgba(245,158,11,0.08)',
+                  border: '1px solid rgba(245,158,11,0.3)', borderRadius: '12px',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 600 }}>
+                    <strong style={{ color: 'var(--color-warning-alt)' }}>{stats.total.pending}</strong> {t('manager.awaitingReview', lang)}
+                  </span>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -293,7 +322,7 @@ export default function ManagerPage() {
                       padding: '7px 16px', borderRadius: '20px', border: '1px solid',
                       borderColor: activeFilter === opt.value ? 'var(--accent)' : 'var(--border)',
                       background: activeFilter === opt.value ? 'var(--accent)' : 'var(--card)',
-                      color: activeFilter === opt.value ? '#fff' : 'var(--text-muted)',
+                      color: activeFilter === opt.value ? 'var(--color-white)' : 'var(--text-muted)',
                       fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
                     }}
                   >
@@ -372,8 +401,8 @@ export default function ManagerPage() {
                             <span
                               style={{
                                 fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px',
-                                background: listing.is_active ? 'rgba(22,163,74,0.12)' : 'rgba(239,68,68,0.1)',
-                                color: listing.is_active ? '#16a34a' : '#ef4444',
+                                background: listing.is_active ? 'var(--color-success-dim)' : 'var(--color-error-dim)',
+                                color: listing.is_active ? 'var(--color-success)' : 'var(--color-error)',
                               }}
                             >
                               {listing.is_active
@@ -395,7 +424,7 @@ export default function ManagerPage() {
                               style={{
                                 display: 'flex', alignItems: 'center', gap: '5px',
                                 padding: '7px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                                background: 'rgba(22,163,74,0.12)', color: '#16a34a',
+                                background: 'var(--color-success-dim)', color: 'var(--color-success)',
                                 fontSize: '13px', fontWeight: 700,
                                 opacity: actionLoading === listing.id + '_activate' ? 0.5 : 1,
                                 transition: 'opacity 0.15s ease',
@@ -412,7 +441,7 @@ export default function ManagerPage() {
                               style={{
                                 display: 'flex', alignItems: 'center', gap: '5px',
                                 padding: '7px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                                background: 'rgba(239,68,68,0.08)', color: '#ef4444',
+                                background: 'var(--color-error-dim)', color: 'var(--color-error)',
                                 fontSize: '13px', fontWeight: 700,
                                 opacity: actionLoading === listing.id + '_deactivate' ? 0.5 : 1,
                                 transition: 'opacity 0.15s ease',
@@ -443,6 +472,59 @@ export default function ManagerPage() {
               )}
             </div>
           )}
+          {/* Moderators Tab */}
+          {tab === 'moderators' && (
+            <div className="animate-fade-in-up">
+              {moderatorsLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>{t('common.loading', lang)}</div>
+              ) : moderators.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', background: 'var(--card)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                  {t('common.noData', lang)}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {moderators.map((mod) => (
+                    <div key={mod.phone} style={{
+                      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px',
+                      padding: '16px 20px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '160px' }}>
+                        <span style={{
+                          width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
+                          background: mod.is_online ? 'var(--color-online)' : 'var(--border)',
+                        }} />
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>{mod.moderator_name}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{mod.phone}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent)' }}>{mod.posts_today}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('manager.postsToday', lang)}</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>{mod.sessions_today}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('manager.sessionsToday', lang)}</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: mod.is_online ? 'var(--color-online)' : 'var(--text-muted)' }}>
+                            {mod.is_online ? t('manager.onlineNow', lang) : t('manager.offlineNow', lang)}
+                          </div>
+                          {mod.active_session_started_at && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                              {t('manager.activeSince', lang)} {new Date(mod.active_session_started_at).toLocaleTimeString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </main>
 

@@ -107,7 +107,7 @@ export default function DealerDetailPage() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
-      <main style={{ flex: 1 }}>
+      <main style={{ flex: 1 }} className="pb-mobile">
         <div className="max-w-7xl mx-auto px-4 md:px-6" style={{ paddingTop: '28px', paddingBottom: '60px' }}>
           <button
             onClick={() => router.back()}

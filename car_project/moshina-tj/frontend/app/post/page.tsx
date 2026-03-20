@@ -5,8 +5,9 @@ import Image from 'next/image'
 import Cookies from 'js-cookie'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, uploadApi } from '@/lib/api'
+import { listingsApi, uploadApi, authApi } from '@/lib/api'
 import api from '@/lib/api'
+import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { ListingType, Currency, FuelType, TransmissionType, RentalRules } from '@/types'
@@ -99,10 +100,14 @@ function PostPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
 
-  // Auth guard
+  const { logout } = useAuth()
+
+  // Auth guard — verify token is still valid server-side, not just present
   useEffect(() => {
-    if (!Cookies.get('token')) router.replace('/auth/login')
-  }, [router])
+    const token = Cookies.get('token')
+    if (!token) { router.replace('/auth/login'); return }
+    authApi.me().catch(() => { logout(); router.replace('/auth/login') })
+  }, [router, logout])
 
   // Pre-populate form in edit mode
   useEffect(() => {
@@ -378,7 +383,7 @@ function PostPage() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
-      <main style={{ flex: 1 }}>
+      <main style={{ flex: 1 }} className="pb-mobile">
         <div className="max-w-3xl mx-auto px-4 md:px-6" style={{ paddingTop: '36px', paddingBottom: '60px' }}>
           <h1 style={{ fontSize: 'clamp(22px, 4vw, 32px)', fontWeight: 800, color: 'var(--text)', marginBottom: '28px' }}>
             {isEditMode
@@ -595,7 +600,7 @@ function PostPage() {
               {/* Images */}
               <div>
                 <label style={labelStyle}>{t('post.images', lang)}</label>
-                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleImageFiles} style={{ display: 'none' }} />
+                <input ref={fileInputRef} id="photo-upload-input" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleImageFiles} style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }} />
 
                 {/* Existing images (edit mode) */}
                 {existingImageUrls.length > 0 && (
@@ -636,13 +641,15 @@ function PostPage() {
                 )}
 
                 {totalImageCount < 8 && (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{ background: 'var(--surface)', border: '2px dashed var(--border)', borderRadius: '10px', padding: '16px', width: '100%', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', fontWeight: 600 }}
+                  <label
+                    htmlFor="photo-upload-input"
+                    style={{ background: 'var(--surface)', border: '2px dashed var(--border)', borderRadius: '10px', padding: '16px', width: '100%', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxSizing: 'border-box' }}
                   >
-                    + {lang === 'ru' ? 'Добавить фото' : 'Акс илова кунед'} ({totalImageCount}/8)
-                  </button>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    {lang === 'ru' ? 'Добавить фото' : 'Акс илова кунед'} ({totalImageCount}/8)
+                  </label>
                 )}
               </div>
 

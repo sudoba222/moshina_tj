@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, Generic, Optional, TypeVar
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, EmailStr, field_validator
 
 from app.models import Currency, FuelType, ListingStatus, ListingType, TransmissionType, UserRole
 
@@ -41,11 +41,20 @@ class UserCreate(BaseModel):
             raise ValueError("Phone number must be between 7 and 20 characters")
         return v
 
+    @field_validator("name")
+    @classmethod
+    def name_max_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v.strip()) > 100:
+            raise ValueError("Name must be at most 100 characters")
+        return v
+
     @field_validator("password")
     @classmethod
-    def password_min_length(cls, v: str) -> str:
+    def password_length(cls, v: str) -> str:
         if len(v) < 6:
             raise ValueError("Password must be at least 6 characters")
+        if len(v) > 128:
+            raise ValueError("Password must be at most 128 characters")
         return v
 
 
@@ -58,6 +67,8 @@ class UserResponse(BaseModel):
     email: Optional[str] = None
     role: UserRole
     avatar_url: Optional[str] = None
+    email_verified: bool = False
+    phone_verified: bool = False
     is_banned: bool = False
     ban_reason: Optional[str] = None
     created_at: datetime
@@ -133,7 +144,7 @@ class ListingCreate(BaseModel):
     city: str
     description: Optional[str] = None
     installment_available: bool = False
-    image_urls: list[str] = []
+    image_urls: list[AnyHttpUrl] = []
     rental_rules: Optional[RentalRules] = None
 
     @field_validator("year")
@@ -150,12 +161,42 @@ class ListingCreate(BaseModel):
             raise ValueError("Price must be greater than zero")
         return v
 
+    @field_validator("mileage")
+    @classmethod
+    def mileage_non_negative(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v < 0:
+            raise ValueError("Mileage cannot be negative")
+        return v
+
     @field_validator("brand", "model", "city")
     @classmethod
     def strip_strings(cls, v: str) -> str:
         v = v.strip()
         if not v:
             raise ValueError("Field cannot be empty")
+        if len(v) > 100:
+            raise ValueError("Field cannot exceed 100 characters")
+        return v
+
+    @field_validator("color")
+    @classmethod
+    def color_max_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 50:
+            raise ValueError("Color cannot exceed 50 characters")
+        return v
+
+    @field_validator("description")
+    @classmethod
+    def description_max_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 5000:
+            raise ValueError("Description cannot exceed 5000 characters")
+        return v
+
+    @field_validator("image_urls")
+    @classmethod
+    def image_urls_max_count(cls, v: list[str]) -> list[str]:
+        if len(v) > 20:
+            raise ValueError("Cannot upload more than 20 images per listing")
         return v
 
 
@@ -199,6 +240,7 @@ class ListingResponse(BaseModel):
     is_active: bool
     status: ListingStatus
     rejection_reason: Optional[str] = None
+    moderator_note: Optional[str] = None
     moderated_by: Optional[uuid.UUID] = None
     views: int
     created_at: datetime
@@ -243,6 +285,17 @@ class DealerCreate(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Business name cannot be empty")
+        if len(v) > 200:
+            raise ValueError("Business name must be at most 200 characters")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def phone_max_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if len(v) > 20:
+                raise ValueError("Phone must be at most 20 characters")
         return v
 
 
@@ -265,3 +318,13 @@ class DealerDetailResponse(BaseModel):
     """Dealer profile together with their active listings."""
     dealer: DealerResponse
     listings: list[ListingResponse]
+
+
+# ---------------------------------------------------------------------------
+# Search schemas
+# ---------------------------------------------------------------------------
+
+class SuggestionItem(BaseModel):
+    term: str
+    type: str   # "brand", "model", "city"
+    count: int

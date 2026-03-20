@@ -4,9 +4,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth import get_current_user_optional
+from app.auth import get_current_user, get_current_user_optional
 from app.database import get_db
-from app.models import Listing, ListingStatus, User
+from app.models import Favorite, Listing, ListingStatus, User
 from app.schemas import ApiResponse, ListingListResponse, ListingResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -22,7 +22,7 @@ def get_user_profile(
     Public user profile.
     Phone number is included only when the caller is authenticated.
     """
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -75,4 +75,40 @@ def get_user_listings(
             pages=pages,
         ),
         message="User listings fetched",
+    )
+
+
+@router.get("/me/favorites", response_model=ApiResponse[ListingListResponse])
+def get_my_favorites(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return paginated list of listings the current user has favorited."""
+    query = (
+        db.query(Listing)
+        .options(joinedload(Listing.images))
+        .join(Favorite, Favorite.listing_id == Listing.id)
+        .filter(Favorite.user_id == current_user.id)
+        .order_by(Favorite.created_at.desc())
+    )
+    total = query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    items = (
+        query
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    return ApiResponse(
+        success=True,
+        data=ListingListResponse(
+            items=[ListingResponse.model_validate(i) for i in items],
+            total=total,
+            page=page,
+            pages=pages,
+        ),
+        message="Favorites fetched",
     )

@@ -81,10 +81,10 @@ export default function Navbar() {
             style={{ flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: '1px' }}
           >
             <span style={{ fontWeight: 800, fontSize: '20px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>
-              AVTOMARKET
+              TajCar
             </span>
             <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-muted)' }}>
-              .TJ
+              .tj
             </span>
           </Link>
 
@@ -333,9 +333,9 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Category tab bar */}
+      {/* Category tab bar — visible on all screen sizes, scrollable on mobile */}
       <div style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)' }}>
-        <div className="max-w-7xl mx-auto px-4 md:px-6 hidden sm:flex" style={{ gap: '0' }}>
+        <div className="max-w-7xl mx-auto px-4 md:px-6 scrollbar-hide" style={{ display: 'flex', gap: '0', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           {NAV_TABS.map((tab) => {
             const active = isActive(tab.href)
             return (
@@ -362,153 +362,110 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile drawer — backdrop */}
       {mobileOpen && (
-        <div style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)' }} className="animate-fade-in">
-          <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {/* Mobile search */}
-            <form onSubmit={handleSearch} role="search" style={{ display: 'flex', marginBottom: '8px' }}>
+        <div
+          className="md:hidden animate-fade-in"
+          onClick={() => setMobileOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 299 }}
+        />
+      )}
+
+      {/* Mobile drawer — panel */}
+      {mobileOpen && (
+        <div
+          className="md:hidden animate-slide-right"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: '280px',
+            background: 'var(--nav-bg)',
+            borderRight: '1px solid var(--border)',
+            zIndex: 300,
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+          }}
+        >
+          {/* Drawer header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid var(--border)' }}>
+            <Link href="/" onClick={() => setMobileOpen(false)} style={{ display: 'flex', alignItems: 'baseline', gap: '1px' }}>
+              <span style={{ fontWeight: 800, fontSize: '18px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>TajCar</span>
+              <span style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text-muted)' }}>.tj</span>
+            </Link>
+            <button
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close menu"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="2" y1="2" x2="16" y2="16" /><line x1="16" y1="2" x2="2" y2="16" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Search */}
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+            <form onSubmit={(e) => { handleSearch(e); setMobileOpen(false) }} role="search" style={{ display: 'flex', width: '100%' }}>
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('hero.searchPlaceholder', lang)}
-                style={{
-                  flex: 1,
-                  height: '40px',
-                  padding: '0 12px',
-                  background: 'var(--bg)',
-                  border: '1.5px solid var(--border)',
-                  borderRight: 'none',
-                  borderRadius: '6px 0 0 6px',
-                  fontSize: '14px',
-                  color: 'var(--text)',
-                  outline: 'none',
-                }}
+                style={{ flex: 1, height: '44px', minHeight: '44px', padding: '0 12px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRight: 'none', borderRadius: '6px 0 0 6px', fontSize: '14px', color: 'var(--text)', outline: 'none', width: '100%' }}
               />
-              <button
-                type="submit"
-                style={{
-                  height: '40px',
-                  padding: '0 14px',
-                  background: 'var(--accent)',
-                  color: '#fff',
-                  fontWeight: 600,
-                  border: 'none',
-                  borderRadius: '0 6px 6px 0',
-                  cursor: 'pointer',
-                }}
-              >
+              <button type="submit" style={{ height: '44px', minHeight: '44px', padding: '0 14px', background: 'var(--accent)', color: '#fff', fontWeight: 600, border: 'none', borderRadius: '0 6px 6px 0', cursor: 'pointer', fontSize: '13px', flexShrink: 0 }}>
                 {t('hero.searchBtn', lang)}
               </button>
             </form>
+          </div>
 
+          {/* Nav links */}
+          <nav style={{ padding: '8px 0', flex: 1 }}>
             {NAV_TABS.map((tab) => (
               <Link
                 key={tab.href}
                 href={tab.href}
                 onClick={() => setMobileOpen(false)}
-                style={{
-                  display: 'block',
-                  padding: '10px 4px',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  color: isActive(tab.href) ? 'var(--accent)' : 'var(--text)',
-                  borderBottom: '1px solid var(--border)',
-                }}
+                style={{ display: 'flex', alignItems: 'center', height: '48px', padding: '0 20px', fontSize: '15px', fontWeight: 600, color: isActive(tab.href) ? 'var(--accent)' : 'var(--text)', borderLeft: isActive(tab.href) ? '3px solid var(--accent)' : '3px solid transparent' }}
               >
                 {t(tab.key, lang)}
               </Link>
             ))}
 
             {user && (
-              <Link
-                href="/dashboard"
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  display: 'block',
-                  padding: '10px 4px',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  color: 'var(--text)',
-                  borderBottom: '1px solid var(--border)',
-                }}
-              >
+              <Link href="/dashboard" onClick={() => setMobileOpen(false)} style={{ display: 'flex', alignItems: 'center', height: '48px', padding: '0 20px', fontSize: '15px', fontWeight: 600, color: isActive('/dashboard') ? 'var(--accent)' : 'var(--text)', borderLeft: isActive('/dashboard') ? '3px solid var(--accent)' : '3px solid transparent' }}>
                 {t('nav.dashboard', lang)}
               </Link>
             )}
             {user && roleLink && (
-              <Link
-                href={roleLink.href}
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  display: 'block',
-                  padding: '10px 4px',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  color: 'var(--accent)',
-                  borderBottom: '1px solid var(--border)',
-                }}
-              >
+              <Link href={roleLink.href} onClick={() => setMobileOpen(false)} style={{ display: 'flex', alignItems: 'center', height: '48px', padding: '0 20px', fontSize: '15px', fontWeight: 600, color: 'var(--accent)', borderLeft: '3px solid transparent' }}>
                 {t(roleLink.key, lang)}
               </Link>
             )}
+          </nav>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '12px' }}>
+          {/* Bottom actions */}
+          <div style={{ padding: '16px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Link
+              href="/post"
+              onClick={() => setMobileOpen(false)}
+              style={{ height: '44px', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <PlusIcon />
+              {t('nav.addListing', lang)}
+            </Link>
+            <div style={{ display: 'flex', gap: '8px' }}>
               <LanguageToggle />
               <ThemeToggle />
-              <Link
-                href="/post"
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  height: '36px',
-                  padding: '0 14px',
-                  background: 'var(--accent)',
-                  color: '#fff',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  borderRadius: '6px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <PlusIcon />
-                {t('nav.addListing', lang)}
-              </Link>
               {user ? (
-                <button
-                  onClick={() => { logout(); setMobileOpen(false) }}
-                  style={{
-                    height: '36px',
-                    padding: '0 12px',
-                    background: 'none',
-                    border: '1.5px solid var(--border)',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                  }}
-                >
+                <button onClick={() => { logout(); setMobileOpen(false) }} style={{ flex: 1, height: '36px', background: 'none', border: '1.5px solid var(--border)', borderRadius: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                   {t('nav.logout', lang)}
                 </button>
               ) : (
-                <Link
-                  href="/auth/login"
-                  onClick={() => setMobileOpen(false)}
-                  style={{
-                    height: '36px',
-                    padding: '0 12px',
-                    border: '1.5px solid var(--border)',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: 'var(--text-secondary)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                  }}
-                >
+                <Link href="/auth/login" onClick={() => setMobileOpen(false)} style={{ flex: 1, height: '36px', border: '1.5px solid var(--border)', borderRadius: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {t('nav.login', lang)}
                 </Link>
               )}

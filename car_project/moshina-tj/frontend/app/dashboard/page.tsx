@@ -1,18 +1,19 @@
 'use client'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, authApi, usersApi } from '@/lib/api'
+import { listingsApi, authApi, usersApi, favoritesApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import Cookies from 'js-cookie'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
+import CarCard from '@/components/CarCard'
 import type { Listing } from '@/types'
 
-type Tab = 'profile' | 'listings' | 'settings'
+type Tab = 'profile' | 'listings' | 'favorites' | 'settings'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -23,6 +24,11 @@ export default function DashboardPage() {
   const [listings, setListings] = useState<Listing[]>([])
   const [listingsLoading, setListingsLoading] = useState(false)
   const [listingsFilter, setListingsFilter] = useState<'active' | 'inactive'>('active')
+  const [listingsPage, setListingsPage] = useState(1)
+  const [listingsTotalPages, setListingsTotalPages] = useState(1)
+
+  const [favorites, setFavorites] = useState<Listing[]>([])
+  const [favoritesLoading, setFavoritesLoading] = useState(false)
 
   // Profile edit state
   const [editMode, setEditMode] = useState(false)
@@ -48,11 +54,31 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (tab !== 'listings' || !user) return
+    setListingsPage(1)
+    setListingsTotalPages(1)
+    setListings([])
+  }, [tab, user, listingsFilter])
+
+  useEffect(() => {
+    if (tab !== 'listings' || !user) return
     setListingsLoading(true)
-    usersApi.getListings(user.id, 1)
-      .then((res) => setListings(res.data.data.items))
-      .catch(() => setListings([]))
+    usersApi.getListings(user.id, listingsPage)
+      .then((res) => {
+        const data = res.data.data
+        setListings((prev) => listingsPage === 1 ? data.items : [...prev, ...data.items])
+        setListingsTotalPages(data.pages ?? 1)
+      })
+      .catch(() => { if (listingsPage === 1) setListings([]) })
       .finally(() => setListingsLoading(false))
+  }, [tab, user, listingsPage])
+
+  useEffect(() => {
+    if (tab !== 'favorites' || !user) return
+    setFavoritesLoading(true)
+    favoritesApi.list(1)
+      .then((res) => setFavorites(res.data.data.items))
+      .catch(() => setFavorites([]))
+      .finally(() => setFavoritesLoading(false))
   }, [tab, user])
 
   async function saveProfile() {
@@ -141,7 +167,7 @@ export default function DashboardPage() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
-      <main style={{ flex: 1 }}>
+      <main style={{ flex: 1 }} className="pb-mobile">
         <div className="max-w-5xl mx-auto px-4 md:px-6" style={{ paddingTop: '32px', paddingBottom: '60px' }}>
 
           <h1 style={{ fontSize: 'clamp(20px, 3vw, 28px)', fontWeight: 800, color: 'var(--text)', marginBottom: '28px' }}>
@@ -149,27 +175,45 @@ export default function DashboardPage() {
           </h1>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '28px', overflowX: 'auto' }}>
-            {(['profile', 'listings', 'settings'] as Tab[]).map((tabKey) => (
-              <button
-                key={tabKey}
-                onClick={() => setTab(tabKey)}
-                style={{
-                  padding: '10px 20px',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  background: 'none',
-                  border: 'none',
-                  borderBottom: tab === tabKey ? '2px solid var(--accent)' : '2px solid transparent',
-                  color: tab === tabKey ? 'var(--accent)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'color 0.15s, border-color 0.15s',
-                }}
-              >
-                {t(`dashboard.${tabKey}` as Parameters<typeof t>[0], lang)}
-              </button>
-            ))}
+          <div className="scrollbar-hide" style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '28px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+            {(['profile', 'listings', 'favorites', 'settings'] as Tab[]).map((tabKey) => {
+              const labelMap: Record<Tab, string> = {
+                profile: t('dashboard.profile', lang),
+                listings: t('dashboard.myListings', lang),
+                favorites: t('favorites.title', lang),
+                settings: t('dashboard.settings', lang),
+              }
+              return (
+                <button
+                  key={tabKey}
+                  onClick={() => setTab(tabKey)}
+                  style={{
+                    padding: '12px 24px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    minHeight: '44px',
+                    flexShrink: 0,
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: tab === tabKey ? '2px solid var(--accent)' : '2px solid transparent',
+                    color: tab === tabKey ? 'var(--accent)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'color 0.15s, border-color 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  {tabKey === 'favorites' && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill={tab === 'favorites' ? 'var(--accent)' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
+                  )}
+                  {labelMap[tabKey]}
+                </button>
+              )
+            })}
           </div>
 
           {/* ── Profile tab ── */}
@@ -180,7 +224,7 @@ export default function DashboardPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
                   <div style={{
                     width: '72px', height: '72px', borderRadius: '16px',
-                    background: 'var(--accent)', color: '#fff',
+                    background: 'var(--accent)', color: 'var(--color-white)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '28px', fontWeight: 800, flexShrink: 0,
                   }}>
@@ -202,12 +246,12 @@ export default function DashboardPage() {
                       <label htmlFor="dash-name" style={labelStyle}>{t('admin.name', lang)}</label>
                       <input id="dash-name" type="text" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
                     </div>
-                    {profileError && <p style={{ color: 'var(--accent)', fontSize: '13px', fontWeight: 600 }}>{profileError}</p>}
+                    {profileError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{profileError}</p>}
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button
                         onClick={saveProfile}
                         disabled={profileSaving}
-                        style={{ flex: 1, background: profileSaving ? 'var(--text-muted)' : 'var(--accent)', color: '#fff', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: profileSaving ? 'not-allowed' : 'pointer' }}
+                        style={{ flex: 1, background: profileSaving ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: profileSaving ? 'not-allowed' : 'pointer' }}
                       >
                         {profileSaving ? t('common.loading', lang) : t('dashboard.save', lang)}
                       </button>
@@ -224,10 +268,10 @@ export default function DashboardPage() {
                     <InfoRow label={t('auth.phone', lang)} value={user.phone} />
                     <InfoRow label={t('admin.name', lang)} value={user.name ?? '—'} />
                     {user.email && <InfoRow label="Email" value={user.email} />}
-                    {profileSuccess && <p style={{ color: '#16a34a', fontSize: '13px', fontWeight: 600 }}>{lang === 'ru' ? 'Сохранено' : 'Нигоҳ дошта шуд'}</p>}
+                    {profileSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{lang === 'ru' ? 'Сохранено' : 'Нигоҳ дошта шуд'}</p>}
                     <button
                       onClick={() => { setEditMode(true); setProfileSuccess(false) }}
-                      style={{ marginTop: '4px', background: 'var(--accent)', color: '#fff', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: 'pointer' }}
+                      style={{ marginTop: '4px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: 'pointer' }}
                     >
                       {t('dashboard.editProfile', lang)}
                     </button>
@@ -250,7 +294,7 @@ export default function DashboardPage() {
                       style={{
                         padding: '7px 16px', fontSize: '13px', fontWeight: 700,
                         background: listingsFilter === f ? 'var(--accent)' : 'var(--surface)',
-                        color: listingsFilter === f ? '#fff' : 'var(--text-muted)',
+                        color: listingsFilter === f ? 'var(--color-white)' : 'var(--text-muted)',
                         border: 'none', cursor: 'pointer',
                       }}
                     >
@@ -260,7 +304,7 @@ export default function DashboardPage() {
                 </div>
                 <Link
                   href="/post"
-                  style={{ height: '36px', padding: '0 16px', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: '13px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+                  style={{ height: '36px', padding: '0 16px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
                 >
                   <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <line x1="5.5" y1="1" x2="5.5" y2="10" />
@@ -297,6 +341,46 @@ export default function DashboardPage() {
                       onToggle={() => toggleListingStatus(listing.id, listing.is_active)}
                     />
                   ))}
+                  {listingsPage < listingsTotalPages && (
+                    <button
+                      onClick={() => setListingsPage((p) => p + 1)}
+                      disabled={listingsLoading}
+                      style={{ marginTop: '8px', padding: '11px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', fontWeight: 700, fontSize: '14px', color: 'var(--text)', cursor: listingsLoading ? 'not-allowed' : 'pointer' }}
+                    >
+                      {listingsLoading ? t('common.loading', lang) : lang === 'ru' ? 'Загрузить ещё' : 'Бештар бор кунед'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Favorites tab ── */}
+          {tab === 'favorites' && (
+            <div className="animate-fade-in">
+              {favoritesLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} style={{ height: '260px', borderRadius: '8px' }} className="skeleton" />
+                  ))}
+                </div>
+              ) : favorites.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ margin: '0 auto 12px', display: 'block', opacity: 0.4 }}>
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  </svg>
+                  <p>{t('favorites.empty', lang)}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {favorites.map((listing) => (
+                    <CarCard
+                      key={listing.id}
+                      listing={listing}
+                      lang={lang}
+                      initialFavorited={true}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -324,12 +408,12 @@ export default function DashboardPage() {
                       <label htmlFor="conf-pwd" style={labelStyle}>{t('dashboard.confirmPassword', lang)}</label>
                       <input id="conf-pwd" type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} style={inputStyle} />
                     </div>
-                    {pwdError && <p style={{ color: 'var(--accent)', fontSize: '13px', fontWeight: 600 }}>{pwdError}</p>}
-                    {pwdSuccess && <p style={{ color: '#16a34a', fontSize: '13px', fontWeight: 600 }}>{lang === 'ru' ? 'Пароль изменён' : 'Рамз иваз шуд'}</p>}
+                    {pwdError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{pwdError}</p>}
+                    {pwdSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{lang === 'ru' ? 'Пароль изменён' : 'Рамз иваз шуд'}</p>}
                     <button
                       onClick={changePassword}
                       disabled={pwdLoading}
-                      style={{ background: pwdLoading ? 'var(--text-muted)' : 'var(--accent)', color: '#fff', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: pwdLoading ? 'not-allowed' : 'pointer' }}
+                      style={{ background: pwdLoading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: pwdLoading ? 'not-allowed' : 'pointer' }}
                     >
                       {pwdLoading ? t('common.loading', lang) : t('dashboard.save', lang)}
                     </button>
@@ -423,30 +507,30 @@ function DashboardListingRow({
           <Link href={`/car/${listing.id}`} style={{ fontSize: '14px', fontWeight: 700, color: listing.is_active ? 'var(--text)' : 'var(--text-muted)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {listing.brand} {listing.model} {listing.year}
           </Link>
-          {listing.status === 'pending' && (
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#b45309', background: 'rgba(234,179,8,0.15)', padding: '1px 7px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              В модерации
+          {listing.is_active && listing.status === 'active' && (
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '1px 7px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {t('dashboard.active_badge', lang)}
             </span>
           )}
-          {listing.status === 'active' && (
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.12)', padding: '1px 7px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              Активно
+          {listing.status === 'pending' && (
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-warning-alt)', background: 'var(--color-warning-dim)', padding: '1px 7px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {t('dashboard.pending_badge', lang)}
             </span>
           )}
           {listing.status === 'rejected' && (
-            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent)', background: 'rgba(200,56,8,0.1)', padding: '1px 7px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              Отклонено
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-error)', background: 'var(--color-error-dim, rgba(239,68,68,0.1))', padding: '1px 7px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {t('dashboard.rejected_badge', lang)}
             </span>
           )}
-          {!listing.is_active && listing.status !== 'pending' && listing.status !== 'rejected' && (
+          {!listing.is_active && listing.status === 'active' && (
             <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--tag-bg)', padding: '1px 6px', borderRadius: '4px', flexShrink: 0 }}>
               {t('dashboard.inactive_badge', lang)}
             </span>
           )}
         </div>
         {listing.status === 'rejected' && listing.rejection_reason && (
-          <p style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '2px', marginBottom: '2px', fontStyle: 'italic' }}>
-            {listing.rejection_reason}
+          <p style={{ fontSize: '11px', color: 'var(--color-error)', marginTop: '4px', marginBottom: '2px', background: 'var(--color-error-dim)', padding: '4px 8px', borderRadius: '6px', display: 'inline-block' }}>
+            {t('dashboard.rejectionReason', lang)}: {listing.rejection_reason}
           </p>
         )}
         <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
@@ -460,28 +544,39 @@ function DashboardListingRow({
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-        <Link
-          href={`/post?edit=${listing.id}`}
-          style={{ padding: '6px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textDecoration: 'none' }}
-        >
-          {t('dashboard.edit', lang)}
-        </Link>
-        <button
-          onClick={onToggle}
-          style={{
-            padding: '6px 12px',
-            background: listing.is_active ? 'rgba(200,56,8,0.08)' : 'rgba(22,163,74,0.08)',
-            border: listing.is_active ? '1px solid rgba(200,56,8,0.3)' : '1px solid rgba(22,163,74,0.3)',
-            borderRadius: '8px',
-            fontSize: '12px',
-            fontWeight: 700,
-            color: listing.is_active ? 'var(--accent)' : '#16a34a',
-            cursor: 'pointer',
-          }}
-        >
-          {listing.is_active ? t('dashboard.deactivate', lang) : t('dashboard.activate', lang)}
-        </button>
+      <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
+        {listing.status === 'rejected' ? (
+          <Link
+            href={`/post?edit=${listing.id}`}
+            style={{ padding: '6px 12px', background: 'var(--color-error-dim)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: 'var(--color-error)', textDecoration: 'none', whiteSpace: 'nowrap' }}
+          >
+            {t('dashboard.fixAndResubmit', lang)}
+          </Link>
+        ) : (
+          <Link
+            href={`/post?edit=${listing.id}`}
+            style={{ padding: '6px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textDecoration: 'none' }}
+          >
+            {t('dashboard.edit', lang)}
+          </Link>
+        )}
+        {listing.status !== 'pending' && listing.status !== 'rejected' && (
+          <button
+            onClick={onToggle}
+            style={{
+              padding: '6px 12px',
+              background: listing.is_active ? 'var(--color-error-dim, rgba(239,68,68,0.08))' : 'var(--color-success-dim)',
+              border: listing.is_active ? '1px solid var(--color-error-border, rgba(239,68,68,0.3))' : '1px solid rgba(22,163,74,0.3)',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 700,
+              color: listing.is_active ? 'var(--color-error)' : 'var(--color-success)',
+              cursor: 'pointer',
+            }}
+          >
+            {listing.is_active ? t('dashboard.deactivate', lang) : t('dashboard.activate', lang)}
+          </button>
+        )}
       </div>
     </div>
   )

@@ -1,7 +1,11 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { t } from '@/lib/i18n'
+import { favoritesApi } from '@/lib/api'
+import { useAuth } from '@/lib/AuthContext'
 import type { Listing, Lang } from '@/types'
 
 interface CarCardProps {
@@ -9,6 +13,8 @@ interface CarCardProps {
   lang: Lang
   className?: string
   moderatorMode?: boolean
+  initialFavorited?: boolean
+  priority?: boolean
 }
 
 const STATUS_STRIPE: Record<string, string> = {
@@ -18,11 +24,11 @@ const STATUS_STRIPE: Record<string, string> = {
   draft: '#6b7280',
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'На модерации',
-  active: 'Активно',
-  rejected: 'Отклонено',
-  draft: 'Черновик',
+const STATUS_I18N_KEY: Record<string, string> = {
+  pending: 'common.inModeration',
+  active: 'dashboard.active_badge',
+  rejected: 'dashboard.rejected_badge',
+  draft: 'dashboard.inactive_badge',
 }
 
 function formatMileage(km: number): string {
@@ -57,47 +63,97 @@ function StarIcon() {
   )
 }
 
-export default function CarCard({ listing, lang, className, moderatorMode = false }: CarCardProps) {
+// Heart SVG icon
+function HeartIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill={filled ? 'var(--color-error)' : 'none'}
+      stroke={filled ? 'var(--color-error)' : 'currentColor'}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  )
+}
+
+export default function CarCard({ listing, lang, className, moderatorMode = false, initialFavorited, priority = false }: CarCardProps) {
   const primaryImage = listing.images.find((img) => img.is_primary) ?? listing.images[0]
   const stripeColor = moderatorMode ? (STATUS_STRIPE[listing.status] ?? '#6b7280') : null
-  const statusLabel = moderatorMode ? (STATUS_LABEL[listing.status] ?? listing.status) : null
+  const statusI18nKey = moderatorMode ? (STATUS_I18N_KEY[listing.status] ?? null) : null
+  const statusLabel = statusI18nKey ? t(statusI18nKey, lang) : (moderatorMode ? listing.status : null)
+  const [imgLoaded, setImgLoaded] = useState(false)
+
+  const { user } = useAuth()
+  const router = useRouter()
+  const [favorited, setFavorited] = useState<boolean>(
+    initialFavorited ?? listing.is_favorited ?? false
+  )
+  const [favLoading, setFavLoading] = useState(false)
+
+  async function handleFavoriteClick(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!user) {
+      router.push('/auth/login')
+      return
+    }
+    if (favLoading) return
+    // Optimistic update — flip immediately, revert if API fails
+    const prev = favorited
+    setFavorited(!prev)
+    setFavLoading(true)
+    try {
+      const res = await favoritesApi.toggle(listing.id)
+      setFavorited(res.data.data.favorited)
+    } catch {
+      setFavorited(prev) // revert
+    } finally {
+      setFavLoading(false)
+    }
+  }
 
   return (
     <Link href={`/car/${listing.id}`} style={{ display: 'block', textDecoration: 'none' }} className={className}>
       <article
-        className="animate-fade-in-up"
+        className="animate-fade-in-up card-hover"
         style={{
           background: 'var(--card)',
           border: '1px solid var(--border)',
           borderRadius: '8px',
           overflow: 'hidden',
           cursor: 'pointer',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.18s ease',
           ...(stripeColor ? { borderLeft: `4px solid ${stripeColor}` } : {}),
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-4px)'
-          e.currentTarget.style.boxShadow = 'var(--shadow-md)'
-          e.currentTarget.style.borderColor = 'var(--border-strong)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)'
-          e.currentTarget.style.boxShadow = 'none'
-          e.currentTarget.style.borderColor = 'var(--border)'
         }}
       >
         {/* Image */}
         <div style={{ position: 'relative', height: '180px', background: 'var(--bg)', overflow: 'hidden' }}>
           {primaryImage ? (
-            <Image
-              src={primaryImage.url}
-              alt={`${listing.brand} ${listing.model}`}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-              style={{ objectFit: 'cover' }}
-            />
+            <>
+              {/* Skeleton shown while image is loading */}
+              {!imgLoaded && (
+                <div
+                  className="skeleton"
+                  style={{ position: 'absolute', inset: 0, borderRadius: 0 }}
+                />
+              )}
+              <Image
+                src={primaryImage.url}
+                alt={`${listing.brand} ${listing.model}`}
+                fill
+                priority={priority}
+                loading={priority ? 'eager' : 'lazy'}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                style={{ objectFit: 'cover', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+                onLoad={() => setImgLoaded(true)}
+              />
+            </>
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)' }}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth="1.2">
                 <path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h1l2-3h10l2 3h1a2 2 0 012 2v6a2 2 0 01-2 2h-2" />
                 <circle cx="7.5" cy="17" r="2.5" />
@@ -110,7 +166,7 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
           <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', gap: '4px' }}>
             {listing.type === 'rent' && (
               <span style={{
-                background: '#2563eb',
+                background: 'var(--accent-secondary, #2563eb)',
                 color: '#fff',
                 fontSize: '10px',
                 fontWeight: 700,
@@ -158,6 +214,37 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
             </div>
           )}
 
+          {/* Favorite button — top-right (hidden in moderator mode where status badge lives there) */}
+          {!moderatorMode && (
+            <button
+              onClick={handleFavoriteClick}
+              aria-label={favorited ? t('favorites.remove', lang) : t('favorites.add', lang)}
+              style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,0.45)',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: favorited ? 'var(--color-error)' : '#fff',
+                opacity: favLoading ? 0.6 : 1,
+                transition: 'opacity 0.1s ease, transform 0.1s ease',
+                transform: favLoading ? 'scale(0.85)' : 'scale(1)',
+                backdropFilter: 'blur(4px)',
+                WebkitBackdropFilter: 'blur(4px)',
+                flexShrink: 0,
+              }}
+            >
+              <HeartIcon filled={favorited} />
+            </button>
+          )}
+
           {listing.is_dealer_listing && (
             <div style={{ position: 'absolute', bottom: '8px', left: '8px' }}>
               <span style={{
@@ -181,13 +268,14 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
 
         {/* Content */}
         <div style={{ padding: '12px 14px' }}>
-          {/* Price — prominent, dark */}
+          {/* Price — prominent */}
           <p style={{
             fontSize: '18px',
-            fontWeight: 800,
-            color: 'var(--text)',
+            fontWeight: 900,
+            color: 'var(--accent)',
             marginBottom: '4px',
-            letterSpacing: '-0.02em',
+            letterSpacing: '-0.03em',
+            lineHeight: 1.1,
           }}>
             {formatPrice(Number(listing.price), listing.currency)}
           </p>

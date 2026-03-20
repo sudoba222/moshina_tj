@@ -2,13 +2,13 @@ import math
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql import func, or_
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import Dealer, Listing, ListingStatus, User, UserRole
+from app.models import AuditLog, Currency, Dealer, FuelType, Listing, ListingStatus, TransmissionType, User, UserRole, log_audit
 from app.schemas import (
     AdminStats,
     ApiResponse,
@@ -46,6 +46,18 @@ def require_moderator(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+def require_manager_or_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in {UserRole.admin, UserRole.manager}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager or admin access required")
+    return current_user
+
+
+def require_support_or_above(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in {UserRole.admin, UserRole.manager, UserRole.support}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Support access required")
+    return current_user
+
+
 # ---------------------------------------------------------------------------
 # Schemas (local, only needed here)
 # ---------------------------------------------------------------------------
@@ -56,6 +68,66 @@ class BanPayload(BaseModel):
 
 class RejectPayload(BaseModel):
     reason: str
+
+
+class SkipPayload(BaseModel):
+    reason: Optional[str] = None
+
+
+class BulkApprovePayload(BaseModel):
+    listing_ids: list[str]
+
+    @field_validator("listing_ids")
+    @classmethod
+    def listing_ids_max(cls, v: list[str]) -> list[str]:
+        if len(v) > 100:
+            raise ValueError("Cannot bulk-process more than 100 listings at once")
+        return v
+
+
+class BulkRejectPayload(BaseModel):
+    listing_ids: list[str]
+    reason: str
+
+    @field_validator("listing_ids")
+    @classmethod
+    def listing_ids_max(cls, v: list[str]) -> list[str]:
+        if len(v) > 100:
+            raise ValueError("Cannot bulk-process more than 100 listings at once")
+        return v
+
+
+class NotePayload(BaseModel):
+    note: str
+
+
+class CreateUserPayload(BaseModel):
+    phone: str
+    name: Optional[str] = None
+    password: str
+    role: UserRole = UserRole.user
+
+
+class EditUserPayload(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+
+class AdminEditListingPayload(BaseModel):
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+    price: Optional[float] = None
+    currency: Optional[Currency] = None
+    city: Optional[str] = None
+    mileage: Optional[int] = None
+    fuel: Optional[FuelType] = None
+    transmission: Optional[TransmissionType] = None
+    color: Optional[str] = None
+    description: Optional[str] = None
+    installment_available: Optional[bool] = None
+    status: Optional[ListingStatus] = None
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +169,7 @@ def list_users(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    query = db.query(User)
+    query = db.query(User).filter(User.is_deleted == False)
     if role is not None:
         query = query.filter(User.role == role)
     if search:
@@ -149,10 +221,12 @@ def update_user_role(
 ):
     if str(current_user.id) == user_id:
         raise HTTPException(status_code=400, detail="You cannot change your own role")
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    old_role = user.role
     user.role = payload.role
+    log_audit(db, current_user.id, "change_role", "user", user.id, {"old_role": old_role.value, "new_role": payload.role.value})
     db.commit()
     db.refresh(user)
     return ApiResponse(success=True, data=UserResponse.model_validate(user), message="Role updated")
@@ -167,23 +241,25 @@ def ban_user(
 ):
     if str(current_user.id) == user_id:
         raise HTTPException(status_code=400, detail="You cannot ban yourself")
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.is_banned = True
     user.ban_reason = payload.reason
+    log_audit(db, current_user.id, "ban_user", "user", user.id, {"reason": payload.reason})
     db.commit()
     db.refresh(user)
     return ApiResponse(success=True, data=UserResponse.model_validate(user), message="User banned")
 
 
 @router.put("/users/{user_id}/unban", response_model=ApiResponse[UserResponse])
-def unban_user(user_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    user = db.query(User).filter(User.id == user_id).first()
+def unban_user(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.is_banned = False
     user.ban_reason = None
+    log_audit(db, current_user.id, "unban_user", "user", user.id)
     db.commit()
     db.refresh(user)
     return ApiResponse(success=True, data=UserResponse.model_validate(user), message="User unbanned")
@@ -191,14 +267,66 @@ def unban_user(user_id: str, db: Session = Depends(get_db), _: User = Depends(re
 
 @router.delete("/users/{user_id}", response_model=ApiResponse[None])
 def delete_user(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_super_admin)):
+    from datetime import datetime, timezone
     if str(current_user.id) == user_id:
         raise HTTPException(status_code=400, detail="You cannot delete your own account")
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    db.delete(user)
+    user.is_deleted = True
+    user.deleted_at = datetime.now(timezone.utc)
+    log_audit(db, current_user.id, "delete_user", "user", user.id, {"name": user.name, "phone": user.phone})
     db.commit()
     return ApiResponse(success=True, data=None, message="User deleted")
+
+
+@router.post("/users", response_model=ApiResponse[UserResponse])
+def create_user(
+    payload: CreateUserPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    from app.auth import hash_password
+    existing = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this phone already exists")
+    user = User(
+        phone=payload.phone,
+        name=payload.name,
+        password_hash=hash_password(payload.password),
+        role=payload.role,
+        phone_verified=True,
+    )
+    db.add(user)
+    log_audit(db, current_user.id, "create_user", "user", user.id, {"phone": payload.phone, "role": payload.role.value})
+    db.commit()
+    db.refresh(user)
+    return ApiResponse(success=True, data=UserResponse.model_validate(user), message="User created")
+
+
+@router.put("/users/{user_id}", response_model=ApiResponse[UserResponse])
+def edit_user(
+    user_id: str,
+    payload: EditUserPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if payload.name is not None:
+        user.name = payload.name
+    if payload.phone is not None:
+        conflict = db.query(User).filter(User.phone == payload.phone, User.id != user_id, User.is_deleted == False).first()
+        if conflict:
+            raise HTTPException(status_code=400, detail="Phone already in use")
+        user.phone = payload.phone
+    if payload.email is not None:
+        user.email = payload.email
+    log_audit(db, current_user.id, "edit_user", "user", user.id, {"changes": payload.model_dump(exclude_none=True)})
+    db.commit()
+    db.refresh(user)
+    return ApiResponse(success=True, data=UserResponse.model_validate(user), message="User updated")
 
 
 # ---------------------------------------------------------------------------
@@ -245,21 +373,63 @@ def activate_listing(listing_id: str, db: Session = Depends(get_db), current_use
     listing.status = ListingStatus.active
     listing.moderated_by = current_user.id
     listing.rejection_reason = None
+    log_audit(db, current_user.id, "approve_listing", "listing", listing.id)
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing activated")
 
 
 @router.put("/listings/{listing_id}/deactivate", response_model=ApiResponse[ListingResponse])
-def deactivate_listing(listing_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def deactivate_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     listing.is_active = False
     listing.status = ListingStatus.rejected
+    log_audit(db, current_user.id, "deactivate_listing", "listing", listing.id)
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing deactivated")
+
+
+@router.put("/listings/{listing_id}", response_model=ApiResponse[ListingResponse])
+def admin_edit_listing(
+    listing_id: str,
+    payload: AdminEditListingPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    fields = payload.model_dump(exclude_none=True)
+    if "status" in fields:
+        try:
+            listing.status = ListingStatus(fields.pop("status"))
+            listing.is_active = listing.status == ListingStatus.active
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid status")
+    for key, val in fields.items():
+        setattr(listing, key, val)
+    log_audit(db, current_user.id, "edit_listing", "listing", listing.id, {"changes": fields})
+    db.commit()
+    db.refresh(listing)
+    return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing updated")
+
+
+@router.delete("/listings/{listing_id}", response_model=ApiResponse[None])
+def admin_delete_listing(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    log_audit(db, current_user.id, "delete_listing", "listing", listing.id, {"brand": listing.brand, "model": listing.model})
+    db.delete(listing)
+    db.commit()
+    return ApiResponse(success=True, data=None, message="Listing deleted")
 
 
 # ---------------------------------------------------------------------------
@@ -348,6 +518,7 @@ def approve_listing(listing_id: str, db: Session = Depends(get_db), current_user
     ).first()
     if active_session:
         active_session.posts_approved += 1
+    log_audit(db, current_user.id, "approve_listing", "listing", listing.id)
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing approved")
@@ -377,6 +548,7 @@ def reject_listing(
     ).first()
     if active_session:
         active_session.posts_rejected += 1
+    log_audit(db, current_user.id, "reject_listing", "listing", listing.id, {"reason": payload.reason})
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing rejected")
@@ -410,22 +582,24 @@ def admin_dealers(
 
 
 @router.put("/dealers/{dealer_id}/verify", response_model=ApiResponse[DealerResponse])
-def verify_dealer(dealer_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def verify_dealer(dealer_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     dealer = db.query(Dealer).filter(Dealer.id == dealer_id).first()
     if not dealer:
         raise HTTPException(status_code=404, detail="Dealer not found")
     dealer.verified = True
+    log_audit(db, current_user.id, "verify_dealer", "dealer", dealer.id)
     db.commit()
     db.refresh(dealer)
     return ApiResponse(success=True, data=DealerResponse.model_validate(dealer), message="Dealer verified")
 
 
 @router.put("/dealers/{dealer_id}/unverify", response_model=ApiResponse[DealerResponse])
-def unverify_dealer(dealer_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def unverify_dealer(dealer_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     dealer = db.query(Dealer).filter(Dealer.id == dealer_id).first()
     if not dealer:
         raise HTTPException(status_code=404, detail="Dealer not found")
     dealer.verified = False
+    log_audit(db, current_user.id, "unverify_dealer", "dealer", dealer.id)
     db.commit()
     db.refresh(dealer)
     return ApiResponse(success=True, data=DealerResponse.model_validate(dealer), message="Dealer unverified")
@@ -439,6 +613,14 @@ class ModeratorListingPatch(BaseModel):
     brand: Optional[str] = None
     model: Optional[str] = None
     description: Optional[str] = None
+    price: Optional[int] = None
+    currency: Optional[str] = None
+    year: Optional[int] = None
+    city: Optional[str] = None
+    mileage: Optional[int] = None
+    fuel: Optional[str] = None
+    transmission: Optional[str] = None
+    color: Optional[str] = None
 
 @router.patch("/moderation/{listing_id}/edit", response_model=ApiResponse[ListingResponse])
 def moderator_edit_listing(
@@ -447,7 +629,8 @@ def moderator_edit_listing(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
 ):
-    """Allows a moderator to fix brand, model, or description inline before approving."""
+    """Allows a moderator to fix listing fields inline before approving."""
+    from app.models import FuelType, TransmissionType, Currency as CurrencyEnum
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
@@ -457,6 +640,22 @@ def moderator_edit_listing(
         listing.model = payload.model.strip()
     if payload.description is not None:
         listing.description = payload.description.strip()
+    if payload.price is not None:
+        listing.price = payload.price
+    if payload.currency is not None:
+        listing.currency = payload.currency
+    if payload.year is not None:
+        listing.year = payload.year
+    if payload.city is not None:
+        listing.city = payload.city.strip()
+    if payload.mileage is not None:
+        listing.mileage = payload.mileage
+    if payload.fuel is not None:
+        listing.fuel = payload.fuel
+    if payload.transmission is not None:
+        listing.transmission = payload.transmission
+    if payload.color is not None:
+        listing.color = payload.color.strip()
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing updated")
@@ -593,7 +792,12 @@ def get_active_session(db: Session = Depends(get_db), current_user: User = Depen
 
 
 @router.post("/moderation/{listing_id}/skip", response_model=ApiResponse[dict])
-def skip_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
+def skip_listing(
+    listing_id: str,
+    payload: SkipPayload = SkipPayload(),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_moderator),
+):
     """Skip a listing (release lock, increment skip counter) and track in session."""
     from app.models import ModerationSession
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
@@ -607,6 +811,8 @@ def skip_listing(listing_id: str, db: Session = Depends(get_db), current_user: U
     listing.locked_at = None
     if active_session:
         active_session.posts_skipped += 1
+        if payload.reason:
+            active_session.last_skip_reason = payload.reason
     db.commit()
     return ApiResponse(success=True, data={"listing_id": listing_id}, message="Listing skipped")
 
@@ -732,3 +938,263 @@ def moderator_stats(db: Session = Depends(get_db), current_user: User = Depends(
         "avg_posts_per_session": avg,
         "total_sessions": len(all_s),
     }, message="Moderator stats fetched")
+
+
+# ---------------------------------------------------------------------------
+# Moderator note
+# ---------------------------------------------------------------------------
+
+@router.post("/moderation/{listing_id}/note", response_model=ApiResponse[dict])
+def add_moderator_note(
+    listing_id: str,
+    payload: NotePayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_moderator),
+):
+    """Add or update a private moderator note on a listing."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    listing.moderator_note = payload.note.strip()
+    db.commit()
+    return ApiResponse(success=True, data={"listing_id": listing_id, "note": listing.moderator_note}, message="Note saved")
+
+
+# ---------------------------------------------------------------------------
+# Bulk moderation
+# ---------------------------------------------------------------------------
+
+@router.post("/moderation/bulk-approve", response_model=ApiResponse[dict])
+def bulk_approve_listings(
+    payload: BulkApprovePayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_moderator),
+):
+    """Approve multiple pending listings at once (max 20)."""
+    if len(payload.listing_ids) > 20:
+        raise HTTPException(status_code=400, detail="Maximum 20 listings per bulk operation")
+    from app.models import ModerationSession
+    active_session = db.query(ModerationSession).filter(
+        ModerationSession.moderator_id == current_user.id,
+        ModerationSession.is_active == True
+    ).first()
+    approved = 0
+    for lid in payload.listing_ids:
+        listing = db.query(Listing).filter(Listing.id == lid, Listing.status == ListingStatus.pending).first()
+        if listing:
+            listing.status = ListingStatus.active
+            listing.is_active = True
+            listing.rejection_reason = None
+            listing.moderated_by = current_user.id
+            listing.locked_by = None
+            listing.locked_at = None
+            log_audit(db, current_user.id, "approve_listing", "listing", listing.id)
+            approved += 1
+    if active_session:
+        active_session.posts_approved += approved
+    db.commit()
+    return ApiResponse(success=True, data={"approved": approved}, message=f"{approved} listings approved")
+
+
+@router.post("/moderation/bulk-reject", response_model=ApiResponse[dict])
+def bulk_reject_listings(
+    payload: BulkRejectPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_moderator),
+):
+    """Reject multiple pending listings at once with the same reason (max 20)."""
+    if len(payload.listing_ids) > 20:
+        raise HTTPException(status_code=400, detail="Maximum 20 listings per bulk operation")
+    from app.models import ModerationSession
+    active_session = db.query(ModerationSession).filter(
+        ModerationSession.moderator_id == current_user.id,
+        ModerationSession.is_active == True
+    ).first()
+    rejected = 0
+    for lid in payload.listing_ids:
+        listing = db.query(Listing).filter(Listing.id == lid, Listing.status == ListingStatus.pending).first()
+        if listing:
+            listing.status = ListingStatus.rejected
+            listing.is_active = False
+            listing.rejection_reason = payload.reason
+            listing.moderated_by = current_user.id
+            listing.locked_by = None
+            listing.locked_at = None
+            log_audit(db, current_user.id, "reject_listing", "listing", listing.id, {"reason": payload.reason})
+            rejected += 1
+    if active_session:
+        active_session.posts_rejected += rejected
+    db.commit()
+    return ApiResponse(success=True, data={"rejected": rejected}, message=f"{rejected} listings rejected")
+
+
+# ---------------------------------------------------------------------------
+# Audit logs
+# ---------------------------------------------------------------------------
+
+@router.get("/audit-logs", response_model=ApiResponse[dict])
+def get_audit_logs(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    action: Optional[str] = None,
+    target_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_super_admin),
+):
+    """Paginated audit log of all admin actions. Admin only."""
+    query = db.query(AuditLog)
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if target_type:
+        query = query.filter(AuditLog.target_type == target_type)
+    total = query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    logs = query.order_by(AuditLog.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+
+    result = []
+    for log in logs:
+        actor_name = None
+        if log.actor:
+            actor_name = log.actor.name or log.actor.phone
+        result.append({
+            "id": str(log.id),
+            "actor_id": str(log.actor_id) if log.actor_id else None,
+            "actor_name": actor_name,
+            "action": log.action,
+            "target_type": log.target_type,
+            "target_id": str(log.target_id) if log.target_id else None,
+            "details": log.details,
+            "created_at": log.created_at.isoformat(),
+        })
+    return ApiResponse(success=True, data={"items": result, "total": total, "page": page, "pages": pages}, message="Audit logs fetched")
+
+
+# ---------------------------------------------------------------------------
+# Manager trend stats
+# ---------------------------------------------------------------------------
+
+@router.get("/manager/stats", response_model=ApiResponse[dict])
+def manager_stats(db: Session = Depends(get_db), _: User = Depends(require_manager_or_admin)):
+    """Trend stats for manager: today/week/month/all-time."""
+    from datetime import datetime, timedelta, timezone
+    from app.models import ModerationSession
+
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = now - timedelta(days=7)
+    month_start = now - timedelta(days=30)
+
+    def _listing_stats(since):
+        new_listings = db.query(Listing).filter(Listing.created_at >= since).count()
+        approved = db.query(Listing).filter(Listing.status == ListingStatus.active, Listing.updated_at >= since).count()
+        rejected = db.query(Listing).filter(Listing.status == ListingStatus.rejected, Listing.updated_at >= since).count()
+        return {"new_listings": new_listings, "approved": approved, "rejected": rejected}
+
+    def _user_stats(since):
+        return db.query(User).filter(User.created_at >= since, User.is_deleted == False).count()
+
+    today_data = _listing_stats(today_start)
+    today_data["new_users"] = _user_stats(today_start)
+
+    week_data = _listing_stats(week_start)
+    week_data["new_users"] = _user_stats(week_start)
+
+    month_data = _listing_stats(month_start)
+    month_data["new_users"] = _user_stats(month_start)
+
+    total_data = {
+        "users": db.query(User).filter(User.is_deleted == False).count(),
+        "listings": db.query(Listing).count(),
+        "active": db.query(Listing).filter(Listing.status == ListingStatus.active).count(),
+        "pending": db.query(Listing).filter(Listing.status == ListingStatus.pending).count(),
+        "rejected": db.query(Listing).filter(Listing.status == ListingStatus.rejected).count(),
+        "dealers": db.query(Dealer).count(),
+    }
+
+    return ApiResponse(success=True, data={
+        "today": today_data,
+        "week": week_data,
+        "month": month_data,
+        "total": total_data,
+    }, message="Manager stats fetched")
+
+
+# ---------------------------------------------------------------------------
+# Support stats
+# ---------------------------------------------------------------------------
+
+@router.get("/support/stats", response_model=ApiResponse[dict])
+def support_stats(db: Session = Depends(get_db), _: User = Depends(require_support_or_above)):
+    """Stats overview for support role."""
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    total_users = db.query(User).filter(User.is_deleted == False).count()
+    banned_users = db.query(User).filter(User.is_banned == True, User.is_deleted == False).count()
+    total_listings = db.query(Listing).count()
+    active_listings = db.query(Listing).filter(Listing.status == ListingStatus.active).count()
+    pending_listings = db.query(Listing).filter(Listing.status == ListingStatus.pending).count()
+    rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.rejected).count()
+    total_dealers = db.query(Dealer).count()
+    verified_dealers = db.query(Dealer).filter(Dealer.verified == True).count()
+    today_new_users = db.query(User).filter(User.created_at >= today_start, User.is_deleted == False).count()
+    today_new_listings = db.query(Listing).filter(Listing.created_at >= today_start).count()
+
+    return ApiResponse(success=True, data={
+        "total_users": total_users,
+        "banned_users": banned_users,
+        "total_listings": total_listings,
+        "active_listings": active_listings,
+        "pending_listings": pending_listings,
+        "rejected_listings": rejected_listings,
+        "total_dealers": total_dealers,
+        "verified_dealers": verified_dealers,
+        "today_new_users": today_new_users,
+        "today_new_listings": today_new_listings,
+    }, message="Support stats fetched")
+
+
+# ---------------------------------------------------------------------------
+# Listing analytics (admin)
+# ---------------------------------------------------------------------------
+
+@router.get("/listings/stats", response_model=ApiResponse[dict])
+def listing_stats(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """Listing analytics: top brands, cities, fuel types."""
+    from sqlalchemy import func as sqlfunc
+
+    top_brands = (
+        db.query(Listing.brand, sqlfunc.count(Listing.id).label("count"))
+        .filter(Listing.status == ListingStatus.active)
+        .group_by(Listing.brand)
+        .order_by(sqlfunc.count(Listing.id).desc())
+        .limit(10)
+        .all()
+    )
+    top_cities = (
+        db.query(Listing.city, sqlfunc.count(Listing.id).label("count"))
+        .filter(Listing.status == ListingStatus.active)
+        .group_by(Listing.city)
+        .order_by(sqlfunc.count(Listing.id).desc())
+        .limit(10)
+        .all()
+    )
+    by_fuel = (
+        db.query(Listing.fuel, sqlfunc.count(Listing.id).label("count"))
+        .filter(Listing.status == ListingStatus.active)
+        .group_by(Listing.fuel)
+        .all()
+    )
+    by_type = (
+        db.query(Listing.type, sqlfunc.count(Listing.id).label("count"))
+        .group_by(Listing.type)
+        .all()
+    )
+
+    return ApiResponse(success=True, data={
+        "top_brands": [{"brand": r.brand, "count": r.count} for r in top_brands],
+        "top_cities": [{"city": r.city, "count": r.count} for r in top_cities],
+        "by_fuel": [{"fuel": str(r.fuel.value) if r.fuel else None, "count": r.count} for r in by_fuel],
+        "by_type": [{"type": str(r.type.value) if r.type else None, "count": r.count} for r in by_type],
+    }, message="Listing stats fetched")

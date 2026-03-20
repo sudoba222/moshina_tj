@@ -47,16 +47,26 @@ export interface Listing {
   is_active: boolean
   status: ListingStatus
   rejection_reason: string | null
+  moderator_note: string | null
   moderated_by: string | null
   views: number
   created_at: string
   updated_at: string
   images: ListingImage[]
   rental_rules?: RentalRules
+  is_favorited?: boolean
+  favorites_count?: number
 }
 
 export interface PaginatedListings {
   items: Listing[]
+  total: number
+  page: number
+  pages: number
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
   total: number
   page: number
   pages: number
@@ -119,4 +129,77 @@ export interface AdminStats {
   active_listings: number
   total_dealers: number
   pending_listings: number
+}
+
+export interface AuditLog {
+  id: string
+  actor_id: string | null
+  actor_name: string | null
+  action: string
+  target_type: string | null
+  target_id: string | null
+  details: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface ManagerStatsPeriod {
+  new_users: number
+  new_listings: number
+  approved: number
+  rejected: number
+}
+
+export interface ManagerStats {
+  today: ManagerStatsPeriod
+  week: ManagerStatsPeriod
+  month: ManagerStatsPeriod
+  total: {
+    users: number
+    listings: number
+    active: number
+    pending: number
+    rejected: number
+    dealers: number
+  }
+}
+
+export interface SupportStats {
+  total_users: number
+  banned_users: number
+  total_listings: number
+  active_listings: number
+  pending_listings: number
+  rejected_listings: number
+  total_dealers: number
+  verified_dealers: number
+  today_new_users: number
+  today_new_listings: number
+}
+
+export interface SessionHistoryItem {
+  session_id: string
+  started_at: string
+  ended_at: string | null
+  duration_seconds: number | null
+  posts_approved: number
+  posts_rejected: number
+  posts_skipped: number
+  total: number
+  is_active: boolean
+  auto_ended: boolean
+  timer_minutes: number | null
+  filters: {
+    date_from: string | null
+    date_to: string | null
+    type: string | null
+    city: string | null
+    brand: string | null
+  }
+}
+
+export interface ListingAnalytics {
+  top_brands: { brand: string; count: number }[]
+  top_cities: { city: string; count: number }[]
+  by_fuel: { fuel: string | null; count: number }[]
+  by_type: { type: string | null; count: number }[]
 }

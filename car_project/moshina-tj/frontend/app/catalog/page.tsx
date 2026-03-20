@@ -514,7 +514,7 @@ function CatalogContent() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
-      <main style={{ flex: 1 }}>
+      <main style={{ flex: 1 }} className="pb-mobile">
         <div className="max-w-7xl mx-auto px-4 md:px-6" style={{ paddingTop: '32px', paddingBottom: '60px' }}>
 
           {/* Title + mobile filter button */}
@@ -588,6 +588,7 @@ function CatalogContent() {
                   zIndex: 301,
                   overflowY: 'auto',
                   padding: '16px',
+                  boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -661,50 +662,59 @@ function CatalogContent() {
                   {t('catalog.noResults', lang)}
                   {didYouMean && (
                     <div
+                      className="slide-up"
                       style={{
                         marginTop: '20px',
                         display: 'inline-flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '8px',
-                        background: 'var(--accent-dim)',
-                        border: '1px solid var(--accent)',
-                        borderRadius: '10px',
-                        padding: '10px 16px',
-                        fontSize: '14px',
-                        color: 'var(--text)',
+                        gap: '12px',
                       }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: 'var(--accent)', flexShrink: 0 }}>
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="M21 21l-4.35-4.35" />
-                      </svg>
-                      <span>
-                        {lang === 'ru' ? 'Вы имели в виду: ' : 'Шумо мехостед: '}
-                        <button
-                          type="button"
-                          onClick={() => handleDidYouMeanClick(didYouMean)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                            cursor: 'pointer',
-                            color: 'var(--accent)',
-                            fontWeight: 700,
-                            fontSize: '14px',
-                            textDecoration: 'underline',
-                            fontFamily: 'var(--font)',
-                          }}
-                        >
-                          {didYouMean}
-                        </button>
-                        ?
+                      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                        {t('search.didYouMean', lang)}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDidYouMeanClick(didYouMean)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: 'var(--accent-dim)',
+                          border: '1.5px solid var(--accent)',
+                          borderRadius: '100px',
+                          padding: '10px 20px',
+                          cursor: 'pointer',
+                          color: 'var(--accent)',
+                          fontWeight: 700,
+                          fontSize: '15px',
+                          fontFamily: 'inherit',
+                          transition: 'background 0.15s ease, transform 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--accent)'
+                          e.currentTarget.style.color = '#fff'
+                          e.currentTarget.style.transform = 'translateY(-1px)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'var(--accent-dim)'
+                          e.currentTarget.style.color = 'var(--accent)'
+                          e.currentTarget.style.transform = 'translateY(0)'
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                          <circle cx="11" cy="11" r="8" />
+                          <path d="M21 21l-4.35-4.35" />
+                        </svg>
+                        {didYouMean}
+                      </button>
                     </div>
                   )}
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 fade-in">
                     {listings.map((listing, i) => (
                       <CarCard
                         key={listing.id}

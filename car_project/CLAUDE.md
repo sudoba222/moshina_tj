@@ -2,6 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Session Memory Protocol
+
+At the **start of every session**, read these files to restore context:
+
+- `memory/user.md` — who the user is and how they work
+- `memory/preferences.md` — code style, tooling, and workflow rules
+- `memory/decisions.md` — key architectural and product decisions
+- `memory/people.md` — team members and stakeholders
+
+At the **end of every session** (or when significant new information emerges), update the relevant memory files:
+
+- New architectural/product decision made → update `memory/decisions.md`
+- New information about the user → update `memory/user.md`
+- New preference or convention established → update `memory/preferences.md`
+- New person identified → update `memory/people.md`
+
+Keep each file concise and current. Remove outdated entries rather than accumulating stale information.
+
 ## Project
 
 **MOSHINA.TJ** — a car marketplace for Tajikistan. The repo lives under `moshina-tj/` with two sub-projects:

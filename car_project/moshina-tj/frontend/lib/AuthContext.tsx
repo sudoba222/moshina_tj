@@ -1,6 +1,7 @@
 'use client'
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import Cookies from 'js-cookie'
+import { authApi } from '@/lib/api'
 import type { User } from '@/types'
 
 interface AuthContextValue {
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
+    authApi.logout().catch(() => {}) // best-effort server-side token revocation
     Cookies.remove('token')
     localStorage.removeItem('user')
     setToken(null)

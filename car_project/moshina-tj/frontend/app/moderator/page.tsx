@@ -3,37 +3,40 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { adminApi } from '@/lib/api'
-import { listingsApi } from '@/lib/api'
-import { useAuth } from '@/lib/AuthContext'
-import type { Listing, UserRole } from '@/types'
+import { adminApi, listingsApi } from '@/lib/api'
 import type { ModerationSession } from '@/lib/api'
+import { useAuth } from '@/lib/AuthContext'
+import { useLang } from '@/lib/LanguageContext'
+import { t } from '@/lib/i18n'
+import type { Listing, UserRole, SessionHistoryItem, User } from '@/types'
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface ModeratorStats {
+  total_sessions: number
+  avg_posts_per_session: number
+  today: { total: number } | null
+  this_week: { total: number } | null
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 const ALLOWED_ROLES: UserRole[] = ['moderator', 'admin']
 const SESSION_LIMIT = 10
+const FUEL_OPTIONS = ['', 'Бензин', 'Дизель', 'Газ', 'Электро', 'Гибрид']
+const TRANSMISSION_OPTIONS = ['', 'Автомат', 'Механика', 'Вариатор']
+const CURRENCY_OPTIONS = ['USD', 'TJS']
 
-const QUICK_REASONS = [
-  'Дубликат объявления',
-  'Неверная цена',
-  'Нет фотографий',
-  'Некорректные параметры',
-  'Не та категория',
-  'Запрещённый контент',
-  'Неполное описание',
-]
-
-// ── Icons ──────────────────────────────────────────────────────────────────
-function IconCheck() {
+// ── SVG Icons ─────────────────────────────────────────────────────────────────
+function IconCheck({ size = 16 }: { size?: number }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12" />
     </svg>
   )
 }
 
-function IconX() {
+function IconX({ size = 16 }: { size?: number }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
@@ -44,6 +47,7 @@ function IconSkip() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="9 18 15 12 9 6" />
+      <line x1="20" y1="6" x2="20" y2="18" />
     </svg>
   )
 }
@@ -73,6 +77,41 @@ function IconChevronRight() {
   )
 }
 
+function IconUser() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  )
+}
+
+function IconPhone() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.82a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+    </svg>
+  )
+}
+
+function IconEye() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function IconEyeOff() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  )
+}
+
 function IconCar() {
   return (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
@@ -83,13 +122,36 @@ function IconCar() {
   )
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+function IconTrash() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+    </svg>
+  )
+}
+
+function IconArrowLeft() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  )
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function formatPrice(price: number, currency: string) {
-  return currency === 'USD' ? `$${price.toLocaleString('en-US')}` : `${price.toLocaleString()} сом.`
+  return currency === 'USD'
+    ? `$${price.toLocaleString('en-US')}`
+    : `${price.toLocaleString()} сом.`
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleDateString('ru-RU', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
 }
 
 function formatElapsed(seconds: number) {
@@ -98,68 +160,120 @@ function formatElapsed(seconds: number) {
   return `${m}:${s}`
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ── Status badge ──────────────────────────────────────────────────────────────
+function StatusBadge({ status }: { status: string }) {
+  const colors: Record<string, { bg: string; color: string }> = {
+    active:   { bg: 'var(--color-success-dim)', color: 'var(--color-success)' },
+    pending:  { bg: 'var(--color-warning-dim)', color: 'var(--color-warning)' },
+    rejected: { bg: 'var(--color-error-dim)',   color: 'var(--color-error)' },
+  }
+  const c = colors[status] ?? { bg: 'var(--tag-bg)', color: 'var(--text-muted)' }
+  return (
+    <span style={{
+      background: c.bg, color: c.color,
+      padding: '2px 8px', borderRadius: '100px',
+      fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em',
+    }}>
+      {status}
+    </span>
+  )
+}
+
+// ── Role badge ────────────────────────────────────────────────────────────────
+function RoleBadge({ role }: { role: string }) {
+  return (
+    <span style={{
+      background: 'var(--accent-dim)', color: 'var(--accent)',
+      padding: '2px 8px', borderRadius: '100px',
+      fontSize: '11px', fontWeight: 600,
+    }}>
+      {role}
+    </span>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function ModeratorPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { lang } = useLang()
 
   type Screen = 'loading' | 'start' | 'workspace' | 'summary' | 'stats'
 
-  const [screen, setScreen] = useState<Screen>('loading')
-  const [session, setSession] = useState<ModerationSession | null>(null)
-  const [pendingTotal, setPendingTotal] = useState(0)
-  const [listing, setListing] = useState<Listing | null>(null)
-  const [listingLoading, setListingLoading] = useState(false)
-  const [similarListings, setSimilarListings] = useState<Listing[]>([])
+  const [screen, setScreen]                     = useState<Screen>('loading')
+  const [session, setSession]                   = useState<ModerationSession | null>(null)
+  const [pendingTotal, setPendingTotal]          = useState(0)
+  const [listing, setListing]                   = useState<Listing | null>(null)
+  const [listingLoading, setListingLoading]      = useState(false)
+  const [similarListings, setSimilarListings]    = useState<Listing[]>([])
+  const [authorListings, setAuthorListings]      = useState<Listing[]>([])
+  const [authorUser, setAuthorUser]              = useState<User | null>(null)
+  const [showPhone, setShowPhone]                = useState(false)
 
-  // Session filters (start screen)
-  const [filterTimer, setFilterTimer] = useState<number | null>(null)
-  const [filterDateFrom, setFilterDateFrom] = useState('')
-  const [filterDateTo, setFilterDateTo] = useState('')
-  const [filterType, setFilterType] = useState<'sale' | 'rent' | null>(null)
-  const [filterCity, setFilterCity] = useState('')
-  const [filterBrand, setFilterBrand] = useState('')
+  // Session filters
+  const [filterTimer, setFilterTimer]           = useState<number | null>(null)
+  const [filterDateFrom, setFilterDateFrom]     = useState('')
+  const [filterDateTo, setFilterDateTo]         = useState('')
+  const [filterType, setFilterType]             = useState<'sale' | 'rent' | null>(null)
+  const [filterCity, setFilterCity]             = useState('')
+  const [filterBrand, setFilterBrand]           = useState('')
 
   // Stats / history
-  const [statsData, setStatsData] = useState<any>(null)
-  const [historyData, setHistoryData] = useState<any[]>([])
-  const [statsLoading, setStatsLoading] = useState(false)
+  const [statsData, setStatsData]               = useState<ModeratorStats | null>(null)
+  const [historyData, setHistoryData]           = useState<SessionHistoryItem[]>([])
+  const [statsLoading, setStatsLoading]         = useState(false)
 
-  // Timer (elapsed or countdown)
-  const [elapsed, setElapsed] = useState(0)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [timerMinutes, setTimerMinutes] = useState<number | null>(null)
-  const autoEndedRef = useRef(false)
+  // Timer
+  const [elapsed, setElapsed]                   = useState(0)
+  const timerRef                                = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [timerMinutes, setTimerMinutes]         = useState<number | null>(null)
+  const autoEndedRef                            = useRef(false)
 
   // Photo carousel
-  const [photoIdx, setPhotoIdx] = useState(0)
+  const [photoIdx, setPhotoIdx]                 = useState(0)
 
-  // Reject panel
-  const [rejectOpen, setRejectOpen] = useState(false)
-  const [rejectReason, setRejectReason] = useState('')
-  const [rejectLoading, setRejectLoading] = useState(false)
+  // Rejection reasons (multi-select)
+  const [selectedReasons, setSelectedReasons]   = useState<string[]>([])
+  const [rejectLoading, setRejectLoading]       = useState(false)
 
   // Action loading
-  const [actionLoading, setActionLoading] = useState(false)
+  const [actionLoading, setActionLoading]       = useState(false)
 
-  // Inline edit state
-  const [editBrand, setEditBrand] = useState('')
-  const [editModel, setEditModel] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [savedFlash, setSavedFlash] = useState(false)
-  const editDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const savedFlashRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Inline edit
+  const [editBrand, setEditBrand]               = useState('')
+  const [editModel, setEditModel]               = useState('')
+  const [editDescription, setEditDescription]   = useState('')
+  const [editPrice, setEditPrice]               = useState(0)
+  const [editCurrency, setEditCurrency]         = useState('USD')
+  const [editYear, setEditYear]                 = useState(0)
+  const [editCity, setEditCity]                 = useState('')
+  const [editMileage, setEditMileage]           = useState<number | ''>('')
+  const [editFuel, setEditFuel]                 = useState('')
+  const [editTransmission, setEditTransmission] = useState('')
+  const [editColor, setEditColor]               = useState('')
+  const [savedFlash, setSavedFlash]             = useState(false)
+  const editDebounceRef                         = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savedFlashRef                           = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ── Auth guard ─────────────────────────────────────────────────────────────
+  // Skip panel
+  const [skipOpen, setSkipOpen]                 = useState(false)
+  const [skipReason, setSkipReason]             = useState('')
+  const [skipLoading, setSkipLoading]           = useState(false)
+
+  // Moderator note
+  const [noteText, setNoteText]                 = useState('')
+  const [noteSaving, setNoteSaving]             = useState(false)
+  const [noteSaved, setNoteSaved]               = useState(false)
+
+  // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { router.replace('/auth/login'); return }
     if (!ALLOWED_ROLES.includes(user.role)) { router.replace('/'); return }
   }, [user, router])
 
-  // ── On mount: check for active session ────────────────────────────────────
+  // ── On mount: check for active session ─────────────────────────────────────
   useEffect(() => {
     if (!user || !ALLOWED_ROLES.includes(user.role)) return
-
     async function init() {
       try {
         const res = await adminApi.getActiveSession()
@@ -170,23 +284,21 @@ export default function ModeratorPage() {
           startTimer(active.started_at)
           fetchNextListing()
         } else {
-          // Fetch pending count for start screen
           try {
             const pendRes = await adminApi.getPendingListings(1, 1)
             setPendingTotal(pendRes.data.data.total)
-          } catch {}
+          } catch { /* silent */ }
           setScreen('start')
         }
       } catch {
         setScreen('start')
       }
     }
-
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
-  // ── Timer ─────────────────────────────────────────────────────────────────
+  // ── Timer ───────────────────────────────────────────────────────────────────
   function startTimer(startedAt: string, minutes?: number | null) {
     const startMs = new Date(startedAt).getTime()
     if (timerRef.current) clearInterval(timerRef.current)
@@ -198,19 +310,40 @@ export default function ModeratorPage() {
       if (minutes && !autoEndedRef.current && e >= minutes * 60) {
         autoEndedRef.current = true
         clearInterval(timerRef.current!)
-        adminApi.endSession(true).then((res) => {
-          setSession(res.data.data)
-          setScreen('summary')
-        }).catch(() => setScreen('summary'))
+        adminApi.endSession(true)
+          .then((res) => { setSession(res.data.data); setScreen('summary') })
+          .catch(() => setScreen('summary'))
       }
     }, 1000)
   }
 
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
+
+  // ── Keyboard shortcuts ──────────────────────────────────────────────────────
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
+    if (screen !== 'workspace') return
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+      if (!listing || actionLoading) return
+      const imgCount = listing.images?.length ?? 0
+      switch (e.key) {
+        case 'a': case 'A': e.preventDefault(); handleApprove(); break
+        case 'r': case 'R': e.preventDefault(); break
+        case 's': case 'S': e.preventDefault(); setSkipOpen(v => !v); break
+        case 'Escape': setSkipOpen(false); break
+        case 'ArrowLeft':
+          if (imgCount > 1) { e.preventDefault(); setPhotoIdx(p => (p - 1 + imgCount) % imgCount) }
+          break
+        case 'ArrowRight':
+          if (imgCount > 1) { e.preventDefault(); setPhotoIdx(p => (p + 1) % imgCount) }
+          break
+      }
     }
-  }, [])
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, listing, actionLoading, skipOpen])
 
   // Sync editable fields when listing changes
   useEffect(() => {
@@ -218,49 +351,67 @@ export default function ModeratorPage() {
       setEditBrand(listing.brand)
       setEditModel(listing.model)
       setEditDescription(listing.description ?? '')
+      setEditPrice(Number(listing.price))
+      setEditCurrency(listing.currency)
+      setEditYear(listing.year)
+      setEditCity(listing.city)
+      setEditMileage(listing.mileage ?? '')
+      setEditFuel(listing.fuel ?? '')
+      setEditTransmission(listing.transmission ?? '')
+      setEditColor(listing.color ?? '')
+      setNoteText('')
+      setNoteSaved(false)
       setSavedFlash(false)
+      setSelectedReasons([])
+      setShowPhone(false)
       if (editDebounceRef.current) clearTimeout(editDebounceRef.current)
       if (savedFlashRef.current) clearTimeout(savedFlashRef.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listing?.id])
 
-  // Debounced save for inline edit
-  function triggerEditSave(brand: string, model: string, description: string) {
+  // ── Debounced field save ────────────────────────────────────────────────────
+  function triggerFieldSave(patch: Parameters<typeof adminApi.moderatorEditListing>[1]) {
     if (!listing) return
     if (editDebounceRef.current) clearTimeout(editDebounceRef.current)
     editDebounceRef.current = setTimeout(async () => {
-      const originalBrand = listing.brand
-      const originalModel = listing.model
-      const originalDescription = listing.description ?? ''
-      const patch: { brand?: string; model?: string; description?: string } = {}
-      if (brand !== originalBrand) patch.brand = brand
-      if (model !== originalModel) patch.model = model
-      if (description !== originalDescription) patch.description = description
-      if (Object.keys(patch).length === 0) return
       try {
         await adminApi.moderatorEditListing(listing.id, patch)
         setSavedFlash(true)
         if (savedFlashRef.current) clearTimeout(savedFlashRef.current)
         savedFlashRef.current = setTimeout(() => setSavedFlash(false), 2000)
-      } catch {}
+      } catch { /* silent */ }
     }, 800)
   }
 
-  // ── Fetch next listing ─────────────────────────────────────────────────────
+  async function handleSaveNote() {
+    if (!listing || !noteText.trim()) return
+    setNoteSaving(true)
+    try {
+      await adminApi.addModeratorNote(listing.id, noteText.trim())
+      setNoteSaved(true)
+      setTimeout(() => setNoteSaved(false), 3000)
+    } catch { /* silent */ }
+    setNoteSaving(false)
+  }
+
+  // ── Fetch next listing ──────────────────────────────────────────────────────
   const fetchNextListing = useCallback(async () => {
     setListingLoading(true)
-    setRejectOpen(false)
-    setRejectReason('')
+    setSelectedReasons([])
+    setSkipOpen(false)
+    setSkipReason('')
     setPhotoIdx(0)
     if (editDebounceRef.current) clearTimeout(editDebounceRef.current)
     try {
       const res = await adminApi.getPendingListings(1, 1, true)
       const items = res.data.data.items
       if (items.length > 0) {
-        setListing(items[0])
+        const next = items[0]
+        setListing(next)
         setPendingTotal(res.data.data.total)
-        // Fetch similar
-        fetchSimilar(items[0])
+        fetchSimilar(next)
+        fetchAuthorData(next.user_id)
       } else {
         setListing(null)
         setPendingTotal(0)
@@ -275,32 +426,42 @@ export default function ModeratorPage() {
   function fetchSimilar(l: Listing) {
     listingsApi.list({ brand: l.brand, limit: 5 })
       .then((res) => {
-        const items = res.data.data.items.filter((item) => item.id !== l.id).slice(0, 3)
-        setSimilarListings(items)
+        setSimilarListings(res.data.data.items.filter(i => i.id !== l.id).slice(0, 3))
       })
       .catch(() => setSimilarListings([]))
   }
 
-  // ── Session start ──────────────────────────────────────────────────────────
+  function fetchAuthorData(userId: string) {
+    setAuthorUser(null)
+    setAuthorListings([])
+    // Fetch author listings via user listings API
+    import('@/lib/api').then(({ usersApi }) => {
+      usersApi.getListings(userId, 1)
+        .then((res) => setAuthorListings(res.data.data.items.slice(0, 5)))
+        .catch(() => { /* silent */ })
+    })
+  }
+
+  // ── Session start ───────────────────────────────────────────────────────────
   async function handleStartSession() {
     try {
       const res = await adminApi.startSession({
         timer_minutes: filterTimer,
         filter_date_from: filterDateFrom ? new Date(filterDateFrom).toISOString() : null,
-        filter_date_to: filterDateTo ? new Date(filterDateTo).toISOString() : null,
-        filter_type: filterType,
-        filter_city: filterCity || null,
-        filter_brand: filterBrand || null,
+        filter_date_to:   filterDateTo   ? new Date(filterDateTo).toISOString()   : null,
+        filter_type:      filterType,
+        filter_city:      filterCity  || null,
+        filter_brand:     filterBrand || null,
       })
       const newSession = res.data.data
       setSession(newSession)
       setScreen('workspace')
       startTimer(newSession.started_at, filterTimer)
       fetchNextListing()
-    } catch {}
+    } catch { /* silent */ }
   }
 
-  // ── Load stats ────────────────────────────────────────────────────────────
+  // ── Load stats ──────────────────────────────────────────────────────────────
   async function loadStats() {
     setStatsLoading(true)
     try {
@@ -308,13 +469,13 @@ export default function ModeratorPage() {
         adminApi.getModeratorStats(),
         adminApi.getSessionHistory(),
       ])
-      setStatsData(sRes.data.data)
+      setStatsData(sRes.data.data as unknown as ModeratorStats)
       setHistoryData(hRes.data.data ?? [])
-    } catch {}
+    } catch { /* silent */ }
     setStatsLoading(false)
   }
 
-  // ── Session end ────────────────────────────────────────────────────────────
+  // ── Session end ─────────────────────────────────────────────────────────────
   async function handleEndSession() {
     try {
       const res = await adminApi.endSession()
@@ -327,7 +488,7 @@ export default function ModeratorPage() {
     }
   }
 
-  // ── After approve/reject/skip: update session counters + fetch next ────────
+  // ── Advance session counters ────────────────────────────────────────────────
   function advanceSession(type: 'approve' | 'reject' | 'skip') {
     setSession((prev) => {
       if (!prev) return prev
@@ -335,18 +496,17 @@ export default function ModeratorPage() {
       const updated = {
         ...prev,
         approved_count: type === 'approve' ? prev.approved_count + 1 : prev.approved_count,
-        rejected_count: type === 'reject' ? prev.rejected_count + 1 : prev.rejected_count,
-        skipped_count: type === 'skip' ? prev.skipped_count + 1 : prev.skipped_count,
+        rejected_count: type === 'reject'  ? prev.rejected_count + 1 : prev.rejected_count,
+        skipped_count:  type === 'skip'    ? prev.skipped_count  + 1 : prev.skipped_count,
       }
       if (done >= SESSION_LIMIT) {
-        // end after state update
         setTimeout(() => handleEndSession(), 0)
       }
       return updated
     })
   }
 
-  // ── Approve ────────────────────────────────────────────────────────────────
+  // ── Actions ─────────────────────────────────────────────────────────────────
   async function handleApprove() {
     if (!listing) return
     setActionLoading(true)
@@ -354,851 +514,692 @@ export default function ModeratorPage() {
       await adminApi.approveListing(listing.id)
       advanceSession('approve')
       await fetchNextListing()
-    } catch {}
+    } catch { /* silent */ }
     setActionLoading(false)
   }
 
-  // ── Reject ─────────────────────────────────────────────────────────────────
   async function handleReject() {
-    if (!listing || !rejectReason.trim()) return
+    if (!listing || selectedReasons.length === 0) return
     setRejectLoading(true)
     try {
-      await adminApi.rejectListing(listing.id, rejectReason.trim())
+      await adminApi.rejectListing(listing.id, selectedReasons.join('; '))
       advanceSession('reject')
       await fetchNextListing()
-    } catch {}
+    } catch { /* silent */ }
     setRejectLoading(false)
   }
 
-  // ── Duplicate reject ───────────────────────────────────────────────────────
-  async function handleDuplicate(similarId: string) {
+  async function handleSkip(reason?: string) {
     if (!listing) return
-    setActionLoading(true)
-    const reason = `Дубликат объявления. Уже существует: /car/${similarId}`
-    try {
-      await adminApi.rejectListing(listing.id, reason)
-      advanceSession('reject')
-      await fetchNextListing()
-    } catch {}
-    setActionLoading(false)
-  }
-
-  // ── Skip ───────────────────────────────────────────────────────────────────
-  async function handleSkip() {
-    if (!listing) return
+    setSkipLoading(true)
     setActionLoading(true)
     try {
-      await adminApi.skipListing(listing.id)
+      await adminApi.skipListing(listing.id, reason || undefined)
       advanceSession('skip')
       await fetchNextListing()
-    } catch {}
+    } catch { /* silent */ }
+    setSkipLoading(false)
     setActionLoading(false)
   }
 
-  if (!user || !ALLOWED_ROLES.includes(user.role)) return null
+  function toggleReason(reason: string) {
+    setSelectedReasons(prev =>
+      prev.includes(reason) ? prev.filter(r => r !== reason) : [...prev, reason]
+    )
+  }
 
-  // ── Screen: loading ────────────────────────────────────────────────────────
+  // ── Shared style tokens ─────────────────────────────────────────────────────
+  const inputStyle: React.CSSProperties = {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '7px 10px',
+    fontSize: '13px',
+    color: 'var(--text)',
+    outline: 'none',
+    width: '100%',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    marginBottom: '4px',
+    display: 'block',
+  }
+
+  // ── LOADING screen ──────────────────────────────────────────────────────────
   if (screen === 'loading') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--background)' }}>
-        <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{t('common.loading', lang)}</div>
       </div>
     )
   }
 
-  // ── Shared tab bar (start / stats screens) ────────────────────────────────
-  function TabBar() {
-    return (
-      <div style={{ display: 'flex', gap: '4px', padding: '16px 24px 0', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
-        {(['start', 'stats'] as const).map((s) => (
-          <button key={s} onClick={() => { if (s === 'stats') { setScreen('stats'); loadStats() } else setScreen('start') }}
-            style={{ padding: '8px 20px', borderRadius: '8px 8px 0 0', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
-              background: screen === s ? 'var(--background)' : 'transparent',
-              color: screen === s ? 'var(--text-primary)' : 'var(--text-secondary)',
-              borderBottom: screen === s ? '2px solid var(--accent)' : '2px solid transparent',
-            }}>
-            {s === 'start' ? 'Модерация' : 'Статистика'}
-          </button>
-        ))}
-      </div>
-    )
-  }
-
-  // ── Screen: start ──────────────────────────────────────────────────────────
+  // ── START screen ────────────────────────────────────────────────────────────
   if (screen === 'start' || screen === 'stats') {
-    const btnBase: React.CSSProperties = { padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, transition: 'all 0.15s' }
-    const btnActive: React.CSSProperties = { ...btnBase, background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' }
-    const btnInactive: React.CSSProperties = { ...btnBase, background: 'var(--card)', color: 'var(--text-secondary)' }
-
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--background)' }}>
-        <TabBar />
-
-        {screen === 'stats' ? (
-          // ── Stats view ──────────────────────────────────────────────────
-          <div style={{ maxWidth: '900px', margin: '32px auto', padding: '0 24px' }}>
-            {statsLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '60px' }}>
-                <div style={{ width: '28px', height: '28px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              </div>
-            ) : statsData ? (<>
-              {/* Stat cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '32px' }}>
-                {[
-                  { label: 'Всего сессий', value: statsData.total_sessions },
-                  { label: 'Сегодня проверено', value: statsData.today?.total ?? 0 },
-                  { label: 'За неделю', value: statsData.this_week?.total ?? 0 },
-                  { label: 'Среднее за сессию', value: statsData.avg_posts_per_session },
-                ].map((c) => (
-                  <div key={c.label} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
-                    <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)' }}>{c.value}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{c.label}</div>
-                  </div>
-                ))}
-              </div>
-              {/* History table */}
-              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '14px' }}>История сессий</div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ background: 'var(--background)' }}>
-                        {['Дата', 'Длит.', 'Всего', 'Одобрено', 'Отклонено', 'Пропущено', 'Фильтры', 'Статус'].map((h) => (
-                          <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {historyData.map((s: any, i: number) => {
-                        const dur = s.duration_seconds != null ? `${Math.floor(s.duration_seconds/60).toString().padStart(2,'0')}:${(s.duration_seconds%60).toString().padStart(2,'0')}` : '—'
-                        const filters = [s.filters?.type, s.filters?.city, s.filters?.brand].filter(Boolean).join(' · ') || '—'
-                        const dt = new Date(s.started_at).toLocaleString('ru-RU', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
-                        return (
-                          <tr key={s.session_id} style={{ borderTop: '1px solid var(--border)', background: i%2===0 ? 'transparent' : 'var(--background)' }}>
-                            <td style={{ padding: '10px 14px', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{dt}</td>
-                            <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{dur}</td>
-                            <td style={{ padding: '10px 14px', fontWeight: 700 }}>{s.total}</td>
-                            <td style={{ padding: '10px 14px', color: '#16a34a', fontWeight: 600 }}>{s.posts_approved}</td>
-                            <td style={{ padding: '10px 14px', color: '#ef4444', fontWeight: 600 }}>{s.posts_rejected}</td>
-                            <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{s.posts_skipped}</td>
-                            <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: '12px' }}>{filters}</td>
-                            <td style={{ padding: '10px 14px' }}>
-                              <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
-                                background: s.is_active ? 'rgba(22,163,74,0.1)' : 'var(--background)',
-                                color: s.is_active ? '#16a34a' : 'var(--text-secondary)',
-                                border: `1px solid ${s.is_active ? 'rgba(22,163,74,0.3)' : 'var(--border)'}` }}>
-                                {s.is_active ? 'Активна' : s.auto_ended ? 'По таймеру' : 'Завершена'}
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                      {historyData.length === 0 && (
-                        <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>Сессий пока нет</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>) : (
-              <div style={{ textAlign: 'center', paddingTop: '60px', color: 'var(--text-secondary)' }}>Нет данных</div>
-            )}
-          </div>
-        ) : (
-          // ── Start view with filters ──────────────────────────────────────
-          <div style={{ maxWidth: '680px', margin: '40px auto', padding: '0 24px' }}>
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
-                <div>
-                  <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px' }}>Начать сессию модерации</h1>
-                  <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>В очереди: <strong style={{ color: 'var(--text-primary)' }}>{pendingTotal}</strong> объявлений · Лимит: {SESSION_LIMIT}</p>
-                </div>
-              </div>
-
-              {/* Timer */}
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Таймер сессии</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {([null, 10, 20, 30] as const).map((m) => (
-                    <button key={String(m)} onClick={() => setFilterTimer(m)}
-                      style={filterTimer === m ? btnActive : btnInactive}>
-                      {m == null ? 'Без лимита' : `${m} мин`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Type */}
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Тип объявления</div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {([null, 'sale', 'rent'] as const).map((t) => (
-                    <button key={String(t)} onClick={() => setFilterType(t)}
-                      style={filterType === t ? btnActive : btnInactive}>
-                      {t == null ? 'Все' : t === 'sale' ? 'Продажа' : 'Аренда'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Dates */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Дата подачи от</div>
-                  <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--text-primary)', fontSize: '13px' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Дата подачи до</div>
-                  <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--text-primary)', fontSize: '13px' }} />
-                </div>
-              </div>
-
-              {/* City + Brand */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '28px' }}>
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Город</div>
-                  <input type="text" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} placeholder="Все города"
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--text-primary)', fontSize: '13px' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Марка</div>
-                  <input type="text" value={filterBrand} onChange={(e) => setFilterBrand(e.target.value)} placeholder="Все марки"
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--text-primary)', fontSize: '13px' }} />
-                </div>
-              </div>
-
-              <button onClick={handleStartSession}
-                style={{ width: '100%', padding: '14px', background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: '15px', borderRadius: '12px', border: 'none', cursor: 'pointer' }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}>
-                Начать сессию
-              </button>
-
-              <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                <Link href="/dashboard" style={{ fontSize: '13px', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                  Вернуться в личный кабинет
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // ── Screen: summary ────────────────────────────────────────────────────────
-  if (screen === 'summary') {
-    const totalDone = (session?.approved_count ?? 0) + (session?.rejected_count ?? 0) + (session?.skipped_count ?? 0)
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--background)' }}>
-        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '48px 40px', maxWidth: '440px', width: '100%', textAlign: 'center' }}>
-          <div style={{ width: '64px', height: '64px', background: 'rgba(22,163,74,0.12)', border: '2px solid #16a34a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: '#16a34a' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </div>
-
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '24px' }}>
-            Сессия завершена
-          </h1>
-
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-            <div style={{ flex: 1, background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.3)', borderRadius: '12px', padding: '16px 8px' }}>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{session?.approved_count ?? 0}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '4px' }}>Одобрено</div>
-            </div>
-            <div style={{ flex: 1, background: 'rgba(200,56,8,0.08)', border: '1px solid rgba(200,56,8,0.3)', borderRadius: '12px', padding: '16px 8px' }}>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent)' }}>{session?.rejected_count ?? 0}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '4px' }}>Отклонено</div>
-            </div>
-            <div style={{ flex: 1, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 8px' }}>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)' }}>{session?.skipped_count ?? 0}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '4px' }}>Пропущено</div>
-            </div>
-          </div>
-
-          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <IconClock />
-            Длительность: <strong style={{ color: 'var(--text-primary)' }}>{formatElapsed(elapsed)}</strong>
-          </div>
-
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '32px' }}>
-            Проверено: <strong style={{ color: 'var(--text-primary)' }}>{totalDone}</strong> объявлений
-          </p>
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={() => {
-                setSession(null)
-                setElapsed(0)
-                setPendingTotal(0)
-                setScreen('start')
-                // refetch pending count
-                adminApi.getPendingListings(1, 1)
-                  .then((res) => setPendingTotal(res.data.data.total))
-                  .catch(() => {})
-              }}
-              style={{ flex: 1, padding: '12px', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: '14px', borderRadius: '10px', border: 'none', cursor: 'pointer' }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9' }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
-            >
-              Новая сессия
-            </button>
-            <Link
-              href="/dashboard"
-              style={{ flex: 1, padding: '12px', background: 'var(--card)', color: 'var(--text-primary)', fontWeight: 700, fontSize: '14px', borderRadius: '10px', border: '1px solid var(--border)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              В кабинет
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '24px 16px' }}>
+        {/* Header */}
+        <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+            <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px', background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+              <IconArrowLeft />
             </Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Screen: workspace ──────────────────────────────────────────────────────
-  const done = (session?.approved_count ?? 0) + (session?.rejected_count ?? 0) + (session?.skipped_count ?? 0)
-  const progressPct = Math.min((done / SESSION_LIMIT) * 100, 100)
-  const images = listing?.images ?? []
-  const currentImage = images[photoIdx]
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--background)', overflow: 'hidden' }}>
-
-      {/* ── Header bar ─────────────────────────────────────────────────────── */}
-      <div style={{
-        height: '52px', background: 'var(--card)', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', padding: '0 20px', gap: '20px', flexShrink: 0,
-      }}>
-        {/* Back button */}
-        <button onClick={handleEndSession}
-          style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--border)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-          Назад
-        </button>
-
-        {/* Title */}
-        <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-          Модерация
-        </span>
-
-        {/* Progress */}
-        <div style={{ flex: 1, maxWidth: '280px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              {done} / {SESSION_LIMIT}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-              {pendingTotal > 0 ? `${pendingTotal} в очереди` : 'очередь пуста'}
-            </span>
-          </div>
-          <div style={{ height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${progressPct}%`, background: 'var(--accent)', borderRadius: '2px', transition: 'width 0.3s ease' }} />
-          </div>
-        </div>
-
-        <div style={{ flex: 1 }} />
-
-        {/* Timer */}
-        {timerMinutes ? (() => {
-          const remaining = timerMinutes * 60 - elapsed
-          const display = remaining > 0 ? formatElapsed(remaining) : '00:00'
-          const urgent = remaining < 120 && remaining > 0
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: urgent ? '#ef4444' : 'var(--text-secondary)' }}>
-              <IconClock />
-              {display} осталось
+            <div>
+              <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>{t('moderator.title', lang)}</h1>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                {pendingTotal} {t('moderator.pending', lang)}
+              </div>
             </div>
-          )
-        })() : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-            <IconClock />
-            {formatElapsed(elapsed)}
-          </div>
-        )}
-
-        {/* End session */}
-        <button
-          onClick={handleEndSession}
-          style={{
-            padding: '6px 14px', background: 'none', border: '1px solid var(--border)',
-            borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
-        >
-          Завершить сессию
-        </button>
-      </div>
-
-      {/* ── 3-column layout ─────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-
-        {/* ── LEFT PANEL (actions) ──────────────────────────────────────────── */}
-        <div style={{
-          width: '256px', flexShrink: 0, borderRight: '1px solid var(--border)',
-          overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px',
-          background: 'var(--card)',
-        }}>
-          {/* Approve */}
-          <button
-            onClick={handleApprove}
-            disabled={!listing || actionLoading}
-            style={{
-              width: '100%', padding: '12px 0', background: listing && !actionLoading ? '#16a34a' : 'var(--border)',
-              color: '#fff', fontWeight: 800, fontSize: '14px', borderRadius: '10px',
-              border: 'none', cursor: listing && !actionLoading ? 'pointer' : 'not-allowed',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            }}
-            onMouseEnter={(e) => { if (listing && !actionLoading) e.currentTarget.style.opacity = '0.9' }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
-          >
-            <IconCheck />
-            ОДОБРИТЬ
-          </button>
-
-          {/* Reject */}
-          <button
-            onClick={() => setRejectOpen(!rejectOpen)}
-            disabled={!listing || actionLoading}
-            style={{
-              width: '100%', padding: '12px 0',
-              background: rejectOpen ? 'var(--accent)' : 'rgba(200,56,8,0.1)',
-              color: rejectOpen ? '#fff' : 'var(--accent)',
-              fontWeight: 800, fontSize: '14px', borderRadius: '10px',
-              border: `1px solid ${rejectOpen ? 'var(--accent)' : 'rgba(200,56,8,0.3)'}`,
-              cursor: listing && !actionLoading ? 'pointer' : 'not-allowed',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            }}
-            onMouseEnter={(e) => { if (listing && !actionLoading) e.currentTarget.style.opacity = '0.9' }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
-          >
-            <IconX />
-            ОТКЛОНИТЬ
-          </button>
-
-          {/* Reject expanded panel */}
-          {rejectOpen && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '4px' }}>
-              <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                Быстрые причины
-              </p>
-              {QUICK_REASONS.map((reason) => (
-                <button
-                  key={reason}
-                  onClick={() => setRejectReason(reason)}
-                  style={{
-                    width: '100%', padding: '7px 10px', textAlign: 'left',
-                    background: rejectReason === reason ? 'rgba(200,56,8,0.12)' : 'var(--background)',
-                    border: `1px solid ${rejectReason === reason ? 'var(--accent)' : 'var(--border)'}`,
-                    borderRadius: '8px', fontSize: '12px', fontWeight: rejectReason === reason ? 700 : 500,
-                    color: rejectReason === reason ? 'var(--accent)' : 'var(--text-primary)',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => { if (rejectReason !== reason) e.currentTarget.style.background = 'var(--card)' }}
-                  onMouseLeave={(e) => { if (rejectReason !== reason) e.currentTarget.style.background = 'var(--background)' }}
-                >
-                  {reason}
-                </button>
-              ))}
-
-              <textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Или введите причину..."
-                rows={3}
-                style={{
-                  width: '100%', background: 'var(--background)', border: '1px solid var(--border)',
-                  borderRadius: '8px', padding: '8px 10px', fontSize: '12px', color: 'var(--text-primary)',
-                  outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.5,
-                  marginTop: '4px',
-                }}
-              />
-
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
               <button
-                onClick={handleReject}
-                disabled={!rejectReason.trim() || rejectLoading}
-                style={{
-                  width: '100%', padding: '10px 0',
-                  background: rejectReason.trim() && !rejectLoading ? 'var(--accent)' : 'var(--border)',
-                  color: '#fff', fontWeight: 700, fontSize: '13px', borderRadius: '8px',
-                  border: 'none', cursor: rejectReason.trim() && !rejectLoading ? 'pointer' : 'not-allowed',
-                }}
+                onClick={() => { if (screen !== 'stats') { loadStats(); setScreen('stats') } else setScreen('start') }}
+                style={{ padding: '8px 16px', borderRadius: '8px', background: screen === 'stats' ? 'var(--accent)' : 'var(--card)', color: screen === 'stats' ? '#fff' : 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
               >
-                {rejectLoading ? 'Отправка...' : 'Подтвердить отклонение'}
+                {t('moderator.stats', lang)}
               </button>
             </div>
-          )}
+          </div>
 
-          {/* Skip */}
-          <button
-            onClick={handleSkip}
-            disabled={!listing || actionLoading}
-            style={{
-              width: '100%', padding: '11px 0', background: 'none',
-              color: 'var(--text-secondary)', fontWeight: 700, fontSize: '13px', borderRadius: '10px',
-              border: '1px solid var(--border)', cursor: listing && !actionLoading ? 'pointer' : 'not-allowed',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            }}
-            onMouseEnter={(e) => { if (listing && !actionLoading) { e.currentTarget.style.borderColor = 'var(--text-secondary)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
-          >
-            <IconSkip />
-            ПРОПУСТИТЬ
-          </button>
-        </div>
-
-        {/* ── CENTER PANEL (listing detail) ─────────────────────────────────── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', minWidth: 0 }}>
-          {listingLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ height: '320px', borderRadius: '12px', background: 'var(--border)', animation: 'pulse 1.5s infinite' }} />
-              <div style={{ height: '24px', borderRadius: '8px', background: 'var(--border)', animation: 'pulse 1.5s infinite', width: '60%' }} />
-              <div style={{ height: '16px', borderRadius: '6px', background: 'var(--border)', animation: 'pulse 1.5s infinite', width: '40%' }} />
-            </div>
-          ) : !listing ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', gap: '16px' }}>
-              <div style={{ opacity: 0.3 }}><IconCar /></div>
-              <p style={{ fontSize: '16px', fontWeight: 600 }}>Новых объявлений нет</p>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Очередь модерации пуста</p>
-              <button
-                onClick={handleEndSession}
-                style={{ marginTop: '8px', padding: '10px 24px', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: '13px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
-              >
-                Завершить сессию
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-              {/* Photo carousel */}
-              <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', background: 'var(--border)', aspectRatio: '16/9', maxHeight: '340px' }}>
-                {images.length > 0 && currentImage ? (
-                  <Image
-                    src={currentImage.url}
-                    alt={`${listing.brand} ${listing.model} фото ${photoIdx + 1}`}
-                    fill
-                    sizes="(max-width: 1200px) 60vw, 700px"
-                    style={{ objectFit: 'cover' }}
-                    priority
-                  />
-                ) : (
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', opacity: 0.4 }}>
-                    <IconCar />
-                    <span style={{ marginLeft: '8px', fontSize: '13px' }}>Нет фотографий</span>
-                  </div>
-                )}
-
-                {images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setPhotoIdx((prev) => (prev - 1 + images.length) % images.length)}
-                      style={{
-                        position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
-                        width: '34px', height: '34px', background: 'rgba(0,0,0,0.55)', border: 'none',
-                        borderRadius: '50%', cursor: 'pointer', color: '#fff', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                      }}
-                      aria-label="Предыдущее фото"
-                    >
-                      <IconChevronLeft />
-                    </button>
-                    <button
-                      onClick={() => setPhotoIdx((prev) => (prev + 1) % images.length)}
-                      style={{
-                        position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                        width: '34px', height: '34px', background: 'rgba(0,0,0,0.55)', border: 'none',
-                        borderRadius: '50%', cursor: 'pointer', color: '#fff', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                      }}
-                      aria-label="Следующее фото"
-                    >
-                      <IconChevronRight />
-                    </button>
-                    <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px' }}>
-                      {images.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setPhotoIdx(idx)}
-                          style={{
-                            width: idx === photoIdx ? '20px' : '6px', height: '6px',
-                            background: idx === photoIdx ? '#fff' : 'rgba(255,255,255,0.5)',
-                            borderRadius: '3px', border: 'none', cursor: 'pointer', padding: 0,
-                            transition: 'width 0.2s ease',
-                          }}
-                          aria-label={`Фото ${idx + 1}`}
-                        />
+          {screen === 'stats' ? (
+            /* Stats view */
+            <div>
+              {statsLoading ? (
+                <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px' }}>{t('common.loading', lang)}</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Summary cards */}
+                  {statsData && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '8px' }}>
+                      {[
+                        { label: t('moderator.totalSessions', lang), value: statsData.total_sessions },
+                        { label: t('moderator.avgPerSession', lang), value: statsData.avg_posts_per_session?.toFixed(1) ?? '0' },
+                        { label: t('moderator.todayTotal', lang), value: statsData.today?.total ?? 0 },
+                        { label: t('moderator.weekTotal', lang), value: statsData.this_week?.total ?? 0 },
+                      ].map(({ label, value }) => (
+                        <div key={label} style={{ background: 'var(--card)', borderRadius: '12px', padding: '16px', border: '1px solid var(--border)' }}>
+                          <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)' }}>{value}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{label}</div>
+                        </div>
                       ))}
                     </div>
-                    <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.55)', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: 600, color: '#fff' }}>
-                      {photoIdx + 1} / {images.length}
+                  )}
+
+                  {/* Session history */}
+                  <div style={{ background: 'var(--card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>
+                      {t('moderator.sessionHistory', lang)}
                     </div>
-                  </>
-                )}
-              </div>
-
-              {/* Heading — editable brand + model */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                  <input
-                    type="text"
-                    value={editBrand}
-                    onChange={(e) => {
-                      setEditBrand(e.target.value)
-                      triggerEditSave(e.target.value, editModel, editDescription)
-                    }}
-                    style={{
-                      fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)',
-                      background: 'var(--card)', border: '1px solid var(--border)',
-                      borderRadius: '6px', padding: '4px 8px', outline: 'none',
-                      width: '140px', minWidth: '80px',
-                    }}
-                    aria-label="Марка"
-                  />
-                  <input
-                    type="text"
-                    value={editModel}
-                    onChange={(e) => {
-                      setEditModel(e.target.value)
-                      triggerEditSave(editBrand, e.target.value, editDescription)
-                    }}
-                    style={{
-                      fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)',
-                      background: 'var(--card)', border: '1px solid var(--border)',
-                      borderRadius: '6px', padding: '4px 8px', outline: 'none',
-                      width: '160px', minWidth: '80px',
-                    }}
-                    aria-label="Модель"
-                  />
-                  <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    {listing.year}
-                  </span>
-                  {savedFlash && (
-                    <span style={{
-                      fontSize: '11px', fontWeight: 700, color: '#16a34a',
-                      background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)',
-                      borderRadius: '6px', padding: '2px 8px',
-                    }}>
-                      Сохранено
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--accent)' }}>
-                    {formatPrice(listing.price, listing.currency)}
-                  </span>
-                  <span style={{
-                    fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px',
-                    background: listing.type === 'sale' ? 'rgba(59,130,246,0.12)' : 'rgba(168,85,247,0.12)',
-                    color: listing.type === 'sale' ? '#2563eb' : '#9333ea',
-                  }}>
-                    {listing.type === 'sale' ? 'Продажа' : 'Аренда'}
-                  </span>
-                  {listing.installment_available && (
-                    <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(22,163,74,0.1)', color: '#16a34a' }}>
-                      Рассрочка
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Details grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                {[
-                  { label: 'Город', value: listing.city },
-                  { label: 'Топливо', value: listing.fuel ?? '—' },
-                  { label: 'КПП', value: listing.transmission ?? '—' },
-                  { label: 'Пробег', value: listing.mileage != null ? `${listing.mileage.toLocaleString()} км` : '—' },
-                  { label: 'Цвет', value: listing.color ?? '—' },
-                  { label: 'Дата подачи', value: formatDate(listing.created_at) },
-                ].map(({ label, value }) => (
-                  <div key={label} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>{label}</div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{value}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Seller info */}
-              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Продавец</div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    ID: {listing.user_id.slice(0, 8)}...
-                  </div>
-                </div>
-                {listing.is_dealer_listing && (
-                  <div>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Тип</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#2563eb' }}>Дилер</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Description — editable */}
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Описание</div>
-                <textarea
-                  value={editDescription}
-                  onChange={(e) => {
-                    setEditDescription(e.target.value)
-                    triggerEditSave(editBrand, editModel, e.target.value)
-                  }}
-                  placeholder="Описание отсутствует..."
-                  rows={5}
-                  style={{
-                    width: '100%', background: 'var(--card)', border: '1px solid var(--border)',
-                    borderRadius: '10px', padding: '12px 14px', fontSize: '13px',
-                    color: 'var(--text-primary)', lineHeight: 1.6,
-                    outline: 'none', resize: 'vertical', boxSizing: 'border-box',
-                    minHeight: '100px',
-                  }}
-                />
-              </div>
-
-              {/* Rental rules */}
-              {listing.type === 'rent' && listing.rental_rules && (
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Условия аренды</div>
-                  <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                    {listing.rental_rules.min_age && (
-                      <DetailItem label="Мин. возраст" value={`${listing.rental_rules.min_age} лет`} />
-                    )}
-                    {listing.rental_rules.deposit != null && (
-                      <DetailItem label="Залог" value={`${listing.rental_rules.deposit.toLocaleString()} ${listing.rental_rules.deposit_currency ?? ''}`} />
-                    )}
-                    {listing.rental_rules.max_km_per_day && (
-                      <DetailItem label="Макс. км/день" value={`${listing.rental_rules.max_km_per_day} км`} />
-                    )}
-                    {listing.rental_rules.delivery_available !== undefined && (
-                      <DetailItem label="Доставка" value={listing.rental_rules.delivery_available ? 'Да' : 'Нет'} />
-                    )}
-                    {listing.rental_rules.insurance_included !== undefined && (
-                      <DetailItem label="Страховка" value={listing.rental_rules.insurance_included ? 'Включена' : 'Не включена'} />
-                    )}
-                    {listing.rental_rules.fuel_policy && (
-                      <DetailItem label="Топливо" value={listing.rental_rules.fuel_policy} />
-                    )}
-                    {listing.rental_rules.notes && (
-                      <div style={{ gridColumn: '1 / -1' }}>
-                        <DetailItem label="Примечания" value={listing.rental_rules.notes} />
+                    {historyData.length === 0 ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>{t('common.noData', lang)}</div>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr>
+                              {['#', t('moderator.approved', lang), t('moderator.rejected', lang), t('moderator.skipped', lang), t('moderator.duration', lang)].map((h) => (
+                                <th key={h} style={{ padding: '10px 12px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyData.map((row, i) => (
+                              <tr key={row.session_id}>
+                                <td style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--text-muted)' }}>{i + 1}</td>
+                                <td style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--color-success)', fontWeight: 600 }}>{row.posts_approved}</td>
+                                <td style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--color-error)', fontWeight: 600 }}>{row.posts_rejected}</td>
+                                <td style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--text)' }}>{row.posts_skipped}</td>
+                                <td style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--text)' }}>
+                                  {row.duration_seconds != null ? formatElapsed(row.duration_seconds) : '—'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>
                 </div>
               )}
-
-              {/* Open listing link */}
-              <div style={{ paddingBottom: '8px' }}>
-                <Link
-                  href={`/car/${listing.id}`}
-                  target="_blank"
-                  style={{ fontSize: '12px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                >
-                  Открыть объявление
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
-                </Link>
+            </div>
+          ) : (
+            /* Start session form */
+            <div style={{ background: 'var(--card)', borderRadius: '16px', border: '1px solid var(--border)', padding: '24px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)', marginBottom: '20px' }}>
+                {t('moderator.startSession', lang)}
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <label style={labelStyle}>{t('moderator.filterTimer', lang)}</label>
+                  <input
+                    type="number" placeholder="—" value={filterTimer ?? ''}
+                    onChange={(e) => setFilterTimer(e.target.value ? Number(e.target.value) : null)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>{t('moderator.filterType', lang)}</label>
+                  <select value={filterType ?? ''} onChange={(e) => setFilterType((e.target.value as 'sale' | 'rent') || null)} style={inputStyle}>
+                    <option value="">{t('moderator.allTypes', lang)}</option>
+                    <option value="sale">{t('moderator.sale', lang)}</option>
+                    <option value="rent">{t('moderator.rent', lang)}</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>{t('moderator.filterDateFrom', lang)}</label>
+                  <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{t('moderator.filterDateTo', lang)}</label>
+                  <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{t('moderator.filterCity', lang)}</label>
+                  <input value={filterCity} onChange={(e) => setFilterCity(e.target.value)} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{t('moderator.filterBrand', lang)}</label>
+                  <input value={filterBrand} onChange={(e) => setFilterBrand(e.target.value)} style={inputStyle} />
+                </div>
               </div>
+              <button
+                onClick={handleStartSession}
+                style={{ width: '100%', height: '52px', background: 'var(--color-success)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.02em' }}
+              >
+                {t('moderator.startSession', lang)}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── SUMMARY screen ──────────────────────────────────────────────────────────
+  if (screen === 'summary') {
+    const totalDone = (session?.approved_count ?? 0) + (session?.rejected_count ?? 0) + (session?.skipped_count ?? 0)
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ background: 'var(--card)', borderRadius: '20px', border: '1px solid var(--border)', padding: '40px', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--color-success-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <IconCheck size={28} />
+          </div>
+          <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)', marginBottom: '8px' }}>{t('moderator.sessionSummary', lang)}</h2>
+          <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '28px' }}>{formatElapsed(elapsed)}</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '28px' }}>
+            {[
+              { label: t('moderator.approved', lang), value: session?.approved_count ?? 0, color: 'var(--color-success)' },
+              { label: t('moderator.rejected', lang), value: session?.rejected_count ?? 0, color: 'var(--color-error)' },
+              { label: t('moderator.skipped', lang),  value: session?.skipped_count  ?? 0, color: 'var(--text-muted)' },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ background: 'var(--surface)', borderRadius: '12px', padding: '16px 12px' }}>
+                <div style={{ fontSize: '26px', fontWeight: 700, color }}>{value}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {totalDone > 0 && (
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+              {t('moderator.avgTime', lang)}: {formatElapsed(Math.round(elapsed / totalDone))}
+            </div>
+          )}
+
+          <button
+            onClick={() => { setScreen('start'); setSession(null); setElapsed(0); setTimerMinutes(null) }}
+            style={{ width: '100%', height: '48px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            {t('moderator.newSession', lang)}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── WORKSPACE screen (3-column layout) ─────────────────────────────────────
+  const rejectionReasonsList = [
+    t('moderator.reasonGrammar',   lang),
+    t('moderator.reasonWrongCat',  lang),
+    t('moderator.reasonDuplicate', lang),
+    t('moderator.reasonFraud',     lang),
+    t('moderator.reasonForbidden', lang),
+    t('moderator.reasonWrongPhoto',lang),
+    t('moderator.reasonHighPrice', lang),
+    t('moderator.reasonIncomplete',lang),
+  ]
+
+  const done = (session?.approved_count ?? 0) + (session?.rejected_count ?? 0) + (session?.skipped_count ?? 0)
+  const isCountdown = timerMinutes != null
+  const timerDisplay = isCountdown
+    ? formatElapsed(Math.max(0, timerMinutes! * 60 - elapsed))
+    : formatElapsed(elapsed)
+  const timerWarning = isCountdown && elapsed > 0 && (timerMinutes! * 60 - elapsed) < 60
+
+  return (
+    <div style={{ height: '100vh', overflow: 'hidden', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+      {/* Top bar */}
+      <div style={{ height: '48px', background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '12px', flexShrink: 0 }}>
+        <button
+          onClick={() => setScreen('start')}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px', borderRadius: '6px' }}
+        >
+          <IconArrowLeft />
+          {t('moderator.back', lang)}
+        </button>
+        <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
+        <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>{t('moderator.queue', lang)}</span>
+        <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
+          {done + 1} {t('moderator.queueCounter', lang)} {Math.min(SESSION_LIMIT, done + pendingTotal)}
+        </span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {savedFlash && (
+            <span style={{ fontSize: '12px', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <IconCheck size={12} /> {t('moderator.saved', lang)}
+            </span>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: timerWarning ? 'var(--color-error-dim)' : 'var(--surface)', border: `1px solid ${timerWarning ? 'var(--color-error)' : 'var(--border)'}`, padding: '4px 10px', borderRadius: '8px' }}>
+            <IconClock />
+            <span style={{ fontSize: '13px', fontWeight: 700, color: timerWarning ? 'var(--color-error)' : 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{timerDisplay}</span>
+          </div>
+          <button
+            onClick={handleEndSession}
+            style={{ padding: '5px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer' }}
+          >
+            {t('moderator.endSession', lang)}
+          </button>
+        </div>
+      </div>
+
+      {/* 3-column body */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+        {/* ── Column 1: Action console (280px) ── */}
+        <div style={{ width: '280px', flexShrink: 0, borderRight: '1px solid var(--border)', background: 'var(--card)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+            {/* APPROVE button */}
+            <button
+              onClick={handleApprove}
+              disabled={!listing || actionLoading}
+              style={{ width: '100%', height: '52px', background: listing && !actionLoading ? 'var(--color-success)' : 'var(--border)', color: listing && !actionLoading ? '#fff' : 'var(--text-muted)', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, cursor: listing && !actionLoading ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px', letterSpacing: '0.02em' }}
+            >
+              <IconCheck size={18} />
+              {t('moderator.approve', lang)}
+              <span style={{ fontSize: '11px', opacity: 0.75, fontWeight: 400, marginLeft: '2px' }}>A</span>
+            </button>
+
+            {/* Rejection reasons */}
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                {t('moderator.rejectionReasons', lang)}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {rejectionReasonsList.map((reason) => {
+                  const selected = selectedReasons.includes(reason)
+                  return (
+                    <button
+                      key={reason}
+                      onClick={() => toggleReason(reason)}
+                      style={{ textAlign: 'left', background: selected ? 'var(--accent-dim)' : 'var(--surface)', border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`, borderRadius: '8px', padding: '8px 10px', fontSize: '12px', color: selected ? 'var(--accent)' : 'var(--text)', cursor: 'pointer', fontWeight: selected ? 600 : 400, display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      {selected && <IconCheck size={11} />}
+                      {reason}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom action buttons */}
+          <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+            <button
+              onClick={handleReject}
+              disabled={!listing || selectedReasons.length === 0 || rejectLoading}
+              style={{ height: '42px', background: selectedReasons.length > 0 && listing ? 'var(--color-error)' : 'var(--surface)', color: selectedReasons.length > 0 && listing ? '#fff' : 'var(--text-muted)', border: `1px solid ${selectedReasons.length > 0 && listing ? 'var(--color-error)' : 'var(--border)'}`, borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: selectedReasons.length > 0 && listing ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+            >
+              <IconX size={14} />
+              {t('moderator.reject', lang)}
+              {selectedReasons.length > 0 && <span style={{ fontSize: '11px', opacity: 0.8 }}>({selectedReasons.length})</span>}
+            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => setSkipOpen(v => !v)}
+                disabled={!listing || actionLoading}
+                style={{ flex: 1, height: '36px', background: 'var(--surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+              >
+                <IconSkip />
+                {t('moderator.skip', lang)}
+              </button>
+              <button
+                onClick={() => listing && adminApi.rejectListing(listing.id, 'Deleted').then(() => { advanceSession('reject'); fetchNextListing() })}
+                disabled={!listing || actionLoading}
+                style={{ flex: 1, height: '36px', background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+              >
+                <IconTrash />
+                {t('moderator.delete', lang)}
+              </button>
+            </div>
+            {/* Skip panel */}
+            {skipOpen && (
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>{t('moderator.skipReason', lang)}</div>
+                <input
+                  value={skipReason} onChange={(e) => setSkipReason(e.target.value)}
+                  placeholder="..."
+                  style={{ ...inputStyle, marginBottom: '8px' }}
+                />
+                <button
+                  onClick={() => handleSkip(skipReason || undefined)}
+                  disabled={skipLoading}
+                  style={{ width: '100%', height: '34px', background: 'var(--color-warning-alt)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {t('moderator.confirmSkip', lang)}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Column 2: Center panel (flex:1) ── */}
+        <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
+          {listingLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <div style={{ color: 'var(--text-muted)' }}>{t('common.loading', lang)}</div>
+            </div>
+          ) : !listing ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px' }}>
+              <div style={{ color: 'var(--text-muted)' }}><IconCar /></div>
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>{t('moderator.noQueue', lang)}</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('moderator.noQueueDesc', lang)}</div>
+              <button onClick={handleEndSession} style={{ marginTop: '8px', padding: '10px 20px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+                {t('moderator.endSession', lang)}
+              </button>
+            </div>
+          ) : (
+            <div style={{ padding: '16px', maxWidth: '720px', margin: '0 auto' }}>
+              {/* Sticky header */}
+              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('moderator.adId', lang)}</span>
+                <span style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text)' }}>{listing.id}</span>
+                <div style={{ width: '1px', height: '16px', background: 'var(--border)' }} />
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{formatDate(listing.created_at)}</span>
+                {listing.city && (
+                  <>
+                    <div style={{ width: '1px', height: '16px', background: 'var(--border)' }} />
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{listing.city}</span>
+                  </>
+                )}
+                <div style={{ marginLeft: 'auto' }}>
+                  <StatusBadge status={listing.status} />
+                </div>
+              </div>
+
+              {/* Editable title */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <input
+                  value={editBrand}
+                  onChange={(e) => { setEditBrand(e.target.value); triggerFieldSave({ brand: e.target.value }) }}
+                  style={{ ...inputStyle, flex: 1, fontSize: '17px', fontWeight: 700 }}
+                />
+                <input
+                  value={editModel}
+                  onChange={(e) => { setEditModel(e.target.value); triggerFieldSave({ model: e.target.value }) }}
+                  style={{ ...inputStyle, flex: 1, fontSize: '17px', fontWeight: 700 }}
+                />
+                <input
+                  type="number"
+                  value={editYear}
+                  onChange={(e) => { setEditYear(Number(e.target.value)); triggerFieldSave({ year: Number(e.target.value) }) }}
+                  style={{ ...inputStyle, width: '90px', flex: 'none', fontSize: '17px', fontWeight: 700 }}
+                />
+              </div>
+
+              {/* Images + Specs */}
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                {/* Images (40%) */}
+                <div style={{ width: '240px', flexShrink: 0 }}>
+                  {listing.images && listing.images.length > 0 ? (
+                    <div>
+                      {/* Primary large */}
+                      <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)', height: '180px', marginBottom: '8px' }}>
+                        <Image
+                          src={listing.images[photoIdx]?.url ?? listing.images[0].url}
+                          alt={`${listing.brand} ${listing.model}`}
+                          fill style={{ objectFit: 'cover' }}
+                        />
+                        {listing.images.length > 1 && (
+                          <>
+                            <button onClick={() => setPhotoIdx(p => (p - 1 + listing.images.length) % listing.images.length)} style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <IconChevronLeft />
+                            </button>
+                            <button onClick={() => setPhotoIdx(p => (p + 1) % listing.images.length)} style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <IconChevronRight />
+                            </button>
+                            <div style={{ position: 'absolute', bottom: '6px', right: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px' }}>
+                              {photoIdx + 1}/{listing.images.length}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {/* Thumbnails */}
+                      {listing.images.length > 1 && (
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {listing.images.map((img, i) => (
+                            <button key={img.id} onClick={() => setPhotoIdx(i)} style={{ position: 'relative', width: '46px', height: '46px', borderRadius: '8px', overflow: 'hidden', border: `2px solid ${i === photoIdx ? 'var(--accent)' : 'var(--border)'}`, background: 'var(--surface)', cursor: 'pointer', padding: 0 }}>
+                              <Image src={img.url} alt="" fill style={{ objectFit: 'cover' }} />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ height: '180px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                      <IconCar />
+                    </div>
+                  )}
+                </div>
+
+                {/* Specs form (60%) */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    {/* Price */}
+                    <div>
+                      <label style={labelStyle}>{t('catalog.minPrice', lang).replace('Цена от', 'Цена')}</label>
+                      <input type="number" value={editPrice} onChange={(e) => { setEditPrice(Number(e.target.value)); triggerFieldSave({ price: Number(e.target.value) }) }} style={inputStyle} />
+                    </div>
+                    {/* Currency */}
+                    <div>
+                      <label style={labelStyle}>{t('post.currency', lang)}</label>
+                      <select value={editCurrency} onChange={(e) => { setEditCurrency(e.target.value); triggerFieldSave({ currency: e.target.value }) }} style={inputStyle}>
+                        {CURRENCY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    {/* Mileage */}
+                    <div>
+                      <label style={labelStyle}>{t('catalog.mileage', lang)}</label>
+                      <input type="number" value={editMileage} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : ''; setEditMileage(v); triggerFieldSave({ mileage: v === '' ? undefined : Number(v) }) }} style={inputStyle} />
+                    </div>
+                    {/* Fuel */}
+                    <div>
+                      <label style={labelStyle}>{t('catalog.fuel', lang)}</label>
+                      <select value={editFuel} onChange={(e) => { setEditFuel(e.target.value); triggerFieldSave({ fuel: e.target.value || undefined }) }} style={inputStyle}>
+                        {FUEL_OPTIONS.map(f => <option key={f} value={f}>{f || '—'}</option>)}
+                      </select>
+                    </div>
+                    {/* Transmission */}
+                    <div>
+                      <label style={labelStyle}>{t('catalog.transmission', lang)}</label>
+                      <select value={editTransmission} onChange={(e) => { setEditTransmission(e.target.value); triggerFieldSave({ transmission: e.target.value || undefined }) }} style={inputStyle}>
+                        {TRANSMISSION_OPTIONS.map(tx => <option key={tx} value={tx}>{tx || '—'}</option>)}
+                      </select>
+                    </div>
+                    {/* Color */}
+                    <div>
+                      <label style={labelStyle}>{t('catalog.color', lang)}</label>
+                      <input value={editColor} onChange={(e) => { setEditColor(e.target.value); triggerFieldSave({ color: e.target.value }) }} style={inputStyle} />
+                    </div>
+                    {/* City */}
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>{t('catalog.city', lang)}</label>
+                      <input value={editCity} onChange={(e) => { setEditCity(e.target.value); triggerFieldSave({ city: e.target.value }) }} style={inputStyle} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom: '12px' }}>
+                <label style={labelStyle}>{t('moderator.descriptionLabel', lang)}</label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => { setEditDescription(e.target.value); triggerFieldSave({ description: e.target.value }) }}
+                  rows={4}
+                  style={{ ...inputStyle, resize: 'vertical' }}
+                />
+              </div>
+
+              {/* Moderator note */}
+              <div style={{ background: 'var(--surface)', borderRadius: '10px', border: '1px solid var(--border)', padding: '12px' }}>
+                <label style={labelStyle}>{t('moderator.moderatorNote', lang)}</label>
+                <textarea
+                  value={noteText} onChange={(e) => setNoteText(e.target.value)}
+                  placeholder={t('moderator.notePlaceholder', lang)}
+                  rows={3}
+                  style={{ ...inputStyle, resize: 'vertical', marginBottom: '8px' }}
+                />
+                <button
+                  onClick={handleSaveNote}
+                  disabled={noteSaving || !noteText.trim()}
+                  style={{ padding: '6px 16px', background: noteSaved ? 'var(--color-success)' : 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {noteSaved ? t('moderator.noteSaved', lang) : t('moderator.saveNote', lang)}
+                </button>
+              </div>
+
+              {/* Similar listings (dupe detection) */}
+              {similarListings.length > 0 && (
+                <div style={{ marginTop: '16px', background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning-border)', borderRadius: '10px', padding: '12px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-warning-text)', marginBottom: '8px' }}>
+                    {t('moderator.duplicateWarning', lang)} — {similarListings.length} {t('moderator.authorOtherAds', lang)}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {similarListings.map(sim => (
+                      <div key={sim.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.5)', borderRadius: '8px', padding: '6px 10px' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--color-warning-text)', flex: 1 }}>{sim.brand} {sim.model} {sim.year} — {formatPrice(sim.price, sim.currency)}</span>
+                        <StatusBadge status={sim.status} />
+                        <Link href={`/car/${sim.id}`} target="_blank" style={{ fontSize: '11px', color: 'var(--accent)' }}>→</Link>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* ── RIGHT PANEL (similar listings) ───────────────────────────────── */}
-        <div style={{
-          width: '280px', flexShrink: 0, borderLeft: '1px solid var(--border)',
-          overflowY: 'auto', padding: '16px', background: 'var(--card)',
-        }}>
-          <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', margin: '0 0 12px' }}>
-            Похожие объявления
-          </p>
-
-          {!listing ? (
-            <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Нет объявления для сравнения</p>
-          ) : similarListings.length === 0 ? (
-            <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Похожих объявлений не найдено</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {similarListings.map((sim) => {
-                const simPrimary = sim.images.find((i) => i.is_primary) ?? sim.images[0]
-                return (
-                  <div
-                    key={sim.id}
-                    style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '10px' }}
-                  >
-                    {/* Card info row */}
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                      <div style={{ width: '60px', height: '46px', borderRadius: '6px', overflow: 'hidden', background: 'var(--border)', flexShrink: 0, position: 'relative' }}>
-                        {simPrimary ? (
-                          <Image src={simPrimary.url} alt="" fill sizes="60px" style={{ objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', opacity: 0.5 }}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h1l2-3h10l2 3h1a2 2 0 012 2v6a2 2 0 01-2 2h-2" /><circle cx="7.5" cy="17" r="2.5" /><circle cx="16.5" cy="17" r="2.5" /></svg>
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <Link
-                          href={`/car/${sim.id}`}
-                          target="_blank"
-                          style={{ textDecoration: 'none' }}
-                        >
-                          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {sim.brand} {sim.model} {sim.year}
-                          </div>
-                        </Link>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginTop: '2px' }}>
-                          {formatPrice(sim.price, sim.currency)}
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          {new Date(sim.created_at).toLocaleDateString('ru-RU')}
-                        </div>
-                      </div>
+        {/* ── Column 3: Right sidebar (260px) ── */}
+        <div style={{ width: '260px', flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--card)', overflowY: 'auto' }}>
+          {listing ? (
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Author card */}
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>{t('moderator.authorCard', lang)}</div>
+                <div style={{ background: 'var(--surface)', borderRadius: '10px', padding: '12px', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+                      <IconUser />
                     </div>
-                    {/* Duplicate button */}
-                    <button
-                      onClick={() => handleDuplicate(sim.id)}
-                      disabled={!listing || actionLoading}
-                      style={{
-                        width: '100%', padding: '5px 0',
-                        background: 'none',
-                        color: listing && !actionLoading ? '#ef4444' : 'var(--text-secondary)',
-                        border: `1px solid ${listing && !actionLoading ? '#ef4444' : 'var(--border)'}`,
-                        borderRadius: '6px', fontSize: '11px', fontWeight: 700,
-                        cursor: listing && !actionLoading ? 'pointer' : 'not-allowed',
-                        letterSpacing: '0.03em',
-                      }}
-                      onMouseEnter={(e) => { if (listing && !actionLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'none' }}
-                    >
-                      Дубль
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {authorUser?.name ?? listing.user_id.slice(0, 8) + '…'}
+                      </div>
+                      <RoleBadge role={authorUser?.role ?? 'user'} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <IconPhone />
+                    {showPhone ? (
+                      <span>{authorUser?.phone ?? '—'}</span>
+                    ) : (
+                      <span style={{ letterSpacing: '0.08em' }}>••• •• ••</span>
+                    )}
+                    <button onClick={() => setShowPhone(v => !v)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                      {showPhone ? <IconEyeOff /> : <IconEye />}
                     </button>
                   </div>
-                )
-              })}
+                  {authorUser?.created_at && (
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                      {t('moderator.regDate', lang)}: {new Date(authorUser.created_at).toLocaleDateString('ru-RU')}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Author's other listings */}
+              {authorListings.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                    {t('moderator.authorOtherAds', lang)}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {authorListings.filter(l => l.id !== listing.id).map(l => (
+                      <Link
+                        key={l.id}
+                        href={`/car/${l.id}`}
+                        target="_blank"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px', textDecoration: 'none' }}
+                      >
+                        {l.images?.[0] && (
+                          <div style={{ position: 'relative', width: '36px', height: '36px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
+                            <Image src={l.images[0].url} alt="" fill style={{ objectFit: 'cover' }} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {l.brand} {l.model}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{formatPrice(l.price, l.currency)}</div>
+                        </div>
+                        <StatusBadge status={l.status} />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Session mini stats */}
+              {session && (
+                <div style={{ background: 'var(--surface)', borderRadius: '10px', padding: '12px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{t('moderator.sessionTimer', lang)}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--color-success)' }}>{t('moderator.approved', lang)}: {session.approved_count}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--color-error)' }}>{t('moderator.rejected', lang)}: {session.rejected_count}</span>
+                  </div>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('moderator.skipped', lang)}: {session.skipped_count}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '13px', padding: '20px', textAlign: 'center' }}>
+              {t('moderator.noQueue', lang)}
             </div>
           )}
         </div>
       </div>
 
-      {/* Inline keyframes for loading spinner */}
+      {/* Mobile sticky action bar (shown below 1024px via media) */}
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @media (max-width: 1023px) {
+          .mod-cols { flex-direction: column !important; }
+          .mod-left  { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border) !important; }
+          .mod-right { display: none !important; }
+          .mod-center { overflow-y: visible !important; }
+        }
       `}</style>
-    </div>
-  )
-}
-
-function DetailItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>{label}</div>
-      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{value}</div>
     </div>
   )
 }

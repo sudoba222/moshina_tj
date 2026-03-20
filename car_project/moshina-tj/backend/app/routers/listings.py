@@ -1,14 +1,20 @@
 import math
+import time
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
+
+# 2-minute in-memory cache for featured listings (homepage hit on every page load)
+_featured_cache: Dict[str, Any] = {}
+_FEATURED_CACHE_TTL = 120  # seconds
 from app.database import get_db
-from app.models import Currency, FuelType, Listing, ListingImage, ListingStatus, ListingType, TransmissionType, User, UserRole
+from app.models import Currency, Favorite, FuelType, Listing, ListingImage, ListingStatus, ListingType, TransmissionType, User, UserRole
 from app.schemas import (
     ApiResponse,
     ListingCreate,
@@ -131,6 +137,11 @@ def list_listings(
 
 @router.get("/featured", response_model=ApiResponse[list[ListingResponse]])
 def featured_listings(db: Session = Depends(get_db)):
+    now = time.monotonic()
+    cached = _featured_cache.get("data")
+    if cached and now - _featured_cache.get("ts", 0) < _FEATURED_CACHE_TTL:
+        return ApiResponse(success=True, data=cached, message="Featured listings fetched")
+
     listings = (
         db.query(Listing)
         .options(joinedload(Listing.images))
@@ -139,11 +150,10 @@ def featured_listings(db: Session = Depends(get_db)):
         .limit(8)
         .all()
     )
-    return ApiResponse(
-        success=True,
-        data=[ListingResponse.model_validate(l) for l in listings],
-        message="Featured listings fetched",
-    )
+    data = [ListingResponse.model_validate(l) for l in listings]
+    _featured_cache["data"] = data
+    _featured_cache["ts"] = now
+    return ApiResponse(success=True, data=data, message="Featured listings fetched")
 
 
 @router.get("/{listing_id}", response_model=ApiResponse[ListingResponse])
@@ -159,11 +169,9 @@ def get_listing(listing_id: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(listing)
 
-    return ApiResponse(
-        success=True,
-        data=ListingResponse.model_validate(listing),
-        message="Listing fetched",
-    )
+    data = ListingResponse.model_validate(listing)
+    data.moderator_note = None  # internal field — strip from public response
+    return ApiResponse(success=True, data=data, message="Listing fetched")
 
 
 @router.post("", response_model=ApiResponse[ListingResponse], status_code=status.HTTP_201_CREATED)
@@ -285,3 +293,37 @@ def delete_listing(
     db.commit()
 
     return ApiResponse(success=True, data=None, message="Listing deactivated")
+
+
+# ---------------------------------------------------------------------------
+# Favorites
+# ---------------------------------------------------------------------------
+
+class FavoriteToggleResponse(BaseModel):
+    favorited: bool
+
+
+@router.post("/{listing_id}/favorite", response_model=ApiResponse[FavoriteToggleResponse])
+def toggle_favorite(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Toggle favorite for the current user. Returns favorited=True if added, False if removed."""
+    # Verify listing exists
+    _get_listing_or_404(listing_id, db)
+
+    existing = (
+        db.query(Favorite)
+        .filter(Favorite.user_id == current_user.id, Favorite.listing_id == listing_id)
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return ApiResponse(success=True, data=FavoriteToggleResponse(favorited=False), message="Removed from favorites")
+    else:
+        fav = Favorite(user_id=current_user.id, listing_id=listing_id)
+        db.add(fav)
+        db.commit()
+        return ApiResponse(success=True, data=FavoriteToggleResponse(favorited=True), message="Added to favorites")

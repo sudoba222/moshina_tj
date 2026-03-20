@@ -1,4 +1,4 @@
-# AVTOMARKET.TJ
+# TajCar.tj
 
 Automotive marketplace for Tajikistan — buy, rent, and finance cars.
 Bilingual (Russian + Tajik), dark/light mode, mobile-first.
@@ -78,7 +78,7 @@ App: http://localhost:3000
 | `CLOUDINARY_CLOUD_NAME` | Your Cloudinary cloud name | `mycloud` |
 | `CLOUDINARY_API_KEY` | Cloudinary API key | `123456789012345` |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret | `abcdefg...` |
-| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:3000,https://avtomarket.tj` |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:3000,https://tajcar.tj` |
 | `ANTHROPIC_API_KEY` | Claude AI key for description refinement (optional) | `sk-ant-...` |
 
 ### Frontend (`frontend/.env.local`)
@@ -95,12 +95,12 @@ After running `python seeds.py`:
 
 | Role | Phone | Password |
 |---|---|---|
-| User | +992900000001 | moshina123 |
-| Dealer | +992900000002 | moshina123 |
-| Admin | +992900000003 | moshina123 |
-| Moderator | +992900000004 | moshina123 |
-| Manager | +992900000005 | moshina123 |
-| Support | +992900000006 | moshina123 |
+| User | +992900000001 | tajcar123 |
+| Dealer | +992900000002 | tajcar123 |
+| Admin | +992900000003 | tajcar123 |
+| Moderator | +992900000004 | tajcar123 |
+| Manager | +992900000005 | tajcar123 |
+| Support | +992900000006 | tajcar123 |
 
 ---
 
