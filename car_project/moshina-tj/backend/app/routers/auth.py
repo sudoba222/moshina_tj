@@ -954,15 +954,22 @@ def google_oauth_redirect() -> Any:
 
 
 @router.get("/google/callback")
-def google_oauth_callback(
+async def google_oauth_callback(
+    request: Request,
     code: str = "",
     error: str = "",
-    db: Session = Depends(get_db),
 ) -> Any:
-    """Exchange the OAuth code for user info, find/create user, redirect to frontend."""
+    """Exchange the OAuth code for user info, find/create user, redirect to frontend.
+
+    Uses SessionLocal() directly (same pattern as telegram_webhook) to avoid
+    SQLAlchemy MissingGreenlet errors that occur with Depends(get_db) in
+    async routes.
+    """
     import os
     import httpx
+    import urllib.parse as _up
     from fastapi.responses import RedirectResponse as _RedirectResponse
+    from app.database import SessionLocal
 
     frontend_url = os.getenv("FRONTEND_URL", "https://tajcar-frontend.vercel.app")
     client_id = os.getenv("GOOGLE_CLIENT_ID", "")
@@ -975,10 +982,10 @@ def google_oauth_callback(
     if error or not code:
         return _RedirectResponse(f"{frontend_url}/auth/login?error=google_cancelled")
 
-    # Exchange authorization code for access token (sync httpx — avoids greenlet mismatch)
+    # Exchange authorization code for access token
     try:
-        with httpx.Client(timeout=10) as client:
-            token_resp = client.post(
+        async with httpx.AsyncClient(timeout=10) as http:
+            token_resp = await http.post(
                 "https://oauth2.googleapis.com/token",
                 data={
                     "code": code,
@@ -1001,8 +1008,8 @@ def google_oauth_callback(
 
     # Fetch user info from Google
     try:
-        with httpx.Client(timeout=10) as client:
-            userinfo_resp = client.get(
+        async with httpx.AsyncClient(timeout=10) as http:
+            userinfo_resp = await http.get(
                 "https://www.googleapis.com/oauth2/v2/userinfo",
                 headers={"Authorization": f"Bearer {access_token}"},
             )
@@ -1018,36 +1025,47 @@ def google_oauth_callback(
     if not google_sub:
         return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
 
-    # Find or create user (same logic as POST /auth/google)
-    is_new_user = False
-    user = db.query(User).filter(User.google_id == google_sub, User.is_deleted == False).first()
-    if not user and email:
-        user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
-        if user:
-            user.google_id = google_sub
-    if not user:
-        is_new_user = True
-        user = User(
-            phone=f"google_{secrets.token_hex(8)}",
-            name=name,
-            email=email,
-            google_id=google_sub,
-            password_hash=hash_password(secrets.token_hex(32)),
-            email_verified=bool(email),
-        )
-        db.add(user)
+    # DB work in its own block — session created and closed here, never via Depends
+    db = SessionLocal()
+    try:
+        is_new_user = False
+        user = db.query(User).filter(User.google_id == google_sub, User.is_deleted == False).first()
+        if not user and email:
+            user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
+            if user:
+                user.google_id = google_sub
+        if not user:
+            is_new_user = True
+            user = User(
+                phone=f"google_{secrets.token_hex(8)}",
+                name=name,
+                email=email,
+                google_id=google_sub,
+                password_hash=hash_password(secrets.token_hex(32)),
+                email_verified=bool(email),
+            )
+            db.add(user)
 
-    if user.is_banned:
-        return _RedirectResponse(f"{frontend_url}/auth/login?error=banned")
+        if user.is_banned:
+            return _RedirectResponse(f"{frontend_url}/auth/login?error=banned")
 
-    db.commit()
-    db.refresh(user)
+        db.commit()
 
-    jwt_token = create_access_token({"sub": str(user.id)}, token_version=user.token_version)
+        # Read scalar values before session closes
+        user_id = str(user.id)
+        token_version = user.token_version
+        user_name = user.name
+    except Exception:
+        db.rollback()
+        logger.exception("Google OAuth DB error")
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
+    finally:
+        db.close()
+
+    jwt_token = create_access_token({"sub": user_id}, token_version=token_version)
 
     # New users (or users with no name) → name setup page
-    import urllib.parse as _up
-    if is_new_user or not user.name:
+    if is_new_user or not user_name:
         encoded_name = _up.quote(name or "", safe="")
         return _RedirectResponse(
             f"{frontend_url}/auth/google-setup?token={jwt_token}&name={encoded_name}"
