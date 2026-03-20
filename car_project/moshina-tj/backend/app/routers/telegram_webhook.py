@@ -55,8 +55,9 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
 
     if not text.startswith("/start"):
         await _send_message(chat_id, (
-            "Привет! Я бот TajCar.tj.\n"
-            "Откройте сайт и нажмите «Войти через Telegram», чтобы получить код подтверждения."
+            "Привет! Я бот TajCar.tj 🚗\n\n"
+            f"Сайт: {SITE_URL}\n\n"
+            "Откройте сайт → Регистрация → «Войти через Telegram», чтобы получить код подтверждения."
         ), url_button=("Открыть TajCar.tj", SITE_URL))
         return {"ok": "true"}
 
@@ -65,8 +66,9 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
 
     if not token_str:
         await _send_message(chat_id, (
-            "Привет! Я бот TajCar.tj.\n"
-            "Откройте сайт и нажмите «Войти через Telegram», чтобы получить код подтверждения."
+            "Привет! Я бот TajCar.tj 🚗\n\n"
+            f"Сайт: {SITE_URL}\n\n"
+            "Откройте сайт → Регистрация → «Войти через Telegram», чтобы получить код подтверждения."
         ), url_button=("Открыть TajCar.tj", SITE_URL))
         return {"ok": "true"}
 
@@ -86,7 +88,7 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
         if not tg_token:
             await _send_message(chat_id, (
                 "Ссылка недействительна или истекла.\n"
-                "Вернитесь на сайт и запросите новый код."
+                f"Вернитесь на сайт и запросите новый код: {SITE_URL}"
             ), url_button=("Открыть TajCar.tj", SITE_URL))
             return {"ok": "true"}
 
@@ -117,12 +119,11 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
 
         db.commit()
 
+        spaced = " ".join(code)  # "1 2 3 4 5 6" — easier to read
         await _send_message(
             chat_id,
-            f"Ваш код подтверждения TajCar.tj:\n\n*{code}*\n\n"
-            f"Введите этот код на сайте. Код действителен 10 минут.\n"
-            f"Никому не сообщайте этот код.",
-            parse_mode="Markdown",
+            f"🔑 Ваш код TajCar\\.tj:\n\n`{code}`\n\n_{spaced}_\n\nНажмите на код, чтобы скопировать\\.\nВведите его на сайте — код действует 10 минут\\.\nНикому не передавайте этот код\\.",
+            parse_mode="MarkdownV2",
             url_button=("Открыть TajCar.tj", f"{SITE_URL}/auth/register"),
         )
     except Exception:

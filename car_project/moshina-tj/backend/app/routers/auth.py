@@ -728,7 +728,7 @@ def send_otp_telegram(
     db.add(TelegramToken(token=token_str, phone=payload.phone, expires_at=expires_at))
     db.commit()
 
-    deep_link = f"https://t.me/{bot_username}?start={token_str}"
+    deep_link = f"https://telegram.me/{bot_username}?start={token_str}"
     return ApiResponse(
         success=True,
         data={"deep_link": deep_link},
