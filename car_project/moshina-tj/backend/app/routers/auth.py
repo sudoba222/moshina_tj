@@ -395,11 +395,15 @@ def verify_otp(request: Request, payload: VerifyOtpPayload, background_tasks: Ba
     tg_name = tg_token.telegram_name if tg_token else None
     tg_chat_id = tg_token.telegram_chat_id if tg_token else None
 
-    # If telegram_chat_id is already owned by a different user, don't reuse it
+    # Enforce unique telegram_chat_id — reject if already owned by a different user
     if tg_chat_id:
         existing_tg_user = db.query(User).filter(User.telegram_chat_id == tg_chat_id).first()
-        if existing_tg_user and (user is None or str(existing_tg_user.id) != str(user.id) if user else True):
-            tg_chat_id = None
+        if existing_tg_user and (user is None or str(existing_tg_user.id) != str(user.id)):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This Telegram account is already linked to a different phone number. "
+                       "Log in with that number or use a different verification method.",
+            )
 
     if user:
         # Existing (or previously deleted) user — restore if deleted, then log in
