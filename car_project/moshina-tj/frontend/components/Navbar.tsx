@@ -15,6 +15,7 @@ const NAV_TABS = [
   { href: '/rent',        key: 'nav.rent' },
   { href: '/installment', key: 'nav.installment' },
   { href: '/dealers',     key: 'nav.dealers' },
+  { href: '/auction',     key: 'nav.auction' },
 ] as const
 
 function getRoleNavLink(role: UserRole): { href: string; key: string } | null {
