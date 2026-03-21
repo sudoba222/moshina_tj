@@ -19,6 +19,8 @@ env/
 # Environment variables — never commit real credentials
 backend/.env
 frontend/.env.local
+frontend/.env.production
+frontend/.env*.local
 *.env
 
 # IDEs

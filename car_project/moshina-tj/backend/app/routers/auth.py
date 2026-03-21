@@ -552,12 +552,13 @@ def verify_email_otp(request: Request, response: Response, payload: VerifyEmailO
     """Verify the 6-digit OTP sent to the email. Returns a JWT on success."""
     now = datetime.now(timezone.utc)
 
+    # Look up the most recent unused, unexpired OTP for this email (any code)
+    # so we can track attempts even on wrong codes
     otp = (
         db.query(OtpCode)
         .filter(
             OtpCode.email == payload.email,
             OtpCode.purpose == "email_verify",
-            OtpCode.code == payload.code,
             OtpCode.is_used == False,
             OtpCode.expires_at > now,
         )
@@ -566,6 +567,20 @@ def verify_email_otp(request: Request, response: Response, payload: VerifyEmailO
     )
 
     if not otp:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
+
+    # Brute-force protection: lock after 5 failed attempts
+    if otp.attempts >= 5:
+        otp.is_used = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many incorrect attempts. Request a new code.",
+        )
+
+    if otp.code != payload.code:
+        otp.attempts += 1
+        db.commit()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
 
     otp.is_used = True

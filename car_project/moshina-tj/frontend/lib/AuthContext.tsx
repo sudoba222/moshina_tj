@@ -24,40 +24,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    // Restore token + user from localStorage so the Bearer header works across refreshes
-    const savedToken = localStorage.getItem('token')
+    // On mount: call /auth/me — the HttpOnly cookie is sent automatically.
+    // If valid, populate in-memory token + user state.
+    // User object is cached in localStorage (non-sensitive) for instant UI render;
+    // the token itself is NEVER stored in localStorage (XSS risk).
     const savedUser = localStorage.getItem('user')
-
-    if (savedToken && savedUser) {
+    if (savedUser) {
       try {
-        const parsedUser = JSON.parse(savedUser) as User
-        setInMemoryToken(savedToken)
-        setToken(savedToken)
-        setUser(parsedUser)
-
-        // Verify token is still valid server-side (Bearer header now works)
-        authApi.me().then((res) => {
-          setUser(res.data.data)
-          localStorage.setItem('user', JSON.stringify(res.data.data))
-        }).catch(() => {
-          // Token expired or revoked — clear everything
-          setInMemoryToken(null)
-          setToken(null)
-          setUser(null)
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
-        })
+        setUser(JSON.parse(savedUser) as User)
       } catch {
-        localStorage.removeItem('token')
         localStorage.removeItem('user')
       }
     }
+
+    authApi.me().then((res) => {
+      const freshUser = res.data.data
+      // me() returns the token in the response header via the HttpOnly cookie path;
+      // if the server also returns it in the body, store in-memory only.
+      setUser(freshUser)
+      setToken('cookie') // sentinel — real auth is via HttpOnly cookie
+      localStorage.setItem('user', JSON.stringify(freshUser))
+    }).catch(() => {
+      setInMemoryToken(null)
+      setToken(null)
+      setUser(null)
+      localStorage.removeItem('user')
+    })
   }, [])
 
   function login(accessToken: string, userData: User) {
+    // Store token in memory only — never in localStorage (XSS risk).
+    // The server also sets an HttpOnly cookie for persistence across refreshes.
     setInMemoryToken(accessToken)
     setToken(accessToken)
-    localStorage.setItem('token', accessToken)
+    // Cache non-sensitive user object for instant UI render on next load
     localStorage.setItem('user', JSON.stringify(userData))
     setUser(userData)
   }
@@ -67,7 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setInMemoryToken(null)
     setToken(null)
     setUser(null)
-    localStorage.removeItem('token')
     localStorage.removeItem('user')
   }
 

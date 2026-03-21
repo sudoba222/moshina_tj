@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, update
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_user_optional
 
 # 2-minute in-memory cache for featured listings (homepage hit on every page load)
 _featured_cache: Dict[str, Any] = {}
@@ -242,8 +242,21 @@ def featured_listings(db: Session = Depends(get_db)):
 
 
 @router.get("/{listing_id}", response_model=ApiResponse[ListingResponse])
-def get_listing(listing_id: str, db: Session = Depends(get_db)):
+def get_listing(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_optional),
+):
     listing = _get_listing_or_404(listing_id, db)
+
+    # Non-active listings are only visible to their owner or staff
+    if listing.status != ListingStatus.active:
+        is_owner = current_user and current_user.id == listing.user_id
+        is_staff = current_user and current_user.role in (
+            UserRole.admin, UserRole.moderator, UserRole.manager, UserRole.support
+        )
+        if not (is_owner or is_staff):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
 
     # Atomic view increment — avoids a read-modify-write race condition
     db.execute(

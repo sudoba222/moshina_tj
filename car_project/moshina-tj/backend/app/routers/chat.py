@@ -532,7 +532,14 @@ def mark_conversation_read(
 # ---------------------------------------------------------------------------
 
 async def _ws_authenticate(websocket: WebSocket) -> Optional[str]:
-    """Extract and validate a JWT from ?token= or cookie. Returns user_id or None."""
+    """Extract and validate a JWT from ?token= or cookie.
+
+    Performs a full DB check — verifies token_version (revocation) and
+    ban status — so that a logged-out or banned user cannot keep a WS
+    connection open on an old token.
+
+    Returns user_id (str) or None on failure.
+    """
     token: Optional[str] = websocket.query_params.get("token")
     if not token:
         token = websocket.cookies.get("token")
@@ -540,7 +547,23 @@ async def _ws_authenticate(websocket: WebSocket) -> Optional[str]:
         return None
     try:
         payload = _decode_token(token)
-        return payload.get("sub")
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        db = SessionLocal()
+        try:
+            from app.models import User as _User
+            user = db.query(_User).filter(
+                _User.id == user_id,
+                _User.is_deleted == False,  # noqa: E712
+            ).first()
+            if user is None or user.is_banned:
+                return None
+            if payload.get("ver", 0) != user.token_version:
+                return None
+            return str(user.id)
+        finally:
+            db.close()
     except Exception:
         return None
 
