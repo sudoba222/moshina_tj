@@ -24,32 +24,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    // Hydrate from localStorage for immediate render, then verify with server
+    // Restore token + user from localStorage so the Bearer header works across refreshes
+    const savedToken = localStorage.getItem('token')
     const savedUser = localStorage.getItem('user')
-    if (savedUser) {
+
+    if (savedToken && savedUser) {
       try {
-        setUser(JSON.parse(savedUser) as User)
+        const parsedUser = JSON.parse(savedUser) as User
+        setInMemoryToken(savedToken)
+        setToken(savedToken)
+        setUser(parsedUser)
+
+        // Verify token is still valid server-side (Bearer header now works)
+        authApi.me().then((res) => {
+          setUser(res.data.data)
+          localStorage.setItem('user', JSON.stringify(res.data.data))
+        }).catch(() => {
+          // Token expired or revoked — clear everything
+          setInMemoryToken(null)
+          setToken(null)
+          setUser(null)
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+        })
       } catch {
+        localStorage.removeItem('token')
         localStorage.removeItem('user')
       }
     }
-
-    // Verify token is still valid via HttpOnly cookie
-    authApi.me().then((res) => {
-      setUser(res.data.data)
-      localStorage.setItem('user', JSON.stringify(res.data.data))
-    }).catch(() => {
-      // Cookie is gone or expired — clear local state
-      setInMemoryToken(null)
-      setToken(null)
-      setUser(null)
-      localStorage.removeItem('user')
-    })
   }, [])
 
   function login(accessToken: string, userData: User) {
     setInMemoryToken(accessToken)
     setToken(accessToken)
+    localStorage.setItem('token', accessToken)
     localStorage.setItem('user', JSON.stringify(userData))
     setUser(userData)
   }
@@ -59,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setInMemoryToken(null)
     setToken(null)
     setUser(null)
+    localStorage.removeItem('token')
     localStorage.removeItem('user')
   }
 
