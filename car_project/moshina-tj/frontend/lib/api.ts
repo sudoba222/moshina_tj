@@ -330,7 +330,7 @@ export interface ConversationItem {
   id: string
   type: 'direct' | 'support'
   other_participant: { id: string; name: string | null; avatar_url: string | null } | null
-  listing: { id: string; brand: string; model: string; year: number } | null
+  listing: { id: string; brand: string; model: string; year: number; price: number; image_url: string | null } | null
   last_message: { content: string; created_at: string; is_mine: boolean } | null
   unread_count: number
   updated_at: string

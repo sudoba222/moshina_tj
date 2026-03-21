@@ -6,6 +6,7 @@ import {
   useCallback,
   KeyboardEvent,
 } from 'react'
+import Link from 'next/link'
 import { chatApi } from '@/lib/api'
 import type { ConversationItem, ChatMessage } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
@@ -38,6 +39,15 @@ function SendIcon() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="22" y1="2" x2="11" y2="13" />
       <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  )
+}
+
+function PinIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
     </svg>
   )
 }
@@ -239,9 +249,10 @@ interface ChatViewProps {
   convId: string
   lang: string
   otherName: string | null
+  listing: ConversationItem['listing']
 }
 
-function ChatView({ convId, lang, otherName }: ChatViewProps) {
+function ChatView({ convId, lang, otherName, listing }: ChatViewProps) {
   const { user } = useAuth()
   const { sendMessage: sendViaSocket } = useSocket()
   const { onMessage } = useSocket()
@@ -319,6 +330,59 @@ function ChatView({ convId, lang, otherName }: ChatViewProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+
+      {/* Pinned listing card */}
+      {listing && (
+        <Link
+          href={`/car/${listing.id}`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '10px 14px',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--surface)',
+            textDecoration: 'none',
+            flexShrink: 0,
+          }}
+        >
+          {/* Thumbnail */}
+          {listing.image_url ? (
+            <img
+              src={listing.image_url}
+              alt=""
+              style={{ width: 52, height: 40, objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }}
+            />
+          ) : (
+            <div style={{
+              width: 52, height: 40, borderRadius: '6px', flexShrink: 0,
+              background: 'var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="15" height="13" rx="2"/>
+                <path d="M16 8h4l3 5v3h-7V8z"/>
+                <circle cx="5.5" cy="18.5" r="2.5"/>
+                <circle cx="18.5" cy="18.5" r="2.5"/>
+              </svg>
+            </div>
+          )}
+          {/* Info */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {listing.brand} {listing.model} · {listing.year}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 700, marginTop: '2px' }}>
+              {listing.price.toLocaleString()} USD
+            </div>
+          </div>
+          {/* Pin icon */}
+          <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+            <PinIcon />
+          </span>
+        </Link>
+      )}
+
       {/* Messages area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {loading && (
@@ -653,6 +717,7 @@ export default function ChatDrawer() {
               convId={localConvId}
               lang={lang}
               otherName={otherName}
+              listing={activeConv?.listing ?? null}
             />
           ) : (
             <ConversationList

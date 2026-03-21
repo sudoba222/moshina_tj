@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.auth import _decode_token, get_current_user
 from app.database import SessionLocal, get_db
 from app.email_service import send_email_otp
-from app.models import Conversation, ConversationType, Message, Notification, NotificationType, User, UserRole
+from app.models import Conversation, ConversationType, Listing, ListingImage, Message, Notification, NotificationType, User, UserRole
 from app.schemas import ApiResponse
 from app.websockets import manager
 
@@ -61,11 +61,20 @@ class LastMessageOut(BaseModel):
     created_at: str  # ISO-8601 string
 
 
+class ListingPreviewOut(BaseModel):
+    id: _uuid.UUID
+    brand: str
+    model: str
+    year: int
+    price: float
+    image_url: Optional[str] = None
+
+
 class ConversationOut(BaseModel):
     id: _uuid.UUID
     type: ConversationType
     other_participant: Optional[ParticipantOut] = None
-    listing_id: Optional[_uuid.UUID] = None
+    listing: Optional[ListingPreviewOut] = None
     last_message: Optional[LastMessageOut] = None
     updated_at: str
 
@@ -117,11 +126,26 @@ def _build_conversation_out(conv: Conversation, current_user_id) -> Conversation
             created_at=m.created_at.isoformat(),
         )
 
+    listing_preview: Optional[ListingPreviewOut] = None
+    if conv.listing:
+        primary = next(
+            (img for img in conv.listing.images if img.is_primary),
+            conv.listing.images[0] if conv.listing.images else None,
+        )
+        listing_preview = ListingPreviewOut(
+            id=conv.listing.id,
+            brand=conv.listing.brand,
+            model=conv.listing.model,
+            year=conv.listing.year,
+            price=float(conv.listing.price),
+            image_url=primary.url if primary else None,
+        )
+
     return ConversationOut(
         id=conv.id,
         type=conv.type,
         other_participant=other_out,
-        listing_id=conv.listing_id,
+        listing=listing_preview,
         last_message=last_msg,
         updated_at=conv.updated_at.isoformat(),
     )
@@ -134,6 +158,7 @@ def _get_conversation_or_403(conv_id: str, current_user: User, db: Session) -> C
             joinedload(Conversation.participant1),
             joinedload(Conversation.participant2),
             joinedload(Conversation.messages),
+            joinedload(Conversation.listing).joinedload(Listing.images),
         )
         .filter(Conversation.id == conv_id)
         .first()
@@ -159,6 +184,7 @@ def list_conversations(current_user: User = Depends(get_current_user)):
                 joinedload(Conversation.participant1),
                 joinedload(Conversation.participant2),
                 joinedload(Conversation.messages),
+                joinedload(Conversation.listing).joinedload(Listing.images),
             )
             .filter(
                 (Conversation.participant1_id == current_user.id)
@@ -205,6 +231,7 @@ def create_or_get_conversation(
                     joinedload(Conversation.participant1),
                     joinedload(Conversation.participant2),
                     joinedload(Conversation.messages),
+                    joinedload(Conversation.listing).joinedload(Listing.images),
                 )
                 .filter(Conversation.id == conv.id)
                 .first()
@@ -255,6 +282,7 @@ def create_or_get_conversation(
                 joinedload(Conversation.participant1),
                 joinedload(Conversation.participant2),
                 joinedload(Conversation.messages),
+                joinedload(Conversation.listing).joinedload(Listing.images),
             )
             .first()
         )
@@ -280,6 +308,7 @@ def create_or_get_conversation(
                 joinedload(Conversation.participant1),
                 joinedload(Conversation.participant2),
                 joinedload(Conversation.messages),
+                joinedload(Conversation.listing).joinedload(Listing.images),
             )
             .filter(Conversation.id == conv.id)
             .first()
