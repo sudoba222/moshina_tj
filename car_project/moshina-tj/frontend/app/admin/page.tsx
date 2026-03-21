@@ -8,10 +8,10 @@ import type { ModeratorActivity, CarBrand, CarModelItem, CarCategory, AdBanner, 
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
-import type { AdminStats, AuditLog, User, Listing, UserRole } from '@/types'
+import type { AdminStats, AuditLog, User, Listing, UserRole, Dealer } from '@/types'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type Tab = 'dashboard' | 'users' | 'listings' | 'moderation' | 'brands' | 'categories' | 'banners' | 'system'
+type Tab = 'dashboard' | 'users' | 'listings' | 'moderation' | 'dealers' | 'brands' | 'categories' | 'banners' | 'system'
 
 const ALLOWED_ROLES: UserRole[] = ['admin', 'moderator', 'manager']
 const ALL_ROLES: UserRole[] = ['user', 'dealer', 'moderator', 'manager', 'support', 'admin']
@@ -325,6 +325,13 @@ export default function AdminPage() {
   const [bannerActionLoading, setBannerActionLoading] = useState(false)
   const [bannerActionError, setBannerActionError] = useState('')
 
+  // Dealers
+  const [dealers, setDealers]           = useState<Dealer[]>([])
+  const [dealersTotal, setDealersTotal] = useState(0)
+  const [dealersPage, setDealersPage]   = useState(1)
+  const [dealersLoading, setDealersLoading] = useState(false)
+  const [dealerActionLoading, setDealerActionLoading] = useState<string | null>(null)
+
   // Auth guard
   useEffect(() => {
     if (!user) { router.replace('/auth/login'); return }
@@ -410,6 +417,17 @@ export default function AdminPage() {
     setBannersLoading(false)
   }, [])
 
+  // ── Load dealers ─────────────────────────────────────────────────────────────
+  const loadDealers = useCallback(async (page = 1) => {
+    setDealersLoading(true)
+    try {
+      const res = await adminApi.getDealers(page)
+      setDealers(res.data.data.items)
+      setDealersTotal(res.data.data.total)
+    } catch { /* silent */ }
+    setDealersLoading(false)
+  }, [])
+
   // ── Tab change triggers ─────────────────────────────────────────────────────
   useEffect(() => {
     if (tab === 'dashboard')  loadDashboard()
@@ -418,6 +436,7 @@ export default function AdminPage() {
     if (tab === 'brands')     loadBrands(1, brandsSearch)
     if (tab === 'categories') loadCategories()
     if (tab === 'banners')    loadBanners()
+    if (tab === 'dealers')    loadDealers(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
 
@@ -456,6 +475,25 @@ export default function AdminPage() {
   async function handleDeactivateListing(id: string) {
     await adminApi.deactivateListing(id)
     loadListings(listingsPage, listingsStatus, listingsSearch)
+  }
+
+  // ── Dealer actions ───────────────────────────────────────────────────────────
+  async function handleVerifyDealer(dealerId: string) {
+    setDealerActionLoading(dealerId)
+    try {
+      await adminApi.verifyDealer(dealerId)
+      loadDealers(dealersPage)
+    } catch { /* silent */ }
+    setDealerActionLoading(null)
+  }
+
+  async function handleUnverifyDealer(dealerId: string) {
+    setDealerActionLoading(dealerId)
+    try {
+      await adminApi.unverifyDealer(dealerId)
+      loadDealers(dealersPage)
+    } catch { /* silent */ }
+    setDealerActionLoading(null)
   }
 
   async function handleCreateUser() {
@@ -782,6 +820,7 @@ export default function AdminPage() {
     { id: 'users',      label: t('admin.users', lang),                            icon: <IconUsers /> },
     { id: 'listings',   label: t('admin.listings', lang),                         icon: <IconListings /> },
     { id: 'moderation', label: t('admin.moderation', lang),                       icon: <IconShield /> },
+    { id: 'dealers',    label: t('admin.tabDealers', lang),                       icon: <IconUsers /> },
     { id: 'brands',     label: lang === 'ru' ? 'Марки и модели' : 'Марка ва модел', icon: <IconCar /> },
     { id: 'categories', label: lang === 'ru' ? 'Категории' : 'Категорияхо',       icon: <IconTag /> },
     { id: 'banners',    label: lang === 'ru' ? 'Баннеры' : 'Баннерҳо',           icon: <IconImage /> },
@@ -1489,6 +1528,95 @@ export default function AdminPage() {
                 {t('admin.goToModerator', lang)}
               </Link>
             </div>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════
+            DEALERS tab
+        ════════════════════════════════════════════════ */}
+        {tab === 'dealers' && (
+          <div>
+            <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', marginBottom: '20px' }}>{t('admin.tabDealers', lang)}</h1>
+
+            {dealersLoading ? (
+              <div style={{ color: 'var(--text-muted)', padding: '20px' }}>{t('common.loading', lang)}</div>
+            ) : (
+              <div style={{ background: 'var(--card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                    <thead>
+                      <tr>
+                        {[
+                          t('admin.name', lang),
+                          t('admin.phone', lang),
+                          t('admin.city', lang),
+                          t('admin.status', lang),
+                          t('admin.actions', lang),
+                        ].map(h => <th key={h} style={thStyle}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dealers.map(d => (
+                        <tr key={d.id}>
+                          <td style={tdStyle}>{d.business_name}</td>
+                          <td style={tdStyle}>{d.phone ?? '—'}</td>
+                          <td style={tdStyle}>{d.city ?? '—'}</td>
+                          <td style={tdStyle}>
+                            {d.verified ? (
+                              <span style={{ background: 'var(--color-success-dim)', color: 'var(--color-success)', padding: '2px 8px', borderRadius: '100px', fontSize: '11px', fontWeight: 600 }}>
+                                {t('admin.verified', lang)}
+                              </span>
+                            ) : (
+                              <span style={{ background: 'var(--tag-bg)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '100px', fontSize: '11px', fontWeight: 600 }}>
+                                {t('admin.notVerified', lang)}
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                            {d.verified ? (
+                              <button
+                                onClick={() => handleUnverifyDealer(d.id)}
+                                disabled={dealerActionLoading === d.id}
+                                style={{ padding: '4px 10px', background: 'var(--color-error-dim)', color: 'var(--color-error)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, opacity: dealerActionLoading === d.id ? 0.6 : 1 }}
+                              >
+                                {t('admin.unverifyDealer', lang)}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleVerifyDealer(d.id)}
+                                disabled={dealerActionLoading === d.id}
+                                style={{ padding: '4px 10px', background: 'var(--color-success-dim)', color: 'var(--color-success)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, opacity: dealerActionLoading === d.id ? 0.6 : 1 }}
+                              >
+                                {t('admin.verifyDealer', lang)}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                      {dealers.length === 0 && (
+                        <tr>
+                          <td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-muted)', padding: '32px' }}>
+                            {t('common.noData', lang)}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Pagination */}
+                {dealersTotal > 20 && (
+                  <div style={{ display: 'flex', gap: '8px', padding: '12px 16px', justifyContent: 'center', borderTop: '1px solid var(--border)' }}>
+                    <button disabled={dealersPage === 1} onClick={() => { const p = dealersPage - 1; setDealersPage(p); loadDealers(p) }} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', opacity: dealersPage === 1 ? 0.4 : 1 }}>
+                      ‹
+                    </button>
+                    <span style={{ padding: '6px 14px', fontSize: '13px', color: 'var(--text-muted)' }}>{dealersPage}</span>
+                    <button disabled={dealers.length < 20} onClick={() => { const p = dealersPage + 1; setDealersPage(p); loadDealers(p) }} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', opacity: dealers.length < 20 ? 0.4 : 1 }}>
+                      ›
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

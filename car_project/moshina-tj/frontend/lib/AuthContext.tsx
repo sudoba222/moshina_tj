@@ -39,6 +39,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     authApi.me().then((res) => {
       const freshUser = res.data.data
+      if (freshUser.is_banned) {
+        setInMemoryToken(null)
+        setToken(null)
+        setUser(null)
+        localStorage.removeItem('user')
+        return
+      }
       // me() returns the token in the response header via the HttpOnly cookie path;
       // if the server also returns it in the body, store in-memory only.
       setUser(freshUser)

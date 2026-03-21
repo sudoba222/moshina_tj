@@ -482,12 +482,9 @@ def send_message(
         },
     }
 
-    import asyncio
-
-    loop = asyncio.get_event_loop()
     if recipient_id_str:
         if manager.is_online(recipient_id_str):
-            loop.create_task(manager.send_to_user(recipient_id_str, ws_payload))
+            background_tasks.add_task(manager.send_to_user, recipient_id_str, ws_payload)
         else:
             # Recipient is offline — enqueue email notification as background task
             background_tasks.add_task(_notify_offline_recipient, recipient_email, sender_name)

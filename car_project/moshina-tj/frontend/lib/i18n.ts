@@ -326,6 +326,11 @@ const strings = {
     logReason:        { ru: 'Причина',                      tj: 'Сабаб' },
     viewLogs:         { ru: 'История',                      tj: 'Таърих' },
     noLogs:           { ru: 'Нет действий',                 tj: 'Амале нест' },
+    tabDealers:       { ru: 'Дилеры',                       tj: 'Дилерҳо' },
+    verifyDealer:     { ru: 'Верифицировать',               tj: 'Тасдиқ' },
+    unverifyDealer:   { ru: 'Снять верификацию',            tj: 'Тасдиқро бардоред' },
+    verified:         { ru: 'Верифицирован',                tj: 'Тасдиқ шуд' },
+    notVerified:      { ru: 'Не верифицирован',             tj: 'Тасдиқ нашуд' },
   },
   moderator: {
     title:              { ru: 'Модерация',                             tj: 'Назорат' },

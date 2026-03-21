@@ -629,11 +629,19 @@ def activate_listing(listing_id: str, db: Session = Depends(get_db), current_use
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    old_status = listing.status.value if listing.status else None
     listing.is_active = True
     listing.status = ListingStatus.active
     listing.moderated_by = current_user.id
     listing.rejection_reason = None
     log_audit(db, current_user.id, "approve_listing", "listing", listing.id)
+    db.add(ListingLog(
+        listing_id=listing.id,
+        actor_id=current_user.id,
+        action="reactivated",
+        from_status=old_status,
+        to_status="active",
+    ))
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing activated")
@@ -644,9 +652,17 @@ def deactivate_listing(listing_id: str, db: Session = Depends(get_db), current_u
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    old_status = listing.status.value if listing.status else None
     listing.is_active = False
     listing.status = ListingStatus.rejected
     log_audit(db, current_user.id, "deactivate_listing", "listing", listing.id)
+    db.add(ListingLog(
+        listing_id=listing.id,
+        actor_id=current_user.id,
+        action="deactivated",
+        from_status=old_status,
+        to_status="inactive",
+    ))
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing deactivated")

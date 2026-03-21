@@ -80,7 +80,7 @@ class User(Base):
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     )
-    phone = Column(String(20), unique=True, nullable=False, index=True)
+    phone = Column(String(50), unique=True, nullable=False, index=True)
     name = Column(String(100), nullable=True)
     email = Column(String(200), unique=True, nullable=True, index=True)
     password_hash = Column(String(255), nullable=False)
@@ -249,7 +249,7 @@ class ListingLog(Base):
     reason = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
-    listing = relationship("Listing", foreign_keys=[listing_id])
+    listing = relationship("Listing", foreign_keys=[listing_id], overlaps="logs")
     actor = relationship("User", foreign_keys=[actor_id])
 
 
@@ -317,7 +317,7 @@ class AuditLog(Base):
     target_type = Column(String(50), nullable=True)   # "user", "listing", "dealer"
     target_id = Column(UUID(as_uuid=True), nullable=True)
     details = Column(JSON, nullable=True)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
     actor = relationship("User", foreign_keys=[actor_id])
 
@@ -333,7 +333,7 @@ class SearchLog(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
 
 class OtpCode(Base):

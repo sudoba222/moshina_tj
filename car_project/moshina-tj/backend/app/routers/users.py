@@ -78,6 +78,44 @@ def get_user_listings(
     )
 
 
+@router.get("/me/listings", response_model=ApiResponse[ListingListResponse])
+def my_listings(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=50),
+    status_filter: Optional[str] = Query(default=None, alias="status"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return all listings belonging to the current user across all statuses."""
+    query = (
+        db.query(Listing)
+        .options(joinedload(Listing.images))
+        .filter(Listing.user_id == current_user.id)
+    )
+    if status_filter and status_filter != "all":
+        query = query.filter(Listing.status == status_filter)
+
+    total = query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    items = (
+        query.order_by(Listing.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    return ApiResponse(
+        success=True,
+        data=ListingListResponse(
+            items=[ListingResponse.model_validate(i) for i in items],
+            total=total,
+            page=page,
+            pages=pages,
+        ),
+        message="Your listings fetched",
+    )
+
+
 @router.get("/me/favorites", response_model=ApiResponse[ListingListResponse])
 def get_my_favorites(
     page: int = Query(default=1, ge=1),

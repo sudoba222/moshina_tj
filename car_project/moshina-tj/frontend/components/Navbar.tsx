@@ -24,6 +24,7 @@ function getRoleNavLink(role: UserRole): { href: string; key: string } | null {
     case 'moderator': return { href: '/moderator', key: 'nav.moderator' }
     case 'manager':   return { href: '/manager',   key: 'nav.manager' }
     case 'support':   return { href: '/support',   key: 'nav.support' }
+    case 'dealer':    return { href: '/dashboard', key: 'nav.dashboard' }
     default:          return null
   }
 }

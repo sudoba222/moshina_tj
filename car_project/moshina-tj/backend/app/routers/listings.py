@@ -259,13 +259,15 @@ def get_listing(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
 
     # Atomic view increment — avoids a read-modify-write race condition
-    db.execute(
-        update(Listing)
-        .where(Listing.id == listing_id)
-        .values(views=Listing.views + 1)
-    )
-    db.commit()
-    db.refresh(listing)
+    # Only count views for publicly active listings
+    if listing.status == ListingStatus.active:
+        db.execute(
+            update(Listing)
+            .where(Listing.id == listing_id)
+            .values(views=Listing.views + 1)
+        )
+        db.commit()
+        db.refresh(listing)
 
     data = ListingResponse.model_validate(listing)
     data.moderator_note = None  # internal field — strip from public response
@@ -377,6 +379,18 @@ def update_listing(
     for field, value in update_data.items():
         # rental_rules arrives as a JSON-serializable dict — assign directly
         setattr(listing, field, value)
+
+    # Re-submit for moderation whenever an active listing is edited
+    if listing.status == ListingStatus.active:
+        listing.status = ListingStatus.pending
+        listing.is_active = False
+        db.add(ListingLog(
+            listing_id=listing.id,
+            actor_id=current_user.id,
+            action="edited",
+            from_status="active",
+            to_status="pending",
+        ))
 
     db.commit()
     db.refresh(listing)

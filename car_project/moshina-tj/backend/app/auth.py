@@ -101,17 +101,6 @@ def get_current_user(
     return user
 
 
-def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    from app.models import UserRole  # local to avoid circular at module level
-
-    if current_user.role != UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-    return current_user
-
-
 # ---------------------------------------------------------------------------
 # Optional auth dependency — returns None when no token is provided
 # ---------------------------------------------------------------------------

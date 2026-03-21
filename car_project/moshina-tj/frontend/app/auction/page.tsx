@@ -36,12 +36,12 @@ export default function AuctionPage() {
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.4)',
             borderRadius: '100px', padding: '4px 14px',
-            fontSize: '12px', fontWeight: 700, color: '#ca8a04',
+            fontSize: '12px', fontWeight: 700, color: 'var(--color-warning, #ca8a04)',
             marginBottom: '16px', letterSpacing: '0.04em',
           }}>
             <span style={{
               width: '6px', height: '6px', borderRadius: '50%',
-              background: '#ca8a04', display: 'inline-block', animation: 'pulse 2s infinite',
+              background: 'var(--color-warning, #ca8a04)', display: 'inline-block', animation: 'pulse 2s infinite',
             }} />
             {t('auction.badge', lang)}
           </div>

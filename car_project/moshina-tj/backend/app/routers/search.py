@@ -22,7 +22,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Query, Request
 from app.limiter import limiter
-from sqlalchemy import Float, Integer, cast, desc, func, literal, or_, text, union
+from sqlalchemy import Float, Integer, String, cast, desc, func, literal, or_, text, union
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -115,7 +115,7 @@ def search_listings(
         + " "
         + func.coalesce(Listing.description, "")
         + " "
-        + cast(Listing.year, text("text")),
+        + cast(Listing.year, String),
     )
     ts_query = func.plainto_tsquery("simple", q)
     ts_rank_expr = func.ts_rank(search_vector, ts_query)

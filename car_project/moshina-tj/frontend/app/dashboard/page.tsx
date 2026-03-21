@@ -95,7 +95,7 @@ export default function DashboardPage() {
     setMessages([])
     chatApi.getMessages(selectedConvId, 1)
       .then((res) => {
-        setMessages(res.data.data.items)
+        setMessages([...res.data.data.items].reverse())
         chatApi.markRead(selectedConvId).catch(() => {})
       })
       .catch(() => setMessages([]))

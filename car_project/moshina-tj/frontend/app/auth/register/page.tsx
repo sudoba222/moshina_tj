@@ -296,7 +296,7 @@ function PhoneTab({ lang }: { lang: string }) {
 
   return (
     <div className="otp-step">
-      {devCode && <DevBanner lang={lang} />}
+      {devCode !== null && process.env.NODE_ENV === 'development' && <DevBanner lang={lang} />}
       <BackButton lang={lang} onClick={() => { setStep(1); setError(''); setTelegramDeepLink(null) }} />
       <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', marginBottom: '8px', textAlign: 'center' }}>
         {lang === 'ru' ? 'Введите код' : 'Рамзро ворид кунед'}
@@ -469,7 +469,7 @@ function EmailTab({ lang }: { lang: string }) {
 
   return (
     <div className="otp-step">
-      {devCode && <DevBanner lang={lang} />}
+      {devCode !== null && process.env.NODE_ENV === 'development' && <DevBanner lang={lang} />}
       <BackButton lang={lang} onClick={() => { setStep('form'); setError('') }} />
       <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', marginBottom: '8px', textAlign: 'center' }}>
         {lang === 'ru' ? 'Подтвердите email' : 'Email-ро тасдиқ кунед'}

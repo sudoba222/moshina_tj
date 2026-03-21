@@ -50,13 +50,13 @@ export const metadata: Metadata = {
     locale: 'ru_TJ',
     url: SITE_URL,
     siteName: 'TajCar.tj',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'TajCar.tj — Авторынок Таджикистана' }],
+    // images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'TajCar.tj — Авторынок Таджикистана' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'TajCar.tj — Авторынок Таджикистана',
     description: 'Покупка, аренда и рассрочка автомобилей по всему Таджикистану.',
-    images: ['/og-image.png'],
+    // images: ['/og-image.png'],
   },
   alternates: {
     canonical: SITE_URL,

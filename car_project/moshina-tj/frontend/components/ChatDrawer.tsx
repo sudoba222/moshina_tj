@@ -162,7 +162,7 @@ function ConversationList({ conversations, loading, onSelect, lang }: ConvListPr
   return (
     <ul style={{ listStyle: 'none', margin: 0, padding: 0, overflowY: 'auto', flex: 1 }} role="list">
       {conversations.map((conv) => {
-        const name = conv.other_participant?.name ?? (lang === 'ru' ? 'Поддержка' : 'Дастгирӣ')
+        const name = conv.other_participant?.name ?? t('chat.support', lang as 'ru' | 'tj')
         const lastMsg = conv.last_message
         const preview = lastMsg
           ? (lastMsg.is_mine ? `${t('chat.you', lang as 'ru' | 'tj')}: ` : '') + lastMsg.content
