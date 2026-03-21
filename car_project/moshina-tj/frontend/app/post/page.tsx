@@ -481,7 +481,7 @@ function PostPage() {
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Navbar />
         <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="animate-scale-in" style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <div className="animate-scale-in" style={{ textAlign: 'center', padding: '40px 20px', maxWidth: '460px' }}>
             <div style={{
               width: '64px', height: '64px', borderRadius: '50%',
               background: 'rgba(22,163,74,0.1)', border: '2px solid #16a34a',
@@ -492,12 +492,33 @@ function PostPage() {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>
+            <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', marginBottom: '12px' }}>
               {isEditMode
                 ? (lang === 'ru' ? 'Изменения сохранены' : 'Тағйирот нигоҳ дошта шуд')
                 : t('post.success', lang)
               }
             </p>
+            {!isEditMode && (
+              <div style={{
+                background: 'rgba(234,179,8,0.08)',
+                border: '1px solid rgba(234,179,8,0.35)',
+                borderRadius: '12px',
+                padding: '14px 18px',
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'flex-start',
+                textAlign: 'left',
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <p style={{ fontSize: '13px', lineHeight: '1.55', color: 'var(--text)', margin: 0 }}>
+                  {t('post.successSub', lang)}
+                </p>
+              </div>
+            )}
           </div>
         </main>
         <Footer />
