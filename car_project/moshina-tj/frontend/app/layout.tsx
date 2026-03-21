@@ -8,6 +8,8 @@ import { ThemeProvider } from '@/lib/ThemeContext'
 import { SocketProvider } from '@/lib/SocketContext'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import ChatWidget from '@/components/ChatWidget'
+import ChatDrawer from '@/components/ChatDrawer'
+import { ChatDrawerProvider } from '@/lib/ChatDrawerContext'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -71,13 +73,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={syne.className}>
         <ThemeProvider>
           <AuthProvider>
-            <SocketProvider>
-              <LanguageProvider>
-                {children}
-                <MobileBottomNav />
-                <ChatWidget />
-              </LanguageProvider>
-            </SocketProvider>
+            <ChatDrawerProvider>
+              <SocketProvider>
+                <LanguageProvider>
+                  {children}
+                  <MobileBottomNav />
+                  <ChatWidget />
+                  <ChatDrawer />
+                </LanguageProvider>
+              </SocketProvider>
+            </ChatDrawerProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

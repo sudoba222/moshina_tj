@@ -1,9 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { chatApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
+import { useChatDrawer } from '@/lib/ChatDrawerContext'
 import { t } from '@/lib/i18n'
 
 function ChatBubbleIcon() {
@@ -17,7 +16,7 @@ function ChatBubbleIcon() {
 export default function ChatWidget() {
   const { user } = useAuth()
   const { lang } = useLang()
-  const router = useRouter()
+  const { openSupport } = useChatDrawer()
   const [loading, setLoading] = useState(false)
 
   if (!user) return null
@@ -26,12 +25,7 @@ export default function ChatWidget() {
     if (loading) return
     setLoading(true)
     try {
-      const res = await chatApi.createOrGet({ type: 'support' })
-      const convId = res.data.data.id
-      router.push(`/dashboard?tab=messages&conv=${convId}`)
-    } catch {
-      // Fallback: just navigate to messages tab
-      router.push('/dashboard?tab=messages')
+      await openSupport()
     } finally {
       setLoading(false)
     }

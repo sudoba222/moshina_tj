@@ -6,9 +6,10 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
-import { listingsApi, usersApi, searchApi, favoritesApi, chatApi } from '@/lib/api'
+import { listingsApi, usersApi, searchApi, favoritesApi } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { useAuth } from '@/lib/AuthContext'
+import { useChatDrawer } from '@/lib/ChatDrawerContext'
 import { t } from '@/lib/i18n'
 import type { Listing, UserPublicProfile, RentalRules } from '@/types'
 
@@ -382,6 +383,7 @@ export default function CarDetailClient() {
   const [notFound, setNotFound] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
   const [contactOpen, setContactOpen] = useState(false)
+  const { openChat } = useChatDrawer()
   const [favorited, setFavorited] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
   const [chatLoading, setChatLoading] = useState(false)
@@ -406,10 +408,7 @@ export default function CarDetailClient() {
     if (!id || !listing || chatLoading) return
     setChatLoading(true)
     try {
-      const res = await chatApi.createOrGet({ participant_id: listing.user_id, listing_id: id })
-      router.push(`/dashboard?tab=messages&conv=${res.data.data.id}`)
-    } catch {
-      router.push('/dashboard?tab=messages')
+      await openChat(listing.user_id, id)
     } finally {
       setChatLoading(false)
     }

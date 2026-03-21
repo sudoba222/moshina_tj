@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { t } from '@/lib/i18n'
 import { favoritesApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
+import { useChatDrawer } from '@/lib/ChatDrawerContext'
 import type { Listing, Lang } from '@/types'
 
 interface CarCardProps {
@@ -54,6 +55,15 @@ function formatPrice(price: number, currency: string): string {
   return price.toLocaleString('ru-RU') + ' сом.'
 }
 
+// Chat SVG icon
+function ChatIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
 // Credit card SVG icon
 function CreditCardIcon() {
   return (
@@ -100,6 +110,7 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
   const [imgLoaded, setImgLoaded] = useState(false)
 
   const { user } = useAuth()
+  const { openChat } = useChatDrawer()
   const router = useRouter()
   const [favorited, setFavorited] = useState<boolean>(
     initialFavorited ?? listing.is_favorited ?? false
@@ -126,6 +137,16 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
     } finally {
       setFavLoading(false)
     }
+  }
+
+  function handleWriteMessage(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!user) {
+      router.push('/auth/login')
+      return
+    }
+    openChat(listing.user_id, listing.id)
   }
 
   return (
@@ -356,6 +377,36 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
               </span>
             )}
           </div>
+
+          {/* Write message button — only for other sellers */}
+          {!moderatorMode && user && listing.user_id !== user.id && (
+            <button
+              onClick={handleWriteMessage}
+              aria-label={t('chat.writeMessage', lang)}
+              style={{
+                marginTop: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                width: '100%',
+                padding: '7px 10px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: 'var(--accent)',
+                background: 'transparent',
+                border: '1px solid var(--accent)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                justifyContent: 'center',
+                transition: 'background 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'color-mix(in srgb, var(--accent) 10%, transparent)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+            >
+              <ChatIcon />
+              {t('chat.writeMessage', lang)}
+            </button>
+          )}
         </div>
       </article>
     </Link>
