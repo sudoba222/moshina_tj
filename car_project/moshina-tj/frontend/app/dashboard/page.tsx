@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [editMode, setEditMode] = useState(false)
   const [name, setName] = useState(user?.name ?? '')
   const [phone, setPhone] = useState(user?.phone ?? '')
+  const [whatsappNumber, setWhatsappNumber] = useState(user?.whatsapp_number ?? '')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState(false)
@@ -74,6 +75,7 @@ export default function DashboardPage() {
     if (!user) { router.replace('/auth/login'); return }
     setName(user.name ?? '')
     setPhone(user.phone ?? '')
+    setWhatsappNumber(user.whatsapp_number ?? '')
   }, [user, router])
 
   // Load conversations when Messages tab is active
@@ -188,7 +190,10 @@ export default function DashboardPage() {
     if (!name.trim()) { setProfileError(lang === 'ru' ? 'Введите имя' : 'Ном ворид кунед'); return }
     setProfileSaving(true)
     try {
-      const res = await authApi.updateProfile({ name: name.trim() })
+      const res = await authApi.updateProfile({
+        name: name.trim(),
+        whatsapp_number: whatsappNumber.trim() || null,
+      })
       updateUser(res.data.data)
       setProfileSuccess(true)
       setEditMode(false)
@@ -360,6 +365,17 @@ export default function DashboardPage() {
                       <label htmlFor="dash-name" style={labelStyle}>{t('admin.name', lang)}</label>
                       <input id="dash-name" type="text" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
                     </div>
+                    <div>
+                      <label htmlFor="dash-whatsapp" style={labelStyle}>{t('settings.whatsapp', lang)}</label>
+                      <input
+                        id="dash-whatsapp"
+                        type="tel"
+                        value={whatsappNumber}
+                        onChange={(e) => setWhatsappNumber(e.target.value)}
+                        placeholder={t('settings.whatsappPlaceholder', lang)}
+                        style={inputStyle}
+                      />
+                    </div>
                     {profileError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{profileError}</p>}
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button
@@ -382,6 +398,7 @@ export default function DashboardPage() {
                     <InfoRow label={t('auth.phone', lang)} value={user.phone} />
                     <InfoRow label={t('admin.name', lang)} value={user.name ?? '—'} />
                     {user.email && <InfoRow label="Email" value={user.email} />}
+                    {user.whatsapp_number && <InfoRow label={t('settings.whatsapp', lang)} value={user.whatsapp_number} />}
                     {profileSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{lang === 'ru' ? 'Сохранено' : 'Нигоҳ дошта шуд'}</p>}
                     <button
                       onClick={() => { setEditMode(true); setProfileSuccess(false) }}

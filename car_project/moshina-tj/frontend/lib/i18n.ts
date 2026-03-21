@@ -217,6 +217,10 @@ const strings = {
     allListings:  { ru: 'Все объявления продавца', tj: 'Ҳамаи эълонҳои фурӯшанда' },
     close:        { ru: 'Закрыть',               tj: 'Пӯшидан' },
   },
+  settings: {
+    whatsapp:            { ru: 'WhatsApp',            tj: 'WhatsApp' },
+    whatsappPlaceholder: { ru: '+992 xx xxx xxxx',   tj: '+992 xx xxx xxxx' },
+  },
   dashboard: {
     title:          { ru: 'Личный кабинет',          tj: 'Кабинети шахсӣ' },
     myListings:     { ru: 'Мои объявления',          tj: 'Эълонҳои ман' },
@@ -315,6 +319,13 @@ const strings = {
     version:          { ru: 'Версия',                       tj: 'Версия' },
     goToModerator:    { ru: 'Перейти к модерации',          tj: 'Ба назорат гузаред' },
     viewUser:         { ru: 'Просмотр',                     tj: 'Намоиш' },
+    tabListings:      { ru: 'Объявления',                   tj: 'Эълонҳо' },
+    allStatuses:      { ru: 'Все статусы',                  tj: 'Ҳама статусҳо' },
+    logAction:        { ru: 'Действие',                     tj: 'Амал' },
+    logBy:            { ru: 'Кем',                          tj: 'Аз ҷониби' },
+    logReason:        { ru: 'Причина',                      tj: 'Сабаб' },
+    viewLogs:         { ru: 'История',                      tj: 'Таърих' },
+    noLogs:           { ru: 'Нет действий',                 tj: 'Амале нест' },
   },
   moderator: {
     title:              { ru: 'Модерация',                             tj: 'Назорат' },

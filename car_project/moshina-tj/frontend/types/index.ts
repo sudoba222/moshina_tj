@@ -82,6 +82,7 @@ export interface User {
   avatar_url: string | null
   is_banned: boolean
   ban_reason?: string | null
+  whatsapp_number: string | null
   created_at: string
 }
 

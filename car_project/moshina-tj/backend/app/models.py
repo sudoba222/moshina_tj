@@ -96,6 +96,7 @@ class User(Base):
     google_id = Column(String(200), unique=True, nullable=True, index=True)
     apple_id = Column(String(200), unique=True, nullable=True, index=True)
     telegram_chat_id = Column(String(50), unique=True, nullable=True, index=True)
+    whatsapp_number = Column(String(50), nullable=True)
     is_banned = Column(Boolean, nullable=False, default=False, server_default="false")
     ban_reason = Column(Text, nullable=True)
     is_deleted = Column(Boolean, nullable=False, default=False, server_default="false")
@@ -187,6 +188,12 @@ class Listing(Base):
         cascade="all, delete-orphan",
         order_by="ListingImage.order_index",
     )
+    logs = relationship(
+        "ListingLog",
+        foreign_keys="ListingLog.listing_id",
+        order_by="ListingLog.created_at.asc()",
+        lazy="select",
+    )
 
     @property
     def user_name(self) -> Optional[str]:
@@ -217,6 +224,33 @@ class ListingImage(Base):
 
     # Relationships
     listing = relationship("Listing", back_populates="images")
+
+
+class ListingLog(Base):
+    """Immutable audit trail for every status change or action on a listing."""
+    __tablename__ = "listing_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    listing_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("listings.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    actor_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # action values: "created", "approved", "rejected", "deactivated", "reactivated", "edited"
+    action = Column(String(50), nullable=False)
+    from_status = Column(String(50), nullable=True)
+    to_status = Column(String(50), nullable=True)
+    reason = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+
+    listing = relationship("Listing", foreign_keys=[listing_id])
+    actor = relationship("User", foreign_keys=[actor_id])
 
 
 class ModerationSession(Base):

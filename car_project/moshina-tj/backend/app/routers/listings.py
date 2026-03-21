@@ -16,7 +16,7 @@ from app.auth import get_current_user
 _featured_cache: Dict[str, Any] = {}
 _FEATURED_CACHE_TTL = 120  # seconds
 from app.database import SessionLocal, get_db
-from app.models import Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
+from app.models import Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingLog, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
 from app.schemas import (
     ApiResponse,
     ListingCreate,
@@ -319,6 +319,16 @@ def create_listing(
 
     db.commit()
     db.refresh(listing)
+
+    # Record creation in the listing audit log
+    db.add(ListingLog(
+        listing_id=listing.id,
+        actor_id=current_user.id,
+        action="created",
+        from_status=None,
+        to_status="pending",
+    ))
+    db.commit()
 
     # If this is a verified dealer listing, notify their subscribers asynchronously
     if listing.is_dealer_listing:

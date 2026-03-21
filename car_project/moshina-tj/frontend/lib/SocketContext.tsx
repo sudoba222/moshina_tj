@@ -20,7 +20,9 @@ const SocketContext = createContext<SocketContextValue>({
 
 function deriveWsUrl(): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
-  return apiUrl.replace(/^http/, 'ws') + '/ws/chat'
+  // The WS endpoint is mounted at the server root, not under /api/v1
+  const baseUrl = apiUrl.replace(/\/api\/v1\/?$/, '')
+  return baseUrl.replace(/^http/, 'ws') + '/ws/chat'
 }
 
 export function SocketProvider({ children }: { children: ReactNode }) {

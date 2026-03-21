@@ -67,11 +67,20 @@ class UserResponse(BaseModel):
     email: Optional[str] = None
     role: UserRole
     avatar_url: Optional[str] = None
+    whatsapp_number: Optional[str] = None
     email_verified: bool = False
     phone_verified: bool = False
     is_banned: bool = False
     ban_reason: Optional[str] = None
     created_at: datetime
+
+
+class UserUpdate(BaseModel):
+    """Schema for partial profile updates — all fields optional."""
+    name: Optional[str] = None
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None
+    whatsapp_number: Optional[str] = None
 
 
 class UserPublicResponse(BaseModel):

@@ -127,7 +127,7 @@ export const authApi = {
       : api.get<ApiResponse<User>>('/auth/me'),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put<ApiResponse<null>>('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
-  updateProfile: (data: { name?: string; phone?: string; email?: string }, token?: string) =>
+  updateProfile: (data: { name?: string; phone?: string; email?: string; whatsapp_number?: string | null }, token?: string) =>
     token
       ? api.put<ApiResponse<User>>('/auth/profile', data, { headers: { Authorization: `Bearer ${token}` } })
       : api.put<ApiResponse<User>>('/auth/profile', data),
@@ -479,6 +479,44 @@ export const catalogApi = {
     api.put<ApiResponse<AdBanner>>(`/catalog/admin/banners/${id}`, data),
   adminDeleteBanner: (id: string) =>
     api.delete<ApiResponse<null>>(`/catalog/admin/banners/${id}`),
+}
+
+// ─── Admin Listings (detail view with logs) ──────────────────────────────────
+export interface AdminListingItem {
+  id: string
+  brand: string
+  model: string
+  year: number
+  price: number
+  city: string
+  status: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  user: { id: string; name: string | null; phone: string | null; email: string | null }
+  primary_image_url: string | null
+  last_log: { action: string; actor_name: string | null; reason: string | null; created_at: string } | null
+}
+
+export interface AdminListingLog {
+  id: string
+  action: string
+  actor_name: string | null
+  from_status: string | null
+  to_status: string | null
+  reason: string | null
+  created_at: string
+}
+
+export interface AdminListingDetail extends AdminListingItem {
+  logs: AdminListingLog[]
+}
+
+export const adminListingsApi = {
+  list: (params: { status?: string; search?: string; brand?: string; city?: string; page?: number }) =>
+    api.get<ApiResponse<PaginatedResponse<AdminListingItem>>>('/admin/listings', { params }),
+  getDetail: (id: string) =>
+    api.get<ApiResponse<AdminListingDetail>>('/admin/listings/' + id),
 }
 
 export default api

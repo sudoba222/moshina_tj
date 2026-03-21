@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { adminApi, catalogApi } from '@/lib/api'
-import type { ModeratorActivity, CarBrand, CarModelItem, CarCategory, AdBanner } from '@/lib/api'
+import { adminApi, catalogApi, adminListingsApi } from '@/lib/api'
+import type { ModeratorActivity, CarBrand, CarModelItem, CarCategory, AdBanner, AdminListingDetail } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
@@ -282,6 +282,9 @@ export default function AdminPage() {
   const [editListingData, setEditListingData] = useState<Listing | null>(null)
   const [editListingForm, setEditListingForm] = useState<Record<string, string | number | boolean>>({})
   const [listingActionLoading, setListingActionLoading] = useState(false)
+  const [logsListingId, setLogsListingId] = useState<string | null>(null)
+  const [logsDetail, setLogsDetail] = useState<AdminListingDetail | null>(null)
+  const [logsLoading, setLogsLoading] = useState(false)
 
   // Brands
   const [brands, setBrands]             = useState<CarBrand[]>([])
@@ -735,6 +738,17 @@ export default function AdminPage() {
 
   function openDeleteCategory(id: string) {
     setDeleteCategoryId(id)
+  }
+
+  async function openListingLogs(id: string) {
+    setLogsListingId(id)
+    setLogsDetail(null)
+    setLogsLoading(true)
+    try {
+      const res = await adminListingsApi.getDetail(id)
+      setLogsDetail(res.data.data)
+    } catch { /* silent */ }
+    setLogsLoading(false)
   }
 
   function openEditListing(l: Listing) {
@@ -1235,6 +1249,9 @@ export default function AdminPage() {
                               <button onClick={() => openEditListing(l)} style={{ padding: '4px 8px', background: 'var(--tag-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>
                                 {lang === 'ru' ? 'Изм.' : 'Таҳ.'}
                               </button>
+                              <button onClick={() => openListingLogs(l.id)} style={{ padding: '4px 8px', background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 600 }}>
+                                {t('admin.viewLogs', lang)}
+                              </button>
                               <button onClick={() => setDeleteListingId(l.id)} style={{ padding: '4px 8px', background: 'var(--color-error-dim)', color: 'var(--color-error)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center' }}>
                                 <IconX />
                               </button>
@@ -1353,6 +1370,95 @@ export default function AdminPage() {
                       {lang === 'ru' ? 'Удалить' : 'Ҳазф'}
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Listing logs modal */}
+            {logsListingId && (
+              <div
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
+                onClick={() => { setLogsListingId(null); setLogsDetail(null) }}
+              >
+                <div
+                  style={{ background: 'var(--card)', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '560px', maxHeight: '80vh', overflowY: 'auto' }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <h3 style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>
+                      {t('admin.viewLogs', lang)}
+                    </h3>
+                    <button
+                      onClick={() => { setLogsListingId(null); setLogsDetail(null) }}
+                      style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-muted)', padding: '6px 8px', display: 'flex', alignItems: 'center' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="1" y1="1" x2="13" y2="13" /><line x1="13" y1="1" x2="1" y2="13" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {logsLoading ? (
+                    <div style={{ color: 'var(--text-muted)', padding: '24px 0', textAlign: 'center' }}>{t('common.loading', lang)}</div>
+                  ) : logsDetail ? (
+                    <>
+                      {/* Listing summary */}
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', padding: '14px', background: 'var(--surface)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                        {logsDetail.primary_image_url && (
+                          <div style={{ position: 'relative', width: '60px', height: '44px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
+                            <Image src={logsDetail.primary_image_url} alt="" fill style={{ objectFit: 'cover' }} sizes="60px" />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
+                            {logsDetail.brand} {logsDetail.model} {logsDetail.year}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {logsDetail.city} · {logsDetail.user.name ?? logsDetail.user.phone ?? logsDetail.user.email ?? '—'}
+                          </div>
+                        </div>
+                        <StatusBadge status={logsDetail.status} />
+                      </div>
+
+                      {/* Log timeline */}
+                      {logsDetail.logs.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', padding: '20px 0' }}>
+                          {t('admin.noLogs', lang)}
+                        </p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {logsDetail.logs.map((log, i) => (
+                            <div key={log.id ?? i} style={{ padding: '12px', background: 'var(--surface)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '4px' }}>
+                                <span style={{ background: 'var(--tag-bg)', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontFamily: 'monospace', color: 'var(--text)' }}>
+                                  {log.action}
+                                </span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                  {new Date(log.created_at).toLocaleString('ru-RU')}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                                <span style={{ fontWeight: 600 }}>{t('admin.logBy', lang)}:</span> {log.actor_name ?? '—'}
+                                {log.from_status && log.to_status && (
+                                  <span style={{ marginLeft: '8px' }}>
+                                    <StatusBadge status={log.from_status} />
+                                    <span style={{ margin: '0 4px', color: 'var(--text-muted)' }}>→</span>
+                                    <StatusBadge status={log.to_status} />
+                                  </span>
+                                )}
+                              </div>
+                              {log.reason && (
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                  <span style={{ fontWeight: 600 }}>{t('admin.logReason', lang)}:</span> {log.reason}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : null}
                 </div>
               </div>
             )}

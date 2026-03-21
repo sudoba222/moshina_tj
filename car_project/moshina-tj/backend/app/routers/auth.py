@@ -61,6 +61,7 @@ class ChangePasswordPayload(BaseModel):
 class UpdateProfilePayload(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
+    whatsapp_number: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -70,6 +71,15 @@ class UpdateProfilePayload(BaseModel):
             if len(v) > 100:
                 raise ValueError("Name must be at most 100 characters")
         return v
+
+    @field_validator("whatsapp_number")
+    @classmethod
+    def whatsapp_number_max_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if len(v) > 50:
+                raise ValueError("WhatsApp number must be at most 50 characters")
+        return v or None
 
 class SendOtpPayload(BaseModel):
     phone: str
@@ -301,6 +311,8 @@ def update_profile(
         if existing:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use")
         current_user.email = payload.email
+    if payload.whatsapp_number is not None:
+        current_user.whatsapp_number = payload.whatsapp_number
     db.commit()
     db.refresh(current_user)
     return ApiResponse(success=True, data=UserResponse.model_validate(current_user), message="Profile updated")

@@ -1,18 +1,22 @@
 import math
+import uuid
+from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql import func, or_
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import AuditLog, Currency, Dealer, FuelType, Listing, ListingStatus, TransmissionType, User, UserRole, log_audit
+from app.models import AuditLog, Currency, Dealer, FuelType, Listing, ListingLog, ListingStatus, TransmissionType, User, UserRole, log_audit
 from app.schemas import (
     AdminStats,
     ApiResponse,
     DealerResponse,
+    ImageResponse,
     ListingListResponse,
     ListingResponse,
     UserResponse,
@@ -333,35 +337,291 @@ def edit_user(
 # Listing management
 # ---------------------------------------------------------------------------
 
-@router.get("/listings", response_model=ApiResponse[ListingListResponse])
+def _require_staff(current_user: User = Depends(get_current_user)) -> User:
+    """Allow admin, moderator, manager, and support roles to access staff-level listing endpoints."""
+    allowed = {UserRole.admin, UserRole.moderator, UserRole.manager, UserRole.support}
+    if current_user.role not in allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Staff access required")
+    return current_user
+
+
+# ---------------------------------------------------------------------------
+# Admin listing schemas
+# ---------------------------------------------------------------------------
+
+class AdminListingUserInfo(BaseModel):
+    id: uuid.UUID
+    name: Optional[str] = None
+    phone: str
+    email: Optional[str] = None
+
+
+class AdminListingLastLog(BaseModel):
+    action: str
+    actor_name: Optional[str] = None
+    reason: Optional[str] = None
+    created_at: datetime
+
+
+class AdminListingItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    brand: str
+    model: str
+    year: int
+    price: Decimal
+    currency: str
+    city: str
+    status: ListingStatus
+    is_active: bool
+    views: int
+    created_at: datetime
+    updated_at: datetime
+    user: Optional[AdminListingUserInfo] = None
+    primary_image_url: Optional[str] = None
+    last_log: Optional[AdminListingLastLog] = None
+
+
+class AdminListingLogEntry(BaseModel):
+    id: uuid.UUID
+    action: str
+    actor_name: Optional[str] = None
+    from_status: Optional[str] = None
+    to_status: Optional[str] = None
+    reason: Optional[str] = None
+    created_at: datetime
+
+
+class AdminListingDetail(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    type: str
+    brand: str
+    model: str
+    year: int
+    price: Decimal
+    currency: str
+    mileage: Optional[int] = None
+    fuel: Optional[str] = None
+    transmission: Optional[str] = None
+    color: Optional[str] = None
+    city: str
+    description: Optional[str] = None
+    installment_available: bool
+    is_dealer_listing: bool
+    is_active: bool
+    status: ListingStatus
+    rejection_reason: Optional[str] = None
+    moderator_note: Optional[str] = None
+    views: int
+    created_at: datetime
+    updated_at: datetime
+    images: list[ImageResponse] = []
+    user: Optional[AdminListingUserInfo] = None
+    logs: list[AdminListingLogEntry] = []
+
+
+@router.get("/listings", response_model=ApiResponse[dict])
 def admin_listings(
-    listing_status: Optional[ListingStatus] = None,
+    status: Optional[str] = Query(default=None, description="all | active | pending | rejected"),
+    search: Optional[str] = None,
+    user_id: Optional[str] = None,
+    brand: Optional[str] = None,
+    city: Optional[str] = None,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
-    search: Optional[str] = None,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: User = Depends(_require_staff),
 ):
-    query = db.query(Listing).options(joinedload(Listing.images))
-    if listing_status is not None:
-        query = query.filter(Listing.status == listing_status)
+    import uuid as _uuid
+    query = (
+        db.query(Listing)
+        .options(joinedload(Listing.images), joinedload(Listing.user))
+    )
+
+    if status and status != "all":
+        try:
+            status_enum = ListingStatus(status)
+            query = query.filter(Listing.status == status_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid status value: {status}")
+
     if search:
+        ilike_search = f"%{search}%"
         query = query.filter(
-            Listing.brand.ilike(f"%{search}%") | Listing.model.ilike(f"%{search}%") | Listing.city.ilike(f"%{search}%")
+            or_(
+                Listing.brand.ilike(ilike_search),
+                Listing.model.ilike(ilike_search),
+                Listing.city.ilike(ilike_search),
+                Listing.description.ilike(ilike_search),
+            )
         )
+    if user_id:
+        try:
+            uid = _uuid.UUID(user_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid user_id UUID")
+        query = query.filter(Listing.user_id == uid)
+    if brand:
+        query = query.filter(Listing.brand.ilike(f"%{brand}%"))
+    if city:
+        query = query.filter(Listing.city.ilike(f"%{city}%"))
 
     total = query.count()
     pages = math.ceil(total / limit) if total > 0 else 1
     items = query.order_by(Listing.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
 
+    # Fetch latest log for each listing in a single query to avoid N+1
+    listing_ids = [item.id for item in items]
+    last_logs: dict = {}
+    if listing_ids:
+        from sqlalchemy import select
+        subq = (
+            db.query(
+                ListingLog.listing_id,
+                func.max(ListingLog.created_at).label("max_created_at"),
+            )
+            .filter(ListingLog.listing_id.in_(listing_ids))
+            .group_by(ListingLog.listing_id)
+            .subquery()
+        )
+        log_rows = (
+            db.query(ListingLog)
+            .join(subq, (ListingLog.listing_id == subq.c.listing_id) & (ListingLog.created_at == subq.c.max_created_at))
+            .options(joinedload(ListingLog.actor))
+            .all()
+        )
+        for log in log_rows:
+            last_logs[log.listing_id] = log
+
+    result_items = []
+    for item in items:
+        primary_url = None
+        for img in item.images:
+            if img.is_primary:
+                primary_url = img.url
+                break
+        if primary_url is None and item.images:
+            primary_url = item.images[0].url
+
+        last_log = last_logs.get(item.id)
+        last_log_out = None
+        if last_log:
+            last_log_out = AdminListingLastLog(
+                action=last_log.action,
+                actor_name=last_log.actor.name if last_log.actor else None,
+                reason=last_log.reason,
+                created_at=last_log.created_at,
+            )
+
+        user_out = None
+        if item.user:
+            user_out = AdminListingUserInfo(
+                id=item.user.id,
+                name=item.user.name,
+                phone=item.user.phone,
+                email=item.user.email,
+            )
+
+        result_items.append(AdminListingItem(
+            id=item.id,
+            brand=item.brand,
+            model=item.model,
+            year=item.year,
+            price=item.price,
+            currency=item.currency.value,
+            city=item.city,
+            status=item.status,
+            is_active=item.is_active,
+            views=item.views,
+            created_at=item.created_at,
+            updated_at=item.updated_at,
+            user=user_out,
+            primary_image_url=primary_url,
+            last_log=last_log_out,
+        ))
+
     return ApiResponse(
         success=True,
-        data=ListingListResponse(
-            items=[ListingResponse.model_validate(i) for i in items],
-            total=total, page=page, pages=pages,
-        ),
+        data={"items": [i.model_dump() for i in result_items], "total": total, "page": page, "pages": pages},
         message="Listings fetched",
     )
+
+
+@router.get("/listings/{listing_id}", response_model=ApiResponse[AdminListingDetail])
+def admin_listing_detail(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    _: User = Depends(_require_staff),
+):
+    """Return full listing detail for staff — bypasses active/pending filters."""
+    listing = (
+        db.query(Listing)
+        .options(
+            joinedload(Listing.images),
+            joinedload(Listing.user),
+            joinedload(Listing.logs).joinedload(ListingLog.actor),
+        )
+        .filter(Listing.id == listing_id)
+        .first()
+    )
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    user_out = None
+    if listing.user:
+        user_out = AdminListingUserInfo(
+            id=listing.user.id,
+            name=listing.user.name,
+            phone=listing.user.phone,
+            email=listing.user.email,
+        )
+
+    logs_out = [
+        AdminListingLogEntry(
+            id=log.id,
+            action=log.action,
+            actor_name=log.actor.name if log.actor else None,
+            from_status=log.from_status,
+            to_status=log.to_status,
+            reason=log.reason,
+            created_at=log.created_at,
+        )
+        for log in listing.logs
+    ]
+
+    detail = AdminListingDetail(
+        id=listing.id,
+        user_id=listing.user_id,
+        type=listing.type.value,
+        brand=listing.brand,
+        model=listing.model,
+        year=listing.year,
+        price=listing.price,
+        currency=listing.currency.value,
+        mileage=listing.mileage,
+        fuel=listing.fuel.value if listing.fuel else None,
+        transmission=listing.transmission.value if listing.transmission else None,
+        color=listing.color,
+        city=listing.city,
+        description=listing.description,
+        installment_available=listing.installment_available,
+        is_dealer_listing=listing.is_dealer_listing,
+        is_active=listing.is_active,
+        status=listing.status,
+        rejection_reason=listing.rejection_reason,
+        moderator_note=listing.moderator_note,
+        views=listing.views,
+        created_at=listing.created_at,
+        updated_at=listing.updated_at,
+        images=[ImageResponse.model_validate(img) for img in listing.images],
+        user=user_out,
+        logs=logs_out,
+    )
+    return ApiResponse(success=True, data=detail, message="Listing fetched")
 
 
 @router.put("/listings/{listing_id}/activate", response_model=ApiResponse[ListingResponse])
@@ -504,6 +764,7 @@ def approve_listing(listing_id: str, db: Session = Depends(get_db), current_user
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    old_status = listing.status.value if listing.status else None
     listing.status = ListingStatus.active
     listing.is_active = True
     listing.rejection_reason = None
@@ -519,6 +780,14 @@ def approve_listing(listing_id: str, db: Session = Depends(get_db), current_user
     if active_session:
         active_session.posts_approved += 1
     log_audit(db, current_user.id, "approve_listing", "listing", listing.id)
+    db.add(ListingLog(
+        listing_id=listing.id,
+        actor_id=current_user.id,
+        action="approved",
+        from_status=old_status,
+        to_status="active",
+        reason=None,
+    ))
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing approved")
@@ -534,6 +803,7 @@ def reject_listing(
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    old_status = listing.status.value if listing.status else None
     listing.status = ListingStatus.rejected
     listing.is_active = False
     listing.rejection_reason = payload.reason
@@ -549,6 +819,14 @@ def reject_listing(
     if active_session:
         active_session.posts_rejected += 1
     log_audit(db, current_user.id, "reject_listing", "listing", listing.id, {"reason": payload.reason})
+    db.add(ListingLog(
+        listing_id=listing.id,
+        actor_id=current_user.id,
+        action="rejected",
+        from_status=old_status,
+        to_status="rejected",
+        reason=payload.reason,
+    ))
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing rejected")

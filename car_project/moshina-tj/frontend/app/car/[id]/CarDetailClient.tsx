@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
+import ImageLightbox from '@/components/ImageLightbox'
 import { listingsApi, usersApi, searchApi, favoritesApi } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { useAuth } from '@/lib/AuthContext'
@@ -387,6 +388,8 @@ export default function CarDetailClient() {
   const [favorited, setFavorited] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
   const [chatLoading, setChatLoading] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
   const fetchSellerData = useCallback(async (userId: string, currentId: string) => {
     try {
@@ -519,7 +522,15 @@ export default function CarDetailClient() {
             {/* Left: images + specs */}
             <div style={{ flex: '1 1 60%', minWidth: 0 }}>
               {/* Main image */}
-              <div style={{ position: 'relative', height: 'clamp(220px, 50vw, 400px)', borderRadius: '16px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)' }}>
+              <div
+                style={{ position: 'relative', height: 'clamp(220px, 50vw, 400px)', borderRadius: '16px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)', cursor: images ? 'zoom-in' : 'default' }}
+                onClick={() => {
+                  if (images) {
+                    setLightboxIndex(activeImage)
+                    setLightboxOpen(true)
+                  }
+                }}
+              >
                 {images ? (
                   <Image
                     src={images[activeImage].url}
@@ -552,7 +563,7 @@ export default function CarDetailClient() {
                   {images.map((img, i) => (
                     <button
                       key={img.id}
-                      onClick={() => setActiveImage(i)}
+                      onClick={() => { setActiveImage(i); setLightboxIndex(i); setLightboxOpen(true) }}
                       aria-label={`Image ${i + 1}`}
                       aria-pressed={activeImage === i}
                       style={{
@@ -785,6 +796,16 @@ export default function CarDetailClient() {
       </main>
 
       <Footer />
+
+      {/* Image lightbox */}
+      {images && (
+        <ImageLightbox
+          images={images.map((img) => img.url)}
+          initialIndex={lightboxIndex}
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
 
       {/* Sticky mobile contact bar — hidden on lg */}
       <div
