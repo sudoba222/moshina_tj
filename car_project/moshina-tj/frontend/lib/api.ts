@@ -325,6 +325,70 @@ export const adminApi = {
     api.put<ApiResponse<Dealer>>(`/admin/dealers/${dealerId}/unverify`),
 }
 
+// ─── Chat / Conversations ────────────────────────────────────────────────────
+export interface ConversationItem {
+  id: string
+  type: 'direct' | 'support'
+  other_participant: { id: string; name: string | null; avatar_url: string | null } | null
+  listing: { id: string; brand: string; model: string; year: number } | null
+  last_message: { content: string; created_at: string; is_mine: boolean } | null
+  unread_count: number
+  updated_at: string
+}
+
+export interface ChatMessage {
+  id: string
+  conversation_id: string
+  sender_id: string
+  sender_name: string | null
+  content: string
+  is_read: boolean
+  created_at: string
+}
+
+export interface NotificationItem {
+  id: string
+  type: 'message' | 'price_drop' | 'dealer_post' | 'system'
+  title: string
+  body: string
+  link: string | null
+  is_read: boolean
+  created_at: string
+}
+
+export const chatApi = {
+  listConversations: () =>
+    api.get<ApiResponse<ConversationItem[]>>('/conversations'),
+  createOrGet: (data: { participant_id?: string; listing_id?: string; type?: string }) =>
+    api.post<ApiResponse<ConversationItem>>('/conversations', data),
+  getMessages: (convId: string, page = 1) =>
+    api.get<ApiResponse<PaginatedResponse<ChatMessage>>>(`/conversations/${convId}/messages`, { params: { page, limit: 30 } }),
+  sendMessage: (convId: string, content: string) =>
+    api.post<ApiResponse<ChatMessage>>(`/conversations/${convId}/messages`, { content }),
+  markRead: (convId: string) =>
+    api.put<ApiResponse<null>>(`/conversations/${convId}/read`),
+}
+
+export const notificationsApi = {
+  list: (page = 1) =>
+    api.get<ApiResponse<PaginatedResponse<NotificationItem>>>('/notifications', { params: { page, limit: 20 } }),
+  unreadCount: () =>
+    api.get<ApiResponse<{ count: number }>>('/notifications/unread-count'),
+  markRead: (id: string) =>
+    api.put<ApiResponse<null>>(`/notifications/${id}/read`),
+  markAllRead: () =>
+    api.put<ApiResponse<null>>('/notifications/read-all'),
+}
+
+export const subscriptionsApi = {
+  toggle: (dealerId: string) =>
+    api.post<ApiResponse<{ subscribed: boolean; count: number }>>(`/dealers/${dealerId}/subscribe`),
+  check: (dealerId: string) =>
+    api.get<ApiResponse<{ subscribed: boolean }>>(`/dealers/${dealerId}/subscription`),
+  feed: (page = 1) =>
+    api.get<ApiResponse<PaginatedListings>>('/subscriptions/feed', { params: { page } }),
+}
+
 export const favoritesApi = {
   toggle: (listingId: string) =>
     api.post<ApiResponse<{ favorited: boolean }>>(`/listings/${listingId}/favorite`),

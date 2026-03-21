@@ -5,7 +5,9 @@ import './globals.css'
 import { LanguageProvider } from '@/lib/LanguageContext'
 import { AuthProvider } from '@/lib/AuthContext'
 import { ThemeProvider } from '@/lib/ThemeContext'
+import { SocketProvider } from '@/lib/SocketContext'
 import MobileBottomNav from '@/components/MobileBottomNav'
+import ChatWidget from '@/components/ChatWidget'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -69,10 +71,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={syne.className}>
         <ThemeProvider>
           <AuthProvider>
-            <LanguageProvider>
-              {children}
-              <MobileBottomNav />
-            </LanguageProvider>
+            <SocketProvider>
+              <LanguageProvider>
+                {children}
+                <MobileBottomNav />
+                <ChatWidget />
+              </LanguageProvider>
+            </SocketProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

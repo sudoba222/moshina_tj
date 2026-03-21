@@ -1,9 +1,11 @@
+import asyncio
+import logging
 import math
 import time
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import func, update
 from sqlalchemy.orm import Session, joinedload
@@ -13,8 +15,8 @@ from app.auth import get_current_user
 # 2-minute in-memory cache for featured listings (homepage hit on every page load)
 _featured_cache: Dict[str, Any] = {}
 _FEATURED_CACHE_TTL = 120  # seconds
-from app.database import get_db
-from app.models import Currency, Favorite, FuelType, Listing, ListingImage, ListingStatus, ListingType, TransmissionType, User, UserRole
+from app.database import SessionLocal, get_db
+from app.models import Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
 from app.schemas import (
     ApiResponse,
     ListingCreate,
@@ -23,9 +25,92 @@ from app.schemas import (
     ListingUpdate,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/listings", tags=["listings"])
 
 _MAX_LIMIT = 100
+
+
+# ---------------------------------------------------------------------------
+# Background task: notify dealer subscribers of a new listing
+# ---------------------------------------------------------------------------
+
+def _notify_dealer_subscribers(
+    dealer_user_id: str,
+    listing_id: str,
+    brand: str,
+    model: str,
+    year: int,
+    price: str,
+    currency: str,
+) -> None:
+    """Create in-app Notification records for all subscribers of this dealer.
+
+    Also pushes a real-time WebSocket event for online subscribers.
+    Runs as a FastAPI BackgroundTask (sync function, separate from request).
+    """
+    from app.websockets import manager as ws_manager
+
+    db = SessionLocal()
+    try:
+        dealer = db.query(Dealer).filter(Dealer.user_id == dealer_user_id).first()
+        if not dealer:
+            return
+
+        dealer_name = dealer.business_name
+        dealer_id = dealer.id
+
+        subs = (
+            db.query(DealerSubscription)
+            .filter(DealerSubscription.dealer_id == dealer_id)
+            .all()
+        )
+        if not subs:
+            return
+
+        title = f"Новое объявление от {dealer_name}"
+        body = f"{brand} {model} {year} — {price} {currency}"
+        link = f"/car/{listing_id}"
+
+        notifications = []
+        for sub in subs:
+            n = Notification(
+                user_id=sub.user_id,
+                type=NotificationType.dealer_post,
+                title=title,
+                body=body,
+                link=link,
+            )
+            db.add(n)
+            notifications.append((str(sub.user_id), n))
+
+        db.commit()
+
+        # Push real-time events to online subscribers
+        ws_payload = {
+            "event": "dealer_post",
+            "notification": {
+                "type": NotificationType.dealer_post.value,
+                "title": title,
+                "body": body,
+                "link": link,
+            },
+        }
+
+        loop = asyncio.new_event_loop()
+        try:
+            subscriber_ids = [uid for uid, _ in notifications]
+            loop.run_until_complete(
+                ws_manager.broadcast_to_users(subscriber_ids, ws_payload)
+            )
+        finally:
+            loop.close()
+
+    except Exception:
+        logger.exception("_notify_dealer_subscribers failed for listing_id=%s", listing_id)
+    finally:
+        db.close()
 
 
 def _get_listing_or_404(listing_id: str, db: Session) -> Listing:
@@ -177,6 +262,7 @@ def get_listing(listing_id: str, db: Session = Depends(get_db)):
 @router.post("", response_model=ApiResponse[ListingResponse], status_code=status.HTTP_201_CREATED)
 def create_listing(
     payload: ListingCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -233,6 +319,19 @@ def create_listing(
 
     db.commit()
     db.refresh(listing)
+
+    # If this is a verified dealer listing, notify their subscribers asynchronously
+    if listing.is_dealer_listing:
+        background_tasks.add_task(
+            _notify_dealer_subscribers,
+            str(current_user.id),
+            str(listing.id),
+            listing.brand,
+            listing.model,
+            listing.year,
+            str(listing.price),
+            listing.currency.value,
+        )
 
     return ApiResponse(
         success=True,

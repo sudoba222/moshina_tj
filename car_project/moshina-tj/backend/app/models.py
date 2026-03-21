@@ -110,6 +110,12 @@ class User(Base):
     # Relationships
     listings = relationship("Listing", back_populates="user", cascade="all, delete-orphan", foreign_keys="Listing.user_id")
     dealer_profile = relationship("Dealer", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    notifications = relationship(
+        "Notification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="Notification.created_at.desc()",
+    )
 
 
 class Listing(Base):
@@ -410,3 +416,175 @@ def log_audit(db, actor_id, action: str, target_type: str = None, target_id=None
     )
     db.add(entry)
     # Don't commit here — caller commits with their main transaction
+
+
+# ---------------------------------------------------------------------------
+# Communication & Engagement enums
+# ---------------------------------------------------------------------------
+
+class ConversationType(str, enum.Enum):
+    direct = "direct"
+    support = "support"
+
+
+class NotificationType(str, enum.Enum):
+    message = "message"
+    price_drop = "price_drop"
+    dealer_post = "dealer_post"
+    system = "system"
+
+
+# ---------------------------------------------------------------------------
+# Communication & Engagement models
+# ---------------------------------------------------------------------------
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    type = Column(Enum(ConversationType, name="conversationtype"), nullable=False)
+    participant1_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    participant2_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    listing_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("listings.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    created_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "participant1_id", "participant2_id", "listing_id",
+            name="uq_conversation",
+        ),
+    )
+
+    # Relationships
+    participant1 = relationship("User", foreign_keys=[participant1_id])
+    participant2 = relationship("User", foreign_keys=[participant2_id])
+    listing = relationship("Listing", foreign_keys=[listing_id])
+    messages = relationship(
+        "Message",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="Message.created_at",
+    )
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    conversation_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    sender_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    content = Column(Text, nullable=False)
+    is_read = Column(Boolean, nullable=False, default=False, server_default="false")
+    created_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    # Relationships
+    conversation = relationship("Conversation", back_populates="messages")
+    sender = relationship("User", foreign_keys=[sender_id])
+
+
+class DealerSubscription(Base):
+    __tablename__ = "dealer_subscriptions"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    dealer_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("dealers.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "dealer_id", name="uq_dealer_subscription"),
+    )
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+    dealer = relationship("Dealer", foreign_keys=[dealer_id])
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    type = Column(Enum(NotificationType, name="notificationtype"), nullable=False)
+    title = Column(String(200), nullable=False)
+    body = Column(Text, nullable=False)
+    link = Column(String(500), nullable=True)
+    is_read = Column(Boolean, nullable=False, default=False, server_default="false")
+    created_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    # Relationships
+    user = relationship("User", back_populates="notifications", foreign_keys=[user_id])

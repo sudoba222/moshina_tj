@@ -5,8 +5,9 @@ import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
-import { dealersApi } from '@/lib/api'
+import { dealersApi, subscriptionsApi } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
+import { useAuth } from '@/lib/AuthContext'
 import { t } from '@/lib/i18n'
 import type { Dealer, Listing } from '@/types'
 
@@ -55,15 +56,27 @@ function HomeIcon() {
   )
 }
 
+function BellSubscribeIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  )
+}
+
 export default function DealerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { lang } = useLang()
+  const { user } = useAuth()
 
   const [dealer, setDealer] = useState<Dealer | null>(null)
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [subscribed, setSubscribed] = useState(false)
+  const [subLoading, setSubLoading] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -75,6 +88,26 @@ export default function DealerDetailPage() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!id || !user) return
+    subscriptionsApi.check(id)
+      .then((res) => setSubscribed(res.data.data.subscribed))
+      .catch(() => {})
+  }, [id, user])
+
+  async function handleSubscribeToggle() {
+    if (!user || !id || subLoading) return
+    setSubLoading(true)
+    try {
+      const res = await subscriptionsApi.toggle(id)
+      setSubscribed(res.data.data.subscribed)
+    } catch {
+      // swallow
+    } finally {
+      setSubLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -138,6 +171,30 @@ export default function DealerDetailPage() {
                       <CheckIcon />
                       {t('dealers.verified', lang)}
                     </span>
+                  )}
+                  {user && (
+                    <button
+                      onClick={handleSubscribeToggle}
+                      disabled={subLoading}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        padding: '5px 12px',
+                        borderRadius: '8px',
+                        border: subscribed ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
+                        background: subscribed ? 'var(--accent-dim, rgba(37,99,235,0.08))' : 'var(--surface)',
+                        color: subscribed ? 'var(--accent)' : 'var(--text-secondary)',
+                        cursor: subLoading ? 'not-allowed' : 'pointer',
+                        opacity: subLoading ? 0.6 : 1,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <BellSubscribeIcon active={subscribed} />
+                      {subscribed ? t('dealers.unsubscribe', lang) : t('dealers.subscribe', lang)}
+                    </button>
                   )}
                 </div>
 
