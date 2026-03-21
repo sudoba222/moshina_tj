@@ -14,13 +14,18 @@ Phone verification flow:
   4. Match → generate and send OTP
   5. Mismatch → reject with clear error
 """
+import hashlib
+import hmac
+import json
 import logging
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import parse_qsl
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
