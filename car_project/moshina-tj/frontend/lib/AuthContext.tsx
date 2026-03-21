@@ -1,7 +1,6 @@
 'use client'
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import Cookies from 'js-cookie'
-import { authApi } from '@/lib/api'
+import { authApi, setInMemoryToken } from '@/lib/api'
 import type { User } from '@/types'
 
 interface AuthContextValue {
@@ -9,6 +8,7 @@ interface AuthContextValue {
   token: string | null
   login: (token: string, user: User) => void
   logout: () => void
+  updateUser: (user: User) => void
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -16,6 +16,7 @@ const AuthContext = createContext<AuthContextValue>({
   token: null,
   login: () => {},
   logout: () => {},
+  updateUser: () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -23,36 +24,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    const saved = Cookies.get('token')
+    // Hydrate from localStorage for immediate render, then verify with server
     const savedUser = localStorage.getItem('user')
-    if (saved && savedUser) {
+    if (savedUser) {
       try {
-        setToken(saved)
         setUser(JSON.parse(savedUser) as User)
       } catch {
-        Cookies.remove('token')
         localStorage.removeItem('user')
       }
     }
+
+    // Verify token is still valid via HttpOnly cookie
+    authApi.me().then((res) => {
+      setUser(res.data.data)
+      localStorage.setItem('user', JSON.stringify(res.data.data))
+    }).catch(() => {
+      // Cookie is gone or expired — clear local state
+      setInMemoryToken(null)
+      setToken(null)
+      setUser(null)
+      localStorage.removeItem('user')
+    })
   }, [])
 
   function login(accessToken: string, userData: User) {
-    Cookies.set('token', accessToken, { expires: 7, sameSite: 'lax' })
-    localStorage.setItem('user', JSON.stringify(userData))
+    setInMemoryToken(accessToken)
     setToken(accessToken)
+    localStorage.setItem('user', JSON.stringify(userData))
     setUser(userData)
   }
 
   function logout() {
     authApi.logout().catch(() => {}) // best-effort server-side token revocation
-    Cookies.remove('token')
-    localStorage.removeItem('user')
+    setInMemoryToken(null)
     setToken(null)
     setUser(null)
+    localStorage.removeItem('user')
+  }
+
+  function updateUser(userData: User) {
+    setUser(userData)
+    localStorage.setItem('user', JSON.stringify(userData))
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

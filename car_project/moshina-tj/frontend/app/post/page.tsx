@@ -2,10 +2,9 @@
 import { useState, useEffect, useRef, ChangeEvent, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import Cookies from 'js-cookie'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, uploadApi, authApi } from '@/lib/api'
+import { listingsApi, uploadApi, authApi, catalogApi, type CarBrand } from '@/lib/api'
 import api from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
@@ -15,6 +14,8 @@ import type { ListingType, Currency, FuelType, TransmissionType, RentalRules } f
 const CITIES = ['Душанбе', 'Хуҷанд', 'Бохтар', 'Кӯлоб', 'Истаравшан', 'Пенджикент', 'Вахш', 'Хорог', 'Турсунзода']
 const FUELS: FuelType[] = ['Бензин', 'Дизель', 'Газ', 'Электро', 'Гибрид']
 const TRANSMISSIONS: TransmissionType[] = ['Автомат', 'Механика', 'Вариатор']
+
+const DRAFT_KEY = 'post_draft'
 
 interface FormState {
   brand: string
@@ -77,6 +78,76 @@ function FormSkeleton() {
   )
 }
 
+// ─── Step indicator ───────────────────────────────────────────────────────────
+function StepIndicator({ step, labels }: { step: number; labels: string[] }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '28px', gap: 0 }}>
+      {labels.map((label, idx) => {
+        const num = idx + 1
+        const isActive = num === step
+        const isDone = num < step
+        return (
+          <div key={num} style={{ display: 'flex', alignItems: 'center', flex: idx < labels.length - 1 ? 1 : 'none' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <div style={{
+                width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '12px', fontWeight: 800,
+                background: isDone ? 'var(--accent)' : isActive ? 'var(--accent)' : 'var(--surface)',
+                color: isDone || isActive ? '#fff' : 'var(--text-muted)',
+                border: isDone || isActive ? '2px solid var(--accent)' : '2px solid var(--border)',
+                transition: 'all 0.2s',
+              }}>
+                {isDone ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1.5 6 4.5 9 10.5 3" />
+                  </svg>
+                ) : num}
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 600, color: isActive ? 'var(--accent)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                {label}
+              </span>
+            </div>
+            {idx < labels.length - 1 && (
+              <div style={{
+                flex: 1,
+                height: '2px',
+                background: isDone ? 'var(--accent)' : 'var(--border)',
+                margin: '0 6px',
+                marginBottom: '14px',
+                transition: 'background 0.2s',
+              }} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Chip pill (used for fuel/transmission selectors) ────────────────────────
+function ChipPill({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: '7px 14px',
+        borderRadius: '20px',
+        fontSize: '13px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        background: selected ? 'var(--accent)' : 'var(--surface)',
+        color: selected ? '#fff' : 'var(--text-muted)',
+        border: selected ? '1px solid var(--accent)' : '1px solid var(--border)',
+        transition: 'all 0.15s',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 // ─── Inner page (needs useSearchParams) ──────────────────────────────────────
 function PostPage() {
   const router = useRouter()
@@ -86,6 +157,8 @@ function PostPage() {
 
   const { lang } = useLang()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [step, setStep] = useState(1)
 
   const [form, setForm] = useState<FormState>(initialForm)
   const [rentalRules, setRentalRules] = useState<RentalRulesForm>(initialRentalRules)
@@ -100,14 +173,56 @@ function PostPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
 
+  // Draft state
+  const [hasDraft, setHasDraft] = useState(false)
+
+  // Dynamic brands/models
+  const [brands, setBrands] = useState<CarBrand[]>([])
+  const [models, setModels] = useState<{ id: string; name: string }[]>([])
+  const [brandSearch, setBrandSearch] = useState('')
+  const [brandOpen, setBrandOpen] = useState(false)
+
   const { logout } = useAuth()
 
-  // Auth guard — verify token is still valid server-side, not just present
+  // Auth guard — verify session is still valid via HttpOnly cookie
   useEffect(() => {
-    const token = Cookies.get('token')
-    if (!token) { router.replace('/auth/login'); return }
     authApi.me().catch(() => { logout(); router.replace('/auth/login') })
   }, [router, logout])
+
+  // Fetch brands on mount
+  useEffect(() => {
+    catalogApi.getBrands().then((r) => setBrands(r.data.data)).catch(() => {})
+  }, [])
+
+  // Fetch models when brand changes
+  useEffect(() => {
+    if (!form.brand || brands.length === 0) { setModels([]); return }
+    const brandObj = brands.find((b) => b.name === form.brand)
+    if (!brandObj) { setModels([]); return }
+    catalogApi.getModels(brandObj.id).then((r) => setModels(r.data.data)).catch(() => setModels([]))
+  }, [form.brand, brands])
+
+  // Load draft on mount (only if not in edit mode)
+  useEffect(() => {
+    if (isEditMode) return
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return
+    try {
+      const draft = JSON.parse(raw) as FormState
+      setForm(draft)
+      setHasDraft(true)
+    } catch {
+      localStorage.removeItem(DRAFT_KEY)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Save draft whenever form changes (not in edit mode)
+  useEffect(() => {
+    if (isEditMode) return
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(form))
+    setHasDraft(true)
+  }, [form, isEditMode])
 
   // Pre-populate form in edit mode
   useEffect(() => {
@@ -192,6 +307,12 @@ function PostPage() {
     setExistingImageUrls((prev) => prev.filter((_, i) => i !== index))
   }
 
+  function clearDraft() {
+    localStorage.removeItem(DRAFT_KEY)
+    setForm(initialForm)
+    setHasDraft(false)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -256,10 +377,12 @@ function PostPage() {
       setSubmitting(true)
       if (isEditMode && editId) {
         await listingsApi.update(editId, payload)
+        localStorage.removeItem(DRAFT_KEY)
         setSuccess(true)
         setTimeout(() => router.push('/dashboard'), 2000)
       } else {
         await listingsApi.create(payload)
+        localStorage.removeItem(DRAFT_KEY)
         setSuccess(true)
         setTimeout(() => router.push('/catalog'), 2000)
       }
@@ -343,6 +466,11 @@ function PostPage() {
     gap: '20px',
   }
 
+  // Filtered brands for combobox
+  const filteredBrands = brandSearch.trim()
+    ? brands.filter((b) => b.name.toLowerCase().includes(brandSearch.toLowerCase()))
+    : brands
+
   // Show skeleton while loading edit data
   if (loadingEdit) {
     return <FormSkeleton />
@@ -378,6 +506,13 @@ function PostPage() {
   }
 
   const totalImageCount = existingImageUrls.length + imageFiles.length
+
+  const stepLabels = [
+    t('post.wizard_step1', lang),
+    t('post.wizard_step2', lang),
+    t('post.wizard_step3', lang),
+    t('post.wizard_step4', lang),
+  ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -419,352 +554,536 @@ function PostPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            {/* ── Main card ── */}
-            <div style={cardStyle}>
-              {/* Type */}
-              <div>
-                <label style={labelStyle}>{t('post.type', lang)}</label>
-                <div className="flex gap-3">
-                  {(['sale', 'rent'] as ListingType[]).map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => handleField('type', v)}
-                      style={{
-                        flex: 1, padding: '10px', borderRadius: '10px',
-                        fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                        background: form.type === v ? 'var(--accent)' : 'var(--surface)',
-                        color: form.type === v ? '#fff' : 'var(--text-muted)',
-                        border: form.type === v ? '1px solid var(--accent)' : '1px solid var(--border)',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {v === 'sale' ? t('filters.sale', lang) : t('filters.rent', lang)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {/* Draft notice */}
+          {!isEditMode && hasDraft && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: '10px', padding: '10px 14px', marginBottom: '20px',
+              fontSize: '13px', color: 'var(--text-muted)',
+            }}>
+              <span style={{ fontWeight: 600 }}>{t('post.draft_saved', lang)}</span>
+              <button
+                type="button"
+                onClick={clearDraft}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)', fontWeight: 700, padding: 0 }}
+              >
+                {t('post.clear_draft', lang)}
+              </button>
+            </div>
+          )}
 
-              {/* Brand + Model */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Step indicator */}
+          <StepIndicator step={step} labels={stepLabels} />
+
+          <form onSubmit={handleSubmit}>
+
+            {/* ── STEP 1: Vehicle ── */}
+            {step === 1 && (
+              <div style={cardStyle} className="animate-fade-in">
+                {/* Type toggle */}
                 <div>
-                  <label htmlFor="brand" style={labelStyle}>{t('post.brand', lang)} *</label>
-                  <input id="brand" type="text" required value={form.brand} onChange={(e) => handleField('brand', e.target.value)} placeholder="Toyota" style={inputStyle} />
+                  <label style={labelStyle}>{t('post.type', lang)}</label>
+                  <div className="flex gap-3">
+                    {(['sale', 'rent'] as ListingType[]).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => handleField('type', v)}
+                        style={{
+                          flex: 1, padding: '10px', borderRadius: '10px',
+                          fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                          background: form.type === v ? 'var(--accent)' : 'var(--surface)',
+                          color: form.type === v ? '#fff' : 'var(--text-muted)',
+                          border: form.type === v ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {v === 'sale' ? t('filters.sale', lang) : t('filters.rent', lang)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Brand combobox */}
+                <div style={{ position: 'relative' }}>
+                  <label htmlFor="brand-input" style={labelStyle}>{t('post.brand', lang)} *</label>
+                  <input
+                    id="brand-input"
+                    type="text"
+                    autoComplete="off"
+                    value={brandOpen ? brandSearch : form.brand}
+                    onChange={(e) => {
+                      setBrandSearch(e.target.value)
+                      setBrandOpen(true)
+                      if (!e.target.value) handleField('brand', '')
+                    }}
+                    onFocus={() => { setBrandOpen(true); setBrandSearch('') }}
+                    onBlur={() => setTimeout(() => setBrandOpen(false), 150)}
+                    placeholder="Toyota, BMW..."
+                    style={inputStyle}
+                  />
+                  {brandOpen && filteredBrands.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                      background: 'var(--card)', border: '1px solid var(--border)',
+                      borderRadius: '10px', maxHeight: '200px', overflowY: 'auto',
+                      zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                    }}>
+                      {filteredBrands.map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onMouseDown={() => {
+                            handleField('brand', b.name)
+                            handleField('model', '')
+                            setBrandSearch('')
+                            setBrandOpen(false)
+                          }}
+                          style={{
+                            display: 'block', width: '100%', textAlign: 'left',
+                            padding: '9px 14px', background: 'none', border: 'none',
+                            cursor: 'pointer', fontSize: '14px', color: 'var(--text)',
+                            fontWeight: form.brand === b.name ? 700 : 400,
+                          }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface)' }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'none' }}
+                        >
+                          {b.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Model */}
                 <div>
                   <label htmlFor="model" style={labelStyle}>{t('post.model', lang)} *</label>
-                  <input id="model" type="text" required value={form.model} onChange={(e) => handleField('model', e.target.value)} placeholder="Camry" style={inputStyle} />
+                  {models.length > 0 ? (
+                    <select
+                      id="model"
+                      value={form.model}
+                      onChange={(e) => handleField('model', e.target.value)}
+                      style={inputStyle}
+                    >
+                      <option value="">—</option>
+                      {models.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      id="model"
+                      type="text"
+                      value={form.model}
+                      onChange={(e) => handleField('model', e.target.value)}
+                      placeholder="Camry"
+                      style={inputStyle}
+                    />
+                  )}
                 </div>
-              </div>
 
-              {/* Year + Mileage */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Year */}
                 <div>
                   <label htmlFor="year" style={labelStyle}>{t('post.year', lang)} *</label>
-                  <input id="year" type="number" required min={1900} max={2100} value={form.year} onChange={(e) => handleField('year', e.target.value)} style={inputStyle} />
-                </div>
-                <div>
-                  <label htmlFor="mileage" style={labelStyle}>{t('post.mileage', lang)}</label>
-                  <input id="mileage" type="number" min={0} value={form.mileage} onChange={(e) => handleField('mileage', e.target.value)} placeholder="85000" style={inputStyle} />
-                </div>
-              </div>
-
-              {/* Price + Currency */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label htmlFor="price" style={labelStyle}>{t('post.price', lang)} *</label>
-                  <input id="price" type="number" required min={1} value={form.price} onChange={(e) => handleField('price', e.target.value)} placeholder="15000" style={inputStyle} />
-                </div>
-                <div>
-                  <label htmlFor="currency" style={labelStyle}>{t('post.currency', lang)}</label>
-                  <select id="currency" value={form.currency} onChange={(e) => handleField('currency', e.target.value as Currency)} style={inputStyle}>
-                    <option value="USD">USD ($)</option>
-                    <option value="TJS">TJS (сомони)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Fuel + Transmission */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="fuel" style={labelStyle}>{t('post.fuel', lang)}</label>
-                  <select id="fuel" value={form.fuel} onChange={(e) => handleField('fuel', e.target.value as FuelType | '')} style={inputStyle}>
-                    <option value="">—</option>
-                    {FUELS.map((f) => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="transmission" style={labelStyle}>{t('post.transmission', lang)}</label>
-                  <select id="transmission" value={form.transmission} onChange={(e) => handleField('transmission', e.target.value as TransmissionType | '')} style={inputStyle}>
-                    <option value="">—</option>
-                    {TRANSMISSIONS.map((tr) => <option key={tr} value={tr}>{tr}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Color + City */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="color" style={labelStyle}>{t('post.color', lang)}</label>
-                  <input id="color" type="text" value={form.color} onChange={(e) => handleField('color', e.target.value)} placeholder={lang === 'ru' ? 'Белый' : 'Сафед'} style={inputStyle} />
-                </div>
-                <div>
-                  <label htmlFor="city" style={labelStyle}>{t('post.city', lang)} *</label>
-                  <select id="city" required value={form.city} onChange={(e) => handleField('city', e.target.value)} style={inputStyle}>
-                    <option value="">—</option>
-                    {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label htmlFor="description" style={{ ...labelStyle, marginBottom: 0 }}>
-                    {t('post.description', lang)}
-                  </label>
-                  {form.brand.trim() && form.model.trim() && (
-                    <button
-                      type="button"
-                      onClick={handleAiRefine}
-                      disabled={aiLoading}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        background: aiLoading ? 'var(--surface)' : 'var(--accent-dim)',
-                        border: '1px solid var(--accent)',
-                        borderRadius: '8px',
-                        padding: '5px 11px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        color: aiLoading ? 'var(--text-muted)' : 'var(--accent)',
-                        cursor: aiLoading ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.15s',
-                        fontFamily: 'var(--font)',
-                        whiteSpace: 'nowrap',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!aiLoading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent)'
-                        if (!aiLoading) (e.currentTarget as HTMLButtonElement).style.color = '#fff'
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.background = aiLoading ? 'var(--surface)' : 'var(--accent-dim)'
-                        if (!aiLoading) (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent)'
-                      }}
-                    >
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 3l1.5 3 3.5.5-2.5 2.5.5 3.5L12 11l-3 1.5.5-3.5L7 6.5 10.5 6z" />
-                        <path d="M5 19l1 2 2-1-1-2z" />
-                        <path d="M19 5l1 2 2-1-1-2z" />
-                        <line x1="8" y1="16" x2="16" y2="8" />
-                      </svg>
-                      {aiLoading
-                        ? (lang === 'ru' ? 'Генерация...' : 'Тавлид...')
-                        : (lang === 'ru' ? 'Улучшить с ИИ' : 'Бо ИИ беҳтар кунед')
-                      }
-                    </button>
-                  )}
-                </div>
-                <textarea
-                  id="description"
-                  rows={4}
-                  value={form.description}
-                  onChange={(e) => handleField('description', e.target.value)}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-                {aiError && (
-                  <p style={{ marginTop: '6px', fontSize: '12px', color: 'var(--accent)', fontWeight: 600 }}>
-                    {aiError}
-                  </p>
-                )}
-              </div>
-
-              {/* Installment */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>
-                <input type="checkbox" checked={form.installment_available} onChange={(e) => handleField('installment_available', e.target.checked)} style={{ accentColor: 'var(--accent)', width: '18px', height: '18px' }} />
-                {t('post.installment', lang)}
-              </label>
-
-              {/* Images */}
-              <div>
-                <label style={labelStyle}>{t('post.images', lang)}</label>
-                <input ref={fileInputRef} id="photo-upload-input" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleImageFiles} style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }} />
-
-                {/* Existing images (edit mode) */}
-                {existingImageUrls.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {existingImageUrls.map((src, i) => (
-                      <div key={`existing-${i}`} style={{ position: 'relative', width: '80px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                        <Image src={src} alt={`Existing image ${i + 1}`} fill sizes="80px" style={{ objectFit: 'cover' }} />
-                        <button
-                          type="button"
-                          onClick={() => removeExistingImage(i)}
-                          aria-label={`Remove existing image ${i + 1}`}
-                          style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* New image previews */}
-                {imagePreviews.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {imagePreviews.map((src, i) => (
-                      <div key={`new-${i}`} style={{ position: 'relative', width: '80px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
-                        <Image src={src} alt={`New image ${i + 1}`} fill sizes="80px" style={{ objectFit: 'cover' }} />
-                        <button
-                          type="button"
-                          onClick={() => removeNewImage(i)}
-                          aria-label={`Remove new image ${i + 1}`}
-                          style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {totalImageCount < 8 && (
-                  <label
-                    htmlFor="photo-upload-input"
-                    style={{ background: 'var(--surface)', border: '2px dashed var(--border)', borderRadius: '10px', padding: '16px', width: '100%', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxSizing: 'border-box' }}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                    {lang === 'ru' ? 'Добавить фото' : 'Акс илова кунед'} ({totalImageCount}/8)
-                  </label>
-                )}
-              </div>
-
-              {error && (
-                <div style={{ background: 'rgba(200,56,8,0.08)', border: '1px solid var(--accent)', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', color: 'var(--accent)', fontWeight: 600 }}>
-                  {error}
-                </div>
-              )}
-            </div>
-
-            {/* ── Rental rules card ── */}
-            {form.type === 'rent' && (
-              <div style={{ ...cardStyle, marginTop: '20px' }} className="animate-fade-in-up">
-                <div style={{ paddingBottom: '4px', borderBottom: '1px solid var(--border)' }}>
-                  <h2 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>
-                    {t('post.rentalRulesTitle', lang)}
-                  </h2>
-                </div>
-
-                {/* Min age + Deposit */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="rr-min-age" style={labelStyle}>{t('rentalRules.minAge', lang)}</label>
-                    <input id="rr-min-age" type="number" min={18} max={99} value={rentalRules.min_age} onChange={(e) => handleRentalField('min_age', e.target.value)} placeholder="21" style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>{t('rentalRules.deposit', lang)}</label>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <input type="number" min={0} value={rentalRules.deposit} onChange={(e) => handleRentalField('deposit', e.target.value)} placeholder="500" style={{ ...inputStyle, flex: 1 }} />
-                      <select value={rentalRules.deposit_currency} onChange={(e) => handleRentalField('deposit_currency', e.target.value as 'USD' | 'TJS')} style={{ ...inputStyle, width: 'auto' }}>
-                        <option value="USD">USD</option>
-                        <option value="TJS">TJS</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Fuel policy */}
-                <div>
-                  <label htmlFor="rr-fuel-policy" style={labelStyle}>{t('rentalRules.fuelPolicy', lang)}</label>
-                  <select id="rr-fuel-policy" value={rentalRules.fuel_policy} onChange={(e) => handleRentalField('fuel_policy', e.target.value as RentalRulesForm['fuel_policy'])} style={inputStyle}>
-                    <option value="">—</option>
-                    <option value="full_to_full">{t('rentalRules.fullToFull', lang)}</option>
-                    <option value="free_tank">{t('rentalRules.freeTank', lang)}</option>
-                    <option value="same_level">{t('rentalRules.sameLevel', lang)}</option>
-                  </select>
-                </div>
-
-                {/* Delivery */}
-                <div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: rentalRules.delivery_available ? '10px' : '0' }}>
-                    <input type="checkbox" checked={rentalRules.delivery_available} onChange={(e) => handleRentalField('delivery_available', e.target.checked)} style={{ accentColor: 'var(--accent)', width: '16px', height: '16px' }} />
-                    {t('rentalRules.delivery', lang)}
-                  </label>
-                  {rentalRules.delivery_available && (
-                    <div>
-                      <label style={labelStyle}>{lang === 'ru' ? 'Стоимость доставки (USD)' : 'Нархи расонидан (USD)'}</label>
-                      <input type="number" min={0} value={rentalRules.delivery_price} onChange={(e) => handleRentalField('delivery_price', e.target.value)} placeholder="10" style={inputStyle} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Max km + Extra km */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label style={labelStyle}>{t('rentalRules.maxKm', lang)}</label>
-                    <input type="number" min={0} value={rentalRules.max_km_per_day} onChange={(e) => handleRentalField('max_km_per_day', e.target.value)} placeholder="300" style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>{t('rentalRules.extraKm', lang)} (USD)</label>
-                    <input type="number" min={0} step={0.1} value={rentalRules.extra_km_price} onChange={(e) => handleRentalField('extra_km_price', e.target.value)} placeholder="0.5" style={inputStyle} />
-                  </div>
-                </div>
-
-                {/* Insurance */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>
-                  <input type="checkbox" checked={rentalRules.insurance_included} onChange={(e) => handleRentalField('insurance_included', e.target.checked)} style={{ accentColor: 'var(--accent)', width: '16px', height: '16px' }} />
-                  {t('rentalRules.insurance', lang)}
-                </label>
-
-                {/* Notes */}
-                <div>
-                  <label style={labelStyle}>{t('rentalRules.notes', lang)}</label>
-                  <textarea rows={3} value={rentalRules.notes} onChange={(e) => handleRentalField('notes', e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} placeholder={lang === 'ru' ? 'Дополнительные условия...' : 'Шартҳои иловагӣ...'} />
+                  <input
+                    id="year"
+                    type="number"
+                    min={1900}
+                    max={2100}
+                    value={form.year}
+                    onChange={(e) => handleField('year', e.target.value)}
+                    style={inputStyle}
+                  />
                 </div>
               </div>
             )}
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={submitting || uploading}
-              style={{
-                marginTop: '20px',
-                width: '100%',
-                background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '16px',
-                padding: '14px',
-                borderRadius: '12px',
-                border: 'none',
-                cursor: submitting || uploading ? 'not-allowed' : 'pointer',
-                transition: 'background 0.15s ease',
-              }}
-            >
-              {uploading
-                ? t('post.uploading', lang)
-                : submitting
-                  ? t('common.loading', lang)
-                  : isEditMode
-                    ? (lang === 'ru' ? 'Сохранить изменения' : 'Тағйиротро нигоҳ доред')
-                    : t('post.submit', lang)
-              }
-            </button>
+            {/* ── STEP 2: Specs ── */}
+            {step === 2 && (
+              <div style={cardStyle} className="animate-fade-in">
+                {/* Fuel chips */}
+                <div>
+                  <label style={labelStyle}>{t('post.fuel', lang)}</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {FUELS.map((f) => (
+                      <ChipPill
+                        key={f}
+                        label={f}
+                        selected={form.fuel === f}
+                        onClick={() => handleField('fuel', form.fuel === f ? '' : f as FuelType)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Transmission chips */}
+                <div>
+                  <label style={labelStyle}>{t('post.transmission', lang)}</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {TRANSMISSIONS.map((tr) => (
+                      <ChipPill
+                        key={tr}
+                        label={tr}
+                        selected={form.transmission === tr}
+                        onClick={() => handleField('transmission', form.transmission === tr ? '' : tr as TransmissionType)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mileage + Color */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="mileage" style={labelStyle}>{t('post.mileage', lang)}</label>
+                    <input id="mileage" type="number" min={0} value={form.mileage} onChange={(e) => handleField('mileage', e.target.value)} placeholder="85000" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label htmlFor="color" style={labelStyle}>{t('post.color', lang)}</label>
+                    <input id="color" type="text" value={form.color} onChange={(e) => handleField('color', e.target.value)} placeholder={lang === 'ru' ? 'Белый' : 'Сафед'} style={inputStyle} />
+                  </div>
+                </div>
+
+                {/* Description + AI */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label htmlFor="description" style={{ ...labelStyle, marginBottom: 0 }}>
+                      {t('post.description', lang)}
+                    </label>
+                    {form.brand.trim() && form.model.trim() && (
+                      <button
+                        type="button"
+                        onClick={handleAiRefine}
+                        disabled={aiLoading}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          background: aiLoading ? 'var(--surface)' : 'var(--accent-dim)',
+                          border: '1px solid var(--accent)', borderRadius: '8px',
+                          padding: '5px 11px', fontSize: '12px', fontWeight: 700,
+                          color: aiLoading ? 'var(--text-muted)' : 'var(--accent)',
+                          cursor: aiLoading ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+                          fontFamily: 'var(--font)', whiteSpace: 'nowrap',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!aiLoading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent)'
+                          if (!aiLoading) (e.currentTarget as HTMLButtonElement).style.color = '#fff'
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background = aiLoading ? 'var(--surface)' : 'var(--accent-dim)'
+                          if (!aiLoading) (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent)'
+                        }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M12 3l1.5 3 3.5.5-2.5 2.5.5 3.5L12 11l-3 1.5.5-3.5L7 6.5 10.5 6z" />
+                          <path d="M5 19l1 2 2-1-1-2z" />
+                          <path d="M19 5l1 2 2-1-1-2z" />
+                          <line x1="8" y1="16" x2="16" y2="8" />
+                        </svg>
+                        {aiLoading
+                          ? (lang === 'ru' ? 'Генерация...' : 'Тавлид...')
+                          : (lang === 'ru' ? 'Улучшить с ИИ' : 'Бо ИИ беҳтар кунед')
+                        }
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    id="description"
+                    rows={4}
+                    value={form.description}
+                    onChange={(e) => handleField('description', e.target.value)}
+                    style={{ ...inputStyle, resize: 'vertical' }}
+                  />
+                  {aiError && (
+                    <p style={{ marginTop: '6px', fontSize: '12px', color: 'var(--accent)', fontWeight: 600 }}>
+                      {aiError}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 3: Media ── */}
+            {step === 3 && (
+              <div style={cardStyle} className="animate-fade-in">
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>{t('post.add_photos', lang)}</label>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('post.photos_hint', lang)}</span>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    id="photo-upload-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={handleImageFiles}
+                    style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }}
+                  />
+
+                  {/* Upload zone */}
+                  {totalImageCount < 8 && (
+                    <label
+                      htmlFor="photo-upload-input"
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        gap: '8px', background: 'var(--surface)', border: '2px dashed var(--border)',
+                        borderRadius: '12px', padding: '28px 16px', cursor: 'pointer',
+                        color: 'var(--text-muted)', marginBottom: '16px',
+                        transition: 'border-color 0.15s',
+                      }}
+                      onDragOver={(e) => { e.preventDefault(); (e.currentTarget as HTMLLabelElement).style.borderColor = 'var(--accent)' }}
+                      onDragLeave={(e) => { (e.currentTarget as HTMLLabelElement).style.borderColor = 'var(--border)' }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        (e.currentTarget as HTMLLabelElement).style.borderColor = 'var(--border)'
+                        const dt = e.dataTransfer
+                        const synth = { target: { files: dt.files } } as unknown as ChangeEvent<HTMLInputElement>
+                        handleImageFiles(synth)
+                      }}
+                    >
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      <span style={{ fontSize: '14px', fontWeight: 600 }}>{t('post.add_photos', lang)}</span>
+                      <span style={{ fontSize: '12px' }}>{totalImageCount}/8</span>
+                    </label>
+                  )}
+
+                  {/* Image grid */}
+                  {(existingImageUrls.length > 0 || imagePreviews.length > 0) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '8px' }}>
+                      {existingImageUrls.map((src, i) => (
+                        <div key={`existing-${i}`} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                          <Image src={src} alt={`Image ${i + 1}`} fill sizes="120px" style={{ objectFit: 'cover' }} />
+                          {i === 0 && existingImageUrls.length + imagePreviews.length > 0 && (
+                            <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'var(--accent)', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>
+                              {t('post.cover_photo', lang)}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeExistingImage(i)}
+                            aria-label={`Remove image ${i + 1}`}
+                            style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="1" y1="1" x2="7" y2="7" /><line x1="7" y1="1" x2="1" y2="7" /></svg>
+                          </button>
+                        </div>
+                      ))}
+                      {imagePreviews.map((src, i) => {
+                        const globalIdx = existingImageUrls.length + i
+                        return (
+                          <div key={`new-${i}`} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
+                            <Image src={src} alt={`New image ${i + 1}`} fill sizes="120px" style={{ objectFit: 'cover' }} />
+                            {globalIdx === 0 && (
+                              <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'var(--accent)', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>
+                                {t('post.cover_photo', lang)}
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeNewImage(i)}
+                              aria-label={`Remove new image ${i + 1}`}
+                              style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="1" y1="1" x2="7" y2="7" /><line x1="7" y1="1" x2="1" y2="7" /></svg>
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 4: Deal ── */}
+            {step === 4 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in">
+                <div style={cardStyle}>
+                  {/* Price + Currency */}
+                  <div>
+                    <label style={labelStyle}>{t('post.price', lang)} *</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="number"
+                        required
+                        min={1}
+                        value={form.price}
+                        onChange={(e) => handleField('price', e.target.value)}
+                        placeholder="15000"
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                      {(['USD', 'TJS'] as Currency[]).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => handleField('currency', c)}
+                          style={{
+                            padding: '11px 14px', borderRadius: '10px', fontWeight: 700,
+                            fontSize: '14px', cursor: 'pointer', flexShrink: 0,
+                            background: form.currency === c ? 'var(--accent)' : 'var(--surface)',
+                            color: form.currency === c ? '#fff' : 'var(--text-muted)',
+                            border: form.currency === c ? '1px solid var(--accent)' : '1px solid var(--border)',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {c === 'USD' ? 'USD $' : 'TJS'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* City */}
+                  <div>
+                    <label htmlFor="city" style={labelStyle}>{t('post.city', lang)} *</label>
+                    <select id="city" required value={form.city} onChange={(e) => handleField('city', e.target.value)} style={inputStyle}>
+                      <option value="">—</option>
+                      {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Installment (sale only) */}
+                  {form.type === 'sale' && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>
+                      <input type="checkbox" checked={form.installment_available} onChange={(e) => handleField('installment_available', e.target.checked)} style={{ accentColor: 'var(--accent)', width: '18px', height: '18px' }} />
+                      {t('post.installment', lang)}
+                    </label>
+                  )}
+
+                  {error && (
+                    <div style={{ background: 'rgba(200,56,8,0.08)', border: '1px solid var(--accent)', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', color: 'var(--accent)', fontWeight: 600 }}>
+                      {error}
+                    </div>
+                  )}
+                </div>
+
+                {/* Rental rules (rent only) */}
+                {form.type === 'rent' && (
+                  <div style={cardStyle} className="animate-fade-in-up">
+                    <div style={{ paddingBottom: '4px', borderBottom: '1px solid var(--border)' }}>
+                      <h2 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>
+                        {t('post.rentalRulesTitle', lang)}
+                      </h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="rr-min-age" style={labelStyle}>{t('rentalRules.minAge', lang)}</label>
+                        <input id="rr-min-age" type="number" min={18} max={99} value={rentalRules.min_age} onChange={(e) => handleRentalField('min_age', e.target.value)} placeholder="21" style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>{t('rentalRules.deposit', lang)}</label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <input type="number" min={0} value={rentalRules.deposit} onChange={(e) => handleRentalField('deposit', e.target.value)} placeholder="500" style={{ ...inputStyle, flex: 1 }} />
+                          <select value={rentalRules.deposit_currency} onChange={(e) => handleRentalField('deposit_currency', e.target.value as 'USD' | 'TJS')} style={{ ...inputStyle, width: 'auto' }}>
+                            <option value="USD">USD</option>
+                            <option value="TJS">TJS</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="rr-fuel-policy" style={labelStyle}>{t('rentalRules.fuelPolicy', lang)}</label>
+                      <select id="rr-fuel-policy" value={rentalRules.fuel_policy} onChange={(e) => handleRentalField('fuel_policy', e.target.value as RentalRulesForm['fuel_policy'])} style={inputStyle}>
+                        <option value="">—</option>
+                        <option value="full_to_full">{t('rentalRules.fullToFull', lang)}</option>
+                        <option value="free_tank">{t('rentalRules.freeTank', lang)}</option>
+                        <option value="same_level">{t('rentalRules.sameLevel', lang)}</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: rentalRules.delivery_available ? '10px' : '0' }}>
+                        <input type="checkbox" checked={rentalRules.delivery_available} onChange={(e) => handleRentalField('delivery_available', e.target.checked)} style={{ accentColor: 'var(--accent)', width: '16px', height: '16px' }} />
+                        {t('rentalRules.delivery', lang)}
+                      </label>
+                      {rentalRules.delivery_available && (
+                        <div>
+                          <label style={labelStyle}>{lang === 'ru' ? 'Стоимость доставки (USD)' : 'Нархи расонидан (USD)'}</label>
+                          <input type="number" min={0} value={rentalRules.delivery_price} onChange={(e) => handleRentalField('delivery_price', e.target.value)} placeholder="10" style={inputStyle} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label style={labelStyle}>{t('rentalRules.maxKm', lang)}</label>
+                        <input type="number" min={0} value={rentalRules.max_km_per_day} onChange={(e) => handleRentalField('max_km_per_day', e.target.value)} placeholder="300" style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>{t('rentalRules.extraKm', lang)} (USD)</label>
+                        <input type="number" min={0} step={0.1} value={rentalRules.extra_km_price} onChange={(e) => handleRentalField('extra_km_price', e.target.value)} placeholder="0.5" style={inputStyle} />
+                      </div>
+                    </div>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>
+                      <input type="checkbox" checked={rentalRules.insurance_included} onChange={(e) => handleRentalField('insurance_included', e.target.checked)} style={{ accentColor: 'var(--accent)', width: '16px', height: '16px' }} />
+                      {t('rentalRules.insurance', lang)}
+                    </label>
+
+                    <div>
+                      <label style={labelStyle}>{t('rentalRules.notes', lang)}</label>
+                      <textarea rows={3} value={rentalRules.notes} onChange={(e) => handleRentalField('notes', e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} placeholder={lang === 'ru' ? 'Дополнительные условия...' : 'Шартҳои иловагӣ...'} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Navigation buttons ── */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              {step > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => s - 1)}
+                  style={{
+                    flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
+                    fontSize: '15px', cursor: 'pointer',
+                    background: 'var(--surface)', color: 'var(--text)',
+                    border: '1px solid var(--border)', transition: 'all 0.15s',
+                  }}
+                >
+                  {t('post.back', lang)}
+                </button>
+              )}
+              {step < 4 ? (
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => s + 1)}
+                  style={{
+                    flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
+                    fontSize: '15px', cursor: 'pointer',
+                    background: 'var(--accent)', color: '#fff',
+                    border: '1px solid var(--accent)', transition: 'all 0.15s',
+                  }}
+                >
+                  {t('post.next', lang)}
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={submitting || uploading}
+                  style={{
+                    flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
+                    fontSize: '15px', cursor: submitting || uploading ? 'not-allowed' : 'pointer',
+                    background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)',
+                    color: '#fff', border: 'none', transition: 'background 0.15s',
+                  }}
+                >
+                  {uploading
+                    ? t('post.uploading', lang)
+                    : submitting
+                      ? t('common.loading', lang)
+                      : isEditMode
+                        ? (lang === 'ru' ? 'Сохранить изменения' : 'Тағйиротро нигоҳ доред')
+                        : t('post.submit', lang)
+                  }
+                </button>
+              )}
+            </div>
           </form>
         </div>
       </main>

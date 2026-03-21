@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session, joinedload
@@ -28,7 +28,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 # JWT
 # ---------------------------------------------------------------------------
 
-_bearer_scheme = HTTPBearer()
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def create_access_token(data: dict, token_version: int = 0) -> str:
@@ -57,10 +57,22 @@ def _decode_token(token: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    payload = _decode_token(credentials.credentials)
+    token: Optional[str] = None
+    if credentials:
+        token = credentials.credentials
+    if not token:
+        token = request.cookies.get("token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    payload = _decode_token(token)
     user_id: str | None = payload.get("sub")
     if user_id is None:
         raise HTTPException(
@@ -111,10 +123,13 @@ _oauth2_optional = OAuth2PasswordBearer(
 
 
 def get_current_user_optional(
+    request: Request,
     token: Optional[str] = Depends(_oauth2_optional),
     db: Session = Depends(get_db),
 ) -> Optional[User]:
     """Returns the authenticated user or None if no valid token is present."""
+    if not token:
+        token = request.cookies.get("token")
     if not token:
         return None
     try:

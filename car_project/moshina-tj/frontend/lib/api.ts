@@ -1,5 +1,4 @@
 import axios from 'axios'
-import Cookies from 'js-cookie'
 import type {
   ApiResponse,
   AuditLog,
@@ -42,11 +41,15 @@ export interface ModeratorActivity {
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
-const api = axios.create({ baseURL: BASE_URL })
+// In-memory token store — avoids reading from js-cookie on every request
+let _inMemoryToken: string | null = null
+export function setInMemoryToken(t: string | null) { _inMemoryToken = t }
+export function getInMemoryToken() { return _inMemoryToken }
+
+const api = axios.create({ baseURL: BASE_URL, withCredentials: true })
 
 api.interceptors.request.use((config) => {
-  const token = Cookies.get('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (_inMemoryToken) config.headers.Authorization = `Bearer ${_inMemoryToken}`
   return config
 })
 
@@ -257,12 +260,12 @@ export const adminApi = {
     price?: number; currency?: string; year?: number; city?: string;
     mileage?: number; fuel?: string; transmission?: string; color?: string;
   }) => {
-    const token = Cookies.get('token')
     const res = await fetch(`${BASE_URL}/admin/moderation/${id}/edit`, {
       method: 'PATCH',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(_inMemoryToken ? { Authorization: `Bearer ${_inMemoryToken}` } : {}),
       },
       body: JSON.stringify(patch),
     })

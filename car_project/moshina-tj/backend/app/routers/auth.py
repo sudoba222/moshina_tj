@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, field_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -22,6 +22,26 @@ from app.models import OtpCode, TelegramToken, User
 from app.schemas import ApiResponse, AuthResponse, Token, UserCreate, UserResponse
 
 logger = logging.getLogger(__name__)
+
+_COOKIE_MAX_AGE = 7 * 24 * 60 * 60  # 7 days in seconds
+
+
+def _set_auth_cookie(response: Response, token: str) -> None:
+    """Set the JWT as an HttpOnly cookie so XSS cannot steal it."""
+    secure = settings.environment == "production"
+    response.set_cookie(
+        key="token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        max_age=_COOKIE_MAX_AGE,
+        path="/",
+        secure=secure,
+    )
+
+
+def _clear_auth_cookie(response: Response) -> None:
+    response.delete_cookie(key="token", path="/")
 
 
 class ChangePasswordPayload(BaseModel):
@@ -190,7 +210,7 @@ limiter = Limiter(key_func=get_remote_address)
     status_code=status.HTTP_201_CREATED,
 )
 @limiter.limit("3/hour")
-def register(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
+def register(request: Request, response: Response, payload: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.phone == payload.phone).first()
     if existing:
         raise HTTPException(
@@ -208,6 +228,7 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
     db.refresh(user)
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
@@ -220,7 +241,7 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
     response_model=ApiResponse[AuthResponse],
 )
 @limiter.limit("5/15minutes")
-def login(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
+def login(request: Request, response: Response, payload: UserCreate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
@@ -234,6 +255,7 @@ def login(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
         )
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
@@ -255,12 +277,14 @@ def me(current_user: User = Depends(get_current_user)):
 
 @router.post("/logout", response_model=ApiResponse[None])
 def logout(
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Invalidate all existing tokens for this user by bumping token_version."""
     current_user.token_version = (current_user.token_version or 0) + 1
     db.commit()
+    _clear_auth_cookie(response)
     return ApiResponse(success=True, data=None, message="Logged out")
 
 
@@ -335,7 +359,7 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
 
 @router.post("/verify-otp", response_model=ApiResponse[AuthResponse])
 @limiter.limit("10/hour")
-def verify_otp(request: Request, payload: VerifyOtpPayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def verify_otp(request: Request, response: Response, payload: VerifyOtpPayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Verify OTP code.
 
     - If user exists with this phone: log them in.
@@ -441,6 +465,7 @@ def verify_otp(request: Request, payload: VerifyOtpPayload, background_tasks: Ba
         background_tasks.add_task(send_welcome_message, chat_id_for_bot, user.name)
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
@@ -511,7 +536,7 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
 
 @router.post("/verify-email-otp", response_model=ApiResponse[AuthResponse])
 @limiter.limit("10/hour")
-def verify_email_otp(request: Request, payload: VerifyEmailOtpPayload, db: Session = Depends(get_db)):
+def verify_email_otp(request: Request, response: Response, payload: VerifyEmailOtpPayload, db: Session = Depends(get_db)):
     """Verify the 6-digit OTP sent to the email. Returns a JWT on success."""
     now = datetime.now(timezone.utc)
 
@@ -543,6 +568,7 @@ def verify_email_otp(request: Request, payload: VerifyEmailOtpPayload, db: Sessi
     db.commit()
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
@@ -552,7 +578,7 @@ def verify_email_otp(request: Request, payload: VerifyEmailOtpPayload, db: Sessi
 
 @router.post("/login-email", response_model=ApiResponse[AuthResponse])
 @limiter.limit("5/15minutes")
-def login_email(request: Request, payload: EmailLoginPayload, db: Session = Depends(get_db)):
+def login_email(request: Request, response: Response, payload: EmailLoginPayload, db: Session = Depends(get_db)):
     """Login with email + password."""
     user = db.query(User).filter(User.email == payload.email, User.is_deleted == False).first()
 
@@ -567,6 +593,7 @@ def login_email(request: Request, payload: EmailLoginPayload, db: Session = Depe
         )
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
@@ -760,6 +787,7 @@ class GoogleAuthPayload(BaseModel):
 @limiter.limit("10/hour")
 def google_auth(
     request: Request,
+    response: Response,
     payload: GoogleAuthPayload,
     db: Session = Depends(get_db),
 ):
@@ -825,6 +853,7 @@ def google_auth(
     db.refresh(user)
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
@@ -843,6 +872,7 @@ class AppleAuthPayload(BaseModel):
 @limiter.limit("10/hour")
 def apple_auth(
     request: Request,
+    response: Response,
     payload: AppleAuthPayload,
     db: Session = Depends(get_db),
 ):
@@ -930,6 +960,7 @@ def apple_auth(
     db.refresh(user)
 
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),

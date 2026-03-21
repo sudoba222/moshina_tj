@@ -7,7 +7,6 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { listingsApi, authApi, usersApi, favoritesApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
-import Cookies from 'js-cookie'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import CarCard from '@/components/CarCard'
@@ -18,7 +17,7 @@ type Tab = 'profile' | 'listings' | 'favorites' | 'settings'
 export default function DashboardPage() {
   const router = useRouter()
   const { lang } = useLang()
-  const { user, login } = useAuth()
+  const { user, updateUser } = useAuth()
 
   const [tab, setTab] = useState<Tab>('profile')
   const [listings, setListings] = useState<Listing[]>([])
@@ -87,8 +86,7 @@ export default function DashboardPage() {
     setProfileSaving(true)
     try {
       const res = await authApi.updateProfile({ name: name.trim() })
-      const token = Cookies.get('token') ?? ''
-      login(token, res.data.data)
+      updateUser(res.data.data)
       setProfileSuccess(true)
       setEditMode(false)
     } catch {

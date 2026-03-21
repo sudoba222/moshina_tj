@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import Pagination from '@/components/Pagination'
-import { listingsApi, searchApi, type ListingFilters } from '@/lib/api'
+import { listingsApi, searchApi, catalogApi, type ListingFilters, type CarBrand } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { Listing } from '@/types'
@@ -15,11 +15,6 @@ const CITIES = [
   'Пенджикент', 'Вахш', 'Хорог', 'Турсунзода', 'Нораком',
 ]
 
-const BRANDS = [
-  'Toyota', 'Chevrolet', 'BMW', 'Mercedes', 'Hyundai', 'Kia',
-  'Honda', 'Daewoo', 'Audi', 'Lexus', 'Nissan', 'Volkswagen',
-  'Ford', 'Mazda', 'Lada', 'Mitsubishi',
-]
 
 const FUELS = ['Бензин', 'Дизель', 'Газ', 'Электро', 'Гибрид']
 const TRANSMISSIONS = ['Автомат', 'Механика', 'Вариатор']
@@ -73,6 +68,10 @@ function CatalogContent() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [didYouMean, setDidYouMean] = useState<string | null>(null)
 
+  // Dynamic brands + models from API
+  const [brands, setBrands] = useState<CarBrand[]>([])
+  const [catalogModels, setCatalogModels] = useState<{ id: string; name: string }[]>([])
+
   // Filter state
   const [type, setType] = useState<string>(searchParams.get('type') ?? '')
   const [city, setCity] = useState(searchParams.get('city') ?? '')
@@ -92,6 +91,19 @@ function CatalogContent() {
 
   const activeFilterCount = [type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, color, maxMileage]
     .filter(Boolean).length + (installmentOnly ? 1 : 0)
+
+  // Fetch brands once on mount
+  useEffect(() => {
+    catalogApi.getBrands().then((res) => setBrands(res.data.data)).catch(() => {})
+  }, [])
+
+  // Fetch models when brand changes
+  useEffect(() => {
+    if (!brand) { setCatalogModels([]); return }
+    const brandObj = brands.find((b) => b.name === brand)
+    if (!brandObj) { setCatalogModels([]); return }
+    catalogApi.getModels(brandObj.id).then((res) => setCatalogModels(res.data.data)).catch(() => setCatalogModels([]))
+  }, [brand, brands])
 
   const fetchListings = useCallback(async () => {
     setLoading(true)
@@ -255,24 +267,31 @@ function CatalogContent() {
         {/* Brand */}
         <div>
           <label htmlFor="filter-brand" style={labelStyle}>{t('catalog.brand', lang)}</label>
-          <select id="filter-brand" value={brand} onChange={(e) => setBrand(e.target.value)} style={inputStyle}>
+          <select id="filter-brand" value={brand} onChange={(e) => { setBrand(e.target.value); setModel('') }} style={inputStyle}>
             <option value="">{t('catalog.allBrands', lang)}</option>
-            {BRANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+            {brands.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
           </select>
         </div>
 
         {/* Model */}
         <div>
           <label htmlFor="filter-model" style={labelStyle}>{t('catalog.model', lang)}</label>
-          <input
-            id="filter-model"
-            type="text"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder={brand ? 'Camry, Nexia...' : '—'}
-            disabled={!brand}
-            style={{ ...inputStyle, opacity: brand ? 1 : 0.5 }}
-          />
+          {catalogModels.length > 0 ? (
+            <select id="filter-model" value={model} onChange={(e) => setModel(e.target.value)} style={inputStyle}>
+              <option value="">{t('filters.all', lang)}</option>
+              {catalogModels.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+            </select>
+          ) : (
+            <input
+              id="filter-model"
+              type="text"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder={brand ? 'Camry, Nexia...' : '—'}
+              disabled={!brand}
+              style={{ ...inputStyle, opacity: brand ? 1 : 0.5 }}
+            />
+          )}
         </div>
 
         {/* Year */}
