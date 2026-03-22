@@ -10,6 +10,7 @@ import MobileBottomNav from '@/components/MobileBottomNav'
 import ChatWidget from '@/components/ChatWidget'
 import ChatDrawer from '@/components/ChatDrawer'
 import { ChatDrawerProvider } from '@/lib/ChatDrawerContext'
+import { JsonLd } from '@/components/JsonLd'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -30,36 +31,88 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'TajCar.tj — Авторынок Таджикистана',
-    template: '%s | TajCar.tj',
+    default: 'MOSHINA.TJ — Авто рынок Таджикистана | Автомобили в Таджикистане',
+    template: '%s | MOSHINA.TJ',
   },
-  description: 'Покупка, аренда и рассрочка автомобилей по всему Таджикистану. Лучшие предложения в Душанбе, Худжанде и других городах.',
-  keywords: 'авто, машина, Таджикистан, купить машину, аренда авто, рассрочка, Душанбе, Худжанд, автомобили Таджикистан',
-  authors: [{ name: 'TajCar.tj' }],
-  creator: 'TajCar.tj',
-  publisher: 'TajCar.tj',
+  description:
+    'Купите или продайте автомобиль в Таджикистане. Тысячи объявлений — новые и подержанные авто, аренда, рассрочка. MOSHINA.TJ — главный авторынок Таджикистана.',
+  keywords: [
+    'авто таджикистан',
+    'купить машину душанбе',
+    'продать авто таджикистан',
+    'moshina tj',
+    'автомобили душанбе',
+    'аренда авто таджикистан',
+    'mashina tj',
+  ],
+  authors: [{ name: 'MOSHINA.TJ' }],
+  creator: 'MOSHINA.TJ',
+  publisher: 'MOSHINA.TJ',
   robots: {
     index: true,
     follow: true,
-    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
   openGraph: {
-    title: 'TajCar.tj — Авторынок Таджикистана',
-    description: 'Покупка, аренда и рассрочка автомобилей по всему Таджикистану.',
     type: 'website',
     locale: 'ru_TJ',
+    alternateLocale: 'tg_TJ',
     url: SITE_URL,
-    siteName: 'TajCar.tj',
-    // images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'TajCar.tj — Авторынок Таджикистана' }],
+    siteName: 'MOSHINA.TJ',
+    title: 'MOSHINA.TJ — Авто рынок Таджикистана',
+    description: 'Купите или продайте автомобиль в Таджикистане. Тысячи объявлений.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'MOSHINA.TJ' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TajCar.tj — Авторынок Таджикистана',
-    description: 'Покупка, аренда и рассрочка автомобилей по всему Таджикистану.',
-    // images: ['/og-image.png'],
+    title: 'MOSHINA.TJ — Авто рынок Таджикистана',
+    description: 'Купите или продайте автомобиль в Таджикистане.',
+    images: ['/og-image.png'],
   },
   alternates: {
     canonical: SITE_URL,
+    languages: {
+      ru: SITE_URL,
+      tg: SITE_URL,
+    },
+  },
+  verification: {
+    google: 'GOOGLE_VERIFICATION_PLACEHOLDER',
+    yandex: 'YANDEX_VERIFICATION_PLACEHOLDER',
+  },
+}
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'MOSHINA.TJ',
+  url: SITE_URL,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${SITE_URL}/catalog?q={search_term_string}`,
+    },
+    'query-input': 'required name=search_term_string',
+  },
+}
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'AutoDealer',
+  name: 'MOSHINA.TJ',
+  description: 'Главный авторынок Таджикистана',
+  url: SITE_URL,
+  areaServed: { '@type': 'Country', name: 'Tajikistan' },
+  address: {
+    '@type': 'PostalAddress',
+    addressCountry: 'TJ',
+    addressLocality: 'Душанбе',
   },
 }
 
@@ -71,6 +124,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={lang} suppressHydrationWarning>
       <body className={syne.className}>
+        <JsonLd data={websiteSchema} />
+        <JsonLd data={organizationSchema} />
         <ThemeProvider>
           <AuthProvider>
             <ChatDrawerProvider>

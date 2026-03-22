@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import dynamic from 'next/dynamic'
+import { JsonLd } from '@/components/JsonLd'
 
 // Dynamically import the heavy client component so it ships as a separate chunk
 const CarDetailClient = dynamic(() => import('./CarDetailClient'), {
@@ -15,6 +16,7 @@ interface ListingMeta {
   year: number
   price: number
   currency: string
+  mileage: number | null
   city: string
   description: string | null
   images: Array<{ url: string; is_primary: boolean }>
@@ -57,7 +59,7 @@ export async function generateMetadata(
   const title = `${listing.brand} ${listing.model} ${listing.year} — ${priceStr}`
   const description = listing.description
     ? listing.description.slice(0, 155)
-    : `${listing.brand} ${listing.model} ${listing.year}, ${listing.city}. ${priceStr} на TajCar.tj — авторынок Таджикистана.`
+    : `${listing.brand} ${listing.model} ${listing.year}, ${listing.city}. ${priceStr} на MOSHINA.TJ — авторынок Таджикистана.`
 
   const primaryImage =
     listing.images.find((img) => img.is_primary) ?? listing.images[0]
@@ -75,7 +77,7 @@ export async function generateMetadata(
       url: pageUrl,
       type: 'website',
       locale: 'ru_TJ',
-      siteName: 'TajCar.tj',
+      siteName: 'MOSHINA.TJ',
       images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
     },
     twitter: {
@@ -87,6 +89,44 @@ export async function generateMetadata(
   }
 }
 
-export default function CarDetailPage() {
-  return <CarDetailClient />
+export default async function CarDetailPage(
+  { params }: { params: { id: string } }
+) {
+  const listing = await fetchListingMeta(params.id)
+
+  const vehicleSchema = listing
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'Car',
+        name: `${listing.brand} ${listing.model} ${listing.year}`,
+        brand: { '@type': 'Brand', name: listing.brand },
+        modelDate: String(listing.year),
+        ...(listing.mileage != null && {
+          mileageFromOdometer: {
+            '@type': 'QuantitativeValue',
+            value: listing.mileage,
+            unitCode: 'KMT',
+          },
+        }),
+        offers: {
+          '@type': 'Offer',
+          price: listing.price,
+          priceCurrency: listing.currency,
+          availability: 'https://schema.org/InStock',
+          url: `${SITE_URL}/car/${params.id}`,
+        },
+        ...(listing.images.length > 0 && {
+          image: [listing.images[0].url],
+        }),
+        ...(listing.description && { description: listing.description }),
+        vehicleIdentificationNumber: params.id,
+      }
+    : null
+
+  return (
+    <>
+      {vehicleSchema && <JsonLd data={vehicleSchema} />}
+      <CarDetailClient />
+    </>
+  )
 }

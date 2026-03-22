@@ -6,8 +6,23 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/catalog', '/car/', '/dealers/', '/rent', '/installment'],
-        disallow: ['/admin', '/moderator', '/manager', '/support', '/dashboard', '/post', '/auth/'],
+        allow: '/',
+        disallow: [
+          '/admin',
+          '/moderator',
+          '/manager',
+          '/support',
+          '/api/',
+          '/dashboard',
+        ],
+      },
+      {
+        userAgent: 'Googlebot',
+        allow: '/',
+      },
+      {
+        userAgent: 'YandexBot',
+        allow: '/',
       },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,
