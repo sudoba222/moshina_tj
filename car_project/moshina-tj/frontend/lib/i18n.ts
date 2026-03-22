@@ -486,6 +486,23 @@ const strings = {
     errorSave:   { ru: 'Ошибка сохранения',     tj: 'Хатои нигоҳ доштан' },
     genericError:{ ru: 'Ошибка',               tj: 'Хато' },
   },
+  mod: {
+    // Dashboard stats cards
+    inQueue:          { ru: 'В очереди',          tj: 'Дар навбат' },
+    approvedToday:    { ru: 'Одобрено сегодня',    tj: 'Имрӯз тасдиқ шуд' },
+    rejectedToday:    { ru: 'Отклонено сегодня',   tj: 'Имрӯз рад шуд' },
+    // Rejection reason keys (mod.reason* are canonical storage keys)
+    reasonBadPhotos:  { ru: 'Плохие фото',          tj: 'Аксҳои бад' },
+    reasonLowPrice:   { ru: 'Цена занижена',         tj: 'Нарх паст аст' },
+    reasonDuplicate:  { ru: 'Дубликат',              tj: 'Дубликат' },
+    reasonReseller:   { ru: 'Перекуп',               tj: 'Дилол' },
+    reasonWrongInfo:  { ru: 'Неверная информация',   tj: 'Маълумоти нодуруст' },
+    reasonProhibited: { ru: 'Запрещённый контент',   tj: 'Мундариҷаи манъшуда' },
+    // Dashboard session table
+    filters:          { ru: 'Фильтры',               tj: 'Филтрҳо' },
+    // Summary screen
+    summaryRedirect:  { ru: 'Возврат к панели через 5 с…', tj: 'Бозгашт ба панел баъд аз 5 с…' },
+  },
   adminLogin: {
     controlPanel:    { ru: 'Панель управления',               tj: 'Панели идора' },
     staffLogin:      { ru: 'Вход для персонала',              tj: 'Вуруди кормандон' },

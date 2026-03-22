@@ -313,6 +313,10 @@ export const adminApi = {
   getSessionHistory: () =>
     api.get<ApiResponse<SessionHistoryItem[]>>('/admin/moderation/session/history'),
 
+  // Last N listings by a given user (for author context panel)
+  getUserListings: (userId: string, limit = 5) =>
+    api.get<ApiResponse<PaginatedListings>>('/admin/listings', { params: { user_id: userId, limit } }),
+
   // Dealers
   getDealers: (page = 1, verified?: boolean) =>
     api.get<ApiResponse<{ items: Dealer[]; total: number; page: number; pages: number }>>(
