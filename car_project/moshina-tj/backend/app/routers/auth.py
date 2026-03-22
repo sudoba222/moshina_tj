@@ -27,16 +27,21 @@ _COOKIE_MAX_AGE = 7 * 24 * 60 * 60  # 7 days in seconds
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:
-    """Set the JWT as an HttpOnly cookie so XSS cannot steal it."""
-    secure = settings.environment == "production"
+    """Set the JWT as an HttpOnly cookie so XSS cannot steal it.
+
+    In production the frontend (Vercel) and backend (Render) are on different
+    domains, so SameSite must be 'none' (with Secure=True) to allow the browser
+    to send the cookie on cross-origin XHR requests.
+    """
+    is_prod = settings.environment == "production"
     response.set_cookie(
         key="token",
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite="none" if is_prod else "lax",
         max_age=_COOKIE_MAX_AGE,
         path="/",
-        secure=secure,
+        secure=is_prod,
     )
 
 
@@ -252,7 +257,7 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
 )
 @limiter.limit("30/15minutes")
 def login(request: Request, response: Response, payload: UserCreate, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.phone == payload.phone).first()
+    user = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

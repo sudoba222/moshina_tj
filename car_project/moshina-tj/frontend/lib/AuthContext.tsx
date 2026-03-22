@@ -24,11 +24,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    // On mount: call /auth/me — the HttpOnly cookie is sent automatically.
-    // If valid, populate in-memory token + user state.
-    // User object is cached in localStorage (non-sensitive) for instant UI render;
-    // the token itself is NEVER stored in localStorage (XSS risk).
+    // Restore token from localStorage first so API calls work immediately
+    // on page refresh without waiting for /auth/me round-trip.
+    const savedToken = localStorage.getItem('auth_token')
     const savedUser = localStorage.getItem('user')
+
+    if (savedToken) {
+      setInMemoryToken(savedToken)
+      setToken(savedToken)
+    }
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser) as User)
@@ -37,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Validate with the server — refreshes user data and catches revoked tokens.
     authApi.me().then((res) => {
       const freshUser = res.data.data
       if (freshUser.is_banned) {
@@ -44,33 +49,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(null)
         setUser(null)
         localStorage.removeItem('user')
+        localStorage.removeItem('auth_token')
+        document.cookie = 'auth_session=; path=/; max-age=0; samesite=lax'
         return
       }
-      // me() returns the token in the response header via the HttpOnly cookie path;
-      // if the server also returns it in the body, store in-memory only.
       setUser(freshUser)
-      setToken('cookie') // sentinel — real auth is via HttpOnly cookie
       localStorage.setItem('user', JSON.stringify(freshUser))
       document.cookie = 'auth_session=1; path=/; max-age=604800; samesite=lax'
     }).catch(() => {
+      // Token expired or revoked — clear everything
       setInMemoryToken(null)
       setToken(null)
       setUser(null)
       localStorage.removeItem('user')
+      localStorage.removeItem('auth_token')
       document.cookie = 'auth_session=; path=/; max-age=0; samesite=lax'
     })
   }, [])
 
   function login(accessToken: string, userData: User) {
-    // Store token in memory only — never in localStorage (XSS risk).
-    // The server also sets an HttpOnly cookie for persistence across refreshes.
     setInMemoryToken(accessToken)
     setToken(accessToken)
-    // Cache non-sensitive user object for instant UI render on next load
     localStorage.setItem('user', JSON.stringify(userData))
+    // Persist token so it survives page refreshes (SameSite=None cookie fix
+    // handles cross-origin HttpOnly cookie, but localStorage is the reliable fallback).
+    localStorage.setItem('auth_token', accessToken)
     setUser(userData)
-    // Set a non-HttpOnly flag cookie so Next.js middleware can detect auth state.
-    // This does NOT contain the JWT — it's just a session presence flag.
     document.cookie = 'auth_session=1; path=/; max-age=604800; samesite=lax'
   }
 
@@ -80,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     setUser(null)
     localStorage.removeItem('user')
+    localStorage.removeItem('auth_token')
     document.cookie = 'auth_session=; path=/; max-age=0; samesite=lax'
   }
 
