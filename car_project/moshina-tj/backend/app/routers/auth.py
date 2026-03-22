@@ -250,7 +250,7 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     "/login",
     response_model=ApiResponse[AuthResponse],
 )
-@limiter.limit("5/15minutes")
+@limiter.limit("30/15minutes")
 def login(request: Request, response: Response, payload: UserCreate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone).first()
     if not user or not verify_password(payload.password, user.password_hash):
@@ -604,7 +604,7 @@ def verify_email_otp(request: Request, response: Response, payload: VerifyEmailO
 
 
 @router.post("/login-email", response_model=ApiResponse[AuthResponse])
-@limiter.limit("5/15minutes")
+@limiter.limit("30/15minutes")
 def login_email(request: Request, response: Response, payload: EmailLoginPayload, db: Session = Depends(get_db)):
     """Login with email + password."""
     user = db.query(User).filter(User.email == payload.email, User.is_deleted == False).first()
