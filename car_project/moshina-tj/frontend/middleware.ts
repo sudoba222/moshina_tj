@@ -19,9 +19,12 @@ export function middleware(request: NextRequest) {
 
   if (!isProtected) return NextResponse.next()
 
-  const token = request.cookies.get('token')?.value
+  // auth_session is a non-HttpOnly flag cookie set by AuthContext on login.
+  // The actual JWT lives in an HttpOnly cookie on the API domain — middleware
+  // cannot read it directly, so we use this presence flag instead.
+  const authSession = request.cookies.get('auth_session')?.value
 
-  if (!token) {
+  if (!authSession) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)

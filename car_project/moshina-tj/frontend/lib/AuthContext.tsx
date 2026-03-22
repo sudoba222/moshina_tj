@@ -51,11 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(freshUser)
       setToken('cookie') // sentinel — real auth is via HttpOnly cookie
       localStorage.setItem('user', JSON.stringify(freshUser))
+      document.cookie = 'auth_session=1; path=/; max-age=604800; samesite=lax'
     }).catch(() => {
       setInMemoryToken(null)
       setToken(null)
       setUser(null)
       localStorage.removeItem('user')
+      document.cookie = 'auth_session=; path=/; max-age=0; samesite=lax'
     })
   }, [])
 
@@ -67,6 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Cache non-sensitive user object for instant UI render on next load
     localStorage.setItem('user', JSON.stringify(userData))
     setUser(userData)
+    // Set a non-HttpOnly flag cookie so Next.js middleware can detect auth state.
+    // This does NOT contain the JWT — it's just a session presence flag.
+    document.cookie = 'auth_session=1; path=/; max-age=604800; samesite=lax'
   }
 
   function logout() {
@@ -75,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     setUser(null)
     localStorage.removeItem('user')
+    document.cookie = 'auth_session=; path=/; max-age=0; samesite=lax'
   }
 
   function updateUser(userData: User) {
