@@ -10,14 +10,30 @@ import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { Listing } from '@/types'
 
-const CITIES = [
-  'Душанбе', 'Хуҷанд', 'Бохтар', 'Кӯлоб', 'Истаравшан',
-  'Пенджикент', 'Вахш', 'Хорог', 'Турсунзода', 'Нораком',
+const CITIES_OPTIONS = [
+  { value: 'Душанбе',    labelKey: 'options.cityDushanbe' },
+  { value: 'Хуҷанд',     labelKey: 'options.cityKhujand' },
+  { value: 'Бохтар',     labelKey: 'options.cityBokhtar' },
+  { value: 'Кӯлоб',      labelKey: 'options.cityCulob' },
+  { value: 'Истаравшан', labelKey: 'options.cityIstaravshan' },
+  { value: 'Пенджикент', labelKey: 'options.cityPenjikent' },
+  { value: 'Вахш',       labelKey: 'options.cityVakhsh' },
+  { value: 'Хорог',      labelKey: 'options.cityKhorog' },
+  { value: 'Турсунзода', labelKey: 'options.cityTursunzoda' },
+  { value: 'Нораком',    labelKey: 'options.cityNorak' },
 ]
-
-
-const FUELS = ['Бензин', 'Дизель', 'Газ', 'Электро', 'Гибрид']
-const TRANSMISSIONS = ['Автомат', 'Механика', 'Вариатор']
+const FUELS_OPTIONS = [
+  { value: 'Бензин',  labelKey: 'options.fuelBenzin' },
+  { value: 'Дизель',  labelKey: 'options.fuelDiesel' },
+  { value: 'Газ',     labelKey: 'options.fuelGas' },
+  { value: 'Электро', labelKey: 'options.fuelElectric' },
+  { value: 'Гибрид',  labelKey: 'options.fuelHybrid' },
+]
+const TRANSMISSIONS_OPTIONS = [
+  { value: 'Автомат',  labelKey: 'options.transAutomatic' },
+  { value: 'Механика', labelKey: 'options.transMechanical' },
+  { value: 'Вариатор', labelKey: 'options.transCvt' },
+]
 const COLORS = [
   { label: 'Белый',    value: 'Белый',     swatch: '#f5f5f5' },
   { label: 'Чёрный',   value: 'Черный',    swatch: '#1a1a1a' },
@@ -253,7 +269,7 @@ function CatalogContent() {
                   fontWeight: 600,
                   cursor: 'pointer',
                   background: type === v ? 'var(--accent)' : 'var(--surface)',
-                  color: type === v ? '#fff' : 'var(--text-muted)',
+                  color: type === v ? 'var(--color-white)' : 'var(--text-muted)',
                   border: type === v ? '1px solid var(--accent)' : '1px solid var(--border)',
                   transition: 'all 0.15s',
                 }}
@@ -363,28 +379,28 @@ function CatalogContent() {
                 fontWeight: 600,
                 cursor: 'pointer',
                 background: fuel === '' ? 'var(--accent)' : 'var(--surface)',
-                color: fuel === '' ? '#fff' : 'var(--text-muted)',
+                color: fuel === '' ? 'var(--color-white)' : 'var(--text-muted)',
                 border: fuel === '' ? '1px solid var(--accent)' : '1px solid var(--border)',
               }}
             >
               {t('filters.all', lang)}
             </button>
-            {FUELS.map((f) => (
+            {FUELS_OPTIONS.map((f) => (
               <button
-                key={f}
-                onClick={() => setFuel(f === fuel ? '' : f)}
+                key={f.value}
+                onClick={() => setFuel(f.value === fuel ? '' : f.value)}
                 style={{
                   padding: '4px 9px',
                   borderRadius: '20px',
                   fontSize: '11px',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  background: fuel === f ? 'var(--accent)' : 'var(--surface)',
-                  color: fuel === f ? '#fff' : 'var(--text-muted)',
-                  border: fuel === f ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  background: fuel === f.value ? 'var(--accent)' : 'var(--surface)',
+                  color: fuel === f.value ? 'var(--color-white)' : 'var(--text-muted)',
+                  border: fuel === f.value ? '1px solid var(--accent)' : '1px solid var(--border)',
                 }}
               >
-                {f}
+                {t(f.labelKey, lang)}
               </button>
             ))}
           </div>
@@ -403,28 +419,28 @@ function CatalogContent() {
                 fontWeight: 600,
                 cursor: 'pointer',
                 background: transmission === '' ? 'var(--accent)' : 'var(--surface)',
-                color: transmission === '' ? '#fff' : 'var(--text-muted)',
+                color: transmission === '' ? 'var(--color-white)' : 'var(--text-muted)',
                 border: transmission === '' ? '1px solid var(--accent)' : '1px solid var(--border)',
               }}
             >
               {t('filters.all', lang)}
             </button>
-            {TRANSMISSIONS.map((tr) => (
+            {TRANSMISSIONS_OPTIONS.map((tr) => (
               <button
-                key={tr}
-                onClick={() => setTransmission(tr === transmission ? '' : tr)}
+                key={tr.value}
+                onClick={() => setTransmission(tr.value === transmission ? '' : tr.value)}
                 style={{
                   padding: '4px 9px',
                   borderRadius: '20px',
                   fontSize: '11px',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  background: transmission === tr ? 'var(--accent)' : 'var(--surface)',
-                  color: transmission === tr ? '#fff' : 'var(--text-muted)',
-                  border: transmission === tr ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  background: transmission === tr.value ? 'var(--accent)' : 'var(--surface)',
+                  color: transmission === tr.value ? 'var(--color-white)' : 'var(--text-muted)',
+                  border: transmission === tr.value ? '1px solid var(--accent)' : '1px solid var(--border)',
                 }}
               >
-                {tr}
+                {t(tr.labelKey, lang)}
               </button>
             ))}
           </div>
@@ -463,7 +479,7 @@ function CatalogContent() {
           <label htmlFor="filter-city" style={labelStyle}>{t('catalog.city', lang)}</label>
           <select id="filter-city" value={city} onChange={(e) => setCity(e.target.value)} style={inputStyle}>
             <option value="">{t('catalog.allCities', lang)}</option>
-            {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CITIES_OPTIONS.map((c) => <option key={c.value} value={c.value}>{t(c.labelKey, lang)}</option>)}
           </select>
         </div>
 
@@ -496,7 +512,7 @@ function CatalogContent() {
             style={{
               flex: 1,
               background: 'var(--accent)',
-              color: '#fff',
+              color: 'var(--color-white)',
               fontWeight: 700,
               fontSize: '13px',
               padding: '9px',
@@ -567,7 +583,7 @@ function CatalogContent() {
               {activeFilterCount > 0 && (
                 <span style={{
                   background: 'var(--accent)',
-                  color: '#fff',
+                  color: 'var(--color-white)',
                   borderRadius: '10px',
                   padding: '0 6px',
                   fontSize: '11px',
@@ -713,7 +729,7 @@ function CatalogContent() {
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.background = 'var(--accent)'
-                          e.currentTarget.style.color = '#fff'
+                          e.currentTarget.style.color = 'var(--color-white)'
                           e.currentTarget.style.transform = 'translateY(-1px)'
                         }}
                         onMouseLeave={(e) => {

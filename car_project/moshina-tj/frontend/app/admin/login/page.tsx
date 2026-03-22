@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/AuthContext'
+import { useLang } from '@/lib/LanguageContext'
+import { t } from '@/lib/i18n'
 import { authApi } from '@/lib/api'
 import type { UserRole } from '@/types'
 
@@ -19,7 +21,7 @@ const ROLE_REDIRECT: Record<string, string> = {
 function extractApiError(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { detail?: unknown; message?: string; error?: string } } })?.response?.data
   const status = (err as { response?: { status?: number } })?.response?.status
-  if (status === 429) return 'Слишком много попыток. Попробуйте через 15 минут.'
+  if (status === 429) return fallback
   if (!data) return fallback
   if (typeof data.detail === 'string') return data.detail
   if (Array.isArray(data.detail) && data.detail.length > 0) {
@@ -31,7 +33,7 @@ function extractApiError(err: unknown, fallback: string): string {
 
 function ShieldIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c83808" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
   )
@@ -40,7 +42,7 @@ function ShieldIcon() {
 function EyeIcon({ visible }: { visible: boolean }) {
   if (visible) {
     return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b949e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
         <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
         <line x1="1" y1="1" x2="23" y2="23"/>
@@ -48,7 +50,7 @@ function EyeIcon({ visible }: { visible: boolean }) {
     )
   }
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b949e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
       <circle cx="12" cy="12" r="3"/>
     </svg>
@@ -58,6 +60,7 @@ function EyeIcon({ visible }: { visible: boolean }) {
 export default function AdminLoginPage() {
   const router = useRouter()
   const { login } = useAuth()
+  const { lang } = useLang()
 
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -79,7 +82,7 @@ export default function AdminLoginPage() {
       const { token, user } = res.data.data
 
       if (!ALLOWED_ROLES.includes(user.role)) {
-        setError('Доступ запрещён. Эта страница только для персонала.')
+        setError(t('adminLogin.accessDenied', lang))
         setLoading(false)
         return
       }
@@ -87,10 +90,15 @@ export default function AdminLoginPage() {
       login(token.access_token, user)
       router.push(ROLE_REDIRECT[user.role] ?? '/admin')
     } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
       const noResponse = !(err as { response?: unknown })?.response
-      setError(noResponse
-        ? 'Ошибка соединения. Попробуйте позже.'
-        : extractApiError(err, 'Неверные данные для входа.'))
+      if (status === 429) {
+        setError(t('adminLogin.tooManyAttempts', lang))
+      } else if (noResponse) {
+        setError(t('adminLogin.connectionError', lang))
+      } else {
+        setError(extractApiError(err, t('adminLogin.invalidCredentials', lang)))
+      }
     } finally {
       setLoading(false)
     }
@@ -100,7 +108,7 @@ export default function AdminLoginPage() {
     <div
       style={{
         minHeight: '100vh',
-        background: '#0d1117',
+        background: 'var(--bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -112,8 +120,8 @@ export default function AdminLoginPage() {
         style={{
           width: '100%',
           maxWidth: 420,
-          background: '#161b22',
-          border: '1px solid #30363d',
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
           borderRadius: 16,
           padding: '40px 32px',
         }}
@@ -121,12 +129,12 @@ export default function AdminLoginPage() {
         {/* Logo area */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ marginBottom: 8 }}>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#e6edf3', letterSpacing: '0.02em' }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.02em' }}>
               TajCar.tj
             </span>
           </div>
-          <div style={{ fontSize: 12, color: '#8b949e', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            Панель управления
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            {t('adminLogin.controlPanel', lang)}
           </div>
         </div>
 
@@ -140,11 +148,11 @@ export default function AdminLoginPage() {
               margin: 0,
               fontSize: 22,
               fontWeight: 600,
-              color: '#e6edf3',
+              color: 'var(--text)',
               letterSpacing: '-0.01em',
             }}
           >
-            Вход для персонала
+            {t('adminLogin.staffLogin', lang)}
           </h1>
         </div>
 
@@ -157,35 +165,35 @@ export default function AdminLoginPage() {
               style={{
                 display: 'block',
                 fontSize: 13,
-                color: '#8b949e',
+                color: 'var(--text-muted)',
                 marginBottom: 6,
                 fontWeight: 500,
               }}
             >
-              Телефон или Email
+              {t('adminLogin.identifier', lang)}
             </label>
             <input
               id="identifier"
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Телефон или Email"
+              placeholder={t('adminLogin.identifierPlaceholder', lang)}
               autoComplete="username"
               required
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
-                background: '#0d1117',
-                border: '1px solid #30363d',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
                 borderRadius: 8,
                 padding: '10px 14px',
                 fontSize: 14,
-                color: '#e6edf3',
+                color: 'var(--text)',
                 outline: 'none',
                 transition: 'border-color 0.15s',
               }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#c83808' }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = '#30363d' }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)' }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
             />
           </div>
 
@@ -196,12 +204,12 @@ export default function AdminLoginPage() {
               style={{
                 display: 'block',
                 fontSize: 13,
-                color: '#8b949e',
+                color: 'var(--text-muted)',
                 marginBottom: 6,
                 fontWeight: 500,
               }}
             >
-              Пароль
+              {t('adminLogin.password', lang)}
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -209,28 +217,28 @@ export default function AdminLoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Пароль"
+                placeholder={t('adminLogin.passwordPlaceholder', lang)}
                 autoComplete="current-password"
                 required
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
-                  background: '#0d1117',
-                  border: '1px solid #30363d',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
                   borderRadius: 8,
                   padding: '10px 44px 10px 14px',
                   fontSize: 14,
-                  color: '#e6edf3',
+                  color: 'var(--text)',
                   outline: 'none',
                   transition: 'border-color 0.15s',
                 }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#c83808' }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#30363d' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)' }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                aria-label={showPassword ? t('adminLogin.hidePassword', lang) : t('adminLogin.showPassword', lang)}
                 style={{
                   position: 'absolute',
                   right: 12,
@@ -255,11 +263,11 @@ export default function AdminLoginPage() {
               style={{
                 marginBottom: 20,
                 padding: '10px 14px',
-                background: 'rgba(248, 81, 73, 0.1)',
-                border: '1px solid rgba(248, 81, 73, 0.3)',
+                background: 'var(--color-error-dim)',
+                border: '1px solid var(--color-error)',
                 borderRadius: 8,
                 fontSize: 13,
-                color: '#f85149',
+                color: 'var(--color-error)',
                 lineHeight: 1.5,
               }}
             >
@@ -273,8 +281,8 @@ export default function AdminLoginPage() {
             disabled={loading}
             style={{
               width: '100%',
-              background: loading ? '#8b2b06' : '#c83808',
-              color: '#ffffff',
+              background: loading ? 'var(--accent-hover)' : 'var(--accent)',
+              color: 'var(--color-white)',
               border: 'none',
               borderRadius: 8,
               padding: '11px 0',
@@ -285,13 +293,13 @@ export default function AdminLoginPage() {
               letterSpacing: '0.01em',
             }}
             onMouseEnter={(e) => {
-              if (!loading) e.currentTarget.style.background = '#a82e06'
+              if (!loading) e.currentTarget.style.background = 'var(--accent-hover)'
             }}
             onMouseLeave={(e) => {
-              if (!loading) e.currentTarget.style.background = '#c83808'
+              if (!loading) e.currentTarget.style.background = 'var(--accent)'
             }}
           >
-            {loading ? 'Вход...' : 'Войти'}
+            {loading ? t('adminLogin.submitting', lang) : t('adminLogin.submit', lang)}
           </button>
         </form>
 
@@ -301,21 +309,21 @@ export default function AdminLoginPage() {
             href="/"
             style={{
               fontSize: 13,
-              color: '#8b949e',
+              color: 'var(--text-muted)',
               textDecoration: 'none',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
               transition: 'color 0.15s',
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#e6edf3' }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#8b949e' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text)' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--text-muted)' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"/>
               <polyline points="12 19 5 12 12 5"/>
             </svg>
-            Вернуться на сайт
+            {t('adminLogin.backToSite', lang)}
           </Link>
         </div>
       </div>

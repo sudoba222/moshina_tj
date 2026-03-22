@@ -19,10 +19,10 @@ interface CarCardProps {
 }
 
 const STATUS_STRIPE: Record<string, string> = {
-  pending: '#f59e0b',
-  active: '#22c55e',
-  rejected: '#ef4444',
-  draft: '#6b7280',
+  pending: 'var(--color-warning-alt)',
+  active: 'var(--color-online)',
+  rejected: 'var(--color-error)',
+  draft: 'var(--text-muted)',
 }
 
 const STATUS_I18N_KEY: Record<string, string> = {
@@ -104,7 +104,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
 
 export default function CarCard({ listing, lang, className, moderatorMode = false, initialFavorited, priority = false }: CarCardProps) {
   const primaryImage = listing.images.find((img) => img.is_primary) ?? listing.images[0]
-  const stripeColor = moderatorMode ? (STATUS_STRIPE[listing.status] ?? '#6b7280') : null
+  const stripeColor = moderatorMode ? (STATUS_STRIPE[listing.status] ?? 'var(--text-muted)') : null
   const statusI18nKey = moderatorMode ? (STATUS_I18N_KEY[listing.status] ?? null) : null
   const statusLabel = statusI18nKey ? t(statusI18nKey, lang) : (moderatorMode ? listing.status : null)
   const [imgLoaded, setImgLoaded] = useState(false)
@@ -198,8 +198,8 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
           <div style={{ position: 'absolute', top: '8px', left: '8px', display: 'flex', gap: '4px' }}>
             {listing.type === 'rent' && (
               <span style={{
-                background: 'var(--accent-secondary, #2563eb)',
-                color: '#fff',
+                background: 'var(--color-info)',
+                color: 'var(--color-white)',
                 fontSize: '10px',
                 fontWeight: 700,
                 padding: '2px 7px',
@@ -212,7 +212,7 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
             {listing.installment_available && (
               <span style={{
                 background: 'var(--accent)',
-                color: '#fff',
+                color: 'var(--color-white)',
                 fontSize: '10px',
                 fontWeight: 700,
                 padding: '2px 7px',
@@ -233,7 +233,7 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
             <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
               <span style={{
                 background: stripeColor,
-                color: '#fff',
+                color: 'var(--color-white)',
                 fontSize: '10px',
                 fontWeight: 700,
                 padding: '2px 7px',
@@ -264,7 +264,7 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: favorited ? 'var(--color-error)' : '#fff',
+                color: favorited ? 'var(--color-error)' : 'var(--color-white)',
                 opacity: favLoading ? 0.6 : 1,
                 transition: 'opacity 0.1s ease, transform 0.1s ease',
                 transform: favLoading ? 'scale(0.85)' : 'scale(1)',
@@ -281,7 +281,7 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
             <div style={{ position: 'absolute', bottom: '8px', left: '8px' }}>
               <span style={{
                 background: 'rgba(0,0,0,0.72)',
-                color: '#fff',
+                color: 'var(--color-white)',
                 fontSize: '10px',
                 fontWeight: 700,
                 padding: '2px 7px',

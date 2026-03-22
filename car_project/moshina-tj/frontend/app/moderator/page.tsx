@@ -21,8 +21,22 @@ interface ModeratorStats {
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ALLOWED_ROLES: UserRole[] = ['moderator', 'admin']
 const SESSION_LIMIT = 10
-const FUEL_OPTIONS = ['', 'Бензин', 'Дизель', 'Газ', 'Электро', 'Гибрид']
-const TRANSMISSION_OPTIONS = ['', 'Автомат', 'Механика', 'Вариатор']
+type FuelOption = { value: string; labelKey: string }
+type TransmissionOption = { value: string; labelKey: string }
+const FUEL_OPTIONS: FuelOption[] = [
+  { value: '', labelKey: '' },
+  { value: 'Бензин',  labelKey: 'options.fuelBenzin' },
+  { value: 'Дизель',  labelKey: 'options.fuelDiesel' },
+  { value: 'Газ',     labelKey: 'options.fuelGas' },
+  { value: 'Электро', labelKey: 'options.fuelElectric' },
+  { value: 'Гибрид',  labelKey: 'options.fuelHybrid' },
+]
+const TRANSMISSION_OPTIONS: TransmissionOption[] = [
+  { value: '', labelKey: '' },
+  { value: 'Автомат',  labelKey: 'options.transAutomatic' },
+  { value: 'Механика', labelKey: 'options.transMechanical' },
+  { value: 'Вариатор', labelKey: 'options.transCvt' },
+]
 const CURRENCY_OPTIONS = ['USD', 'TJS']
 
 // ── SVG Icons ─────────────────────────────────────────────────────────────────
@@ -598,7 +612,7 @@ export default function ModeratorPage() {
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => { if (screen !== 'stats') { loadStats(); setScreen('stats') } else setScreen('start') }}
-                style={{ padding: '8px 16px', borderRadius: '8px', background: screen === 'stats' ? 'var(--accent)' : 'var(--card)', color: screen === 'stats' ? '#fff' : 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+                style={{ padding: '8px 16px', borderRadius: '8px', background: screen === 'stats' ? 'var(--accent)' : 'var(--card)', color: screen === 'stats' ? 'var(--color-white)' : 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
               >
                 {t('moderator.stats', lang)}
               </button>
@@ -708,7 +722,7 @@ export default function ModeratorPage() {
               </div>
               <button
                 onClick={handleStartSession}
-                style={{ width: '100%', height: '52px', background: 'var(--color-success)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.02em' }}
+                style={{ width: '100%', height: '52px', background: 'var(--color-success)', color: 'var(--color-white)', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.02em' }}
               >
                 {t('moderator.startSession', lang)}
               </button>
@@ -752,7 +766,7 @@ export default function ModeratorPage() {
 
           <button
             onClick={() => { setScreen('start'); setSession(null); setElapsed(0); setTimerMinutes(null) }}
-            style={{ width: '100%', height: '48px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+            style={{ width: '100%', height: '48px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
           >
             {t('moderator.newSession', lang)}
           </button>
@@ -824,7 +838,7 @@ export default function ModeratorPage() {
             <button
               onClick={handleApprove}
               disabled={!listing || actionLoading}
-              style={{ width: '100%', height: '52px', background: listing && !actionLoading ? 'var(--color-success)' : 'var(--border)', color: listing && !actionLoading ? '#fff' : 'var(--text-muted)', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, cursor: listing && !actionLoading ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px', letterSpacing: '0.02em' }}
+              style={{ width: '100%', height: '52px', background: listing && !actionLoading ? 'var(--color-success)' : 'var(--border)', color: listing && !actionLoading ? 'var(--color-white)' : 'var(--text-muted)', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, cursor: listing && !actionLoading ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px', letterSpacing: '0.02em' }}
             >
               <IconCheck size={18} />
               {t('moderator.approve', lang)}
@@ -859,7 +873,7 @@ export default function ModeratorPage() {
             <button
               onClick={handleReject}
               disabled={!listing || selectedReasons.length === 0 || rejectLoading}
-              style={{ height: '42px', background: selectedReasons.length > 0 && listing ? 'var(--color-error)' : 'var(--surface)', color: selectedReasons.length > 0 && listing ? '#fff' : 'var(--text-muted)', border: `1px solid ${selectedReasons.length > 0 && listing ? 'var(--color-error)' : 'var(--border)'}`, borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: selectedReasons.length > 0 && listing ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              style={{ height: '42px', background: selectedReasons.length > 0 && listing ? 'var(--color-error)' : 'var(--surface)', color: selectedReasons.length > 0 && listing ? 'var(--color-white)' : 'var(--text-muted)', border: `1px solid ${selectedReasons.length > 0 && listing ? 'var(--color-error)' : 'var(--border)'}`, borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: selectedReasons.length > 0 && listing ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
               <IconX size={14} />
               {t('moderator.reject', lang)}
@@ -895,7 +909,7 @@ export default function ModeratorPage() {
                 <button
                   onClick={() => handleSkip(skipReason || undefined)}
                   disabled={skipLoading}
-                  style={{ width: '100%', height: '34px', background: 'var(--color-warning-alt)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ width: '100%', height: '34px', background: 'var(--color-warning-alt)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                 >
                   {t('moderator.confirmSkip', lang)}
                 </button>
@@ -915,7 +929,7 @@ export default function ModeratorPage() {
               <div style={{ color: 'var(--text-muted)' }}><IconCar /></div>
               <div style={{ fontWeight: 600, color: 'var(--text)' }}>{t('moderator.noQueue', lang)}</div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('moderator.noQueueDesc', lang)}</div>
-              <button onClick={handleEndSession} style={{ marginTop: '8px', padding: '10px 20px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+              <button onClick={handleEndSession} style={{ marginTop: '8px', padding: '10px 20px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
                 {t('moderator.endSession', lang)}
               </button>
             </div>
@@ -973,13 +987,13 @@ export default function ModeratorPage() {
                         />
                         {listing.images.length > 1 && (
                           <>
-                            <button onClick={() => setPhotoIdx(p => (p - 1 + listing.images.length) % listing.images.length)} style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <button onClick={() => setPhotoIdx(p => (p - 1 + listing.images.length) % listing.images.length)} style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <IconChevronLeft />
                             </button>
-                            <button onClick={() => setPhotoIdx(p => (p + 1) % listing.images.length)} style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <button onClick={() => setPhotoIdx(p => (p + 1) % listing.images.length)} style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <IconChevronRight />
                             </button>
-                            <div style={{ position: 'absolute', bottom: '6px', right: '8px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px' }}>
+                            <div style={{ position: 'absolute', bottom: '6px', right: '8px', background: 'rgba(0,0,0,0.6)', color: 'var(--color-white)', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px' }}>
                               {photoIdx + 1}/{listing.images.length}
                             </div>
                           </>
@@ -1008,7 +1022,7 @@ export default function ModeratorPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     {/* Price */}
                     <div>
-                      <label style={labelStyle}>{t('catalog.minPrice', lang).replace('Цена от', 'Цена')}</label>
+                      <label style={labelStyle}>{t('options.price', lang)}</label>
                       <input type="number" value={editPrice} onChange={(e) => { setEditPrice(Number(e.target.value)); triggerFieldSave({ price: Number(e.target.value) }) }} style={inputStyle} />
                     </div>
                     {/* Currency */}
@@ -1027,14 +1041,14 @@ export default function ModeratorPage() {
                     <div>
                       <label style={labelStyle}>{t('catalog.fuel', lang)}</label>
                       <select value={editFuel} onChange={(e) => { setEditFuel(e.target.value); triggerFieldSave({ fuel: e.target.value || undefined }) }} style={inputStyle}>
-                        {FUEL_OPTIONS.map(f => <option key={f} value={f}>{f || '—'}</option>)}
+                        {FUEL_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.value ? t(f.labelKey, lang) : '—'}</option>)}
                       </select>
                     </div>
                     {/* Transmission */}
                     <div>
                       <label style={labelStyle}>{t('catalog.transmission', lang)}</label>
                       <select value={editTransmission} onChange={(e) => { setEditTransmission(e.target.value); triggerFieldSave({ transmission: e.target.value || undefined }) }} style={inputStyle}>
-                        {TRANSMISSION_OPTIONS.map(tx => <option key={tx} value={tx}>{tx || '—'}</option>)}
+                        {TRANSMISSION_OPTIONS.map(tx => <option key={tx.value} value={tx.value}>{tx.value ? t(tx.labelKey, lang) : '—'}</option>)}
                       </select>
                     </div>
                     {/* Color */}
@@ -1074,7 +1088,7 @@ export default function ModeratorPage() {
                 <button
                   onClick={handleSaveNote}
                   disabled={noteSaving || !noteText.trim()}
-                  style={{ padding: '6px 16px', background: noteSaved ? 'var(--color-success)' : 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ padding: '6px 16px', background: noteSaved ? 'var(--color-success)' : 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                 >
                   {noteSaved ? t('moderator.noteSaved', lang) : t('moderator.saveNote', lang)}
                 </button>

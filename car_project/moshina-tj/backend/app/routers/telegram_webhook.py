@@ -316,3 +316,140 @@ async def _send_message(
             )
     except Exception:
         logger.exception("Failed to send Telegram message to %s", chat_id)
+
+
+# ---------------------------------------------------------------------------
+# Telegram Mini App / Web App login
+# ---------------------------------------------------------------------------
+
+class WebAppLoginPayload(BaseModel):
+    init_data: str
+
+
+def _validate_telegram_init_data(init_data: str, bot_token: str) -> dict | None:
+    """Validate Telegram WebApp initData HMAC signature.
+
+    Returns the parsed ``user`` dict from initData if the signature is valid,
+    or ``None`` if validation fails.
+
+    Reference: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+    """
+    params = dict(parse_qsl(init_data, keep_blank_values=True))
+    received_hash = params.pop("hash", None)
+    if not received_hash:
+        return None
+
+    # Build the data-check string: sorted key=value pairs joined by newlines
+    data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(params.items()))
+
+    # secret_key = HMAC-SHA256("WebAppData", bot_token)
+    secret_key = hmac.new(
+        b"WebAppData",
+        bot_token.encode(),
+        hashlib.sha256,
+    ).digest()
+
+    # computed = HMAC-SHA256(secret_key, data_check_string)
+    computed = hmac.new(
+        secret_key,
+        data_check_string.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(computed, received_hash):
+        return None
+
+    user_str = params.get("user", "{}")
+    try:
+        return json.loads(user_str)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+
+@router.post("/webapp-login")
+async def webapp_login(payload: WebAppLoginPayload, response: Response) -> dict:
+    """Authenticate a user via Telegram Mini App initData.
+
+    Steps:
+    1. Validate initData HMAC using the bot token.
+    2. Extract the Telegram user ID from initData.
+    3. Look up the User by telegram_chat_id.
+    4. Issue a JWT and set it as an HttpOnly cookie.
+
+    Returns:
+        200 + JWT token if the account is linked.
+        401 if the initData signature is invalid.
+        404 if no account is linked to this Telegram user.
+    """
+    from app.auth import create_access_token
+    from app.config import settings
+
+    bot_token = settings.telegram_bot_token
+    if not bot_token:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Telegram bot not configured",
+        )
+
+    tg_user = _validate_telegram_init_data(payload.init_data, bot_token)
+    if tg_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Telegram initData signature",
+        )
+
+    tg_id = tg_user.get("id")
+    if not tg_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Telegram user ID missing from initData",
+        )
+
+    chat_id_str = str(tg_id)
+
+    db: Session = SessionLocal()
+    try:
+        user = (
+            db.query(User)
+            .filter(
+                User.telegram_chat_id == chat_id_str,
+                User.is_deleted == False,
+            )
+            .first()
+        )
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Account not linked",
+            )
+
+        if user.is_banned:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is suspended",
+            )
+
+        token = create_access_token(
+            {"sub": str(user.id)},
+            token_version=user.token_version,
+        )
+
+        # Set HttpOnly cookie so the frontend JS layer is not required
+        response.set_cookie(
+            key="token",
+            value=token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=60 * 60 * 24 * 7,  # 7 days
+        )
+
+        return {
+            "success": True,
+            "data": {"token": token},
+            "message": "Logged in via Telegram",
+        }
+
+    finally:
+        db.close()

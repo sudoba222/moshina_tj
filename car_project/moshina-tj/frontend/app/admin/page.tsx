@@ -506,7 +506,7 @@ export default function AdminPage() {
       loadUsers(usersPage, usersRole, usersSearch)
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setUserActionError(msg ?? 'Ошибка создания')
+      setUserActionError(msg ?? t('common.errorCreate', lang))
     }
     setUserActionLoading(false)
   }
@@ -525,7 +525,7 @@ export default function AdminPage() {
       loadUsers(usersPage, usersRole, usersSearch)
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setUserActionError(msg ?? 'Ошибка сохранения')
+      setUserActionError(msg ?? t('common.errorSave', lang))
     }
     setUserActionLoading(false)
   }
@@ -572,7 +572,7 @@ export default function AdminPage() {
       loadBrands(brandsPage, brandsSearch)
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setBrandActionError(msg ?? (lang === 'ru' ? 'Ошибка создания' : 'Хатои сохтан'))
+      setBrandActionError(msg ?? t('common.errorCreate', lang))
     }
     setBrandActionLoading(false)
   }
@@ -594,7 +594,7 @@ export default function AdminPage() {
       loadBrands(brandsPage, brandsSearch)
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setBrandActionError(msg ?? (lang === 'ru' ? 'Ошибка сохранения' : 'Хатои нигох доштан'))
+      setBrandActionError(msg ?? t('common.errorSave', lang))
     }
     setBrandActionLoading(false)
   }
@@ -658,7 +658,7 @@ export default function AdminPage() {
       loadCategories()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setCategoryActionError(msg ?? (lang === 'ru' ? 'Ошибка создания' : 'Хатои сохтан'))
+      setCategoryActionError(msg ?? t('common.errorCreate', lang))
     }
     setCategoryActionLoading(false)
   }
@@ -685,7 +685,7 @@ export default function AdminPage() {
       loadCategories()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setCategoryActionError(msg ?? (lang === 'ru' ? 'Ошибка сохранения' : 'Хатои нигох доштан'))
+      setCategoryActionError(msg ?? t('common.errorSave', lang))
     }
     setCategoryActionLoading(false)
   }
@@ -727,7 +727,7 @@ export default function AdminPage() {
       loadBanners()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setBannerActionError(msg ?? 'Ошибка')
+      setBannerActionError(msg ?? t('common.genericError', lang))
     }
     setBannerActionLoading(false)
   }
@@ -861,7 +861,7 @@ export default function AdminPage() {
               {icon}
               {label}
               {id === 'moderation' && stats && stats.pending_listings > 0 && (
-                <span style={{ marginLeft: 'auto', background: 'var(--color-error)', color: '#fff', borderRadius: '100px', fontSize: '10px', fontWeight: 700, padding: '1px 6px', minWidth: '18px', textAlign: 'center' }}>
+                <span style={{ marginLeft: 'auto', background: 'var(--color-error)', color: 'var(--color-white)', borderRadius: '100px', fontSize: '10px', fontWeight: 700, padding: '1px 6px', minWidth: '18px', textAlign: 'center' }}>
                   {stats.pending_listings}
                 </span>
               )}
@@ -981,7 +981,7 @@ export default function AdminPage() {
               <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>{t('admin.users', lang)}</h1>
               <button
                 onClick={() => { setCreateUserOpen(true); setUserActionError('') }}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 {lang === 'ru' ? 'Добавить' : 'Илова'}
@@ -1000,7 +1000,7 @@ export default function AdminPage() {
                   style={{ ...inputStyle, width: '100%', paddingLeft: '32px' }}
                 />
               </div>
-              <button onClick={() => { setUsersPage(1); loadUsers(1, usersRole, usersSearch) }} style={{ padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+              <button onClick={() => { setUsersPage(1); loadUsers(1, usersRole, usersSearch) }} style={{ padding: '8px 16px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
                 {t('admin.searchUsers', lang).split(' ')[0]}
               </button>
             </div>
@@ -1087,7 +1087,7 @@ export default function AdminPage() {
                     <button onClick={() => setBanUserId(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={() => handleBanUser(banUserId)} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                    <button onClick={() => handleBanUser(banUserId)} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)' }}>
                       {t('admin.ban', lang)}
                     </button>
                   </div>
@@ -1107,7 +1107,7 @@ export default function AdminPage() {
                     <button onClick={() => setChangeRoleUserId(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={() => handleChangeRole(changeRoleUserId)} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                    <button onClick={() => handleChangeRole(changeRoleUserId)} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)' }}>
                       {t('dashboard.save', lang)}
                     </button>
                   </div>
@@ -1147,7 +1147,7 @@ export default function AdminPage() {
                     <button onClick={() => setCreateUserOpen(false)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleCreateUser} disabled={userActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff', opacity: userActionLoading ? 0.6 : 1 }}>
+                    <button onClick={handleCreateUser} disabled={userActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', opacity: userActionLoading ? 0.6 : 1 }}>
                       {lang === 'ru' ? 'Создать' : 'Сохтан'}
                     </button>
                   </div>
@@ -1179,7 +1179,7 @@ export default function AdminPage() {
                     <button onClick={() => setEditUserData(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleEditUser} disabled={userActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff', opacity: userActionLoading ? 0.6 : 1 }}>
+                    <button onClick={handleEditUser} disabled={userActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', opacity: userActionLoading ? 0.6 : 1 }}>
                       {t('dashboard.save', lang)}
                     </button>
                   </div>
@@ -1197,7 +1197,7 @@ export default function AdminPage() {
                     <button onClick={() => setDeleteUserId(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleDeleteUser} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                    <button onClick={handleDeleteUser} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)' }}>
                       {lang === 'ru' ? 'Удалить' : 'Ҳазф'}
                     </button>
                   </div>
@@ -1226,7 +1226,7 @@ export default function AdminPage() {
                   style={{ ...inputStyle, width: '100%', paddingLeft: '32px' }}
                 />
               </div>
-              <button onClick={() => { setListingsPage(1); loadListings(1, listingsStatus, listingsSearch) }} style={{ padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+              <button onClick={() => { setListingsPage(1); loadListings(1, listingsStatus, listingsSearch) }} style={{ padding: '8px 16px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
                 {t('admin.searchListings', lang).split(' ')[0]}
               </button>
             </div>
@@ -1330,7 +1330,7 @@ export default function AdminPage() {
                     <button onClick={() => setRejectListingId(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={() => handleRejectListing(rejectListingId)} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                    <button onClick={() => handleRejectListing(rejectListingId)} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)' }}>
                       {t('admin.rejectBtn', lang)}
                     </button>
                   </div>
@@ -1387,7 +1387,7 @@ export default function AdminPage() {
                     <button onClick={() => setEditListingData(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleEditListing} disabled={listingActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff', opacity: listingActionLoading ? 0.6 : 1 }}>
+                    <button onClick={handleEditListing} disabled={listingActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', opacity: listingActionLoading ? 0.6 : 1 }}>
                       {t('dashboard.save', lang)}
                     </button>
                   </div>
@@ -1405,7 +1405,7 @@ export default function AdminPage() {
                     <button onClick={() => setDeleteListingId(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleDeleteListing} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                    <button onClick={handleDeleteListing} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)' }}>
                       {lang === 'ru' ? 'Удалить' : 'Ҳазф'}
                     </button>
                   </div>
@@ -1523,7 +1523,7 @@ export default function AdminPage() {
               </div>
               <Link
                 href="/moderator"
-                style={{ display: 'inline-block', padding: '12px 28px', background: 'var(--accent)', color: '#fff', borderRadius: '10px', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}
+                style={{ display: 'inline-block', padding: '12px 28px', background: 'var(--accent)', color: 'var(--color-white)', borderRadius: '10px', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}
               >
                 {t('admin.goToModerator', lang)}
               </Link>
@@ -1631,7 +1631,7 @@ export default function AdminPage() {
               </h1>
               <button
                 onClick={openCreateBrand}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}
               >
                 <IconPlus />
                 {lang === 'ru' ? 'Добавить марку' : 'Марка илова'}
@@ -1650,7 +1650,7 @@ export default function AdminPage() {
                   style={{ ...inputStyle, width: '100%', paddingLeft: '32px' }}
                 />
               </div>
-              <button onClick={() => { setBrandsPage(1); loadBrands(1, brandsSearch) }} style={{ padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+              <button onClick={() => { setBrandsPage(1); loadBrands(1, brandsSearch) }} style={{ padding: '8px 16px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
                 {lang === 'ru' ? 'Найти' : 'Ёфтан'}
               </button>
             </div>
@@ -1769,7 +1769,7 @@ export default function AdminPage() {
                                         style={{ ...inputStyle, fontSize: '12px', padding: '6px 10px' }}
                                         autoFocus
                                       />
-                                      <button onClick={() => handleAddModel(b.id)} style={{ padding: '6px 12px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>
+                                      <button onClick={() => handleAddModel(b.id)} style={{ padding: '6px 12px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>
                                         {lang === 'ru' ? 'Добавить' : 'Илова'}
                                       </button>
                                       <button onClick={() => { setAddModelBrandId(null); setNewModelName('') }} style={{ padding: '6px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: 'var(--text)' }}>
@@ -1853,7 +1853,7 @@ export default function AdminPage() {
                     <button onClick={() => setCreateBrandOpen(false)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleCreateBrand} disabled={brandActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff', opacity: brandActionLoading ? 0.6 : 1 }}>
+                    <button onClick={handleCreateBrand} disabled={brandActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', opacity: brandActionLoading ? 0.6 : 1 }}>
                       {lang === 'ru' ? 'Создать' : 'Сохтан'}
                     </button>
                   </div>
@@ -1910,7 +1910,7 @@ export default function AdminPage() {
                     <button onClick={() => setEditBrandData(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleUpdateBrand} disabled={brandActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff', opacity: brandActionLoading ? 0.6 : 1 }}>
+                    <button onClick={handleUpdateBrand} disabled={brandActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', opacity: brandActionLoading ? 0.6 : 1 }}>
                       {t('dashboard.save', lang)}
                     </button>
                   </div>
@@ -1932,7 +1932,7 @@ export default function AdminPage() {
                     <button onClick={() => setDeleteBrandId(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleDeleteBrand} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                    <button onClick={handleDeleteBrand} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)' }}>
                       {lang === 'ru' ? 'Удалить' : 'Хазф'}
                     </button>
                   </div>
@@ -1953,7 +1953,7 @@ export default function AdminPage() {
               </h1>
               <button
                 onClick={openCreateCategory}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}
               >
                 <IconPlus />
                 {lang === 'ru' ? 'Добавить категорию' : 'Категория илова'}
@@ -2053,7 +2053,7 @@ export default function AdminPage() {
                   ))}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lang === 'ru' ? 'Порядок' : 'Тартиб'}</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('admin.orderLabel', lang)}</label>
                       <input
                         type="number"
                         value={createCategoryForm.display_order}
@@ -2079,7 +2079,7 @@ export default function AdminPage() {
                     <button onClick={() => setCreateCategoryOpen(false)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleCreateCategory} disabled={categoryActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff', opacity: categoryActionLoading ? 0.6 : 1 }}>
+                    <button onClick={handleCreateCategory} disabled={categoryActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', opacity: categoryActionLoading ? 0.6 : 1 }}>
                       {lang === 'ru' ? 'Создать' : 'Сохтан'}
                     </button>
                   </div>
@@ -2126,7 +2126,7 @@ export default function AdminPage() {
                   ))}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lang === 'ru' ? 'Порядок' : 'Тартиб'}</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('admin.orderLabel', lang)}</label>
                       <input
                         type="number"
                         value={editCategoryData.display_order}
@@ -2162,7 +2162,7 @@ export default function AdminPage() {
                     <button onClick={() => setEditCategoryData(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleUpdateCategory} disabled={categoryActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff', opacity: categoryActionLoading ? 0.6 : 1 }}>
+                    <button onClick={handleUpdateCategory} disabled={categoryActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', opacity: categoryActionLoading ? 0.6 : 1 }}>
                       {t('dashboard.save', lang)}
                     </button>
                   </div>
@@ -2184,7 +2184,7 @@ export default function AdminPage() {
                     <button onClick={() => setDeleteCategoryId(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
-                    <button onClick={handleDeleteCategory} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                    <button onClick={handleDeleteCategory} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)' }}>
                       {lang === 'ru' ? 'Удалить' : 'Хазф'}
                     </button>
                   </div>
@@ -2201,7 +2201,7 @@ export default function AdminPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
               <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>{lang === 'ru' ? 'Баннеры' : 'Баннерҳо'}</h1>
-              <button onClick={() => { setCreateBannerOpen(true); setBannerActionError('') }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>
+              <button onClick={() => { setCreateBannerOpen(true); setBannerActionError('') }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>
                 <IconPlus /> {lang === 'ru' ? 'Добавить баннер' : 'Банер илова'}
               </button>
             </div>
@@ -2282,13 +2282,13 @@ export default function AdminPage() {
                     </div>
                   ))}
                   <div style={{ marginBottom: '14px' }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lang === 'ru' ? 'Порядок' : 'Тартиб'}</label>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('admin.orderLabel', lang)}</label>
                     <input type="number" value={createBannerForm.display_order} onChange={e => setCreateBannerForm(f => ({ ...f, display_order: Number(e.target.value) }))} style={{ ...inputStyle, width: '100%' }} />
                   </div>
                   {bannerActionError && <p style={{ fontSize: '13px', color: 'var(--color-error)', marginBottom: '10px' }}>{bannerActionError}</p>}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={() => setCreateBannerOpen(false)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>{t('dashboard.cancel', lang)}</button>
-                    <button onClick={handleCreateBanner} disabled={bannerActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff', opacity: bannerActionLoading ? 0.6 : 1 }}>{lang === 'ru' ? 'Создать' : 'Сохтан'}</button>
+                    <button onClick={handleCreateBanner} disabled={bannerActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', opacity: bannerActionLoading ? 0.6 : 1 }}>{t('admin.create', lang)}</button>
                   </div>
                 </div>
               </div>
@@ -2323,7 +2323,7 @@ export default function AdminPage() {
                   ))}
                   <div style={{ display: 'flex', gap: '10px', marginBottom: '14px', alignItems: 'center' }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lang === 'ru' ? 'Порядок' : 'Тартиб'}</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('admin.orderLabel', lang)}</label>
                       <input type="number" value={editBannerData.display_order} onChange={e => setEditBannerData(d => d ? { ...d, display_order: Number(e.target.value) } : d)} style={{ ...inputStyle, width: '100%' }} />
                     </div>
                     <div>
@@ -2333,7 +2333,7 @@ export default function AdminPage() {
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={() => setEditBannerData(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>{t('dashboard.cancel', lang)}</button>
-                    <button onClick={handleEditBanner} disabled={bannerActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff', opacity: bannerActionLoading ? 0.6 : 1 }}>{t('dashboard.save', lang)}</button>
+                    <button onClick={handleEditBanner} disabled={bannerActionLoading} style={{ flex: 1, padding: '10px', background: 'var(--accent)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', opacity: bannerActionLoading ? 0.6 : 1 }}>{t('dashboard.save', lang)}</button>
                   </div>
                 </div>
               </div>
@@ -2343,11 +2343,11 @@ export default function AdminPage() {
             {deleteBannerId && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }} onClick={() => setDeleteBannerId(null)}>
                 <div style={{ background: 'var(--card)', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '360px', margin: '16px' }} onClick={e => e.stopPropagation()}>
-                  <h3 style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)', marginBottom: '8px' }}>{lang === 'ru' ? 'Удалить баннер?' : 'Баннерро ҳазф кунед?'}</h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '18px' }}>{lang === 'ru' ? 'Это действие необратимо.' : 'Ин амал баргашт надорад.'}</p>
+                  <h3 style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)', marginBottom: '8px' }}>{t('admin.deleteBanner', lang)}</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '18px' }}>{t('admin.irreversible', lang)}</p>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={() => setDeleteBannerId(null)} style={{ flex: 1, padding: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>{t('dashboard.cancel', lang)}</button>
-                    <button onClick={handleDeleteBanner} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#fff' }}>{lang === 'ru' ? 'Удалить' : 'Ҳазф'}</button>
+                    <button onClick={handleDeleteBanner} style={{ flex: 1, padding: '10px', background: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-white)' }}>{t('admin.deleteBtn2', lang)}</button>
                   </div>
                 </div>
               </div>

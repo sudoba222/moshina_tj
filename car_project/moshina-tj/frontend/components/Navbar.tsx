@@ -122,7 +122,7 @@ export default function Navbar() {
                 height: '40px',
                 padding: '0 18px',
                 background: 'var(--accent)',
-                color: '#fff',
+                color: 'var(--color-white)',
                 fontWeight: 600,
                 fontSize: '14px',
                 border: 'none',
@@ -177,7 +177,7 @@ export default function Navbar() {
                     height: '28px',
                     borderRadius: '6px',
                     background: 'var(--accent)',
-                    color: '#fff',
+                    color: 'var(--color-white)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -295,7 +295,7 @@ export default function Navbar() {
                 height: '36px',
                 padding: '0 14px',
                 background: 'var(--accent)',
-                color: '#fff',
+                color: 'var(--color-white)',
                 fontWeight: 700,
                 fontSize: '13px',
                 borderRadius: '6px',
@@ -425,7 +425,7 @@ export default function Navbar() {
                 placeholder={t('hero.searchPlaceholder', lang)}
                 style={{ flex: 1, height: '44px', minHeight: '44px', padding: '0 12px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRight: 'none', borderRadius: '6px 0 0 6px', fontSize: '14px', color: 'var(--text)', outline: 'none', width: '100%' }}
               />
-              <button type="submit" style={{ height: '44px', minHeight: '44px', padding: '0 14px', background: 'var(--accent)', color: '#fff', fontWeight: 600, border: 'none', borderRadius: '0 6px 6px 0', cursor: 'pointer', fontSize: '13px', flexShrink: 0 }}>
+              <button type="submit" style={{ height: '44px', minHeight: '44px', padding: '0 14px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 600, border: 'none', borderRadius: '0 6px 6px 0', cursor: 'pointer', fontSize: '13px', flexShrink: 0 }}>
                 {t('hero.searchBtn', lang)}
               </button>
             </form>
@@ -461,7 +461,7 @@ export default function Navbar() {
             <Link
               href="/post"
               onClick={() => setMobileOpen(false)}
-              style={{ height: '44px', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              style={{ height: '44px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
               <PlusIcon />
               {t('nav.addListing', lang)}

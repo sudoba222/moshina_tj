@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql import func, or_
@@ -12,6 +12,7 @@ from sqlalchemy.sql import func, or_
 from app.auth import get_current_user
 from app.database import get_db
 from app.models import AuditLog, Currency, Dealer, FuelType, Listing, ListingLog, ListingStatus, TransmissionType, User, UserRole, log_audit
+from app.services.telegram_notifier import send_telegram_notification
 from app.schemas import (
     AdminStats,
     ApiResponse,
@@ -776,7 +777,12 @@ def pending_listings(
 
 
 @router.put("/moderation/{listing_id}/approve", response_model=ApiResponse[ListingResponse])
-def approve_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_moderator)):
+def approve_listing(
+    listing_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_moderator),
+):
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
@@ -806,6 +812,17 @@ def approve_listing(listing_id: str, db: Session = Depends(get_db), current_user
     ))
     db.commit()
     db.refresh(listing)
+
+    # Send Telegram notification if user has linked Telegram
+    if listing.user and listing.user.telegram_chat_id:
+        car_name = f"{listing.brand} {listing.model} {listing.year}"
+        background_tasks.add_task(
+            send_telegram_notification,
+            listing.user_id,
+            "listing_approved",
+            {"car_name": car_name, "listing_id": str(listing.id)},
+        )
+
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing approved")
 
 

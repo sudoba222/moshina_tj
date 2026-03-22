@@ -7,6 +7,7 @@ import {
   KeyboardEvent,
 } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { chatApi } from '@/lib/api'
 import type { ConversationItem, ChatMessage } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
@@ -101,7 +102,7 @@ function Avatar({ name, size = 36 }: AvatarProps) {
         height: size,
         borderRadius: '50%',
         background: avatarColor(name),
-        color: '#fff',
+        color: 'var(--color-white)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -218,7 +219,7 @@ function ConversationList({ conversations, loading, onSelect, lang }: ConvListPr
                   {conv.unread_count > 0 && (
                     <span style={{
                       background: 'var(--accent)',
-                      color: '#fff',
+                      color: 'var(--color-white)',
                       borderRadius: '10px',
                       fontSize: '11px',
                       fontWeight: 700,
@@ -348,10 +349,12 @@ function ChatView({ convId, lang, otherName, listing }: ChatViewProps) {
         >
           {/* Thumbnail */}
           {listing.image_url ? (
-            <img
+            <Image
               src={listing.image_url}
               alt=""
-              style={{ width: 52, height: 40, objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }}
+              width={52}
+              height={40}
+              style={{ objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }}
             />
           ) : (
             <div style={{
@@ -424,7 +427,7 @@ function ChatView({ convId, lang, otherName, listing }: ChatViewProps) {
                 padding: '8px 12px',
                 borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                 background: isMe ? 'var(--accent)' : 'var(--surface)',
-                color: isMe ? '#fff' : 'var(--text)',
+                color: isMe ? 'var(--color-white)' : 'var(--text)',
                 fontSize: '14px',
                 lineHeight: 1.4,
                 wordBreak: 'break-word',
@@ -483,7 +486,7 @@ function ChatView({ convId, lang, otherName, listing }: ChatViewProps) {
             height: '38px',
             borderRadius: '50%',
             background: input.trim() && !sending ? 'var(--accent)' : 'var(--border)',
-            color: input.trim() && !sending ? '#fff' : 'var(--text-muted)',
+            color: input.trim() && !sending ? 'var(--color-white)' : 'var(--text-muted)',
             border: 'none',
             cursor: input.trim() && !sending ? 'pointer' : 'not-allowed',
             display: 'flex',

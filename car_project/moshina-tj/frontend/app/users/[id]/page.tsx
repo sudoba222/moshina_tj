@@ -18,12 +18,12 @@ function formatDate(dateStr: string, lang: 'ru' | 'tj'): string {
 
 function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, { bg: string; text: string }> = {
-    admin:     { bg: 'rgba(220,38,38,0.1)',   text: '#dc2626' },
-    moderator: { bg: 'rgba(124,58,237,0.1)',  text: '#7c3aed' },
-    dealer:    { bg: 'rgba(200,56,8,0.1)',    text: 'var(--accent)' },
-    manager:   { bg: 'rgba(37,99,235,0.1)',   text: '#2563eb' },
-    support:   { bg: 'rgba(5,150,105,0.1)',   text: '#059669' },
-    user:      { bg: 'var(--tag-bg)',          text: 'var(--text-muted)' },
+    admin:     { bg: 'var(--color-error-dim)',   text: 'var(--color-error)' },
+    moderator: { bg: 'var(--accent-dim)',        text: 'var(--accent)' },
+    dealer:    { bg: 'var(--accent-dim)',        text: 'var(--accent)' },
+    manager:   { bg: 'var(--color-info-dim)',    text: 'var(--color-info)' },
+    support:   { bg: 'var(--color-success-dim)', text: 'var(--color-success)' },
+    user:      { bg: 'var(--tag-bg)',            text: 'var(--text-muted)' },
   }
   const c = colors[role] ?? colors.user
   return (
@@ -126,7 +126,7 @@ export default function UserProfilePage() {
               <div style={{
                 width: '80px', height: '80px', borderRadius: '16px',
                 background: profile.avatar_url ? 'var(--border)' : 'var(--accent)',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '32px', fontWeight: 800, flexShrink: 0, overflow: 'hidden',
               }}>
                 {profile.avatar_url ? (
@@ -168,7 +168,7 @@ export default function UserProfilePage() {
                 <a
                   href="/dashboard"
                   style={{
-                    height: '38px', padding: '0 16px', background: 'var(--accent)', color: '#fff',
+                    height: '38px', padding: '0 16px', background: 'var(--accent)', color: 'var(--color-white)',
                     fontWeight: 700, fontSize: '13px', borderRadius: '8px', display: 'inline-flex',
                     alignItems: 'center', gap: '6px', textDecoration: 'none', flexShrink: 0,
                   }}

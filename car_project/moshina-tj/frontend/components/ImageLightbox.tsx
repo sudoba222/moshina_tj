@@ -111,7 +111,7 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
-    color: '#fff',
+    color: 'var(--color-white)',
     zIndex: 1001,
     transition: 'background 0.15s ease',
     flexShrink: 0,
@@ -159,7 +159,7 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          color: '#fff',
+          color: 'var(--color-white)',
           zIndex: 1002,
         }}
       >
@@ -229,7 +229,7 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
             left: '50%',
             transform: 'translateX(-50%)',
             background: 'rgba(0,0,0,0.55)',
-            color: '#fff',
+            color: 'var(--color-white)',
             fontSize: '14px',
             fontWeight: 600,
             padding: '6px 16px',

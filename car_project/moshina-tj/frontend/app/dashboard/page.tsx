@@ -589,7 +589,7 @@ export default function DashboardPage() {
                           onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
                         >
                           {/* Avatar */}
-                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isActive ? 'var(--accent)' : 'var(--surface)', color: isActive ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 800, flexShrink: 0 }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isActive ? 'var(--accent)' : 'var(--surface)', color: isActive ? 'var(--color-white)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 800, flexShrink: 0 }}>
                             {initials}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -598,7 +598,7 @@ export default function DashboardPage() {
                                 {name}
                               </span>
                               {conv.unread_count > 0 && (
-                                <span style={{ minWidth: '18px', height: '18px', background: 'var(--accent)', color: '#fff', fontSize: '10px', fontWeight: 800, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', flexShrink: 0 }}>
+                                <span style={{ minWidth: '18px', height: '18px', background: 'var(--accent)', color: 'var(--color-white)', fontSize: '10px', fontWeight: 800, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', flexShrink: 0 }}>
                                   {conv.unread_count}
                                 </span>
                               )}
@@ -645,7 +645,7 @@ export default function DashboardPage() {
                         : (conv?.other_participant?.name ?? (lang === 'ru' ? 'Пользователь' : 'Корбар'))
                       return (
                         <>
-                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--accent)', color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
                             {name.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -688,7 +688,7 @@ export default function DashboardPage() {
                               borderRadius: isMine ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
                               background: isMine ? 'var(--accent)' : 'var(--surface)',
                               border: isMine ? 'none' : '1px solid var(--border)',
-                              color: isMine ? '#fff' : 'var(--text)',
+                              color: isMine ? 'var(--color-white)' : 'var(--text)',
                             }}>
                               <div style={{ fontSize: '14px', lineHeight: 1.5, wordBreak: 'break-word' }}>
                                 {msg.content}
@@ -741,7 +741,7 @@ export default function DashboardPage() {
                         height: '42px',
                         borderRadius: '10px',
                         background: msgInput.trim() && !sendingMsg ? 'var(--accent)' : 'var(--border)',
-                        color: '#fff',
+                        color: 'var(--color-white)',
                         border: 'none',
                         cursor: !msgInput.trim() || sendingMsg ? 'not-allowed' : 'pointer',
                         display: 'flex',

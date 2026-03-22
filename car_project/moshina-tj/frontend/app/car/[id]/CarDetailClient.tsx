@@ -278,7 +278,7 @@ function ContactModal({
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
           <div style={{
             width: '48px', height: '48px', borderRadius: '12px', background: 'var(--accent)',
-            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '20px', fontWeight: 800, flexShrink: 0,
           }}>
             {(profile.name ?? 'U').charAt(0).toUpperCase()}
@@ -303,7 +303,7 @@ function ContactModal({
                 justifyContent: 'center',
                 gap: '8px',
                 background: 'var(--accent)',
-                color: '#fff',
+                color: 'var(--color-white)',
                 fontWeight: 700,
                 fontSize: '15px',
                 padding: '13px',
@@ -328,8 +328,8 @@ function ContactModal({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  background: '#25D366',
-                  color: '#fff',
+                  background: 'var(--color-whatsapp)',
+                  color: 'var(--color-white)',
                   fontWeight: 700,
                   fontSize: '15px',
                   padding: '13px',
@@ -551,7 +551,7 @@ export default function CarDetailClient() {
                 )}
 
                 {/* Views badge */}
-                <div style={{ position: 'absolute', bottom: '12px', right: '14px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '12px', padding: '4px 10px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ position: 'absolute', bottom: '12px', right: '14px', background: 'rgba(0,0,0,0.6)', color: 'var(--color-white)', fontSize: '12px', padding: '4px 10px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <EyeIcon />
                   {listing.views} {t('carDetail.views', lang)}
                 </div>
@@ -611,8 +611,8 @@ export default function CarDetailClient() {
                 {/* Badges */}
                 <div className="flex gap-2 flex-wrap mb-4">
                   <span style={{
-                    background: listing.type === 'sale' ? 'var(--accent)' : '#2563eb',
-                    color: '#fff', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px', letterSpacing: '0.06em',
+                    background: listing.type === 'sale' ? 'var(--accent)' : 'var(--color-info)',
+                    color: 'var(--color-white)', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px', letterSpacing: '0.06em',
                   }}>
                     {listing.type === 'sale' ? t('badges.sale', lang) : t('badges.rent', lang)}
                   </span>
@@ -644,7 +644,7 @@ export default function CarDetailClient() {
                       justifyContent: 'center',
                       gap: '8px',
                       background: 'var(--accent)',
-                      color: '#fff',
+                      color: 'var(--color-white)',
                       fontWeight: 700,
                       fontSize: '15px',
                       padding: '13px',
@@ -815,7 +815,7 @@ export default function CarDetailClient() {
           bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
           left: 0,
           right: 0,
-          background: 'rgba(var(--card-rgb, 255,255,255), 0.9)',
+          background: 'var(--card)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           borderTop: '1px solid var(--border)',
@@ -836,7 +836,7 @@ export default function CarDetailClient() {
         </div>
         <button
           onClick={() => setContactOpen(true)}
-          style={{ height: '44px', padding: '0 16px', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: '14px', borderRadius: '10px', border: 'none', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
+          style={{ height: '44px', padding: '0 16px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '14px', borderRadius: '10px', border: 'none', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           <PhoneIcon />
           {t('carDetail.call', lang)}

@@ -11,9 +11,29 @@ import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { ListingType, Currency, FuelType, TransmissionType, RentalRules } from '@/types'
 
-const CITIES = ['Душанбе', 'Хуҷанд', 'Бохтар', 'Кӯлоб', 'Истаравшан', 'Пенджикент', 'Вахш', 'Хорог', 'Турсунзода']
-const FUELS: FuelType[] = ['Бензин', 'Дизель', 'Газ', 'Электро', 'Гибрид']
-const TRANSMISSIONS: TransmissionType[] = ['Автомат', 'Механика', 'Вариатор']
+const CITIES_OPTIONS = [
+  { value: 'Душанбе',    labelKey: 'options.cityDushanbe' },
+  { value: 'Хуҷанд',     labelKey: 'options.cityKhujand' },
+  { value: 'Бохтар',     labelKey: 'options.cityBokhtar' },
+  { value: 'Кӯлоб',      labelKey: 'options.cityCulob' },
+  { value: 'Истаравшан', labelKey: 'options.cityIstaravshan' },
+  { value: 'Пенджикент', labelKey: 'options.cityPenjikent' },
+  { value: 'Вахш',       labelKey: 'options.cityVakhsh' },
+  { value: 'Хорог',      labelKey: 'options.cityKhorog' },
+  { value: 'Турсунзода', labelKey: 'options.cityTursunzoda' },
+]
+const FUELS_OPTIONS: { value: FuelType; labelKey: string }[] = [
+  { value: 'Бензин',  labelKey: 'options.fuelBenzin' },
+  { value: 'Дизель',  labelKey: 'options.fuelDiesel' },
+  { value: 'Газ',     labelKey: 'options.fuelGas' },
+  { value: 'Электро', labelKey: 'options.fuelElectric' },
+  { value: 'Гибрид',  labelKey: 'options.fuelHybrid' },
+]
+const TRANSMISSIONS_OPTIONS: { value: TransmissionType; labelKey: string }[] = [
+  { value: 'Автомат',  labelKey: 'options.transAutomatic' },
+  { value: 'Механика', labelKey: 'options.transMechanical' },
+  { value: 'Вариатор', labelKey: 'options.transCvt' },
+]
 
 const DRAFT_KEY = 'post_draft'
 
@@ -94,7 +114,7 @@ function StepIndicator({ step, labels }: { step: number; labels: string[] }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '12px', fontWeight: 800,
                 background: isDone ? 'var(--accent)' : isActive ? 'var(--accent)' : 'var(--surface)',
-                color: isDone || isActive ? '#fff' : 'var(--text-muted)',
+                color: isDone || isActive ? 'var(--color-white)' : 'var(--text-muted)',
                 border: isDone || isActive ? '2px solid var(--accent)' : '2px solid var(--border)',
                 transition: 'all 0.2s',
               }}>
@@ -138,7 +158,7 @@ function ChipPill({ label, selected, onClick }: { label: string; selected: boole
         fontWeight: 600,
         cursor: 'pointer',
         background: selected ? 'var(--accent)' : 'var(--surface)',
-        color: selected ? '#fff' : 'var(--text-muted)',
+        color: selected ? 'var(--color-white)' : 'var(--text-muted)',
         border: selected ? '1px solid var(--accent)' : '1px solid var(--border)',
         transition: 'all 0.15s',
       }}
@@ -484,11 +504,11 @@ function PostPage() {
           <div className="animate-scale-in" style={{ textAlign: 'center', padding: '40px 20px', maxWidth: '460px' }}>
             <div style={{
               width: '64px', height: '64px', borderRadius: '50%',
-              background: 'rgba(22,163,74,0.1)', border: '2px solid #16a34a',
+              background: 'var(--color-success-dim)', border: '2px solid var(--color-success)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 16px',
             }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
@@ -500,8 +520,8 @@ function PostPage() {
             </p>
             {!isEditMode && (
               <div style={{
-                background: 'rgba(234,179,8,0.08)',
-                border: '1px solid rgba(234,179,8,0.35)',
+                background: 'var(--color-warning-dim)',
+                border: '1px solid var(--color-warning)',
                 borderRadius: '12px',
                 padding: '14px 18px',
                 display: 'flex',
@@ -509,7 +529,7 @@ function PostPage() {
                 alignItems: 'flex-start',
                 textAlign: 'left',
               }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="12" />
                   <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -554,8 +574,8 @@ function PostPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              background: 'rgba(37,99,235,0.07)',
-              border: '1px solid rgba(37,99,235,0.25)',
+              background: 'var(--color-info-dim)',
+              border: '1px solid var(--color-info)',
               borderRadius: '12px',
               padding: '12px 16px',
               marginBottom: '20px',
@@ -563,7 +583,7 @@ function PostPage() {
               fontWeight: 600,
               color: 'var(--text)',
             }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-info)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -615,7 +635,7 @@ function PostPage() {
                           flex: 1, padding: '10px', borderRadius: '10px',
                           fontSize: '14px', fontWeight: 700, cursor: 'pointer',
                           background: form.type === v ? 'var(--accent)' : 'var(--surface)',
-                          color: form.type === v ? '#fff' : 'var(--text-muted)',
+                          color: form.type === v ? 'var(--color-white)' : 'var(--text-muted)',
                           border: form.type === v ? '1px solid var(--accent)' : '1px solid var(--border)',
                           transition: 'all 0.15s',
                         }}
@@ -725,12 +745,12 @@ function PostPage() {
                 <div>
                   <label style={labelStyle}>{t('post.fuel', lang)}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {FUELS.map((f) => (
+                    {FUELS_OPTIONS.map((f) => (
                       <ChipPill
-                        key={f}
-                        label={f}
-                        selected={form.fuel === f}
-                        onClick={() => handleField('fuel', form.fuel === f ? '' : f as FuelType)}
+                        key={f.value}
+                        label={t(f.labelKey, lang)}
+                        selected={form.fuel === f.value}
+                        onClick={() => handleField('fuel', form.fuel === f.value ? '' : f.value)}
                       />
                     ))}
                   </div>
@@ -740,12 +760,12 @@ function PostPage() {
                 <div>
                   <label style={labelStyle}>{t('post.transmission', lang)}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {TRANSMISSIONS.map((tr) => (
+                    {TRANSMISSIONS_OPTIONS.map((tr) => (
                       <ChipPill
-                        key={tr}
-                        label={tr}
-                        selected={form.transmission === tr}
-                        onClick={() => handleField('transmission', form.transmission === tr ? '' : tr as TransmissionType)}
+                        key={tr.value}
+                        label={t(tr.labelKey, lang)}
+                        selected={form.transmission === tr.value}
+                        onClick={() => handleField('transmission', form.transmission === tr.value ? '' : tr.value)}
                       />
                     ))}
                   </div>
@@ -785,7 +805,7 @@ function PostPage() {
                         }}
                         onMouseEnter={(e) => {
                           if (!aiLoading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--accent)'
-                          if (!aiLoading) (e.currentTarget as HTMLButtonElement).style.color = '#fff'
+                          if (!aiLoading) (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-white)'
                         }}
                         onMouseLeave={(e) => {
                           (e.currentTarget as HTMLButtonElement).style.background = aiLoading ? 'var(--surface)' : 'var(--accent-dim)'
@@ -878,7 +898,7 @@ function PostPage() {
                         <div key={`existing-${i}`} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                           <Image src={src} alt={`Image ${i + 1}`} fill sizes="120px" style={{ objectFit: 'cover' }} />
                           {i === 0 && existingImageUrls.length + imagePreviews.length > 0 && (
-                            <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'var(--accent)', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>
+                            <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'var(--accent)', color: 'var(--color-white)', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>
                               {t('post.cover_photo', lang)}
                             </div>
                           )}
@@ -886,7 +906,7 @@ function PostPage() {
                             type="button"
                             onClick={() => removeExistingImage(i)}
                             aria-label={`Remove image ${i + 1}`}
-                            style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.65)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
                             <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="1" y1="1" x2="7" y2="7" /><line x1="7" y1="1" x2="1" y2="7" /></svg>
                           </button>
@@ -898,7 +918,7 @@ function PostPage() {
                           <div key={`new-${i}`} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
                             <Image src={src} alt={`New image ${i + 1}`} fill sizes="120px" style={{ objectFit: 'cover' }} />
                             {globalIdx === 0 && (
-                              <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'var(--accent)', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>
+                              <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'var(--accent)', color: 'var(--color-white)', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>
                                 {t('post.cover_photo', lang)}
                               </div>
                             )}
@@ -906,7 +926,7 @@ function PostPage() {
                               type="button"
                               onClick={() => removeNewImage(i)}
                               aria-label={`Remove new image ${i + 1}`}
-                              style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.65)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             >
                               <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="1" y1="1" x2="7" y2="7" /><line x1="7" y1="1" x2="1" y2="7" /></svg>
                             </button>
@@ -945,7 +965,7 @@ function PostPage() {
                             padding: '11px 14px', borderRadius: '10px', fontWeight: 700,
                             fontSize: '14px', cursor: 'pointer', flexShrink: 0,
                             background: form.currency === c ? 'var(--accent)' : 'var(--surface)',
-                            color: form.currency === c ? '#fff' : 'var(--text-muted)',
+                            color: form.currency === c ? 'var(--color-white)' : 'var(--text-muted)',
                             border: form.currency === c ? '1px solid var(--accent)' : '1px solid var(--border)',
                             transition: 'all 0.15s',
                           }}
@@ -961,7 +981,7 @@ function PostPage() {
                     <label htmlFor="city" style={labelStyle}>{t('post.city', lang)} *</label>
                     <select id="city" required value={form.city} onChange={(e) => handleField('city', e.target.value)} style={inputStyle}>
                       <option value="">—</option>
-                      {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      {CITIES_OPTIONS.map((c) => <option key={c.value} value={c.value}>{t(c.labelKey, lang)}</option>)}
                     </select>
                   </div>
 
@@ -1077,7 +1097,7 @@ function PostPage() {
                   style={{
                     flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
                     fontSize: '15px', cursor: 'pointer',
-                    background: 'var(--accent)', color: '#fff',
+                    background: 'var(--accent)', color: 'var(--color-white)',
                     border: '1px solid var(--accent)', transition: 'all 0.15s',
                   }}
                 >
@@ -1091,7 +1111,7 @@ function PostPage() {
                     flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
                     fontSize: '15px', cursor: submitting || uploading ? 'not-allowed' : 'pointer',
                     background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)',
-                    color: '#fff', border: 'none', transition: 'background 0.15s',
+                    color: 'var(--color-white)', border: 'none', transition: 'background 0.15s',
                   }}
                 >
                   {uploading
