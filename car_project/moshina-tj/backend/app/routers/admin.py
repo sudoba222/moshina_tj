@@ -1,11 +1,13 @@
 import math
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from sqlalchemy import cast
+from sqlalchemy.dialects.postgresql import DATE as SADate
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql import func, or_
 
@@ -17,6 +19,7 @@ from app.schemas import (
     AdminStats,
     ApiResponse,
     DealerResponse,
+    GrowthPoint,
     ImageResponse,
     ListingListResponse,
     ListingResponse,
@@ -141,20 +144,63 @@ class AdminEditListingPayload(BaseModel):
 
 @router.get("/stats", response_model=ApiResponse[AdminStats])
 def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    total_users = db.query(User).count()
+    today = date.today()
+
+    total_users = db.query(User).filter(User.is_deleted == False).count()
+    new_users_today = db.query(User).filter(
+        User.is_deleted == False,
+        cast(User.created_at, SADate) == today,
+    ).count()
+
     total_listings = db.query(Listing).count()
     active_listings = db.query(Listing).filter(Listing.status == ListingStatus.active).count()
-    total_dealers = db.query(Dealer).count()
     pending_listings = db.query(Listing).filter(Listing.status == ListingStatus.pending).count()
+    rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.rejected).count()
+
+    total_dealers = db.query(Dealer).count()
+    verified_dealers = db.query(Dealer).filter(Dealer.verified == True).count()
+
+    # Growth series — last 30 days (one row per day, missing days fill to 0)
+    thirty_days_ago = today - timedelta(days=29)
+
+    user_rows = (
+        db.query(cast(User.created_at, SADate).label("day"), func.count().label("cnt"))
+        .filter(User.is_deleted == False, cast(User.created_at, SADate) >= thirty_days_ago)
+        .group_by(cast(User.created_at, SADate))
+        .all()
+    )
+    listing_rows = (
+        db.query(cast(Listing.created_at, SADate).label("day"), func.count().label("cnt"))
+        .filter(cast(Listing.created_at, SADate) >= thirty_days_ago)
+        .group_by(cast(Listing.created_at, SADate))
+        .all()
+    )
+
+    def _fill_series(rows, start: date, end: date) -> list:
+        lookup = {str(r.day): r.cnt for r in rows}
+        result = []
+        current = start
+        while current <= end:
+            result.append({"date": str(current), "count": lookup.get(str(current), 0)})
+            current += timedelta(days=1)
+        return result
+
+    user_growth = [GrowthPoint(**p) for p in _fill_series(user_rows, thirty_days_ago, today)]
+    listing_growth = [GrowthPoint(**p) for p in _fill_series(listing_rows, thirty_days_ago, today)]
 
     return ApiResponse(
         success=True,
         data=AdminStats(
             total_users=total_users,
+            new_users_today=new_users_today,
             total_listings=total_listings,
             active_listings=active_listings,
-            total_dealers=total_dealers,
             pending_listings=pending_listings,
+            rejected_listings=rejected_listings,
+            total_dealers=total_dealers,
+            verified_dealers=verified_dealers,
+            user_growth=user_growth,
+            listing_growth=listing_growth,
         ),
         message="Stats fetched",
     )
@@ -203,7 +249,19 @@ def get_user_detail(user_id: str, db: Session = Depends(get_db), _: User = Depen
         "active": db.query(Listing).filter(Listing.user_id == user_id, Listing.status == ListingStatus.active).count(),
         "pending": db.query(Listing).filter(Listing.user_id == user_id, Listing.status == ListingStatus.pending).count(),
         "rejected": db.query(Listing).filter(Listing.user_id == user_id, Listing.status == ListingStatus.rejected).count(),
+        "total": db.query(Listing).filter(Listing.user_id == user_id).count(),
     }
+
+    # Last 10 listings for CRM preview
+    recent_listings = (
+        db.query(Listing)
+        .options(joinedload(Listing.images))
+        .filter(Listing.user_id == user_id)
+        .order_by(Listing.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
     dealer = db.query(Dealer).filter(Dealer.user_id == user_id).first()
 
     return ApiResponse(
@@ -211,7 +269,13 @@ def get_user_detail(user_id: str, db: Session = Depends(get_db), _: User = Depen
         data={
             "user": UserResponse.model_validate(user).model_dump(),
             "listing_counts": listing_counts,
+            "recent_listings": [ListingResponse.model_validate(l).model_dump() for l in recent_listings],
             "dealer": DealerResponse.model_validate(dealer).model_dump() if dealer else None,
+            # ban_history: ban state is stored per-user (no history table); current ban info below
+            "ban_info": {
+                "is_banned": user.is_banned,
+                "ban_reason": user.ban_reason,
+            },
         },
         message="User detail fetched",
     )
@@ -707,6 +771,58 @@ def admin_delete_listing(
     db.delete(listing)
     db.commit()
     return ApiResponse(success=True, data=None, message="Listing deleted")
+
+
+@router.get("/listings/{listing_id}/logs", response_model=ApiResponse[dict])
+def get_listing_logs(
+    listing_id: str,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Return the full status-change audit trail for a single listing."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    base_query = (
+        db.query(ListingLog)
+        .options(joinedload(ListingLog.actor))
+        .filter(ListingLog.listing_id == listing_id)
+    )
+    total = base_query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    logs = (
+        base_query
+        .order_by(ListingLog.created_at.asc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    items = [
+        {
+            "id": str(log.id),
+            "action": log.action,
+            "from_status": log.from_status,
+            "to_status": log.to_status,
+            "reason": log.reason,
+            "created_at": log.created_at.isoformat() if log.created_at else None,
+            "actor": {
+                "id": str(log.actor.id),
+                "name": log.actor.name,
+                "role": log.actor.role.value,
+            } if log.actor else None,
+        }
+        for log in logs
+    ]
+
+    return ApiResponse(
+        success=True,
+        data={"items": items, "total": total, "page": page, "pages": pages},
+        message="Logs fetched",
+    )
 
 
 # ---------------------------------------------------------------------------

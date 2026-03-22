@@ -270,12 +270,22 @@ class ListingListResponse(BaseModel):
 # Admin schemas
 # ---------------------------------------------------------------------------
 
+class GrowthPoint(BaseModel):
+    date: str
+    count: int
+
+
 class AdminStats(BaseModel):
     total_users: int
+    new_users_today: int
     total_listings: int
     active_listings: int
-    total_dealers: int
     pending_listings: int
+    rejected_listings: int
+    total_dealers: int
+    verified_dealers: int
+    user_growth: list[GrowthPoint]
+    listing_growth: list[GrowthPoint]
 
 
 # ---------------------------------------------------------------------------

@@ -434,7 +434,7 @@ export default function ContentPanel({
             color: 'var(--color-warning-text)',
             marginBottom: '8px',
           }}>
-            {t('moderator.duplicateWarning', lang)} — {similarListings.length} {t('moderator.authorOtherAds', lang)}
+            {t('moderator.duplicateWarning', lang)} — {similarListings.length} {t('mod.similarFound', lang)}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {similarListings.map((sim) => (

@@ -506,6 +506,16 @@ const strings = {
     filters:          { ru: 'Фильтры',               tj: 'Филтрҳо' },
     // Summary screen
     summaryRedirect:  { ru: 'Возврат к панели через 5 с…', tj: 'Бозгашт ба панел баъд аз 5 с…' },
+    // Toast notifications
+    toastApproved:    { ru: 'Одобрено',               tj: 'Тасдиқ шуд' },
+    toastRejected:    { ru: 'Отклонено',              tj: 'Рад шуд' },
+    toastSkipped:     { ru: 'Пропущено',              tj: 'Гузашт' },
+    toastActionFailed:{ ru: 'Ошибка. Повторите.',     tj: 'Хато. Такрор кунед.' },
+    // Empty queue with stats
+    queueEmptyTitle:  { ru: 'Все объявления проверены!', tj: 'Ҳамаи эълонҳо тафтиш шуданд!' },
+    queueEmptyDesc:   { ru: 'Новых объявлений в очереди нет', tj: 'Эълонҳои нав дар навбат нест' },
+    // Duplicate listings
+    similarFound:     { ru: 'похожих активных объявлений', tj: 'эълонҳои фаъоли монанд' },
   },
   adminLogin: {
     controlPanel:    { ru: 'Панель управления',               tj: 'Панели идора' },

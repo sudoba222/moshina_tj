@@ -506,7 +506,7 @@ function ChatView({ convId, lang, otherName, listing }: ChatViewProps) {
 // ─── Main ChatDrawer ──────────────────────────────────────────────────────────
 
 export default function ChatDrawer() {
-  const { isOpen, activeConvId, mode, close, openSupport } = useChatDrawer()
+  const { isOpen, activeConvId, mode, lastCreatedConv, close, openSupport } = useChatDrawer()
   const { user } = useAuth()
   const { onMessage } = useSocket()
   const { lang } = useLang()
@@ -536,6 +536,15 @@ export default function ChatDrawer() {
       .catch(() => {})
       .finally(() => setConvsLoading(false))
   }, [isOpen, user])
+
+  // Prepend lastCreatedConv if it's not already in the list (fixes "Write to Seller" race condition)
+  useEffect(() => {
+    if (!lastCreatedConv) return
+    setConversations((prev) => {
+      if (prev.some((c) => c.id === lastCreatedConv.id)) return prev
+      return [lastCreatedConv, ...prev]
+    })
+  }, [lastCreatedConv])
 
   // Update conversation list last message + unread on incoming socket messages
   useEffect(() => {

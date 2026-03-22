@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import ActionPanel from './ActionPanel'
 import ContentPanel from './ContentPanel'
 import AuthorContext from './AuthorContext'
+import Toast, { type ToastVariant } from './Toast'
 import { IconClock, IconArrowLeft, IconCheck, IconCar } from './icons'
 import { formatElapsed } from './utils'
 import { adminApi } from '@/lib/api'
@@ -21,6 +22,12 @@ interface SessionStats {
   approved: number
   rejected: number
   skipped: number
+}
+
+interface ToastState {
+  id: number
+  message: string
+  variant: ToastVariant
 }
 
 export default function ModerationWorkspace({
@@ -42,9 +49,12 @@ export default function ModerationWorkspace({
     skipped:  initialSession.skipped_count,
   })
 
-  // Timer
-  const [elapsed, setElapsed]       = useState(0)
-  const [timerMinutes]              = useState<number | null>(initialSession.limit > 0 ? null : null)
+  // Timer — computed from session start time so it resumes correctly after refresh
+  const [elapsed, setElapsed]       = useState(() => {
+    const startMs = new Date(initialSession.started_at).getTime()
+    return Math.floor((Date.now() - startMs) / 1000)
+  })
+  const timerMinutes                = initialSession.timer_minutes ?? null
   const timerRef                    = useRef<ReturnType<typeof setInterval> | null>(null)
   const autoEndedRef                = useRef(false)
 
@@ -56,6 +66,15 @@ export default function ModerationWorkspace({
 
   // savedFlash timeout ref
   const savedFlashRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Toast state
+  const [toast, setToast] = useState<ToastState | null>(null)
+  const toastIdRef = useRef(0)
+
+  function showToast(message: string, variant: ToastVariant) {
+    toastIdRef.current += 1
+    setToast({ id: toastIdRef.current, message, variant })
+  }
 
   // ── Start timer ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -69,6 +88,29 @@ export default function ModerationWorkspace({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSession.started_at])
+
+  // ── Auto-end when countdown timer reaches 0 ─────────────────────────────────
+  useEffect(() => {
+    if (timerMinutes === null) return
+    const limitSecs = timerMinutes * 60
+    if (elapsed >= limitSecs && !autoEndedRef.current) {
+      autoEndedRef.current = true
+      if (timerRef.current) clearInterval(timerRef.current)
+      adminApi
+        .endSession(true)
+        .then((res) => onSessionEnd(res.data.data))
+        .catch(() =>
+          onSessionEnd({
+            ...initialSession,
+            is_active: false,
+            approved_count: sessionStats.approved,
+            rejected_count: sessionStats.rejected,
+            skipped_count:  sessionStats.skipped,
+          })
+        )
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsed, timerMinutes])
 
   // ── Prefetch buffer ──────────────────────────────────────────────────────────
   const fetchBuffer = useCallback(async () => {
@@ -112,14 +154,8 @@ export default function ModerationWorkspace({
       const [next, ...rest] = buffer
       setCurrent(next)
       setBuffer(rest)
-      // Refetch buffer if it's getting low
       if (rest.length < 2) {
-        fetchBuffer().then((newItems) => {
-          // fetchBuffer updates the buffer state directly via setBuffer
-          void newItems
-        })
-        // We need to separately handle since fetchBuffer sets buffer state
-        // We already call setBuffer inside fetchBuffer so just trigger it
+        fetchBuffer()
       }
     } else {
       // Buffer empty — try to fetch more
@@ -156,10 +192,13 @@ export default function ModerationWorkspace({
     const id = current.id
     setSessionStats((prev) => ({ ...prev, approved: prev.approved + 1 }))
     advanceToNext()
+    showToast(t('mod.toastApproved', lang), 'approve')
     try {
       await adminApi.approveListing(id)
     } catch {
-      // silent — optimistic; the listing stays claimed
+      // Revert optimistic counter and show error
+      setSessionStats((prev) => ({ ...prev, approved: prev.approved - 1 }))
+      showToast(t('mod.toastActionFailed', lang), 'error')
     } finally {
       actionInFlightRef.current = false
     }
@@ -171,10 +210,12 @@ export default function ModerationWorkspace({
     const id = current.id
     setSessionStats((prev) => ({ ...prev, rejected: prev.rejected + 1 }))
     advanceToNext()
+    showToast(t('mod.toastRejected', lang), 'reject')
     try {
       await adminApi.rejectListing(id, reasons.join('; '))
     } catch {
-      // silent
+      setSessionStats((prev) => ({ ...prev, rejected: prev.rejected - 1 }))
+      showToast(t('mod.toastActionFailed', lang), 'error')
     } finally {
       actionInFlightRef.current = false
     }
@@ -186,10 +227,12 @@ export default function ModerationWorkspace({
     const id = current.id
     setSessionStats((prev) => ({ ...prev, skipped: prev.skipped + 1 }))
     advanceToNext()
+    showToast(t('mod.toastSkipped', lang), 'skip')
     try {
       await adminApi.skipListing(id)
     } catch {
-      // silent
+      setSessionStats((prev) => ({ ...prev, skipped: prev.skipped - 1 }))
+      showToast(t('mod.toastActionFailed', lang), 'error')
     } finally {
       actionInFlightRef.current = false
     }
@@ -230,8 +273,6 @@ export default function ModerationWorkspace({
         case 'r':
         case 'R':
           // R triggers reject — ActionPanel handles enabling only when reasons selected
-          // We can't directly call reject without reasons here; ActionPanel owns that.
-          // This is a no-op shortcut indicator; the user selects reasons first.
           break
         case 's':
         case 'S':
@@ -263,8 +304,8 @@ export default function ModerationWorkspace({
   }, [current, lang])
 
   // ── Timer display ─────────────────────────────────────────────────────────────
-  const timerWarning = timerMinutes != null && elapsed > 0 && (timerMinutes * 60 - elapsed) < 60
-  const timerDisplay = timerMinutes != null
+  const timerWarning = timerMinutes !== null && (timerMinutes * 60 - elapsed) < 60 && elapsed > 0
+  const timerDisplay = timerMinutes !== null
     ? formatElapsed(Math.max(0, timerMinutes * 60 - elapsed))
     : formatElapsed(elapsed)
 
@@ -380,24 +421,65 @@ export default function ModerationWorkspace({
               {t('common.loading', lang)}
             </div>
           ) : !current ? (
+            /* ── Empty queue state (W2) ───────────────────────────────── */
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', height: '100%', gap: '12px', padding: '32px',
+              justifyContent: 'center', height: '100%', gap: '16px', padding: '40px 32px',
             }}>
-              <div style={{ color: 'var(--text-muted)' }}><IconCar size={48} /></div>
-              <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '16px' }}>
-                {t('moderator.noQueue', lang)}
+              {/* Checkmark icon */}
+              <div style={{
+                width: '72px', height: '72px', borderRadius: '50%',
+                background: 'var(--color-success-dim)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--color-success)',
+              }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               </div>
-              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                {t('moderator.noQueueDesc', lang)}
+
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '18px', marginBottom: '6px' }}>
+                  {t('mod.queueEmptyTitle', lang)}
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  {t('mod.queueEmptyDesc', lang)}
+                </div>
               </div>
+
+              {/* Session stats summary */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '10px',
+                width: '100%',
+                maxWidth: '320px',
+              }}>
+                {[
+                  { label: t('moderator.approved', lang), value: sessionStats.approved, color: 'var(--color-success)' },
+                  { label: t('moderator.rejected', lang), value: sessionStats.rejected, color: 'var(--color-error)' },
+                  { label: t('moderator.skipped', lang),  value: sessionStats.skipped,  color: 'var(--text-muted)' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={{
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px',
+                    padding: '14px 8px',
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: '24px', fontWeight: 700, color }}>{value}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
               <button
                 onClick={handleEndSession}
                 style={{
-                  marginTop: '8px', padding: '10px 24px',
+                  padding: '11px 32px',
                   background: 'var(--accent)', color: 'var(--color-white)',
                   border: 'none', borderRadius: '10px', cursor: 'pointer',
-                  fontSize: '13px', fontWeight: 600,
+                  fontSize: '14px', fontWeight: 600,
                 }}
               >
                 {t('moderator.endSession', lang)}
@@ -422,6 +504,16 @@ export default function ModerationWorkspace({
           />
         )}
       </div>
+
+      {/* Toast notification */}
+      {toast && (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          variant={toast.variant}
+          onDismiss={() => setToast(null)}
+        />
+      )}
 
       {/* Responsive mobile overrides */}
       <style>{`

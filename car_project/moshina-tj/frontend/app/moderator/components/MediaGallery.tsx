@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import Image from 'next/image'
 import { IconChevronLeft, IconChevronRight, IconCar } from './icons'
 import type { ListingImage } from '@/types'
@@ -7,6 +8,120 @@ interface MediaGalleryProps {
   images: ListingImage[]
   activeIndex: number
   onNavigate: (index: number) => void
+}
+
+function ImageSlot({ src, alt, priority }: { src: string; alt: string; priority?: boolean }) {
+  const [loaded, setLoaded] = useState(false)
+  const [errored, setErrored] = useState(false)
+
+  return (
+    <>
+      {/* Loading shimmer — hidden once the image loads */}
+      {!loaded && !errored && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'var(--surface)',
+            zIndex: 1,
+          }}
+          className="mod-gallery-shimmer"
+        />
+      )}
+
+      {errored ? (
+        /* Broken image placeholder */
+        <div
+          aria-label="Image failed to load"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-muted)',
+            background: 'var(--surface)',
+            zIndex: 1,
+          }}
+        >
+          <IconCar size={40} />
+        </div>
+      ) : (
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          style={{ objectFit: 'cover', transition: 'transform 0.2s ease', opacity: loaded ? 1 : 0 }}
+          className="mod-gallery-img"
+          priority={priority}
+          onLoad={() => setLoaded(true)}
+          onError={() => { setLoaded(true); setErrored(true) }}
+        />
+      )}
+    </>
+  )
+}
+
+function ThumbnailSlot({ src, isActive, onClick, label }: {
+  src: string
+  isActive: boolean
+  onClick: () => void
+  label: string
+}) {
+  const [loaded, setLoaded] = useState(false)
+  const [errored, setErrored] = useState(false)
+
+  return (
+    <button
+      role="option"
+      aria-selected={isActive}
+      aria-label={label}
+      onClick={onClick}
+      style={{
+        position: 'relative',
+        width: '52px',
+        height: '52px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: `2px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
+        background: 'var(--surface)',
+        cursor: 'pointer',
+        padding: 0,
+        flexShrink: 0,
+      }}
+    >
+      {!loaded && !errored && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'var(--border)',
+          }}
+          className="mod-gallery-shimmer"
+        />
+      )}
+      {errored ? (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--text-muted)',
+        }}>
+          <IconCar size={16} />
+        </div>
+      ) : (
+        <Image
+          src={src}
+          alt=""
+          fill
+          style={{ objectFit: 'cover', opacity: loaded ? 1 : 0 }}
+          onLoad={() => setLoaded(true)}
+          onError={() => { setLoaded(true); setErrored(true) }}
+        />
+      )}
+    </button>
+  )
 }
 
 export default function MediaGallery({ images, activeIndex, onNavigate }: MediaGalleryProps) {
@@ -36,7 +151,7 @@ export default function MediaGallery({ images, activeIndex, onNavigate }: MediaG
 
   return (
     <div>
-      {/* Main image with zoom-on-hover */}
+      {/* Main image */}
       <div
         style={{
           position: 'relative',
@@ -50,12 +165,9 @@ export default function MediaGallery({ images, activeIndex, onNavigate }: MediaG
         }}
         className="mod-gallery-main"
       >
-        <Image
+        <ImageSlot
           src={currentImage.url}
           alt={`Photo ${activeIndex + 1} of ${count}`}
-          fill
-          style={{ objectFit: 'cover', transition: 'transform 0.2s ease' }}
-          className="mod-gallery-img"
           priority={activeIndex === 0}
         />
 
@@ -139,35 +251,29 @@ export default function MediaGallery({ images, activeIndex, onNavigate }: MediaG
           style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}
         >
           {images.map((img, i) => (
-            <button
+            <ThumbnailSlot
               key={img.id}
-              role="option"
-              aria-selected={i === activeIndex}
-              aria-label={`Photo ${i + 1}`}
+              src={img.url}
+              isActive={i === activeIndex}
               onClick={() => onNavigate(i)}
-              style={{
-                position: 'relative',
-                width: '52px',
-                height: '52px',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                border: `2px solid ${i === activeIndex ? 'var(--accent)' : 'var(--border)'}`,
-                background: 'var(--surface)',
-                cursor: 'pointer',
-                padding: 0,
-                flexShrink: 0,
-              }}
-            >
-              <Image src={img.url} alt="" fill style={{ objectFit: 'cover' }} />
-            </button>
+              label={`Photo ${i + 1}`}
+            />
           ))}
         </div>
       )}
 
-      {/* Zoom CSS — injected via style tag to keep component self-contained */}
+      {/* Gallery styles */}
       <style>{`
         .mod-gallery-main:hover .mod-gallery-img {
           transform: scale(1.5);
+        }
+        @keyframes mod-shimmer {
+          0%   { opacity: 0.5; }
+          50%  { opacity: 1; }
+          100% { opacity: 0.5; }
+        }
+        .mod-gallery-shimmer {
+          animation: mod-shimmer 1.4s ease-in-out infinite;
         }
       `}</style>
     </div>

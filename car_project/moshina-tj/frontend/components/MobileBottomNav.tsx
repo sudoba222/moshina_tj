@@ -140,6 +140,10 @@ export default function MobileBottomNav() {
     },
   ]
 
+  // Suppress the global bottom nav on CRM/staff pages that have their own navigation
+  const isCrmRoute = pathname.startsWith('/admin') || pathname.startsWith('/moderator') || pathname.startsWith('/manager') || pathname.startsWith('/support')
+  if (isCrmRoute) return null
+
   return (
     <>
       {/* Bottom nav bar — mobile only */}

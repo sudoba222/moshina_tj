@@ -13,6 +13,9 @@ const PROTECTED_PATHS = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Allow admin login page through without auth check
+  if (pathname === '/admin/login') return NextResponse.next()
+
   const isProtected = PROTECTED_PATHS.some(
     (path) => pathname === path || pathname.startsWith(path + '/')
   )
@@ -25,7 +28,10 @@ export function middleware(request: NextRequest) {
   const authSession = request.cookies.get('auth_session')?.value
 
   if (!authSession) {
-    const loginUrl = new URL('/auth/login', request.url)
+    // Admin/staff routes redirect to the admin login page, not the public login
+    const isAdminRoute = pathname.startsWith('/admin/')
+    const loginPath = isAdminRoute ? '/admin/login' : '/auth/login'
+    const loginUrl = new URL(loginPath, request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
   }

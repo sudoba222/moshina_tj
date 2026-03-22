@@ -131,6 +131,10 @@ export interface AdminStats {
   active_listings: number
   total_dealers: number
   pending_listings: number
+  /** Optional extended fields — present if the backend returns them */
+  rejected_listings?: number
+  total_staff?: number
+  active_users_today?: number
 }
 
 export interface AuditLog {

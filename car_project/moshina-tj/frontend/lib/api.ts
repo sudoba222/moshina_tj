@@ -25,6 +25,7 @@ export interface ModerationSession {
   rejected_count: number
   skipped_count: number
   limit: number
+  timer_minutes: number | null
   is_active: boolean
 }
 

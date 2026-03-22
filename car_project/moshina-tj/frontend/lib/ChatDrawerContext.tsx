@@ -1,6 +1,7 @@
 'use client'
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 import { chatApi } from '@/lib/api'
+import type { ConversationItem } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 
 type DrawerMode = 'chat' | 'support'
@@ -9,6 +10,7 @@ interface ChatDrawerContextValue {
   isOpen: boolean
   activeConvId: string | null
   mode: DrawerMode
+  lastCreatedConv: ConversationItem | null
   openChat: (participantId: string, listingId?: string) => Promise<void>
   openSupport: () => Promise<void>
   openConversation: (convId: string) => void
@@ -19,6 +21,7 @@ const ChatDrawerContext = createContext<ChatDrawerContextValue>({
   isOpen: false,
   activeConvId: null,
   mode: 'chat',
+  lastCreatedConv: null,
   openChat: async () => {},
   openSupport: async () => {},
   openConversation: () => {},
@@ -30,23 +33,19 @@ export function ChatDrawerProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeConvId, setActiveConvId] = useState<string | null>(null)
   const [mode, setMode] = useState<DrawerMode>('chat')
+  const [lastCreatedConv, setLastCreatedConv] = useState<ConversationItem | null>(null)
 
   const openChat = useCallback(async (participantId: string, listingId?: string) => {
     if (!user) return
-    try {
-      const res = await chatApi.createOrGet({
-        participant_id: participantId,
-        listing_id: listingId,
-      })
-      setActiveConvId(res.data.data.id)
-      setMode('chat')
-      setIsOpen(true)
-    } catch {
-      // Open drawer anyway at list view
-      setActiveConvId(null)
-      setMode('chat')
-      setIsOpen(true)
-    }
+    const res = await chatApi.createOrGet({
+      participant_id: participantId,
+      listing_id: listingId,
+    })
+    const conv: ConversationItem = res.data.data
+    setLastCreatedConv(conv)
+    setActiveConvId(conv.id)
+    setMode('chat')
+    setIsOpen(true)
   }, [user])
 
   const openSupport = useCallback(async () => {
@@ -75,7 +74,7 @@ export function ChatDrawerProvider({ children }: { children: ReactNode }) {
 
   return (
     <ChatDrawerContext.Provider
-      value={{ isOpen, activeConvId, mode, openChat, openSupport, openConversation, close }}
+      value={{ isOpen, activeConvId, mode, lastCreatedConv, openChat, openSupport, openConversation, close }}
     >
       {children}
     </ChatDrawerContext.Provider>
