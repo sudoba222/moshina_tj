@@ -97,7 +97,7 @@ export default function Navbar() {
             onSubmit={handleSearch}
             role="search"
             style={{ flex: 1, maxWidth: '580px', display: 'flex' }}
-            className="hidden sm:flex"
+            className="hidden md:flex"
           >
             <input
               type="search"
@@ -137,7 +137,7 @@ export default function Navbar() {
           </form>
 
           {/* Spacer on mobile */}
-          <div className="flex-1 sm:hidden" />
+          <div className="flex-1 md:hidden" />
 
           {/* Right actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -305,7 +305,7 @@ export default function Navbar() {
                 gap: '6px',
                 whiteSpace: 'nowrap',
               }}
-              className="hidden sm:inline-flex"
+              className="hidden md:inline-flex"
             >
               <PlusIcon />
               {t('nav.addListing', lang)}

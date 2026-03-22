@@ -66,6 +66,7 @@ html.dark {
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 body {
@@ -75,6 +76,19 @@ body {
   font-size: 14px;
   line-height: 1.5;
   min-height: 100vh;
+  overflow-x: hidden;
+  /* bottom padding so content never hides behind mobile bottom nav */
+  padding-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  body {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+  /* Push cookie banner above the bottom nav */
+  :root {
+    --bottom-nav-offset: calc(56px + env(safe-area-inset-bottom));
+  }
 }
 
 a {

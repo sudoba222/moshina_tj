@@ -38,10 +38,10 @@ export default function CookieBanner() {
       aria-label="Cookie consent"
       style={{
         position: 'fixed',
-        bottom: 0,
+        bottom: 'var(--bottom-nav-offset, 0px)',
         left: 0,
         right: 0,
-        zIndex: 1000,
+        zIndex: 190,
         background: 'var(--card)',
         borderTop: '1px solid var(--border)',
         boxShadow: 'var(--shadow-md)',
