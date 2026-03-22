@@ -597,51 +597,61 @@ function CatalogContent() {
             </button>
           </div>
 
-          {/* Mobile drawer overlay */}
+          {/* Mobile bottom sheet filter drawer */}
           {drawerOpen && (
             <>
+              {/* Backdrop */}
               <div
                 className="md:hidden"
                 onClick={() => setDrawerOpen(false)}
                 style={{
                   position: 'fixed',
                   inset: 0,
-                  background: 'rgba(0,0,0,0.4)',
+                  background: 'rgba(0,0,0,0.45)',
                   zIndex: 300,
                   animation: 'fadeIn 0.2s ease',
                 }}
               />
+              {/* Bottom sheet panel */}
               <div
-                className="md:hidden animate-slide-right"
+                className="md:hidden"
                 style={{
                   position: 'fixed',
-                  top: 0,
-                  right: 0,
                   bottom: 0,
-                  width: 'min(320px, 90vw)',
+                  left: 0,
+                  right: 0,
                   background: 'var(--bg)',
                   zIndex: 301,
                   overflowY: 'auto',
-                  padding: '16px',
-                  boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
+                  maxHeight: '85dvh',
+                  borderRadius: '20px 20px 0 0',
+                  paddingBottom: 'calc(16px + env(safe-area-inset-bottom))',
+                  boxShadow: '0 -8px 32px rgba(0,0,0,0.16)',
+                  animation: 'sheetSlideUp 0.3s ease',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)' }}>
+                {/* Drag handle */}
+                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '4px' }}>
+                  <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'var(--border-strong)' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px 12px' }}>
+                  <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>
                     {t('catalog.filters', lang)}
                   </span>
                   <button
                     onClick={() => setDrawerOpen(false)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}
                     aria-label="Close filters"
+                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-muted)', padding: '6px', display: 'flex', alignItems: 'center', minWidth: '36px', minHeight: '36px', justifyContent: 'center' }}
                   >
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <line x1="2" y1="2" x2="16" y2="16" />
-                      <line x1="16" y1="2" x2="2" y2="16" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="2" y1="2" x2="14" y2="14" />
+                      <line x1="14" y1="2" x2="2" y2="14" />
                     </svg>
                   </button>
                 </div>
-                {sidebarContent}
+                <div style={{ padding: '0 16px' }}>
+                  {sidebarContent}
+                </div>
               </div>
             </>
           )}
@@ -685,7 +695,7 @@ function CatalogContent() {
               </div>
 
               {loading ? (
-                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                   {Array.from({ length: 9 }).map((_, i) => <CatalogSkeleton key={i} />)}
                 </div>
               ) : listings.length === 0 ? (
@@ -749,7 +759,7 @@ function CatalogContent() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 fade-in">
                     {listings.map((listing, i) => (
                       <CarCard
                         key={listing.id}

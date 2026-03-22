@@ -252,3 +252,40 @@ img { transition: opacity 0.3s ease; }
   to   { opacity: 1; }
 }
 .gallery-img { animation: galleryFade 0.2s ease; }
+
+/* ── Bottom sheet slide-up animation ───────────────────────────────── */
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); opacity: 0.8; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Mobile-specific improvements ──────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Prevent iOS auto-zoom on input focus — minimum 16px */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* CarCard image: 16:9 aspect ratio on mobile */
+  .card-image-wrap {
+    aspect-ratio: 16 / 9;
+  }
+
+  /* Ensure all interactive elements have minimum 44px tap target */
+  button, [role="button"] {
+    min-height: 44px;
+  }
+
+  /* Smooth scrolling for horizontal scroll areas */
+  .scrollbar-hide {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── CarCard image height on desktop (no aspect-ratio override) ─────── */
+@media (min-width: 768px) {
+  .card-image-wrap {
+    height: 180px;
+  }
+}

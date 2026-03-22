@@ -162,8 +162,8 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
           ...(stripeColor ? { borderLeft: `4px solid ${stripeColor}` } : {}),
         }}
       >
-        {/* Image */}
-        <div style={{ position: 'relative', height: '180px', background: 'var(--bg)', overflow: 'hidden' }}>
+        {/* Image — 16:9 aspect ratio on mobile, fixed 180px on larger screens */}
+        <div className="card-image-wrap" style={{ position: 'relative', background: 'var(--bg)', overflow: 'hidden' }}>
           {primaryImage ? (
             <>
               {/* Skeleton shown while image is loading */}
@@ -246,19 +246,19 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
             </div>
           )}
 
-          {/* Favorite button — top-right (hidden in moderator mode where status badge lives there) */}
+          {/* Favorite button — top-right, 44x44 tap target (hidden in moderator mode where status badge lives there) */}
           {!moderatorMode && (
             <button
               onClick={handleFavoriteClick}
               aria-label={favorited ? t('favorites.remove', lang) : t('favorites.add', lang)}
               style={{
                 position: 'absolute',
-                top: '8px',
-                right: '8px',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: 'rgba(0,0,0,0.45)',
+                top: '0',
+                right: '0',
+                width: '44px',
+                height: '44px',
+                borderRadius: '0 0 0 12px',
+                background: 'rgba(0,0,0,0.38)',
                 border: 'none',
                 cursor: 'pointer',
                 display: 'flex',

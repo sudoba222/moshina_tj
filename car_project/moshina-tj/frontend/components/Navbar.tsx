@@ -8,6 +8,7 @@ import { t } from '@/lib/i18n'
 import ThemeToggle from './ThemeToggle'
 import LanguageToggle from './LanguageToggle'
 import NotificationBell from './NotificationBell'
+import BottomNav from './BottomNav'
 import type { UserRole } from '@/types'
 
 const NAV_TABS = [
@@ -342,8 +343,8 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Category tab bar — visible on all screen sizes, scrollable on mobile */}
-      <div style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)' }}>
+      {/* Category tab bar — hidden on mobile (bottom nav handles navigation), visible on md+ */}
+      <div className="hidden md:block" style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)' }}>
         <div className="max-w-7xl mx-auto px-4 md:px-6 scrollbar-hide" style={{ display: 'flex', gap: '0', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           {NAV_TABS.map((tab) => {
             const active = isActive(tab.href)
@@ -482,6 +483,9 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      {/* Fixed bottom navigation — mobile only */}
+      <BottomNav />
     </header>
   )
 }

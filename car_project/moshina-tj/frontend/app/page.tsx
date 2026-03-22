@@ -89,7 +89,8 @@ export default function HomePage() {
                 onClick={() => router.push(`/catalog?brand=${brand}`)}
                 style={{
                   flexShrink: 0,
-                  height: '42px',
+                  height: '48px',
+                  minWidth: '44px',
                   padding: '0 16px',
                   background: 'none',
                   border: 'none',
@@ -208,8 +209,12 @@ export default function HomePage() {
         }
         .listings-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: 1fr;
           gap: 10px;
+        }
+
+        @media (min-width: 480px) {
+          .listings-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         @media (min-width: 640px) {

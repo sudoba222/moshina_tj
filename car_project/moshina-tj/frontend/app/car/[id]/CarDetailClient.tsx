@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -400,6 +400,9 @@ export default function CarDetailClient() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [shareCopied, setShareCopied] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
+  // Swipe tracking for the main gallery on mobile
+  const touchStartX = useRef<number | null>(null)
 
   const fetchSellerData = useCallback(async (userId: string, currentId: string) => {
     try {
@@ -553,13 +556,29 @@ export default function CarDetailClient() {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Left: images + specs */}
             <div style={{ flex: '1 1 60%', minWidth: 0 }}>
-              {/* Main image */}
+              {/* Main image — supports swipe on mobile */}
               <div
-                style={{ position: 'relative', height: 'clamp(220px, 50vw, 400px)', borderRadius: '16px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)', cursor: images ? 'zoom-in' : 'default' }}
+                style={{ position: 'relative', height: 'clamp(220px, 50vw, 400px)', borderRadius: '16px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)', cursor: images ? 'zoom-in' : 'default', touchAction: 'pan-y' }}
                 onClick={() => {
                   if (images) {
                     setLightboxIndex(activeImage)
                     setLightboxOpen(true)
+                  }
+                }}
+                onTouchStart={(e) => {
+                  touchStartX.current = e.touches[0].clientX
+                }}
+                onTouchEnd={(e) => {
+                  if (touchStartX.current === null || !images) return
+                  const dx = e.changedTouches[0].clientX - touchStartX.current
+                  touchStartX.current = null
+                  if (Math.abs(dx) < 40) return
+                  if (dx < 0) {
+                    // swipe left — next
+                    setActiveImage((prev) => (prev + 1) % images.length)
+                  } else {
+                    // swipe right — previous
+                    setActiveImage((prev) => (prev - 1 + images.length) % images.length)
                   }
                 }}
               >
@@ -587,6 +606,27 @@ export default function CarDetailClient() {
                   <EyeIcon />
                   {listing.views} {t('carDetail.views', lang)}
                 </div>
+
+                {/* Image counter dot indicator — mobile only */}
+                {images && images.length > 1 && (
+                  <div
+                    className="md:hidden"
+                    style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px', alignItems: 'center' }}
+                  >
+                    {images.map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: i === activeImage ? '16px' : '6px',
+                          height: '6px',
+                          borderRadius: '3px',
+                          background: i === activeImage ? 'var(--color-white)' : 'rgba(255,255,255,0.45)',
+                          transition: 'width 0.2s ease, background 0.2s ease',
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Thumbnails */}
@@ -624,15 +664,57 @@ export default function CarDetailClient() {
                 <RentalRulesCard rules={listing.rental_rules} lang={lang} />
               )}
 
-              {/* Description */}
+              {/* Description — collapsible on mobile (3-line preview) */}
               {listing.description && (
                 <div style={{ marginTop: '28px' }}>
                   <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px' }}>
                     {t('carDetail.description', lang)}
                   </h3>
-                  <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.7, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
-                    {listing.description}
-                  </p>
+                  <div style={{ position: 'relative', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
+                    <p style={{
+                      fontSize: '15px',
+                      color: 'var(--text-muted)',
+                      lineHeight: 1.7,
+                      overflow: descExpanded ? 'visible' : 'hidden',
+                      display: descExpanded ? 'block' : '-webkit-box',
+                      WebkitLineClamp: descExpanded ? 'unset' : 3,
+                      WebkitBoxOrient: 'vertical',
+                    } as React.CSSProperties}>
+                      {listing.description}
+                    </p>
+                    {listing.description.length > 180 && (
+                      <button
+                        onClick={() => setDescExpanded((v) => !v)}
+                        style={{
+                          marginTop: '8px',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--accent)',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        {descExpanded ? t('carDetail.readLess', lang) : t('carDetail.readMore', lang)}
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          style={{ transition: 'transform 0.2s ease', transform: descExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        >
+                          <path d="M2 4l4 4 4-4" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -874,12 +956,12 @@ export default function CarDetailClient() {
         />
       )}
 
-      {/* Sticky mobile contact bar — hidden on lg */}
+      {/* Sticky mobile contact bar — hidden on lg, sits above the bottom nav */}
       <div
         className="lg:hidden"
         style={{
           position: 'fixed',
-          bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+          bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))',
           left: 0,
           right: 0,
           background: 'var(--card)',
@@ -887,6 +969,7 @@ export default function CarDetailClient() {
           WebkitBackdropFilter: 'blur(12px)',
           borderTop: '1px solid var(--border)',
           padding: '10px 16px',
+          display: 'flex',
           alignItems: 'center',
           gap: '10px',
           zIndex: 150,

@@ -3,6 +3,8 @@ import type { Lang } from '@/types'
 const strings = {
   nav: {
     home:        { ru: 'Главная',        tj: 'Асосӣ' },
+    post:        { ru: 'Продать',        tj: 'Фурӯхтан' },
+    profile:     { ru: 'Профиль',        tj: 'Профил' },
     catalog:     { ru: 'Каталог',        tj: 'Каталог' },
     rent:        { ru: 'Аренда',         tj: 'Иҷора' },
     dealers:     { ru: 'Дилеры',         tj: 'Намоишгоҳ' },
@@ -82,6 +84,8 @@ const strings = {
     related:     { ru: 'Похожие объявления', tj: 'Эълонҳои монанд' },
     sellerListings: { ru: 'Другие объявления продавца', tj: 'Дигар эълонҳои фурӯшанда' },
     km:          { ru: 'км',               tj: 'км' },
+    readMore:    { ru: 'Читать далее',     tj: 'Бештар хонед' },
+    readLess:    { ru: 'Свернуть',         tj: 'Кам кунед' },
     notFound:    { ru: 'Объявление не найдено', tj: 'Эълон ёфт нашуд' },
     call:            { ru: 'Позвонить',             tj: 'Занг задан' },
     whatsapp:        { ru: 'WhatsApp',              tj: 'WhatsApp' },
