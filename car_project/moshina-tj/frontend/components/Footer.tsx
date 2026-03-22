@@ -18,7 +18,7 @@ export default function Footer() {
 
   return (
     <footer style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', marginTop: 'auto' }}>
-      <div className="max-w-7xl mx-auto px-4 md:px-6 footer-inner" style={{ padding: '28px 16px' }}>
+      <div className="max-w-7xl mx-auto px-4 md:px-6 footer-inner" style={{ paddingTop: '28px' }}>
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
 
           {/* Brand */}

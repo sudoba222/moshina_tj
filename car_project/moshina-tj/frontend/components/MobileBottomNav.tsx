@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useLang } from '@/lib/LanguageContext'
@@ -102,6 +102,11 @@ export default function MobileBottomNav() {
   const { dark, toggle: toggleTheme } = useTheme()
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [themeMounted, setThemeMounted] = useState(false)
+
+  useEffect(() => {
+    setThemeMounted(true)
+  }, [])
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
@@ -410,10 +415,16 @@ export default function MobileBottomNav() {
             }}
           >
             <span style={{ fontSize: '14px', fontWeight: 600 }}>
-              {dark ? t('common.lightMode', lang) : t('common.darkMode', lang)}
+              {/* Suppress hydration warning: ThemeProvider reads localStorage in useEffect,
+                  so dark may differ between SSR (false) and first client render. */}
+              {themeMounted
+                ? (dark ? t('common.lightMode', lang) : t('common.darkMode', lang))
+                : t('common.darkMode', lang)}
             </span>
             <span style={{ color: 'var(--text-muted)' }}>
-              {dark ? <SunIcon /> : <MoonIcon />}
+              {themeMounted
+                ? (dark ? <SunIcon /> : <MoonIcon />)
+                : <MoonIcon />}
             </span>
           </button>
 

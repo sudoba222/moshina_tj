@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect } from 'react'
 import { useTheme } from '@/lib/ThemeContext'
 
 function SunIcon() {
@@ -27,6 +28,38 @@ function MoonIcon() {
 
 export default function ThemeToggle() {
   const { dark, toggle } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Render a neutral placeholder before mount to avoid hydration mismatch.
+  // The ThemeProvider reads localStorage/window.matchMedia in useEffect, so
+  // the `dark` value on the first client render may differ from the SSR value (false).
+  if (!mounted) {
+    return (
+      <button
+        aria-label="Toggle theme"
+        disabled
+        style={{
+          background: 'none',
+          border: '1px solid var(--border)',
+          borderRadius: '6px',
+          padding: '6px 8px',
+          cursor: 'pointer',
+          color: 'var(--text)',
+          lineHeight: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'border-color 0.15s ease',
+        }}
+      >
+        <MoonIcon />
+      </button>
+    )
+  }
 
   return (
     <button

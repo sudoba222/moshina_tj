@@ -8,7 +8,6 @@ import { t } from '@/lib/i18n'
 import ThemeToggle from './ThemeToggle'
 import LanguageToggle from './LanguageToggle'
 import NotificationBell from './NotificationBell'
-import BottomNav from './BottomNav'
 import type { UserRole } from '@/types'
 
 const NAV_TABS = [
@@ -484,8 +483,6 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* Fixed bottom navigation — mobile only */}
-      <BottomNav />
     </header>
   )
 }

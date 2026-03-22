@@ -6,6 +6,22 @@ interface PaginationProps {
   onPageChange: (page: number) => void
 }
 
+function ChevronLeft() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10 3L5 8l5 5" />
+    </svg>
+  )
+}
+
+function ChevronRight() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 3l5 5-5 5" />
+    </svg>
+  )
+}
+
 export default function Pagination({ page, pages, onPageChange }: PaginationProps) {
   if (pages <= 1) return null
 
@@ -14,25 +30,36 @@ export default function Pagination({ page, pages, onPageChange }: PaginationProp
   return (
     <nav
       aria-label="Pagination"
-      className="flex items-center justify-center gap-1 flex-wrap"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '4px',
+        flexWrap: 'wrap',
+      }}
     >
+      {/* Previous */}
       <button
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
         aria-label="Previous page"
         style={{
-          padding: '8px 14px',
-          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '36px',
+          height: '36px',
+          borderRadius: '6px',
           border: '1px solid var(--border)',
           background: 'var(--surface)',
           color: page <= 1 ? 'var(--text-muted)' : 'var(--text)',
           cursor: page <= 1 ? 'not-allowed' : 'pointer',
           opacity: page <= 1 ? 0.4 : 1,
-          fontSize: '14px',
-          fontWeight: 600,
+          flexShrink: 0,
+          transition: 'border-color 0.15s, background 0.15s',
         }}
       >
-        ←
+        <ChevronLeft />
       </button>
 
       {visiblePages.map((p, i) =>
@@ -40,12 +67,18 @@ export default function Pagination({ page, pages, onPageChange }: PaginationProp
           <span
             key={`ellipsis-${i}`}
             style={{
-              padding: '8px 6px',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               color: 'var(--text-muted)',
               fontSize: '14px',
+              flexShrink: 0,
+              userSelect: 'none',
             }}
           >
-            …
+            &hellip;
           </span>
         ) : (
           <button
@@ -54,15 +87,20 @@ export default function Pagination({ page, pages, onPageChange }: PaginationProp
             aria-label={`Page ${p}`}
             aria-current={page === p ? 'page' : undefined}
             style={{
-              padding: '8px 13px',
-              borderRadius: '8px',
-              border: page === p ? '1px solid var(--accent)' : '1px solid var(--border)',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '6px',
+              border: page === p ? '1.5px solid var(--accent)' : '1px solid var(--border)',
               background: page === p ? 'var(--accent)' : 'var(--surface)',
-              color: page === p ? '#fff' : 'var(--text)',
+              color: page === p ? 'var(--color-white)' : 'var(--text)',
               cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 600,
-              minWidth: '38px',
+              fontSize: '13px',
+              fontWeight: page === p ? 700 : 500,
+              flexShrink: 0,
+              transition: 'border-color 0.15s, background 0.15s, color 0.15s',
             }}
           >
             {p}
@@ -70,23 +108,28 @@ export default function Pagination({ page, pages, onPageChange }: PaginationProp
         )
       )}
 
+      {/* Next */}
       <button
         onClick={() => onPageChange(page + 1)}
         disabled={page >= pages}
         aria-label="Next page"
         style={{
-          padding: '8px 14px',
-          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '36px',
+          height: '36px',
+          borderRadius: '6px',
           border: '1px solid var(--border)',
           background: 'var(--surface)',
           color: page >= pages ? 'var(--text-muted)' : 'var(--text)',
           cursor: page >= pages ? 'not-allowed' : 'pointer',
           opacity: page >= pages ? 0.4 : 1,
-          fontSize: '14px',
-          fontWeight: 600,
+          flexShrink: 0,
+          transition: 'border-color 0.15s, background 0.15s',
         }}
       >
-        →
+        <ChevronRight />
       </button>
     </nav>
   )

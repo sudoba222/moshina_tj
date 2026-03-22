@@ -133,7 +133,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <AuthProvider>
             <ChatDrawerProvider>
               <SocketProvider>
-                <LanguageProvider>
+                <LanguageProvider initialLang={lang}>
                   {children}
                   <MobileBottomNav />
                   <ChatWidget />
