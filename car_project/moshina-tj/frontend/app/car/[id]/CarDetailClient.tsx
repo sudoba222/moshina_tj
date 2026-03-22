@@ -108,6 +108,15 @@ const ChatIcon = () => (
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 )
+const ShareIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="18" cy="5" r="3" />
+    <circle cx="6" cy="12" r="3" />
+    <circle cx="18" cy="19" r="3" />
+    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+  </svg>
+)
 const HeartIcon = ({ filled }: { filled: boolean }) => (
   <svg
     width="18"
@@ -390,6 +399,7 @@ export default function CarDetailClient() {
   const [chatLoading, setChatLoading] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [shareCopied, setShareCopied] = useState(false)
 
   const fetchSellerData = useCallback(async (userId: string, currentId: string) => {
     try {
@@ -431,6 +441,28 @@ export default function CarDetailClient() {
       // silently ignore
     } finally {
       setFavLoading(false)
+    }
+  }
+
+  async function handleShare() {
+    const url = window.location.href
+    const title = listing
+      ? `${listing.brand} ${listing.model} ${listing.year}`
+      : 'MOSHINA.TJ'
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url })
+      } catch {
+        // user cancelled — ignore
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url)
+        setShareCopied(true)
+        setTimeout(() => setShareCopied(false), 2500)
+      } catch {
+        // clipboard unavailable — silently ignore
+      }
     }
   }
 
@@ -683,6 +715,41 @@ export default function CarDetailClient() {
                   >
                     <HeartIcon filled={favorited} />
                     {favorited ? t('favorites.remove', lang) : t('favorites.add', lang)}
+                  </button>
+
+                  {/* Share */}
+                  <button
+                    onClick={handleShare}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      background: shareCopied ? 'var(--color-success-dim)' : 'var(--surface)',
+                      color: shareCopied ? 'var(--color-success)' : 'var(--text-secondary)',
+                      fontWeight: 700,
+                      fontSize: '15px',
+                      padding: '13px',
+                      borderRadius: '12px',
+                      border: shareCopied ? '1px solid rgba(22,163,74,0.35)' : '1px solid var(--border)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!shareCopied) {
+                        e.currentTarget.style.background = 'var(--card)'
+                        e.currentTarget.style.borderColor = 'var(--border-strong)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!shareCopied) {
+                        e.currentTarget.style.background = 'var(--surface)'
+                        e.currentTarget.style.borderColor = 'var(--border)'
+                      }
+                    }}
+                  >
+                    <ShareIcon />
+                    {shareCopied ? t('share.copied', lang) : t('share.btn', lang)}
                   </button>
 
                   {/* Chat with Seller */}

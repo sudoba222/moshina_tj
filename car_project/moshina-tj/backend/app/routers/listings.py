@@ -5,7 +5,9 @@ import time
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from pydantic import BaseModel
 from sqlalchemy import func, update
 from sqlalchemy.orm import Session, joinedload
@@ -28,6 +30,7 @@ from app.schemas import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/listings", tags=["listings"])
+limiter = Limiter(key_func=get_remote_address)
 
 _MAX_LIMIT = 100
 
@@ -275,7 +278,9 @@ def get_listing(
 
 
 @router.post("", response_model=ApiResponse[ListingResponse], status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/hour")
 def create_listing(
+    request: Request,
     payload: ListingCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -285,6 +290,23 @@ def create_listing(
         current_user.dealer_profile is not None
         and current_user.dealer_profile.verified
     )
+
+    # Per-user listing creation limit
+    if current_user.role not in (UserRole.admin, UserRole.moderator, UserRole.manager, UserRole.support):
+        active_count = (
+            db.query(func.count(Listing.id))
+            .filter(
+                Listing.user_id == current_user.id,
+                Listing.status.in_([ListingStatus.pending, ListingStatus.active])
+            )
+            .scalar()
+        )
+        limit = 50 if is_dealer else 5
+        if active_count >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Listing limit reached ({limit}). Remove or wait for existing listings to be processed.",
+            )
 
     listing = Listing(
         user_id=current_user.id,

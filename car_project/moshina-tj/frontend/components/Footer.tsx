@@ -8,6 +8,9 @@ const FOOTER_LINKS = [
   { href: '/rent',        key: 'footer.rent' },
   { href: '/dealers',     key: 'footer.dealers' },
   { href: '/installment', key: 'footer.installment' },
+  { href: '/about',       key: 'footer.about' },
+  { href: '/terms',       key: 'footer.terms' },
+  { href: '/privacy',     key: 'footer.privacy' },
 ] as const
 
 export default function Footer() {
