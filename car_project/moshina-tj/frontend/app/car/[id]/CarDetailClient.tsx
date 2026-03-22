@@ -956,9 +956,9 @@ export default function CarDetailClient() {
         />
       )}
 
-      {/* Sticky mobile contact bar — hidden on lg, sits above the bottom nav */}
+      {/* Sticky mobile contact bar — hidden on md+, sits above the bottom nav */}
       <div
-        className="lg:hidden"
+        className="md:hidden"
         style={{
           position: 'fixed',
           bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))',
