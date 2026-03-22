@@ -134,6 +134,8 @@ export const authApi = {
       : api.put<ApiResponse<User>>('/auth/profile', data),
   forgotPassword: (identifier: string) =>
     api.post<ApiResponse<{ dev_code?: string }>>('/auth/forgot-password', { identifier }),
+  forgotPasswordTelegram: (identifier: string) =>
+    api.post<ApiResponse<{ available: boolean; dev_code?: string }>>('/auth/forgot-password-telegram', { identifier }),
   resetPassword: (identifier: string, code: string, newPassword: string) =>
     api.post<ApiResponse<null>>('/auth/reset-password', { identifier, code, new_password: newPassword }),
   logout: () =>
@@ -328,6 +330,8 @@ export const adminApi = {
     api.put<ApiResponse<Dealer>>(`/admin/dealers/${dealerId}/verify`),
   unverifyDealer: (dealerId: string) =>
     api.put<ApiResponse<Dealer>>(`/admin/dealers/${dealerId}/unverify`),
+  updateDealer: (dealerId: string, data: { max_ads_allowed?: number }) =>
+    api.patch<ApiResponse<Dealer>>(`/admin/dealers/${dealerId}`, data),
 }
 
 // ─── Chat / Conversations ────────────────────────────────────────────────────
@@ -415,6 +419,8 @@ export interface CarBrand {
 export interface CarModelItem {
   id: string
   name: string
+  brand_id?: string
+  generation_count?: number
 }
 
 export interface CarCategory {
@@ -459,8 +465,15 @@ export const catalogApi = {
     api.put<ApiResponse<CarBrand>>(`/catalog/admin/brands/${id}`, data),
   adminDeleteBrand: (id: string) =>
     api.delete<ApiResponse<null>>(`/catalog/admin/brands/${id}`),
+  adminGetModels: (brandId: string, page = 1, search?: string) =>
+    api.get<ApiResponse<{ items: CarModelItem[]; total: number; page: number; pages: number }>>(
+      `/catalog/admin/brands/${brandId}/models`,
+      { params: { page, search: search || undefined } }
+    ),
   adminAddModel: (brandId: string, name: string) =>
     api.post<ApiResponse<CarModelItem>>(`/catalog/admin/brands/${brandId}/models`, { name }),
+  adminUpdateModel: (brandId: string, modelId: string, name: string) =>
+    api.put<ApiResponse<CarModelItem>>(`/catalog/admin/brands/${brandId}/models/${modelId}`, { name }),
   adminDeleteModel: (brandId: string, modelId: string) =>
     api.delete<ApiResponse<null>>(`/catalog/admin/brands/${brandId}/models/${modelId}`),
 

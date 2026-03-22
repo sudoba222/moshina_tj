@@ -697,6 +697,84 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         return ApiResponse(success=True, data={"dev_code": code} if is_dev else {}, message="Code sent to your phone")
 
 
+@router.post("/forgot-password-telegram", response_model=ApiResponse[dict])
+@limiter.limit("3/hour")
+def forgot_password_telegram(
+    request: Request,
+    payload: ForgotPasswordPayload,
+    db: Session = Depends(get_db),
+):
+    """Send a password-reset OTP via Telegram if user has a linked Telegram account."""
+    import os
+    import httpx as _httpx
+
+    identifier = payload.identifier.strip()
+    is_email = "@" in identifier
+
+    if is_email:
+        user = db.query(User).filter(User.email == identifier, User.is_deleted == False).first()
+    else:
+        user = db.query(User).filter(User.phone == identifier, User.is_deleted == False).first()
+
+    # Return available=False without revealing account existence to unauthenticated callers
+    if not user or not user.telegram_chat_id:
+        return ApiResponse(
+            success=True,
+            data={"available": False},
+            message="No Telegram account linked to this identifier",
+        )
+
+    # Invalidate old reset OTPs for this identifier
+    if is_email:
+        db.query(OtpCode).filter(
+            OtpCode.email == identifier,
+            OtpCode.purpose == "password_reset",
+            OtpCode.is_used == False,
+        ).update({"is_used": True})
+    else:
+        db.query(OtpCode).filter(
+            OtpCode.phone == identifier,
+            OtpCode.purpose == "password_reset",
+            OtpCode.is_used == False,
+        ).update({"is_used": True})
+
+    code = str(secrets.randbelow(900000) + 100000)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    if is_email:
+        db.add(OtpCode(email=identifier, purpose="password_reset", code=code, expires_at=expires_at))
+    else:
+        db.add(OtpCode(phone=identifier, purpose="password_reset", code=code, expires_at=expires_at))
+    db.commit()
+
+    # Send OTP via Telegram Bot API (sync httpx)
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    if bot_token:
+        tg_text = (
+            f"🔐 Ваш код сброса пароля TajCar.tj: *{code}*\n\n"
+            f"Действителен 10 минут.\nНикому не сообщайте этот код."
+        )
+        try:
+            with _httpx.Client(timeout=10) as client:
+                client.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={
+                        "chat_id": user.telegram_chat_id,
+                        "text": tg_text,
+                        "parse_mode": "Markdown",
+                    },
+                )
+        except Exception:
+            logger.exception("Failed to send Telegram reset code to %s", user.telegram_chat_id)
+
+    is_dev = not bot_token and settings.environment != "production"
+    return ApiResponse(
+        success=True,
+        data={"available": True, "dev_code": code if is_dev else None},
+        message="Code sent to your Telegram",
+    )
+
+
 @router.post("/reset-password", response_model=ApiResponse[None])
 @limiter.limit("5/hour")
 def reset_password(request: Request, payload: ResetPasswordPayload, db: Session = Depends(get_db)):

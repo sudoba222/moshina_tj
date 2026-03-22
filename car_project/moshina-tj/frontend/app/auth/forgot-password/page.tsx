@@ -136,6 +136,7 @@ export default function ForgotPasswordPage() {
   const [step1Error, setStep1Error] = useState('')
   const [step1Loading, setStep1Loading] = useState(false)
   const [devCode, setDevCode] = useState<string | null>(null)
+  const [method, setMethod] = useState<'default' | 'telegram'>('default')
 
   // Step 2
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', ''])
@@ -176,7 +177,7 @@ export default function ForgotPasswordPage() {
   const countdownStr = `${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}`
 
   // ── Step 1: send code ───────────────────────────────────────────────────────
-  async function handleSendCode() {
+  async function handleSendCode(via: 'default' | 'telegram' = 'default') {
     setStep1Error('')
     if (!identifier.trim()) {
       setStep1Error(lang === 'ru' ? 'Введите телефон или email' : 'Телефон ё email-ро ворид кунед')
@@ -184,12 +185,26 @@ export default function ForgotPasswordPage() {
     }
     try {
       setStep1Loading(true)
-      const res = await authApi.forgotPassword(identifier.trim())
-      const dc = res.data.data?.dev_code ?? null
-      setDevCode(dc)
-      setDigits(dc ? dc.split('').slice(0, 6) : ['', '', '', '', '', ''])
-      setStep(2)
-      startCountdown()
+      setMethod(via)
+      if (via === 'telegram') {
+        const res = await authApi.forgotPasswordTelegram(identifier.trim())
+        if (!res.data.data?.available) {
+          setStep1Error(lang === 'ru' ? 'Telegram не подключён к этому аккаунту' : 'Telegram ба ин ҳисоб пайваст нест')
+          return
+        }
+        const dc = res.data.data?.dev_code ?? null
+        setDevCode(dc)
+        setDigits(dc ? dc.split('').slice(0, 6) : ['', '', '', '', '', ''])
+        setStep(2)
+        startCountdown()
+      } else {
+        const res = await authApi.forgotPassword(identifier.trim())
+        const dc = res.data.data?.dev_code ?? null
+        setDevCode(dc)
+        setDigits(dc ? dc.split('').slice(0, 6) : ['', '', '', '', '', ''])
+        setStep(2)
+        startCountdown()
+      }
     } catch (err) {
       setStep1Error(extractApiError(err, lang === 'ru' ? 'Ошибка отправки кода' : 'Хатои фиристодани рамз'))
     } finally {
@@ -319,17 +334,47 @@ export default function ForgotPasswordPage() {
                 type="text" autoComplete="username" value={identifier}
                 placeholder={lang === 'ru' ? '+992... или you@example.com' : '+992... ё you@example.com'}
                 onChange={(e) => setIdentifier(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSendCode() }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSendCode('default') }}
                 style={{ ...baseInput, borderColor: step1Error ? '#ef4444' : 'var(--border)' }}
               />
             </div>
             {step1Error && (
               <p role="alert" style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600 }}>{step1Error}</p>
             )}
-            <button type="button" onClick={handleSendCode} disabled={step1Loading} style={btnStyle(step1Loading)}>
-              {step1Loading && <Spinner />}
-              {lang === 'ru' ? 'Отправить код' : 'Рамз фиристед'}
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button type="button" onClick={() => handleSendCode('default')} disabled={step1Loading} style={btnStyle(step1Loading)}>
+                {step1Loading && method !== 'telegram' && <Spinner />}
+                {lang === 'ru' ? 'Отправить код' : 'Рамз фиристед'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendCode('telegram')}
+                disabled={step1Loading}
+                style={{
+                  width: '100%',
+                  background: step1Loading ? 'var(--text-muted)' : 'var(--color-telegram)',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  padding: '13px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  cursor: step1Loading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  opacity: step1Loading ? 0.7 : 1,
+                }}
+              >
+                {step1Loading && method === 'telegram' && <Spinner />}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+                {lang === 'ru' ? 'Получить код в Telegram' : 'Рамз дар Telegram'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -352,7 +397,9 @@ export default function ForgotPasswordPage() {
               {lang === 'ru' ? 'Введите код' : 'Рамзро ворид кунед'}
             </h2>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '28px' }}>
-              {lang === 'ru' ? `Код отправлен на ${identifier}` : `Рамз ба ${identifier} фиристода шуд`}
+              {method === 'telegram'
+                ? (lang === 'ru' ? 'Код отправлен в ваш Telegram' : 'Рамз ба Telegram-и шумо фиристода шуд')
+                : (lang === 'ru' ? `Код отправлен на ${identifier}` : `Рамз ба ${identifier} фиристода шуд`)}
             </p>
 
             <OtpInput value={digits} onChange={setDigits} hasError={!!otpError} />
