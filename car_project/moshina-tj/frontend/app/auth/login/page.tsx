@@ -6,6 +6,7 @@ import { authApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
+import PhoneInput from '@/components/PhoneInput'
 
 // ─── Eye Icon ─────────────────────────────────────────────────────────────────
 function EyeIcon({ open }: { open: boolean }) {
@@ -91,7 +92,7 @@ function LoginPageInner() {
   const { login } = useAuth()
   const { lang } = useLang()
 
-  const [identifier, setIdentifier] = useState('')
+  const [identifier, setIdentifier] = useState('+992')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -116,7 +117,9 @@ function LoginPageInner() {
     e.preventDefault()
     setError('')
 
-    if (!identifier.trim() || !password) {
+    // identifier is a full phone number from PhoneInput (e.g. "+992901234567")
+    const localDigits = identifier.replace(/^\+\d{1,4}/, '')
+    if (!localDigits.trim() || !password) {
       setError(lang === 'ru' ? 'Заполните все поля' : 'Ҳама майдонҳоро пур кунед')
       return
     }
@@ -158,15 +161,14 @@ function LoginPageInner() {
           {/* Identifier */}
           <div>
             <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-              {lang === 'ru' ? 'Телефон или Email' : 'Телефон ё Email'}
+              {t('auth.phone', lang)}
             </label>
-            <input
-              type="text"
-              autoComplete="username"
+            <PhoneInput
               value={identifier}
-              placeholder={lang === 'ru' ? '+992... или you@example.com' : '+992... ё you@example.com'}
-              onChange={(e) => setIdentifier(e.target.value)}
-              style={{ ...baseInput, borderColor: error ? 'var(--color-error)' : 'var(--border)' }}
+              onChange={setIdentifier}
+              placeholder="000 000 0000"
+              hasError={!!error}
+              searchPlaceholder={t('auth.searchCountry', lang)}
             />
           </div>
 

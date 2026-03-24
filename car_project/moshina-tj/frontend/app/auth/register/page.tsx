@@ -6,6 +6,7 @@ import { authApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
+import PhoneInput from '@/components/PhoneInput'
 
 // ─── Error helper ─────────────────────────────────────────────────────────────
 function extractApiError(err: unknown, fallback: string): string {
@@ -136,7 +137,7 @@ function PhoneTab({ lang }: { lang: string }) {
   const { login } = useAuth()
   const [step, setStep] = useState<1 | 2>(1)
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
+  const [phone, setPhone] = useState('+992')
   const [password, setPassword] = useState('')
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', ''])
   const [error, setError] = useState('')
@@ -163,12 +164,14 @@ function PhoneTab({ lang }: { lang: string }) {
     setCountdown(60)
   }
 
-  const fullPhone = `+992${phone.replace(/\D/g, '')}`
+  // phone state now holds the full number e.g. "+992901234567"
+  const fullPhone = phone
 
   async function handleSendOtp() {
     setError('')
     if (!name.trim()) { setError(lang === 'ru' ? 'Введите имя' : 'Номро ворид кунед'); return }
-    if (!phone.trim()) { setError(lang === 'ru' ? 'Введите номер телефона' : 'Рақами телефонро ворид кунед'); return }
+    const localDigits = phone.replace(/^\+\d{1,4}/, '')
+    if (!localDigits.trim()) { setError(lang === 'ru' ? 'Введите номер телефона' : 'Рақами телефонро ворид кунед'); return }
     if (!password.trim()) { setError(lang === 'ru' ? 'Введите пароль' : 'Рамзро ворид кунед'); return }
     if (password.length < 6) { setError(lang === 'ru' ? 'Пароль минимум 6 символов' : 'Рамз бояд ҳадди ақал 6 аломат бошад'); return }
     try {
@@ -185,7 +188,8 @@ function PhoneTab({ lang }: { lang: string }) {
 
   async function handleSendOtpTelegram() {
     setError('')
-    if (!phone.trim()) { setError(lang === 'ru' ? 'Введите номер телефона' : 'Рақами телефонро ворид кунед'); return }
+    const localDigitsTg = phone.replace(/^\+\d{1,4}/, '')
+    if (!localDigitsTg.trim()) { setError(lang === 'ru' ? 'Введите номер телефона' : 'Рақами телефонро ворид кунед'); return }
     try {
       setLoading(true)
       const res = await authApi.sendOtpTelegram(fullPhone)
@@ -241,22 +245,13 @@ function PhoneTab({ lang }: { lang: string }) {
         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
           {lang === 'ru' ? 'Номер телефона' : 'Рақами телефон'}
         </label>
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          border: `1px solid ${error ? 'var(--color-error)' : 'var(--border)'}`,
-          borderRadius: '10px', overflow: 'hidden', background: 'var(--bg)',
-        }}>
-          <span style={{
-            padding: '12px 10px 12px 14px', fontSize: '15px', fontWeight: 600,
-            color: 'var(--text-muted)', borderRight: '1px solid var(--border)',
-            background: 'var(--surface)', flexShrink: 0,
-          }}>+992</span>
-          <input type="tel" inputMode="tel" autoComplete="tel" value={phone}
-            placeholder="000 000 0000"
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSendOtp() }}
-            style={{ ...baseInput, border: 'none', borderRadius: 0, flex: 1, padding: '12px 14px' }} />
-        </div>
+        <PhoneInput
+          value={phone}
+          onChange={setPhone}
+          placeholder="000 000 0000"
+          hasError={!!error}
+          searchPlaceholder={t('auth.searchCountry', lang as import('@/types').Lang)}
+        />
       </div>
       <div>
         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
@@ -306,7 +301,7 @@ function PhoneTab({ lang }: { lang: string }) {
           ? (lang === 'ru'
             ? 'Telegram открыт — бот отправит вам код. Введите его ниже.'
             : 'Telegram кушода шуд — бот рамзро мефиристад. Онро дар поён ворид кунед.')
-          : (lang === 'ru' ? `Код отправлен на +992${phone}` : `Рамз ба +992${phone} фиристода шуд`)
+          : (lang === 'ru' ? `Код отправлен на ${fullPhone}` : `Рамз ба ${fullPhone} фиристода шуд`)
         }
       </p>
 

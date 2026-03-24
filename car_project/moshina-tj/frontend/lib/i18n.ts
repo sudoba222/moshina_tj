@@ -152,6 +152,7 @@ const strings = {
     nameRequired:     { ru: 'Укажите ваше имя',             tj: 'Номатонро нависед' },
     namePlaceholder:  { ru: 'Ваше имя',                     tj: 'Номи шумо' },
     next:             { ru: 'Далее',                        tj: 'Идома' },
+    searchCountry:    { ru: 'Поиск страны...',              tj: 'Ҷустуҷӯи кишвар...' },
   },
   post: {
     title:        { ru: 'Подать объявление',    tj: 'Эълон диҳед' },
