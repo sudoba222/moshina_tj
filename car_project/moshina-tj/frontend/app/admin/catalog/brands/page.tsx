@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Fragment, Suspense, useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { catalogApi } from '@/lib/api'
@@ -215,10 +215,15 @@ function BrandsPageInner() {
             <tbody>
               {loading ? (
                 <LoadingRow colSpan={6} />
+              ) : brands.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ ...tdStyle, textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                    {t('common.noData', lang)}
+                  </td>
+                </tr>
               ) : (
                 brands.map((b) => (
-                  <>
-                    <tr key={b.id}>
+                  <Fragment key={b.id}><tr>
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <button
@@ -257,16 +262,24 @@ function BrandsPageInner() {
                         )}
                       </td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <Link
+                            href={`/admin/catalog/brands/${b.id}/models`}
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
+                          >
+                            {t('admin.viewModels', lang)} <IconChevronRight />
+                          </Link>
                           <button
                             onClick={() => { setEditBrandData({ ...b }); setBrandActionError('') }}
                             style={{ padding: '4px 10px', background: 'var(--tag-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            aria-label={t('admin.editBrand', lang)}
                           >
-                            <IconEdit /> {lang === 'ru' ? 'Изм.' : 'Таҳ.'}
+                            <IconEdit />
                           </button>
                           <button
                             onClick={() => setDeleteBrandId(b.id)}
                             style={{ padding: '4px 8px', background: 'var(--color-error-dim)', color: 'var(--color-error)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center' }}
+                            aria-label={t('admin.deleteBrand', lang)}
                           >
                             <IconX />
                           </button>
@@ -338,7 +351,7 @@ function BrandsPageInner() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))
               )}
             </tbody>

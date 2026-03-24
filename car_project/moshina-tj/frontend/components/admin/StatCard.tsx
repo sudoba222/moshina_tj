@@ -19,7 +19,7 @@ export default function StatCard({ label, value, accentColor, icon, trend, onCli
 
   const formattedValue = typeof value === 'number' ? value.toLocaleString('ru-RU') : value
 
-  const trendPositive = trend && trend.value >= 0
+  const trendPositive: boolean = trend !== undefined && trend.value >= 0
   const trendColor = trendPositive ? 'var(--color-success)' : 'var(--color-error)'
   const trendBg = trendPositive ? 'var(--color-success-dim)' : 'var(--color-error-dim)'
   const trendSign = trend && trend.value > 0 ? '+' : ''
@@ -93,7 +93,7 @@ export default function StatCard({ label, value, accentColor, icon, trend, onCli
               color: trendColor,
             }}
           >
-            <TrendArrow positive={!!trendPositive} />
+            <TrendArrow positive={trendPositive} />
             {trendSign}{trend.value}%
           </span>
         )}

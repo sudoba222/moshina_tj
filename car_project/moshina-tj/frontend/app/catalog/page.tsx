@@ -5,7 +5,8 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import Pagination from '@/components/Pagination'
-import { listingsApi, searchApi, catalogApi, type ListingFilters, type CarBrand } from '@/lib/api'
+import { listingsApi, searchApi, type ListingFilters } from '@/lib/api'
+import { useBrands, useModels } from '@/hooks/useCatalogData'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { Listing } from '@/types'
@@ -84,10 +85,6 @@ function CatalogContent() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [didYouMean, setDidYouMean] = useState<string | null>(null)
 
-  // Dynamic brands + models from API
-  const [brands, setBrands] = useState<CarBrand[]>([])
-  const [catalogModels, setCatalogModels] = useState<{ id: string; name: string }[]>([])
-
   // Filter state
   const [type, setType] = useState<string>(searchParams.get('type') ?? '')
   const [city, setCity] = useState(searchParams.get('city') ?? '')
@@ -108,18 +105,10 @@ function CatalogContent() {
   const activeFilterCount = [type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, color, maxMileage]
     .filter(Boolean).length + (installmentOnly ? 1 : 0)
 
-  // Fetch brands once on mount
-  useEffect(() => {
-    catalogApi.getBrands().then((res) => setBrands(res.data.data)).catch(() => {})
-  }, [])
-
-  // Fetch models when brand changes
-  useEffect(() => {
-    if (!brand) { setCatalogModels([]); return }
-    const brandObj = brands.find((b) => b.name === brand)
-    if (!brandObj) { setCatalogModels([]); return }
-    catalogApi.getModels(brandObj.id).then((res) => setCatalogModels(res.data.data)).catch(() => setCatalogModels([]))
-  }, [brand, brands])
+  // Dynamic brands/models from API
+  const { brands, loading: brandsLoading } = useBrands()
+  const selectedBrandId = brands.find((b) => b.name === brand)?.id ?? null
+  const { models: catalogModels, loading: modelsLoading } = useModels(selectedBrandId)
 
   const fetchListings = useCallback(async () => {
     setLoading(true)
@@ -283,8 +272,14 @@ function CatalogContent() {
         {/* Brand */}
         <div>
           <label htmlFor="filter-brand" style={labelStyle}>{t('catalog.brand', lang)}</label>
-          <select id="filter-brand" value={brand} onChange={(e) => { setBrand(e.target.value); setModel('') }} style={inputStyle}>
-            <option value="">{t('catalog.allBrands', lang)}</option>
+          <select
+            id="filter-brand"
+            value={brand}
+            disabled={brandsLoading}
+            onChange={(e) => { setBrand(e.target.value); setModel('') }}
+            style={{ ...inputStyle, opacity: brandsLoading ? 0.5 : 1 }}
+          >
+            <option value="">{brandsLoading ? t('common.loading', lang) : t('catalog.allBrands', lang)}</option>
             {brands.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
           </select>
         </div>
@@ -292,7 +287,11 @@ function CatalogContent() {
         {/* Model */}
         <div>
           <label htmlFor="filter-model" style={labelStyle}>{t('catalog.model', lang)}</label>
-          {catalogModels.length > 0 ? (
+          {modelsLoading ? (
+            <select id="filter-model" disabled style={{ ...inputStyle, opacity: 0.5 }}>
+              <option>{t('common.loading', lang)}</option>
+            </select>
+          ) : catalogModels.length > 0 ? (
             <select id="filter-model" value={model} onChange={(e) => setModel(e.target.value)} style={inputStyle}>
               <option value="">{t('filters.all', lang)}</option>
               {catalogModels.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}

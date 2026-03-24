@@ -15,6 +15,9 @@ from app.routers.notifications import router as notifications_router
 from app.routers.subscriptions import router as subscriptions_router
 from app.routers.support import router as support_router
 from app.routers.telegram_webhook import router as telegram_router
+from app.database import SessionLocal
+from app.models import User, UserRole
+from app.auth import hash_password
 
 _IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
 
@@ -85,6 +88,39 @@ app.include_router(telegram_router)
 UPLOADS_DIR = Path(__file__).resolve().parents[1] / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
+
+# ---------------------------------------------------------------------------
+# Startup: ensure staff accounts exist (idempotent)
+# ---------------------------------------------------------------------------
+_STAFF_ACCOUNTS = [
+    {"phone": "+992900000003", "name": "Admin Moshina",     "role": UserRole.admin},
+    {"phone": "+992900000004", "name": "Moderator Moshina", "role": UserRole.moderator},
+    {"phone": "+992900000005", "name": "Manager Moshina",   "role": UserRole.manager},
+    {"phone": "+992900000006", "name": "Support Moshina",   "role": UserRole.support},
+]
+_DEFAULT_STAFF_PASSWORD = "tajcar123"
+
+@app.on_event("startup")
+def seed_staff_accounts() -> None:
+    """Create staff accounts on first boot if they don't exist yet."""
+    db = SessionLocal()
+    try:
+        for acc in _STAFF_ACCOUNTS:
+            exists = db.query(User).filter(User.phone == acc["phone"]).first()
+            if not exists:
+                db.add(User(
+                    phone=acc["phone"],
+                    name=acc["name"],
+                    password_hash=hash_password(_DEFAULT_STAFF_PASSWORD),
+                    role=acc["role"],
+                    is_active=True,
+                ))
+        db.commit()
+    except Exception:  # noqa: BLE001 — don't crash the server if seeding fails
+        db.rollback()
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------

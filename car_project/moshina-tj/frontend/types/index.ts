@@ -107,6 +107,9 @@ export interface Dealer {
   description: string | null
   verified: boolean
   created_at: string
+  // Admin-only fields returned by /admin/dealers
+  active_listings_count?: number
+  max_ads_allowed?: number
 }
 
 export interface ApiResponse<T> {

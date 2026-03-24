@@ -389,6 +389,33 @@ export const notificationsApi = {
     api.put<ApiResponse<null>>('/notifications/read-all'),
 }
 
+export interface SupportLastMsg {
+  content: string
+  sender_id: string
+  created_at: string
+}
+
+export interface SupportTicket {
+  id: string
+  type: 'direct' | 'support'
+  participant: { id: string; name: string | null; avatar_url: string | null } | null
+  assignee: { id: string; name: string | null; avatar_url: string | null } | null
+  last_message: SupportLastMsg | null
+  unread_count: number
+  is_closed: boolean
+  created_at: string
+  updated_at: string
+}
+
+export const supportApi = {
+  listTickets: () =>
+    api.get<ApiResponse<SupportTicket[]>>('/support/tickets'),
+  assignTicket: (convId: string) =>
+    api.post<ApiResponse<SupportTicket>>(`/support/assign/${convId}`),
+  closeTicket: (convId: string) =>
+    api.put<ApiResponse<SupportTicket>>(`/support/close/${convId}`),
+}
+
 export const subscriptionsApi = {
   toggle: (dealerId: string) =>
     api.post<ApiResponse<{ subscribed: boolean; count: number }>>(`/dealers/${dealerId}/subscribe`),

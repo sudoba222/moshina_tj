@@ -165,7 +165,13 @@ def _get_conversation_or_403(conv_id: str, current_user: User, db: Session) -> C
     )
     if not conv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
-    if conv.participant1_id != current_user.id and conv.participant2_id != current_user.id:
+    _SUPPORT_ROLES = {UserRole.support, UserRole.admin}
+    is_participant = (
+        conv.participant1_id == current_user.id
+        or conv.participant2_id == current_user.id
+    )
+    is_support_ticket = conv.type == ConversationType.support and current_user.role in _SUPPORT_ROLES
+    if not is_participant and not is_support_ticket:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return conv
 
@@ -466,10 +472,12 @@ def send_message(
         recipient_email: Optional[str] = recipient.email if recipient else None
         recipient_id_str: Optional[str] = str(recipient_id) if recipient_id else None
         sender_name: Optional[str] = current_user.name
+        conv_type = conv.type
+        conv_id_str = str(conv.id)
     finally:
         db.close()
 
-    # Push real-time event to recipient (non-blocking, runs in async context)
+    # Push real-time event to recipient (non-blocking)
     ws_payload = {
         "event": "new_message",
         "conversation_id": str(msg_conv_id),
@@ -482,12 +490,59 @@ def send_message(
         },
     }
 
-    if recipient_id_str:
+    if conv_type == ConversationType.support and str(msg_sender_id) != recipient_id_str:
+        # User wrote to support — notify ALL online support/admin agents
+        db2 = SessionLocal()
+        try:
+            support_agents = db2.query(User).filter(
+                User.role.in_([UserRole.support, UserRole.admin]),
+                User.is_deleted == False,  # noqa: E712
+                User.is_banned == False,  # noqa: E712
+            ).all()
+            offline_agents = []
+            for agent in support_agents:
+                agent_id_str = str(agent.id)
+                if manager.is_online(agent_id_str):
+                    background_tasks.add_task(manager.send_to_user, agent_id_str, ws_payload)
+                else:
+                    offline_agents.append(agent)
+            # Create DB notifications for offline support agents
+            for agent in offline_agents:
+                notif = Notification(
+                    user_id=agent.id,
+                    type=NotificationType.message,
+                    title="Новое обращение в поддержку",
+                    body=f"{sender_name or 'Пользователь'}: {msg_content[:100]}",
+                    link=f"/support?tab=messages&conv={conv_id_str}",
+                )
+                db2.add(notif)
+            db2.commit()
+        except Exception:
+            logger.exception("Failed to notify support agents")
+        finally:
+            db2.close()
+    elif recipient_id_str:
+        # Direct message or support agent replying to user
         if manager.is_online(recipient_id_str):
             background_tasks.add_task(manager.send_to_user, recipient_id_str, ws_payload)
         else:
-            # Recipient is offline — enqueue email notification as background task
             background_tasks.add_task(_notify_offline_recipient, recipient_email, sender_name)
+            # Also create a DB notification for the offline recipient
+            db2 = SessionLocal()
+            try:
+                notif = Notification(
+                    user_id=_uuid.UUID(recipient_id_str),
+                    type=NotificationType.message,
+                    title=f"Новое сообщение от {sender_name or 'пользователя'}",
+                    body=msg_content[:100],
+                    link=f"/dashboard?tab=messages&conv={str(msg_conv_id)}",
+                )
+                db2.add(notif)
+                db2.commit()
+            except Exception:
+                logger.exception("Failed to create message notification")
+            finally:
+                db2.close()
 
     out = MessageOut(
         id=msg_id,

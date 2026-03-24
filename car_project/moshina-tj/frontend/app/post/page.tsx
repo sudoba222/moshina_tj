@@ -4,8 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, uploadApi, authApi, catalogApi, type CarBrand } from '@/lib/api'
+import { listingsApi, uploadApi, authApi } from '@/lib/api'
 import api from '@/lib/api'
+import { useBrands, useModels } from '@/hooks/useCatalogData'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
@@ -196,11 +197,13 @@ function PostPage() {
   // Draft state
   const [hasDraft, setHasDraft] = useState(false)
 
-  // Dynamic brands/models
-  const [brands, setBrands] = useState<CarBrand[]>([])
-  const [models, setModels] = useState<{ id: string; name: string }[]>([])
   const [brandSearch, setBrandSearch] = useState('')
   const [brandOpen, setBrandOpen] = useState(false)
+
+  // Dynamic brands/models from API
+  const { brands, loading: brandsLoading } = useBrands()
+  const selectedBrandId = brands.find((b) => b.name === form.brand)?.id ?? null
+  const { models, loading: modelsLoading } = useModels(selectedBrandId)
 
   const { logout } = useAuth()
 
@@ -208,19 +211,6 @@ function PostPage() {
   useEffect(() => {
     authApi.me().catch(() => { logout(); router.replace('/auth/login') })
   }, [router, logout])
-
-  // Fetch brands on mount
-  useEffect(() => {
-    catalogApi.getBrands().then((r) => setBrands(r.data.data)).catch(() => {})
-  }, [])
-
-  // Fetch models when brand changes
-  useEffect(() => {
-    if (!form.brand || brands.length === 0) { setModels([]); return }
-    const brandObj = brands.find((b) => b.name === form.brand)
-    if (!brandObj) { setModels([]); return }
-    catalogApi.getModels(brandObj.id).then((r) => setModels(r.data.data)).catch(() => setModels([]))
-  }, [form.brand, brands])
 
   // Load draft on mount (only if not in edit mode)
   useEffect(() => {
@@ -296,6 +286,7 @@ function PostPage() {
   }, [editId])
 
   function handleField<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setError('')
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
@@ -304,6 +295,7 @@ function PostPage() {
   }
 
   function handleImageFiles(e: ChangeEvent<HTMLInputElement>) {
+    setError('')
     const files = Array.from(e.target.files ?? [])
     const totalExisting = existingImageUrls.length + imageFiles.length
     const remaining = 8 - totalExisting
@@ -486,6 +478,33 @@ function PostPage() {
     gap: '20px',
   }
 
+  // ── Per-step validation before advancing ────────────────────────────────────
+  function goNext() {
+    setError('')
+    if (step === 1) {
+      if (!form.brand.trim()) {
+        setError(lang === 'ru' ? 'Выберите марку автомобиля' : 'Маркаи мошинаро интихоб кунед')
+        return
+      }
+      if (!form.model.trim()) {
+        setError(lang === 'ru' ? 'Укажите модель' : 'Моделро нишон диҳед')
+        return
+      }
+      if (!form.year || Number(form.year) < 1900 || Number(form.year) > 2100) {
+        setError(lang === 'ru' ? 'Укажите корректный год' : 'Солро дуруст нишон диҳед')
+        return
+      }
+    }
+    if (step === 3) {
+      const totalImages = existingImageUrls.length + imageFiles.length
+      if (totalImages === 0) {
+        setError(lang === 'ru' ? 'Добавьте хотя бы одно фото' : 'Ҳадди ақал як акс илова кунед')
+        return
+      }
+    }
+    setStep((s) => (s + 1) as 1 | 2 | 3 | 4)
+  }
+
   // Filtered brands for combobox
   const filteredBrands = brandSearch.trim()
     ? brands.filter((b) => b.name.toLowerCase().includes(brandSearch.toLowerCase()))
@@ -653,7 +672,8 @@ function PostPage() {
                     id="brand-input"
                     type="text"
                     autoComplete="off"
-                    value={brandOpen ? brandSearch : form.brand}
+                    disabled={brandsLoading}
+                    value={brandsLoading ? '' : (brandOpen ? brandSearch : form.brand)}
                     onChange={(e) => {
                       setBrandSearch(e.target.value)
                       setBrandOpen(true)
@@ -661,8 +681,8 @@ function PostPage() {
                     }}
                     onFocus={() => { setBrandOpen(true); setBrandSearch('') }}
                     onBlur={() => setTimeout(() => setBrandOpen(false), 150)}
-                    placeholder="Toyota, BMW..."
-                    style={inputStyle}
+                    placeholder={brandsLoading ? t('common.loading', lang) : 'Toyota, BMW...'}
+                    style={{ ...inputStyle, opacity: brandsLoading ? 0.5 : 1 }}
                   />
                   {brandOpen && filteredBrands.length > 0 && (
                     <div style={{
@@ -700,7 +720,11 @@ function PostPage() {
                 {/* Model */}
                 <div>
                   <label htmlFor="model" style={labelStyle}>{t('post.model', lang)} *</label>
-                  {models.length > 0 ? (
+                  {modelsLoading ? (
+                    <select id="model" disabled style={{ ...inputStyle, opacity: 0.5 }}>
+                      <option>{t('common.loading', lang)}</option>
+                    </select>
+                  ) : models.length > 0 ? (
                     <select
                       id="model"
                       value={form.model}
@@ -735,6 +759,12 @@ function PostPage() {
                     style={inputStyle}
                   />
                 </div>
+
+                {error && (
+                  <div style={{ background: 'rgba(200,56,8,0.08)', border: '1px solid var(--accent)', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', color: 'var(--accent)', fontWeight: 600 }}>
+                    {error}
+                  </div>
+                )}
               </div>
             )}
 
@@ -935,6 +965,12 @@ function PostPage() {
                       })}
                     </div>
                   )}
+
+                  {error && (
+                    <div style={{ background: 'rgba(200,56,8,0.08)', border: '1px solid var(--accent)', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', color: 'var(--accent)', fontWeight: 600, marginTop: '8px' }}>
+                      {error}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1079,7 +1115,7 @@ function PostPage() {
               {step > 1 && (
                 <button
                   type="button"
-                  onClick={() => setStep((s) => s - 1)}
+                  onClick={() => { setError(''); setStep((s) => (s - 1) as 1 | 2 | 3 | 4) }}
                   style={{
                     flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
                     fontSize: '15px', cursor: 'pointer',
@@ -1093,7 +1129,7 @@ function PostPage() {
               {step < 4 ? (
                 <button
                   type="button"
-                  onClick={() => setStep((s) => s + 1)}
+                  onClick={goNext}
                   style={{
                     flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
                     fontSize: '15px', cursor: 'pointer',
