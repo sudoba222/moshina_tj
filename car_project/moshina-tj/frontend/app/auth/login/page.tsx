@@ -92,7 +92,9 @@ function LoginPageInner() {
   const { login } = useAuth()
   const { lang } = useLang()
 
+  const [loginMode, setLoginMode] = useState<'phone' | 'email'>('phone')
   const [identifier, setIdentifier] = useState('+992')
+  const [emailIdentifier, setEmailIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -117,18 +119,23 @@ function LoginPageInner() {
     e.preventDefault()
     setError('')
 
-    // identifier is a full phone number from PhoneInput (e.g. "+992901234567")
-    const localDigits = identifier.replace(/^\+\d{1,4}/, '')
-    if (!localDigits.trim() || !password) {
-      setError(lang === 'ru' ? 'Заполните все поля' : 'Ҳама майдонҳоро пур кунед')
-      return
+    if (loginMode === 'phone') {
+      const localDigits = identifier.replace(/^\+\d{1,4}/, '')
+      if (!localDigits.trim() || !password) {
+        setError(lang === 'ru' ? 'Заполните все поля' : 'Ҳама майдонҳоро пур кунед')
+        return
+      }
+    } else {
+      if (!emailIdentifier.trim() || !password) {
+        setError(lang === 'ru' ? 'Заполните все поля' : 'Ҳама майдонҳоро пур кунед')
+        return
+      }
     }
 
     try {
       setLoading(true)
-      const isEmail = identifier.includes('@')
-      const res = isEmail
-        ? await authApi.loginEmail(identifier.trim(), password)
+      const res = loginMode === 'email'
+        ? await authApi.loginEmail(emailIdentifier.trim(), password)
         : await authApi.login(identifier.trim(), password)
       const data = res.data.data!
       login(data.token.access_token, data.user)
@@ -158,18 +165,53 @@ function LoginPageInner() {
 
         <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
+          {/* Phone / Email toggle */}
+          <div style={{ display: 'flex', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '3px', gap: '3px' }}>
+            {(['phone', 'email'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => { setLoginMode(mode); setError('') }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '7px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font)',
+                  background: loginMode === mode ? 'var(--card)' : 'transparent',
+                  color: loginMode === mode ? 'var(--accent)' : 'var(--text-muted)',
+                  boxShadow: loginMode === mode ? 'var(--shadow-sm)' : 'none',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {mode === 'phone' ? t('auth.loginByPhone', lang) : t('auth.loginByEmail', lang)}
+              </button>
+            ))}
+          </div>
+
           {/* Identifier */}
           <div>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-              {t('auth.phone', lang)}
-            </label>
-            <PhoneInput
-              value={identifier}
-              onChange={setIdentifier}
-              placeholder="000 000 0000"
-              hasError={!!error}
-              searchPlaceholder={t('auth.searchCountry', lang)}
-            />
+            {loginMode === 'phone' ? (
+              <PhoneInput
+                value={identifier}
+                onChange={setIdentifier}
+                placeholder="000 000 0000"
+                hasError={!!error}
+                searchPlaceholder={t('auth.searchCountry', lang)}
+              />
+            ) : (
+              <input
+                type="email"
+                autoComplete="email"
+                value={emailIdentifier}
+                onChange={(e) => setEmailIdentifier(e.target.value)}
+                placeholder={t('auth.emailPlaceholder', lang)}
+                style={{ ...baseInput, borderColor: error ? 'var(--color-error)' : 'var(--border)' }}
+              />
+            )}
           </div>
 
           {/* Password */}
