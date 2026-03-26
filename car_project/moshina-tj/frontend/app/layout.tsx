@@ -13,6 +13,7 @@ import { ChatDrawerProvider } from '@/lib/ChatDrawerContext'
 import { JsonLd } from '@/components/JsonLd'
 import CookieBanner from '@/components/CookieBanner'
 import YandexMetrika from '@/components/YandexMetrika'
+import { Analytics } from '@vercel/analytics/next'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -145,6 +146,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </ThemeProvider>
 
         <YandexMetrika />
+        <Analytics />
       </body>
     </html>
   )
