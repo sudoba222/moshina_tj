@@ -17,13 +17,15 @@ import math
 import uuid as _uuid
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import _decode_token, get_current_user
 from app.database import SessionLocal, get_db
-from app.email_service import send_email_otp
+from app.email_service import send_email_otp, send_new_message_notification
 from app.models import Conversation, ConversationType, Listing, ListingImage, Message, Notification, NotificationType, User, UserRole
 from app.schemas import ApiResponse
 from app.websockets import manager
@@ -31,6 +33,7 @@ from app.websockets import manager
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/conversations", tags=["chat"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ---------------------------------------------------------------------------
@@ -382,49 +385,22 @@ def list_messages(
 # REST: send a message
 # ---------------------------------------------------------------------------
 
-def _send_offline_email(recipient_email: str, sender_name: str) -> None:
-    """Fire-and-forget email to notify an offline user of a new message."""
-    send_email_otp(
-        to_email=recipient_email,
-        code="",
-        purpose="message_notify",
-    )
-
-
 def _notify_offline_recipient(recipient_email: Optional[str], sender_name: Optional[str]) -> None:
     """Background task: email the recipient if they are offline."""
     if not recipient_email:
         return
-    import os
-
-    api_key = os.getenv("RESEND_API_KEY", "")
-    from_addr = os.getenv("RESEND_FROM_EMAIL", "TajCar.tj <noreply@tajcar.tj>")
-    subject = "Новое сообщение на TajCar.tj"
-    body_text = (
-        f"У вас новое сообщение от {sender_name or 'пользователя'} на TajCar.tj. "
-        "Войдите на сайт, чтобы ответить."
+    send_new_message_notification(
+        to_email=recipient_email,
+        sender_name=sender_name,
+        message_preview=None,
+        chat_url="https://tajcar.tj/chat",
     )
-    if not api_key:
-        logger.warning("[DEV MODE] Offline message email to %s | %s", recipient_email, subject)
-        return
-    try:
-        import resend  # type: ignore[import-untyped]
-
-        resend.api_key = api_key
-        resend.Emails.send(
-            {
-                "from": from_addr,
-                "to": recipient_email,
-                "subject": subject,
-                "html": f"<p>{body_text}</p>",
-            }
-        )
-    except Exception:
-        logger.exception("Failed to send offline-message email to %s", recipient_email)
 
 
 @router.post("/{conv_id}/messages", response_model=ApiResponse[MessageOut], status_code=status.HTTP_201_CREATED)
+@limiter.limit("60/minute")
 def send_message(
+    request: Request,
     conv_id: str,
     body: SendMessageBody,
     background_tasks: BackgroundTasks,
@@ -724,8 +700,7 @@ async def websocket_chat(websocket: WebSocket):
                 else:
                     # Offline — send email notification in background
                     import asyncio
-
-                    asyncio.get_event_loop().run_in_executor(
+                    asyncio.get_running_loop().run_in_executor(
                         None,
                         _notify_offline_recipient,
                         recipient_email,

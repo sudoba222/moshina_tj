@@ -1,25 +1,25 @@
-import uuid
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 
 from app.auth import get_current_user
-from app.config import settings
 from app.models import User
 from app.schemas import ApiResponse
+from app.services import image_service
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 
-UPLOADS_DIR = Path(__file__).resolve().parents[2] / "uploads"
-UPLOADS_DIR.mkdir(exist_ok=True)
-
 _ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 _MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
-_EXTENSIONS = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
 
-def _use_cloudinary() -> bool:
-    return bool(settings.cloudinary_cloud_name and settings.cloudinary_api_key and settings.cloudinary_api_secret)
+def _detect_content_type(data: bytes) -> str | None:
+    """Return the detected MIME type from magic bytes, or None if unrecognised."""
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
 
 
 @router.post("/image", response_model=ApiResponse[dict])
@@ -27,6 +27,7 @@ async def upload_image(
     file: UploadFile,
     current_user: User = Depends(get_current_user),
 ):
+    # Validate declared content-type before reading the full file
     if file.content_type not in _ALLOWED_CONTENT_TYPES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -40,56 +41,25 @@ async def upload_image(
             detail="File exceeds maximum allowed size of 10 MB",
         )
 
-    if _use_cloudinary():
-        return _upload_to_cloudinary(contents, file.content_type)
-    else:
-        return _upload_to_local(contents, file.content_type)
+    # Validate actual file content via magic bytes — prevents content-type spoofing
+    detected = _detect_content_type(contents)
+    if detected is None or detected not in _ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="File content does not match a supported image type (JPEG, PNG, WebP)",
+        )
 
-
-def _upload_to_cloudinary(contents: bytes, content_type: str) -> ApiResponse:
-    import cloudinary
-    import cloudinary.uploader
-    import io
-
-    cloudinary.config(
-        cloud_name=settings.cloudinary_cloud_name,
-        api_key=settings.cloudinary_api_key,
-        api_secret=settings.cloudinary_api_secret,
-        secure=True,
-    )
-
-    resource_type = "image"
-    result = cloudinary.uploader.upload(
-        io.BytesIO(contents),
-        folder="tajcar",
-        resource_type=resource_type,
-        quality="auto",
-        fetch_format="auto",
-    )
+    try:
+        result = image_service.upload_image(contents, detected)
+    except RuntimeError as exc:
+        # Raised when production Cloudinary keys are missing
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
     return ApiResponse(
         success=True,
-        data={
-            "url": result["secure_url"],
-            "cloudinary_id": result["public_id"],
-        },
-        message="Image uploaded successfully",
-    )
-
-
-def _upload_to_local(contents: bytes, content_type: str) -> ApiResponse:
-    ext = _EXTENSIONS[content_type]
-    filename = f"{uuid.uuid4().hex}{ext}"
-    dest = UPLOADS_DIR / filename
-
-    with open(dest, "wb") as f:
-        f.write(contents)
-
-    return ApiResponse(
-        success=True,
-        data={
-            "url": f"/uploads/{filename}",
-            "cloudinary_id": filename,
-        },
+        data=result.as_dict(),
         message="Image uploaded successfully",
     )

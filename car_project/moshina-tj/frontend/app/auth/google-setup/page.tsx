@@ -143,7 +143,7 @@ function GoogleSetupInner() {
               padding: '13px',
               borderRadius: '10px',
               background: 'var(--accent)',
-              color: '#fff',
+              color: 'var(--color-white)',
               border: 'none',
               fontWeight: 600,
               fontSize: '15px',

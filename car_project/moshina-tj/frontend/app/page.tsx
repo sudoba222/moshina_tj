@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import HeroBannerSlider from '@/components/HeroBannerSlider'
-import { listingsApi, catalogApi } from '@/lib/api'
-import type { AdBanner } from '@/lib/api'
+import { listingsApi, catalogApi, statsApi } from '@/lib/api'
+import type { AdBanner, MarketplaceStats } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { Listing, Lang } from '@/types'
@@ -16,11 +17,16 @@ const QUICK_BRANDS = [
   'Kia', 'Honda', 'Daewoo', 'Audi', 'Lexus', 'Nissan',
 ]
 
-const STATS = [
-  { num: '2 400+', key: 'stats.listings' },
-  { num: '48',     key: 'stats.dealers' },
-  { num: '12',     key: 'stats.cities' },
-] as const
+const STATS_KEYS: { field: keyof MarketplaceStats; i18nKey: string }[] = [
+  { field: 'listings_count', i18nKey: 'stats.listings' },
+  { field: 'dealers_count',  i18nKey: 'stats.dealers'  },
+  { field: 'cities_count',   i18nKey: 'stats.cities'   },
+]
+
+function formatStatNum(n: number): string {
+  // e.g. 2431 → "2 431"
+  return n.toLocaleString('ru-RU')
+}
 
 export default function HomePage() {
   const { lang } = useLang()
@@ -28,6 +34,29 @@ export default function HomePage() {
   const [featured, setFeatured] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [banners, setBanners] = useState<AdBanner[]>([])
+  const [stats, setStats] = useState<MarketplaceStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(true)
+
+  // Fetch stats and set up a 60-second refresh interval
+  useEffect(() => {
+    function fetchStats() {
+      statsApi
+        .get()
+        .then((res) => {
+          if (res.data.success && res.data.data) {
+            setStats(res.data.data)
+          }
+        })
+        .catch(() => {
+          // Keep last known value on failure — do not clear stats
+        })
+        .finally(() => setStatsLoading(false))
+    }
+
+    fetchStats()
+    const interval = setInterval(fetchStats, 30 * 60 * 1000)  // 30 minutes
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     listingsApi
@@ -57,25 +86,46 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* ── Desktop Hero (text + stats) ───────────────────────────────────── */}
+        {/* ── Hero (text + stats) ─────────────────────────────────────────── */}
         <section className="desktop-hero">
           <div className="max-w-7xl mx-auto px-4 md:px-6 desktop-hero-inner">
-            <h1 className="hero-title">
-              {t('hero.title', lang)}
-            </h1>
-            <p className="hero-sub">
-              {t('hero.sub', lang)}
-            </p>
-            <div className="hero-stats">
-              {STATS.map((stat, idx) => (
+            <div className="hero-text-block">
+              <h1 className="hero-title">{t('hero.title', lang)}</h1>
+              <p className="hero-sub">{t('hero.sub', lang)}</p>
+            </div>
+            <div className="hero-stats" role="list" aria-label="Platform statistics">
+              {STATS_KEYS.map(({ field, i18nKey }, idx) => (
                 <div
-                  key={stat.key}
+                  key={i18nKey}
                   className={`hero-stat slide-up delay-${(idx + 1) as 1 | 2 | 3}`}
+                  role="listitem"
                 >
-                  <span className="hero-stat-num">{stat.num}</span>
-                  <span className="hero-stat-label">{t(stat.key, lang)}</span>
+                  {statsLoading ? (
+                    <span className="skeleton hero-stat-skeleton" />
+                  ) : (
+                    <span className="hero-stat-num">
+                      {stats ? formatStatNum(stats[field] as number) : '—'}
+                    </span>
+                  )}
+                  <span className="hero-stat-label">{t(i18nKey, lang)}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Static promo banner ─────────────────────────────────────────── */}
+        <section style={{ padding: '12px 16px 0' }}>
+          <div className="max-w-7xl mx-auto">
+            <div className="promo-banner">
+              <div className="promo-banner-text">
+                <h2 className="promo-banner-title">{t('banner.sell.title', lang)}</h2>
+                <p className="promo-banner-sub">{t('banner.sell.sub', lang)}</p>
+                <Link href="/post" className="promo-banner-cta">
+                  {t('banner.sell.cta', lang)}
+                </Link>
+              </div>
+              <div className="promo-banner-visual" aria-hidden="true" />
             </div>
           </div>
         </section>
@@ -130,7 +180,11 @@ export default function HomePage() {
                   fontSize: '13px', fontWeight: 600, color: 'var(--accent)',
                   background: 'none', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '6px 0',
+                  transition: 'opacity 0.15s ease',
                 }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.75' }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
               >
                 {t('hero.viewAll', lang)}
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -165,19 +219,24 @@ export default function HomePage() {
       <Footer />
 
       <style>{`
-        /* ── Desktop hero ─────────────────────────────── */
+        /* ── Hero section ─────────────────────────────── */
         .desktop-hero {
           background: var(--surface);
           border-bottom: 1px solid var(--border);
-          padding: 16px 16px 12px;
+          padding: 16px 16px 14px;
         }
         .desktop-hero-inner {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 12px;
+        }
+        .hero-text-block {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
         }
         .hero-title {
-          font-size: 20px;
+          font-size: 22px;
           font-weight: 800;
           color: var(--text);
           letter-spacing: -0.02em;
@@ -186,26 +245,47 @@ export default function HomePage() {
         .hero-sub {
           font-size: 13px;
           color: var(--text-muted);
+          line-height: 1.5;
         }
         .hero-stats {
           display: flex;
           flex-wrap: wrap;
-          gap: 14px;
-          margin-top: 4px;
+          gap: 0;
+          border-top: 1px solid var(--border);
+          padding-top: 12px;
         }
         .hero-stat {
           display: flex;
-          align-items: baseline;
-          gap: 5px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 1px;
+          padding-right: 20px;
+          margin-right: 20px;
+          border-right: 1px solid var(--border);
+        }
+        .hero-stat:last-child {
+          border-right: none;
+          padding-right: 0;
+          margin-right: 0;
         }
         .hero-stat-num {
-          font-size: 17px;
-          font-weight: 800;
+          font-size: 20px;
+          font-weight: 900;
           color: var(--accent);
+          letter-spacing: -0.03em;
+          line-height: 1;
+        }
+        .hero-stat-skeleton {
+          display: inline-block;
+          width: 52px;
+          height: 20px;
+          border-radius: 4px;
         }
         .hero-stat-label {
-          font-size: 12px;
+          font-size: 11px;
           color: var(--text-muted);
+          font-weight: 500;
+          letter-spacing: 0.01em;
         }
         .listings-grid {
           display: grid;
@@ -223,20 +303,27 @@ export default function HomePage() {
 
         @media (min-width: 1024px) {
           .desktop-hero {
-            padding: 28px 16px 20px;
-            background: var(--surface);
+            padding: 28px 16px 22px;
           }
           .desktop-hero-inner {
             flex-direction: row;
             align-items: center;
             justify-content: space-between;
-            gap: 32px;
+            gap: 40px;
           }
-          .hero-title { font-size: 32px; letter-spacing: -0.03em; }
-          .hero-sub { font-size: 15px; max-width: 400px; }
-          .hero-stats { gap: 24px; margin-top: 0; }
-          .hero-stat-num { font-size: 22px; }
-          .hero-stat-label { font-size: 13px; }
+          .hero-text-block { gap: 6px; }
+          .hero-title { font-size: 34px; letter-spacing: -0.03em; }
+          .hero-sub { font-size: 15px; max-width: 440px; }
+          .hero-stats {
+            border-top: none;
+            padding-top: 0;
+            gap: 0;
+            flex-shrink: 0;
+          }
+          .hero-stat { padding-right: 28px; margin-right: 28px; }
+          .hero-stat-num { font-size: 26px; }
+          .hero-stat-skeleton { width: 72px; height: 26px; }
+          .hero-stat-label { font-size: 12px; }
           .listings-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; }
         }
       `}</style>
@@ -246,12 +333,25 @@ export default function HomePage() {
 
 function SkeletonCard() {
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
-      <div className="skeleton" style={{ height: '160px' }} />
-      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
-        <div className="skeleton" style={{ height: '18px', width: '55%' }} />
-        <div className="skeleton" style={{ height: '13px', width: '80%' }} />
-        <div className="skeleton" style={{ height: '11px', width: '65%' }} />
+    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }} aria-hidden="true">
+      {/* Image placeholder — 16:9 on mobile, 180px on desktop (matches .card-image-wrap) */}
+      <div className="skeleton card-image-wrap" style={{ borderRadius: 0 }} />
+      <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Brand name */}
+        <div className="skeleton" style={{ height: '13px', width: '60%', borderRadius: '4px' }} />
+        {/* Price */}
+        <div className="skeleton" style={{ height: '22px', width: '50%', borderRadius: '4px' }} />
+        {/* Spec chips row */}
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <div className="skeleton" style={{ height: '20px', width: '36px', borderRadius: '4px' }} />
+          <div className="skeleton" style={{ height: '20px', width: '64px', borderRadius: '4px' }} />
+          <div className="skeleton" style={{ height: '20px', width: '52px', borderRadius: '4px' }} />
+        </div>
+        {/* Location + date row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="skeleton" style={{ height: '11px', width: '40%', borderRadius: '4px' }} />
+          <div className="skeleton" style={{ height: '11px', width: '25%', borderRadius: '4px' }} />
+        </div>
       </div>
     </div>
   )

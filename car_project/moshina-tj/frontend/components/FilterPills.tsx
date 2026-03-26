@@ -40,7 +40,7 @@ export default function FilterPills({ value, onChange }: FilterPillsProps) {
               cursor: 'pointer',
               transition: 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease',
               background: active ? 'var(--accent)' : 'var(--surface)',
-              color: active ? '#fff' : 'var(--text-muted)',
+              color: active ? 'var(--color-white)' : 'var(--text-muted)',
               border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
             }}
           >

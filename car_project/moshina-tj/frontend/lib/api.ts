@@ -16,6 +16,48 @@ import type {
   PaginatedResponse,
 } from '@/types'
 
+export interface StaffSearchItem {
+  id: string
+  brand: string
+  model: string
+  year: number
+  price: number
+  currency: string
+  city: string
+  status: string
+  is_active: boolean
+  views: number
+  created_at: string
+  updated_at: string
+  primary_image_url: string | null
+  user: { id: string; name: string | null; phone: string; email: string | null; created_at: string | null } | null
+  last_log: { action: string; actor_name: string | null; reason: string | null; created_at: string } | null
+}
+
+export interface ActivityLogEntry {
+  log_id: string
+  action: string
+  from_status: string | null
+  to_status: string | null
+  reason: string | null
+  created_at: string
+  listing: {
+    id: string
+    brand: string
+    model: string
+    year: number
+    status: string
+    primary_image_url: string | null
+  } | null
+}
+
+export interface ModeratorProfile {
+  id: string
+  name: string | null
+  phone: string
+  role: string
+}
+
 export interface ModerationSession {
   id: string
   moderator_id: string
@@ -54,6 +96,29 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Redirect to login on 401 (expired / revoked token)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      typeof window !== 'undefined' &&
+      error?.response?.status === 401 &&
+      !window.location.pathname.startsWith('/auth/') &&
+      !window.location.pathname.startsWith('/admin/') &&
+      !window.location.pathname.startsWith('/moderator/') &&
+      !window.location.pathname.startsWith('/manager/') &&
+      !window.location.pathname.startsWith('/support/')
+    ) {
+      // Clear in-memory token so stale headers are not re-sent
+      setInMemoryToken(null)
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user')
+      window.location.href = '/auth/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
 export interface ListingFilters {
   type?: string
   city?: string
@@ -65,6 +130,7 @@ export interface ListingFilters {
   max_year?: number
   fuel?: string
   transmission?: string
+  body_type?: string
   color?: string
   max_mileage?: number
   installment?: boolean
@@ -320,6 +386,24 @@ export const adminApi = {
   getUserListings: (userId: string, limit = 5) =>
     api.get<ApiResponse<PaginatedListings>>('/admin/listings', { params: { user_id: userId, limit } }),
 
+  // Staff search / activity / logs
+  staffSearch: (params: {
+    listing_id?: string
+    user_phone?: string
+    user_name?: string
+    status?: string
+    moderator_id?: string
+    page?: number
+    limit?: number
+  }) =>
+    api.get<ApiResponse<PaginatedResponse<StaffSearchItem>>>('/admin/staff/search', { params }),
+
+  myActivity: (page = 1, limit = 50) =>
+    api.get<ApiResponse<PaginatedResponse<ActivityLogEntry>>>('/admin/my-activity', { params: { page, limit } }),
+
+  moderatorLogs: (moderatorId: string, page = 1, limit = 50) =>
+    api.get<ApiResponse<PaginatedResponse<ActivityLogEntry> & { moderator: ModeratorProfile }>>(`/admin/moderator-logs/${moderatorId}`, { params: { page, limit } }),
+
   // Dealers
   getDealers: (page = 1, verified?: boolean) =>
     api.get<ApiResponse<{ items: Dealer[]; total: number; page: number; pages: number }>>(
@@ -562,6 +646,17 @@ export const adminListingsApi = {
     api.get<ApiResponse<PaginatedResponse<AdminListingItem>>>('/admin/listings', { params }),
   getDetail: (id: string) =>
     api.get<ApiResponse<AdminListingDetail>>('/admin/listings/' + id),
+}
+
+export interface MarketplaceStats {
+  listings_count: number
+  dealers_count: number
+  cities_count: number
+  users_count: number
+}
+
+export const statsApi = {
+  get: () => api.get<ApiResponse<MarketplaceStats>>('/stats'),
 }
 
 export default api

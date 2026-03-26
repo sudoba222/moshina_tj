@@ -13,6 +13,7 @@ import { ChatDrawerProvider } from '@/lib/ChatDrawerContext'
 import { JsonLd } from '@/components/JsonLd'
 import CookieBanner from '@/components/CookieBanner'
 import YandexMetrika from '@/components/YandexMetrika'
+import SplashScreen from '@/components/SplashScreen'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -83,10 +84,18 @@ export const metadata: Metadata = {
       tg: SITE_URL,
     },
   },
-  verification: {
-    google: 'GOOGLE_VERIFICATION_PLACEHOLDER',
-    yandex: 'YANDEX_VERIFICATION_PLACEHOLDER',
-  },
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || process.env.NEXT_PUBLIC_YANDEX_VERIFICATION
+    ? {
+        verification: {
+          ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+            ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+            : {}),
+          ...(process.env.NEXT_PUBLIC_YANDEX_VERIFICATION
+            ? { yandex: process.env.NEXT_PUBLIC_YANDEX_VERIFICATION }
+            : {}),
+        },
+      }
+    : {}),
 }
 
 const websiteSchema = {
@@ -133,6 +142,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <ChatDrawerProvider>
               <SocketProvider>
                 <LanguageProvider initialLang={lang}>
+                  <SplashScreen />
                   {children}
                   <MobileBottomNav />
                   <ChatWidget />

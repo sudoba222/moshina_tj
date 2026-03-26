@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 # Security: run as non-root
 RUN addgroup --system app && adduser --system --group app
@@ -23,5 +23,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
-# Production server
-CMD ["gunicorn", "-c", "gunicorn_conf.py", "app.main:app"]
+# Run migrations then start the server
+CMD ["sh", "-c", "alembic upgrade head && gunicorn -c gunicorn_conf.py app.main:app"]

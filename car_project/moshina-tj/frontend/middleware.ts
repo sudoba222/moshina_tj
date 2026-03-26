@@ -10,6 +10,14 @@ const PROTECTED_PATHS = [
   '/post',
 ]
 
+// Paths that require a specific staff role (beyond just being authenticated)
+const STAFF_ROLE_PATHS: Record<string, string[]> = {
+  '/admin':     ['admin', 'moderator', 'manager', 'support'],
+  '/moderator': ['admin', 'moderator'],
+  '/manager':   ['admin', 'manager'],
+  '/support':   ['admin', 'support'],
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -23,17 +31,27 @@ export function middleware(request: NextRequest) {
   if (!isProtected) return NextResponse.next()
 
   // auth_session is a non-HttpOnly flag cookie set by AuthContext on login.
-  // The actual JWT lives in an HttpOnly cookie on the API domain — middleware
-  // cannot read it directly, so we use this presence flag instead.
-  const authSession = request.cookies.get('auth_session')?.value
+  // Its value is the user's role (e.g. "admin", "user").
+  const role = request.cookies.get('auth_session')?.value
 
-  if (!authSession) {
+  if (!role) {
     // Admin/staff routes redirect to the admin login page, not the public login
-    const isAdminRoute = pathname.startsWith('/admin/')
+    const isAdminRoute = pathname.startsWith('/admin/') || pathname === '/admin'
     const loginPath = isAdminRoute ? '/admin/login' : '/auth/login'
     const loginUrl = new URL(loginPath, request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // Enforce role requirements for staff-only paths
+  for (const [prefix, allowedRoles] of Object.entries(STAFF_ROLE_PATHS)) {
+    if (pathname === prefix || pathname.startsWith(prefix + '/')) {
+      if (!allowedRoles.includes(role)) {
+        // Authenticated but wrong role — send to dashboard
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+      break
+    }
   }
 
   return NextResponse.next()

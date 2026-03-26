@@ -48,13 +48,13 @@ export async function generateMetadata({
   const title = `${dealer.business_name} — автосалон в ${dealer.city}`
   const description =
     dealer.description ||
-    `${dealer.business_name} — ${dealer.verified ? 'верифицированный ' : ''}автодилер в ${dealer.city}, Таджикистан. Смотрите объявления на TajCar.tj.`
+    `${dealer.business_name} — ${dealer.verified ? 'верифицированный ' : ''}автодилер в ${dealer.city}, Таджикистан. Смотрите объявления на MOSHINA.TJ.`
 
   return {
     title,
     description,
     openGraph: {
-      title: `${title} | TajCar.tj`,
+      title: `${title} | MOSHINA.TJ`,
       description,
       type: 'website',
       url: `${SITE_URL}/dealers/${id}`,
@@ -64,7 +64,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary',
-      title: `${title} | TajCar.tj`,
+      title: `${title} | MOSHINA.TJ`,
       description,
     },
     alternates: {

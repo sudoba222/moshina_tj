@@ -17,6 +17,7 @@
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
   --nav-bg: #ffffff;
+  --nav-bg-rgb: 255, 255, 255;
   --tag-bg: #f2f4f7;
   /* Semantic / status colors — same in light and dark */
   --color-white: #ffffff;
@@ -35,6 +36,9 @@
   --color-warning-alt: #f59e0b;
   --color-warning-dim: rgba(202, 138, 4, 0.12);
   --color-online: #22c55e;
+  /* Convenience aliases used in inline styles */
+  --font: inherit;
+  --danger: var(--color-error);
 }
 
 html.dark {
@@ -52,6 +56,7 @@ html.dark {
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --nav-bg: #1a1e27;
+  --nav-bg-rgb: 26, 30, 39;
   --tag-bg: #232838;
 }
 
@@ -67,6 +72,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  scroll-padding-bottom: 80px;
 }
 
 body {
@@ -173,18 +179,19 @@ input[type='search']::-webkit-search-cancel-button {
 
 /* ── Page transition (fade-in on route change) ─────────────────────── */
 @keyframes pageIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 main { animation: pageIn 0.25s ease; }
 
 /* ── Card hover lift ────────────────────────────────────────────────── */
 .card-hover {
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 .card-hover:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+  border-color: var(--border-strong) !important;
 }
 
 /* ── Skeleton shimmer (enhanced) ────────────────────────────────────── */
@@ -202,6 +209,15 @@ main { animation: pageIn 0.25s ease; }
 /* ── Button press ───────────────────────────────────────────────────── */
 button:active:not(:disabled) { transform: scale(0.97); }
 
+/* ── Focus ring on interactive elements (keyboard nav) ─────────────── */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* ── Fade-in utility ────────────────────────────────────────────────── */
 .fade-in { animation: fadeIn 0.3s ease; }
 
@@ -215,7 +231,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
 /* ── Smooth focus ring ──────────────────────────────────────────────── */
 input:focus, select:focus, textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(200, 56, 8, 0.15);
+  box-shadow: 0 0 0 3px var(--accent-dim);
   border-color: var(--accent) !important;
   transition: box-shadow 0.15s, border-color 0.15s;
 }
@@ -288,4 +304,171 @@ img { transition: opacity 0.3s ease; }
   .card-image-wrap {
     height: 180px;
   }
+}
+
+/* ── Hero section ───────────────────────────────────────────────────── */
+.desktop-hero {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 16px 14px;
+}
+.desktop-hero-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hero-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hero-title {
+  margin: 0 0 4px;
+  font-size: clamp(22px, 5vw, 34px);
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.hero-sub {
+  margin: 0;
+  font-size: clamp(13px, 2vw, 15px);
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 440px;
+}
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding-right: 20px;
+  margin-right: 20px;
+  border-right: 1px solid var(--border);
+}
+.hero-stat:last-child {
+  border-right: none;
+  padding-right: 0;
+  margin-right: 0;
+}
+.hero-stat-num {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.hero-stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+.hero-stat-skeleton {
+  display: inline-block;
+  width: 52px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+@media (min-width: 1024px) {
+  .desktop-hero {
+    padding: 28px 16px 22px;
+  }
+  .desktop-hero-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+  }
+  .hero-text-block { gap: 6px; }
+  .hero-stats {
+    border-top: none;
+    padding-top: 0;
+    flex-shrink: 0;
+  }
+  .hero-stat { padding-right: 28px; margin-right: 28px; }
+  .hero-stat-num { font-size: 26px; }
+  .hero-stat-skeleton { width: 72px; height: 26px; }
+  .hero-stat-label { font-size: 12px; }
+}
+
+/* ── Static promo banner ────────────────────────────────────────────── */
+.promo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 32px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent) 0%, #8b1a00 100%);
+  min-height: 140px;
+  overflow: hidden;
+  position: relative;
+}
+.promo-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.promo-banner-title {
+  margin: 0;
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 800;
+  color: var(--color-white);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.promo-banner-sub {
+  margin: 0;
+  font-size: clamp(13px, 1.5vw, 15px);
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.5;
+}
+.promo-banner-cta {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 10px 22px;
+  background: var(--color-white);
+  color: var(--accent);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  align-self: flex-start;
+}
+.promo-banner-cta:hover { opacity: 0.88; }
+.promo-banner-visual {
+  flex-shrink: 0;
+  width: 160px;
+  height: 100px;
+  opacity: 0.12;
+  background: var(--color-white);
+  border-radius: 12px;
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .promo-banner-visual { display: block; }
+}
+
+@media (max-width: 480px) {
+  .promo-banner {
+    padding: 22px 20px;
+    min-height: 120px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .promo-banner-cta { align-self: flex-start; }
 }

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
@@ -130,8 +131,7 @@ export default function UserProfilePage() {
                 fontSize: '32px', fontWeight: 800, flexShrink: 0, overflow: 'hidden',
               }}>
                 {profile.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={profile.avatar_url} alt={profile.name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src={profile.avatar_url} alt={profile.name ?? ''} fill sizes="80px" style={{ objectFit: 'cover' }} />
                 ) : (
                   (profile.name ?? 'U').charAt(0).toUpperCase()
                 )}
@@ -153,7 +153,7 @@ export default function UserProfilePage() {
                     {profile.listing_count} {t('userProfile.listings', lang)}
                   </span>
                 </div>
-                {profile.phone && (
+                {profile.phone && !profile.phone.startsWith('email_') && (
                   <a href={`tel:${profile.phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', color: 'var(--accent)', fontWeight: 600, fontSize: '14px' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.5 1.18 2 2 0 012.5 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.75-.75a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.5z" />

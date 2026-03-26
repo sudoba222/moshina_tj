@@ -444,7 +444,7 @@ function ModelsPageInner() {
 // ── Page export with Suspense boundary ────────────────────────────────────────
 export default function AdminModelsPage() {
   return (
-    <Suspense>
+    <Suspense fallback={null}>
       <ModelsPageInner />
     </Suspense>
   )

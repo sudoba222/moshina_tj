@@ -1,11 +1,7 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { t } from '@/lib/i18n'
 import type { Lang } from '@/types'
-
-// Default to Russian since this is a server component without language context.
-// The user's preferred language is set in LanguageContext (client-side), but
-// not-found is rendered outside the normal layout tree in some Next.js scenarios.
-const lang: Lang = 'ru'
 
 function CarIcon() {
   return (
@@ -28,10 +24,13 @@ function CarIcon() {
 }
 
 export const metadata = {
-  title: '404 — Страница не найдена | MOSHINA.TJ',
+  title: '404 — Страница не найдена / Саҳифа ёфт нашуд | MOSHINA.TJ',
 }
 
-export default function NotFound() {
+export default async function NotFound() {
+  const cookieStore = await cookies()
+  const lang: Lang = cookieStore.get('lang')?.value === 'tj' ? 'tj' : 'ru'
+
   return (
     <main
       style={{

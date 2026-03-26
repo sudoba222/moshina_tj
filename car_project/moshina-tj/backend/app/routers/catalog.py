@@ -3,6 +3,7 @@ import math
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
@@ -106,13 +107,21 @@ def admin_list_brands(
     if search:
         q = q.filter(Brand.name.ilike(f"%{search}%"))
     total = q.count()
+
+    # Count models per brand in a single query to avoid N+1
+    model_counts = dict(
+        db.query(CarModel.brand_id, func.count(CarModel.id))
+        .group_by(CarModel.brand_id)
+        .all()
+    )
+
     brands = q.order_by(Brand.is_popular.desc(), Brand.name).offset((page-1)*50).limit(50).all()
     return ApiResponse(success=True, data={
         "items": [{
             "id": str(b.id), "name": b.name, "slug": b.slug,
             "logo_url": b.logo_url, "country": b.country,
             "is_popular": b.is_popular, "is_active": b.is_active,
-            "model_count": len(b.models),
+            "model_count": model_counts.get(b.id, 0),
         } for b in brands],
         "total": total, "page": page, "pages": math.ceil(total/50) if total else 1,
     }, message="OK")

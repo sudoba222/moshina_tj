@@ -13,12 +13,13 @@ from sqlalchemy import func, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user, get_current_user_optional
+from app.services import image_service
 
 # 2-minute in-memory cache for featured listings (homepage hit on every page load)
 _featured_cache: Dict[str, Any] = {}
 _FEATURED_CACHE_TTL = 120  # seconds
 from app.database import SessionLocal, get_db
-from app.models import Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingLog, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
+from app.models import BodyType, Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingLog, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
 from app.schemas import (
     ApiResponse,
     ListingCreate,
@@ -33,6 +34,24 @@ router = APIRouter(prefix="/listings", tags=["listings"])
 limiter = Limiter(key_func=get_remote_address)
 
 _MAX_LIMIT = 100
+
+
+def _extract_cloudinary_id(url: str) -> str | None:
+    """Parse the Cloudinary public_id out of a secure_url.
+
+    Cloudinary URLs look like:
+      https://res.cloudinary.com/<cloud>/image/upload/v<version>/<folder>/<public_id>.<ext>
+    """
+    if "cloudinary.com" not in url:
+        return None
+    try:
+        path = url.split("/upload/", 1)[1]
+        # Strip version segment (v1234567890/)
+        if path.startswith("v") and "/" in path:
+            path = path.split("/", 1)[1]
+        return path.rsplit(".", 1)[0]  # remove extension
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -101,14 +120,24 @@ def _notify_dealer_subscribers(
             },
         }
 
-        loop = asyncio.new_event_loop()
+        subscriber_ids = [uid for uid, _ in notifications]
         try:
-            subscriber_ids = [uid for uid, _ in notifications]
-            loop.run_until_complete(
-                ws_manager.broadcast_to_users(subscriber_ids, ws_payload)
-            )
-        finally:
-            loop.close()
+            # Schedule the coroutine on the running event loop (uvicorn's loop).
+            # BackgroundTasks run in the same thread as the request handler, so
+            # the event loop is already running — use run_coroutine_threadsafe.
+            import asyncio as _asyncio
+            loop = _asyncio.get_event_loop()
+            if loop.is_running():
+                _asyncio.run_coroutine_threadsafe(
+                    ws_manager.broadcast_to_users(subscriber_ids, ws_payload),
+                    loop,
+                )
+            else:
+                loop.run_until_complete(
+                    ws_manager.broadcast_to_users(subscriber_ids, ws_payload)
+                )
+        except Exception:
+            logger.exception("WS broadcast failed for listing_id=%s", listing_id)
 
     except Exception:
         logger.exception("_notify_dealer_subscribers failed for listing_id=%s", listing_id)
@@ -128,8 +157,11 @@ def _get_listing_or_404(listing_id: str, db: Session) -> Listing:
     return listing
 
 
+_STAFF_ROLES = {UserRole.admin, UserRole.moderator, UserRole.manager}
+
+
 def _assert_owner_or_admin(listing: Listing, current_user: User) -> None:
-    if listing.user_id != current_user.id and current_user.role != UserRole.admin:
+    if listing.user_id != current_user.id and current_user.role not in _STAFF_ROLES:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify this listing",
@@ -152,6 +184,7 @@ def list_listings(
     installment: Optional[bool] = None,
     fuel: Optional[FuelType] = None,
     transmission: Optional[TransmissionType] = None,
+    body_type: Optional[BodyType] = None,
     currency: Optional[Currency] = None,
     sort: Optional[str] = Query(default=None),
     page: int = Query(default=1, ge=1),
@@ -189,6 +222,8 @@ def list_listings(
         query = query.filter(Listing.fuel == fuel)
     if transmission:
         query = query.filter(Listing.transmission == transmission)
+    if body_type:
+        query = query.filter(Listing.body_type == body_type)
     if currency:
         query = query.filter(Listing.currency == currency)
 
@@ -252,8 +287,8 @@ def get_listing(
 ):
     listing = _get_listing_or_404(listing_id, db)
 
-    # Non-active listings are only visible to their owner or staff
-    if listing.status != ListingStatus.active:
+    # Non-active or owner-deactivated listings are only visible to their owner or staff
+    if listing.status != ListingStatus.active or not listing.is_active:
         is_owner = current_user and current_user.id == listing.user_id
         is_staff = current_user and current_user.role in (
             UserRole.admin, UserRole.moderator, UserRole.manager, UserRole.support
@@ -310,18 +345,41 @@ def create_listing(
 
     listing = Listing(
         user_id=current_user.id,
+        category_id=payload.category_id,
         type=payload.type,
         brand=payload.brand,
         model=payload.model,
         year=payload.year,
         price=payload.price,
         currency=payload.currency,
+        is_negotiable=payload.is_negotiable,
+        prepayment_amount=payload.prepayment_amount,
         mileage=payload.mileage,
         fuel=payload.fuel,
         transmission=payload.transmission,
+        body_type=payload.body_type,
+        drive_type=payload.drive_type,
+        engine_volume=payload.engine_volume,
+        has_turbine=payload.has_turbine,
+        condition=payload.condition,
+        is_customs_cleared=payload.is_customs_cleared,
+        taxi_license=payload.taxi_license,
         color=payload.color,
         city=payload.city,
         description=payload.description,
+        
+        # Social & Video
+        youtube_link=payload.youtube_link,
+        tiktok_link=payload.tiktok_link,
+        video_url=payload.video_url,
+
+        # Contact Info
+        contact_name=payload.contact_name,
+        contact_email=payload.contact_email,
+        contact_phone=payload.contact_phone,
+        contact_method=payload.contact_method,
+        whatsapp_number=payload.whatsapp_number,
+
         installment_available=payload.installment_available,
         is_dealer_listing=is_dealer,
         rental_rules=payload.rental_rules.model_dump(mode="json") if payload.rental_rules else None,
@@ -333,22 +391,10 @@ def create_listing(
 
     for index, url in enumerate(payload.image_urls):
         url_str = str(url)
-        # Extract cloudinary public_id from URL if it's a Cloudinary URL
-        cloudinary_id: str | None = None
-        if "cloudinary.com" in url_str:
-            # URL format: .../upload/v{version}/{public_id}.{ext}
-            try:
-                path = url_str.split("/upload/", 1)[1]
-                # Strip version segment (v1234567890/)
-                if path.startswith("v") and "/" in path:
-                    path = path.split("/", 1)[1]
-                cloudinary_id = path.rsplit(".", 1)[0]  # remove extension
-            except Exception:
-                pass
         image = ListingImage(
             listing_id=listing.id,
             url=url_str,
-            cloudinary_id=cloudinary_id,
+            cloudinary_id=_extract_cloudinary_id(url_str),
             is_primary=(index == 0),
             order_index=index,
         )
@@ -398,19 +444,59 @@ def update_listing(
     _assert_owner_or_admin(listing, current_user)
 
     update_data = payload.model_dump(exclude_unset=True, mode="json")
+
+    # Handle image replacement — must happen before the generic field loop so
+    # that image_urls doesn't get blindly setattr'd onto the ORM model.
+    new_image_urls: list[str] | None = update_data.pop("image_urls", None)
+    if new_image_urls is not None:
+        existing_images = (
+            db.query(ListingImage)
+            .filter(ListingImage.listing_id == listing.id)
+            .all()
+        )
+        new_url_set = set(new_image_urls)
+
+        # Delete images that are no longer in the new set
+        for img in existing_images:
+            if img.url not in new_url_set:
+                if img.cloudinary_id:
+                    image_service.delete_image(img.cloudinary_id)
+                db.delete(img)
+
+        # Add images that are newly introduced
+        existing_url_set = {img.url for img in existing_images}
+        for index, url_str in enumerate(new_image_urls):
+            if url_str not in existing_url_set:
+                db.add(ListingImage(
+                    listing_id=listing.id,
+                    url=url_str,
+                    cloudinary_id=_extract_cloudinary_id(url_str),
+                    is_primary=(index == 0),
+                    order_index=index,
+                ))
+            else:
+                # Update order and primary flag for retained images
+                for img in existing_images:
+                    if img.url == url_str:
+                        img.order_index = index
+                        img.is_primary = (index == 0)
+                        break
+
     for field, value in update_data.items():
         # rental_rules arrives as a JSON-serializable dict — assign directly
         setattr(listing, field, value)
 
-    # Re-submit for moderation whenever an active listing is edited
-    if listing.status == ListingStatus.active:
+    # Re-submit for moderation whenever an edited listing had been active or rejected
+    if listing.status in (ListingStatus.active, ListingStatus.rejected):
+        old_status = listing.status  # Capture before mutation so the log is accurate
         listing.status = ListingStatus.pending
         listing.is_active = False
+        listing.rejection_reason = None  # Clear stale rejection reason on resubmit
         db.add(ListingLog(
             listing_id=listing.id,
             actor_id=current_user.id,
             action="edited",
-            from_status="active",
+            from_status=old_status.value,
             to_status="pending",
         ))
 
@@ -432,6 +518,11 @@ def activate_listing(
 ):
     listing = _get_listing_or_404(listing_id, db)
     _assert_owner_or_admin(listing, current_user)
+    if listing.status != ListingStatus.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only approved listings can be re-activated. Rejected or pending listings must go through review.",
+        )
     listing.is_active = True
     db.commit()
     db.refresh(listing)
@@ -446,6 +537,11 @@ def deactivate_listing(
 ):
     listing = _get_listing_or_404(listing_id, db)
     _assert_owner_or_admin(listing, current_user)
+    if listing.status != ListingStatus.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only active listings can be deactivated.",
+        )
     listing.is_active = False
     db.commit()
     db.refresh(listing)
@@ -461,10 +557,33 @@ def delete_listing(
     listing = _get_listing_or_404(listing_id, db)
     _assert_owner_or_admin(listing, current_user)
 
+    # Collect public_ids before the soft-delete so we can clean up storage
+    images_to_delete = (
+        db.query(ListingImage)
+        .filter(ListingImage.listing_id == listing.id)
+        .all()
+    )
+
+    prev_status = listing.status.value if listing.status else None
+    listing.is_deleted = True
     listing.is_active = False
+    listing.status = ListingStatus.rejected  # Remove from all public feeds immediately
+    db.add(ListingLog(
+        listing_id=listing.id,
+        actor_id=current_user.id,
+        action="deleted",
+        from_status=prev_status,
+        to_status="deleted",
+    ))
     db.commit()
 
-    return ApiResponse(success=True, data=None, message="Listing deactivated")
+    # Delete images from storage after committing the soft-delete.
+    # Failures are logged but never propagated — the listing is already gone.
+    for img in images_to_delete:
+        if img.cloudinary_id:
+            image_service.delete_image(img.cloudinary_id)
+
+    return ApiResponse(success=True, data=None, message="Listing deleted")
 
 
 # ---------------------------------------------------------------------------

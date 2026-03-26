@@ -10,7 +10,7 @@ import { useBrands, useModels } from '@/hooks/useCatalogData'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
-import type { ListingType, Currency, FuelType, TransmissionType, RentalRules } from '@/types'
+import type { ListingType, Currency, FuelType, TransmissionType, BodyType, RentalRules } from '@/types'
 
 const CITIES_OPTIONS = [
   { value: 'Душанбе',    labelKey: 'options.cityDushanbe' },
@@ -35,22 +35,53 @@ const TRANSMISSIONS_OPTIONS: { value: TransmissionType; labelKey: string }[] = [
   { value: 'Механика', labelKey: 'options.transMechanical' },
   { value: 'Вариатор', labelKey: 'options.transCvt' },
 ]
+const BODY_TYPES_OPTIONS: { value: BodyType; labelKey: string }[] = [
+  { value: 'sedan',       labelKey: 'options.bodySedan' },
+  { value: 'suv',         labelKey: 'options.bodySuv' },
+  { value: 'hatchback',   labelKey: 'options.bodyHatchback' },
+  { value: 'minivan',     labelKey: 'options.bodyMinivan' },
+  { value: 'pickup',      labelKey: 'options.bodyPickup' },
+  { value: 'coupe',       labelKey: 'options.bodyCoupe' },
+  { value: 'wagon',       labelKey: 'options.bodyWagon' },
+  { value: 'crossover',   labelKey: 'options.bodyCrossover' },
+  { value: 'convertible', labelKey: 'options.bodyConvertible' },
+  { value: 'van',         labelKey: 'options.bodyVan' },
+  { value: 'bus',         labelKey: 'options.bodyBus' },
+  { value: 'other',       labelKey: 'options.bodyOther' },
+]
 
 const DRAFT_KEY = 'post_draft'
 
 interface FormState {
+  category_id: string
   brand: string
   model: string
   year: string
   price: string
   currency: Currency
+  is_negotiable: boolean
+  prepayment_amount: string
   mileage: string
   fuel: FuelType | ''
   transmission: TransmissionType | ''
+  body_type: BodyType | ''
+  drive_type: string
+  engine_volume: string
+  has_turbine: boolean | null
+  condition: string
+  is_customs_cleared: boolean
+  taxi_license: boolean
   color: string
   city: string
   type: ListingType
   description: string
+  youtube_link: string
+  tiktok_link: string
+  contact_name: string
+  contact_email: string
+  contact_phone: string
+  contact_method: 'phone_and_chat' | 'phone_only'
+  whatsapp_number: string
   installment_available: boolean
 }
 
@@ -68,9 +99,19 @@ interface RentalRulesForm {
 }
 
 const initialForm: FormState = {
+  category_id: '',
   brand: '', model: '', year: String(new Date().getFullYear()),
-  price: '', currency: 'USD', mileage: '', fuel: '', transmission: '',
-  color: '', city: '', type: 'sale', description: '', installment_available: false,
+  price: '', currency: 'USD', is_negotiable: false,
+  prepayment_amount: '',
+  mileage: '', fuel: '', transmission: '',
+  body_type: '', drive_type: '', engine_volume: '',
+  has_turbine: null, condition: '', is_customs_cleared: true,
+  taxi_license: false,
+  color: '', city: '', type: 'sale', description: '',
+  youtube_link: '', tiktok_link: '',
+  contact_name: '', contact_email: '', contact_phone: '',
+  contact_method: 'phone_and_chat', whatsapp_number: '',
+  installment_available: false,
 }
 
 const initialRentalRules: RentalRulesForm = {
@@ -179,9 +220,11 @@ function PostPage() {
   const { lang } = useLang()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(0)
 
   const [form, setForm] = useState<FormState>(initialForm)
+  const [categories, setCategories] = useState<CarCategory[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(false)
   const [rentalRules, setRentalRules] = useState<RentalRulesForm>(initialRentalRules)
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -199,6 +242,8 @@ function PostPage() {
 
   const [brandSearch, setBrandSearch] = useState('')
   const [brandOpen, setBrandOpen] = useState(false)
+  const [modelSearch, setModelSearch] = useState('')
+  const [modelOpen, setModelOpen] = useState(false)
 
   // Dynamic brands/models from API
   const { brands, loading: brandsLoading } = useBrands()
@@ -211,6 +256,21 @@ function PostPage() {
   useEffect(() => {
     authApi.me().catch(() => { logout(); router.replace('/auth/login') })
   }, [router, logout])
+
+  // Fetch categories
+  useEffect(() => {
+    setCategoriesLoading(true)
+    catalogApi.getCategories()
+      .then((res) => setCategories(res.data.data))
+      .catch((err) => console.error('Failed to fetch categories:', err))
+      .finally(() => setCategoriesLoading(false))
+  }, [])
+
+  // Reset model combobox state whenever brand changes
+  useEffect(() => {
+    setModelSearch('')
+    setModelOpen(false)
+  }, [form.brand])
 
   // Load draft on mount (only if not in edit mode)
   useEffect(() => {
@@ -251,6 +311,7 @@ function PostPage() {
           mileage: listing.mileage != null ? String(listing.mileage) : '',
           fuel: listing.fuel ?? '',
           transmission: listing.transmission ?? '',
+          body_type: listing.body_type ?? '',
           color: listing.color ?? '',
           city: listing.city,
           type: listing.type,
@@ -369,18 +430,38 @@ function PostPage() {
       }
 
       const payload = {
+        category_id: form.category_id || undefined,
         type: form.type,
         brand: form.brand.trim(),
         model: form.model.trim(),
         year: Number(form.year),
         price: Number(form.price),
         currency: form.currency,
+        is_negotiable: form.is_negotiable,
+        prepayment_amount: form.prepayment_amount ? Number(form.prepayment_amount) : undefined,
         mileage: form.mileage ? Number(form.mileage) : undefined,
         fuel: form.fuel || undefined,
         transmission: form.transmission || undefined,
+        body_type: form.body_type || undefined,
+        drive_type: form.drive_type || undefined,
+        engine_volume: form.engine_volume || undefined,
+        has_turbine: form.has_turbine,
+        condition: form.condition || undefined,
+        is_customs_cleared: form.is_customs_cleared,
+        taxi_license: form.taxi_license,
         color: form.color.trim() || undefined,
         city: form.city,
         description: form.description.trim() || undefined,
+        
+        youtube_link: form.youtube_link.trim() || undefined,
+        tiktok_link: form.tiktok_link.trim() || undefined,
+        
+        contact_name: form.contact_name.trim() || undefined,
+        contact_email: form.contact_email.trim() || undefined,
+        contact_phone: form.contact_phone.trim() || undefined,
+        contact_method: form.contact_method,
+        whatsapp_number: form.whatsapp_number.trim() || undefined,
+
         installment_available: form.installment_available,
         image_urls: imageUrls,
         ...(rentalRulesPayload ? { rental_rules: rentalRulesPayload } : {}),
@@ -568,6 +649,7 @@ function PostPage() {
   const totalImageCount = existingImageUrls.length + imageFiles.length
 
   const stepLabels = [
+    lang === 'ru' ? 'Категория' : 'Категория',
     t('post.wizard_step1', lang),
     t('post.wizard_step2', lang),
     t('post.wizard_step3', lang),
@@ -634,9 +716,46 @@ function PostPage() {
           )}
 
           {/* Step indicator */}
-          <StepIndicator step={step} labels={stepLabels} />
+          <StepIndicator step={step + 1} labels={stepLabels} />
 
           <form onSubmit={handleSubmit}>
+
+            {/* ── STEP 0: Category ── */}
+            {step === 0 && (
+              <div style={cardStyle} className="animate-fade-in">
+                <label style={labelStyle}>{lang === 'ru' ? 'Выберите категорию' : 'Категорияро интихоб кунед'} *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '10px' }}>
+                  {categoriesLoading ? (
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{t('common.loading', lang)}...</p>
+                  ) : (
+                    categories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          handleField('category_id', cat.id)
+                          setStep(1)
+                        }}
+                        style={{
+                          textAlign: 'left',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          background: form.category_id === cat.id ? 'var(--accent)' : 'var(--surface)',
+                          color: form.category_id === cat.id ? 'var(--color-white)' : 'var(--text)',
+                          border: form.category_id === cat.id ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          fontWeight: 700,
+                          fontSize: '16px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {lang === 'ru' ? cat.name_ru : cat.name_tj}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* ── STEP 1: Vehicle ── */}
             {step === 1 && (
@@ -718,31 +837,87 @@ function PostPage() {
                 </div>
 
                 {/* Model */}
-                <div>
-                  <label htmlFor="model" style={labelStyle}>{t('post.model', lang)} *</label>
-                  {modelsLoading ? (
-                    <select id="model" disabled style={{ ...inputStyle, opacity: 0.5 }}>
-                      <option>{t('common.loading', lang)}</option>
-                    </select>
-                  ) : models.length > 0 ? (
-                    <select
-                      id="model"
-                      value={form.model}
-                      onChange={(e) => handleField('model', e.target.value)}
-                      style={inputStyle}
-                    >
-                      <option value="">—</option>
-                      {models.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
-                    </select>
-                  ) : (
-                    <input
-                      id="model"
-                      type="text"
-                      value={form.model}
-                      onChange={(e) => handleField('model', e.target.value)}
-                      placeholder="Camry"
-                      style={inputStyle}
-                    />
+                <div style={{ position: 'relative' }}>
+                  <label htmlFor="model-input" style={labelStyle}>{t('post.model', lang)} *</label>
+                  <input
+                    id="model-input"
+                    type="text"
+                    autoComplete="off"
+                    disabled={modelsLoading || !form.brand}
+                    value={modelsLoading ? '' : (modelOpen ? modelSearch : form.model)}
+                    onChange={(e) => {
+                      setModelSearch(e.target.value)
+                      setModelOpen(true)
+                      if (!e.target.value) handleField('model', '')
+                    }}
+                    onFocus={() => { setModelOpen(true); setModelSearch('') }}
+                    onBlur={() => setTimeout(() => setModelOpen(false), 150)}
+                    placeholder={
+                      !form.brand
+                        ? (lang === 'ru' ? 'Сначала выберите марку' : 'Аввал маркаро интихоб кунед')
+                        : modelsLoading
+                          ? t('common.loading', lang)
+                          : 'Camry, Nexia...'
+                    }
+                    style={{ ...inputStyle, opacity: (!form.brand || modelsLoading) ? 0.5 : 1 }}
+                  />
+                  {modelOpen && form.brand && (
+                    (() => {
+                      const filtered = modelSearch.trim()
+                        ? models.filter((m) => m.name.toLowerCase().includes(modelSearch.toLowerCase()))
+                        : models
+                      const showFreeText = modelSearch.trim() && !filtered.find((m) => m.name.toLowerCase() === modelSearch.toLowerCase())
+                      return (filtered.length > 0 || showFreeText) ? (
+                        <div style={{
+                          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                          background: 'var(--card)', border: '1px solid var(--border)',
+                          borderRadius: '10px', maxHeight: '220px', overflowY: 'auto',
+                          zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                        }}>
+                          {filtered.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onMouseDown={() => {
+                                handleField('model', m.name)
+                                setModelSearch('')
+                                setModelOpen(false)
+                              }}
+                              style={{
+                                display: 'block', width: '100%', textAlign: 'left',
+                                padding: '9px 14px', background: 'none', border: 'none',
+                                cursor: 'pointer', fontSize: '14px', color: 'var(--text)',
+                                fontWeight: form.model === m.name ? 700 : 400,
+                              }}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface)' }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'none' }}
+                            >
+                              {m.name}
+                            </button>
+                          ))}
+                          {showFreeText && (
+                            <button
+                              type="button"
+                              onMouseDown={() => {
+                                handleField('model', modelSearch.trim())
+                                setModelSearch('')
+                                setModelOpen(false)
+                              }}
+                              style={{
+                                display: 'block', width: '100%', textAlign: 'left',
+                                padding: '9px 14px', background: 'none', border: 'none',
+                                borderTop: filtered.length > 0 ? '1px solid var(--border)' : 'none',
+                                cursor: 'pointer', fontSize: '14px', color: 'var(--accent)', fontWeight: 600,
+                              }}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface)' }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'none' }}
+                            >
+                              {lang === 'ru' ? `Добавить "${modelSearch.trim()}"` : `Илова кардан "${modelSearch.trim()}"`}
+                            </button>
+                          )}
+                        </div>
+                      ) : null
+                    })()
                   )}
                 </div>
 
@@ -758,6 +933,34 @@ function PostPage() {
                     onChange={(e) => handleField('year', e.target.value)}
                     style={inputStyle}
                   />
+                </div>
+
+                {/* Body type chips */}
+                <div>
+                  <label style={labelStyle}>{t('post.bodyType', lang)}</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                    {BODY_TYPES_OPTIONS.map((bt) => (
+                      <button
+                        key={bt.value}
+                        type="button"
+                        onClick={() => handleField('body_type', form.body_type === bt.value ? '' : bt.value)}
+                        style={{
+                          padding: '7px 6px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          background: form.body_type === bt.value ? 'var(--accent)' : 'var(--surface)',
+                          color: form.body_type === bt.value ? 'var(--color-white)' : 'var(--text-muted)',
+                          border: form.body_type === bt.value ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {t(bt.labelKey, lang)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {error && (
@@ -799,6 +1002,53 @@ function PostPage() {
                       />
                     ))}
                   </div>
+                </div>
+
+                {/* Drive Type */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="drive_type" style={labelStyle}>{lang === 'ru' ? 'Привод' : 'Привод'}</label>
+                    <select id="drive_type" value={form.drive_type} onChange={(e) => handleField('drive_type', e.target.value)} style={inputStyle}>
+                      <option value="">—</option>
+                      <option value="Передний">{lang === 'ru' ? 'Передний' : 'Пеш'}</option>
+                      <option value="Задний">{lang === 'ru' ? 'Задний' : 'Қафо'}</option>
+                      <option value="Полный">{lang === 'ru' ? 'Полный' : 'Ҳамааш'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="engine_volume" style={labelStyle}>{lang === 'ru' ? 'Объем двигателя' : 'Ҳаҷми муҳаррик'}</label>
+                    <input id="engine_volume" type="text" value={form.engine_volume} onChange={(e) => handleField('engine_volume', e.target.value)} placeholder="2.0 / Электрический" style={inputStyle} />
+                  </div>
+                </div>
+
+                {/* Turbine, Condition */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="condition" style={labelStyle}>{lang === 'ru' ? 'Состояние' : 'Ҳолат'}</label>
+                    <select id="condition" value={form.condition} onChange={(e) => handleField('condition', e.target.value)} style={inputStyle}>
+                      <option value="">—</option>
+                      <option value="С пробегом">{lang === 'ru' ? 'С пробегом' : 'Бо масофа'}</option>
+                      <option value="Новый">{lang === 'ru' ? 'Новый' : 'Нав'}</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', paddingTop: '28px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={form.has_turbine === true} onChange={(e) => handleField('has_turbine', e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }} />
+                      {lang === 'ru' ? 'Турбина' : 'Турбина'}
+                    </label>
+                  </div>
+                </div>
+
+                {/* Customs, Taxi */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={form.is_customs_cleared} onChange={(e) => handleField('is_customs_cleared', e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }} />
+                      {lang === 'ru' ? 'Растаможен в РТ' : 'Боҷхонашуда дар ҶТ'}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={form.taxi_license} onChange={(e) => handleField('taxi_license', e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }} />
+                      {lang === 'ru' ? 'Лицензия на такси' : 'Иҷозатномаи таксӣ'}
+                    </label>
                 </div>
 
                 {/* Mileage + Color */}
@@ -966,6 +1216,15 @@ function PostPage() {
                     </div>
                   )}
 
+                  {/* Video Links */}
+                  <div style={{ marginTop: '20px' }}>
+                    <label style={labelStyle}>{lang === 'ru' ? 'Ссылки на видео (YouTube / TikTok)' : 'Пайвандҳои видео (YouTube / TikTok)'}</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <input type="text" value={form.youtube_link} onChange={(e) => handleField('youtube_link', e.target.value)} placeholder="YouTube link" style={inputStyle} />
+                      <input type="text" value={form.tiktok_link} onChange={(e) => handleField('tiktok_link', e.target.value)} placeholder="TikTok link" style={inputStyle} />
+                    </div>
+                  </div>
+
                   {error && (
                     <div style={{ background: 'rgba(200,56,8,0.08)', border: '1px solid var(--accent)', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', color: 'var(--accent)', fontWeight: 600, marginTop: '8px' }}>
                       {error}
@@ -975,41 +1234,42 @@ function PostPage() {
               </div>
             )}
 
-            {/* ── STEP 4: Deal ── */}
+            {/* ── STEP 4: Deal & Contact ── */}
             {step === 4 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in">
                 <div style={cardStyle}>
                   {/* Price + Currency */}
-                  <div>
-                    <label style={labelStyle}>{t('post.price', lang)} *</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="number"
-                        required
-                        min={1}
-                        value={form.price}
-                        onChange={(e) => handleField('price', e.target.value)}
-                        placeholder="15000"
-                        style={{ ...inputStyle, flex: 1 }}
-                      />
-                      {(['USD', 'TJS'] as Currency[]).map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => handleField('currency', c)}
-                          style={{
-                            padding: '11px 14px', borderRadius: '10px', fontWeight: 700,
-                            fontSize: '14px', cursor: 'pointer', flexShrink: 0,
-                            background: form.currency === c ? 'var(--accent)' : 'var(--surface)',
-                            color: form.currency === c ? 'var(--color-white)' : 'var(--text-muted)',
-                            border: form.currency === c ? '1px solid var(--accent)' : '1px solid var(--border)',
-                            transition: 'all 0.15s',
-                          }}
-                        >
-                          {c === 'USD' ? 'USD $' : 'TJS'}
-                        </button>
-                      ))}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label style={labelStyle}>{t('post.price', lang)} *</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="number"
+                          required
+                          min={1}
+                          value={form.price}
+                          onChange={(e) => handleField('price', e.target.value)}
+                          placeholder="15000"
+                          style={{ ...inputStyle, flex: 1 }}
+                        />
+                        <select value={form.currency} onChange={(e) => handleField('currency', e.target.value as Currency)} style={{ ...inputStyle, width: 'auto' }}>
+                          <option value="USD">USD</option>
+                          <option value="TJS">TJS</option>
+                        </select>
+                      </div>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '28px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={form.is_negotiable} onChange={(e) => handleField('is_negotiable', e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--accent)' }} />
+                        {lang === 'ru' ? 'Торг' : 'Муомила'}
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Prepayment */}
+                  <div>
+                    <label htmlFor="prepayment" style={labelStyle}>{lang === 'ru' ? 'Размер предоплаты (c.)' : 'Размер предоплаты (c.)'}</label>
+                    <input id="prepayment" type="number" value={form.prepayment_amount} onChange={(e) => handleField('prepayment_amount', e.target.value)} placeholder="22000" style={inputStyle} />
                   </div>
 
                   {/* City */}
@@ -1028,12 +1288,40 @@ function PostPage() {
                       {t('post.installment', lang)}
                     </label>
                   )}
+                </div>
 
-                  {error && (
-                    <div style={{ background: 'rgba(200,56,8,0.08)', border: '1px solid var(--accent)', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', color: 'var(--accent)', fontWeight: 600 }}>
-                      {error}
+                {/* Contact Info */}
+                <div style={cardStyle}>
+                  <div style={{ paddingBottom: '4px', borderBottom: '1px solid var(--border)' }}>
+                    <h2 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>
+                      {lang === 'ru' ? 'Контактная информация' : 'Маълумот барои тамос'}
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label style={labelStyle}>{lang === 'ru' ? 'Имя' : 'Ном'}</label>
+                      <input type="text" value={form.contact_name} onChange={(e) => handleField('contact_name', e.target.value)} style={inputStyle} />
                     </div>
-                  )}
+                    <div>
+                      <label style={labelStyle}>{lang === 'ru' ? 'Телефон' : 'Телефон'}</label>
+                      <input type="text" value={form.contact_phone} onChange={(e) => handleField('contact_phone', e.target.value)} placeholder="+992..." style={inputStyle} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>{lang === 'ru' ? 'Email' : 'Email'}</label>
+                    <input type="email" value={form.contact_email} onChange={(e) => handleField('contact_email', e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>{lang === 'ru' ? 'Способ связи' : 'Тарзи тамос'}</label>
+                    <select value={form.contact_method} onChange={(e) => handleField('contact_method', e.target.value as any)} style={inputStyle}>
+                      <option value="phone_and_chat">{lang === 'ru' ? 'Телефон и чат' : 'Телефон ва чат'}</option>
+                      <option value="phone_only">{lang === 'ru' ? 'Только телефон' : 'Танҳо телефон'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>WhatsApp</label>
+                    <input type="text" value={form.whatsapp_number} onChange={(e) => handleField('whatsapp_number', e.target.value)} placeholder="+992..." style={inputStyle} />
+                  </div>
                 </div>
 
                 {/* Rental rules (rent only) */}

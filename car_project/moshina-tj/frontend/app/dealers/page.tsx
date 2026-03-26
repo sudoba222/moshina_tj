@@ -117,7 +117,7 @@ function DealerCard({ dealer, lang, delay }: { dealer: Dealer; lang: 'ru' | 'tj'
       </div>
 
       {dealer.verified && (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: '#16a34a', background: 'rgba(22, 163, 74, 0.1)', padding: '4px 10px', borderRadius: '6px', alignSelf: 'flex-start' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '4px 10px', borderRadius: '6px', alignSelf: 'flex-start' }}>
           <CheckIcon />
           {t('dealers.verified', lang)}
         </span>
@@ -131,7 +131,7 @@ function DealerCard({ dealer, lang, delay }: { dealer: Dealer; lang: 'ru' | 'tj'
 
       <Link
         href={`/dealers/${dealer.id}`}
-        style={{ display: 'block', textAlign: 'center', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: '14px', padding: '10px', borderRadius: '10px', marginTop: 'auto', transition: 'background 0.15s ease', textDecoration: 'none' }}
+        style={{ display: 'block', textAlign: 'center', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '14px', padding: '10px', borderRadius: '10px', marginTop: 'auto', transition: 'background 0.15s ease', textDecoration: 'none' }}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-hover)' }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent)' }}
       >

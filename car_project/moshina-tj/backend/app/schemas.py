@@ -7,7 +7,7 @@ from typing import Any, Dict, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
-from app.models import Currency, FuelType, ListingStatus, ListingType, TransmissionType, UserRole
+from app.models import BodyType, Currency, FuelType, ListingStatus, ListingType, TransmissionType, UserRole
 
 # ---------------------------------------------------------------------------
 # Generic API wrapper
@@ -51,8 +51,8 @@ class UserCreate(BaseModel):
     @field_validator("password")
     @classmethod
     def password_length(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("Password must be at least 6 characters")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
         if len(v) > 128:
             raise ValueError("Password must be at most 128 characters")
         return v
@@ -140,18 +140,41 @@ class ImageResponse(BaseModel):
 
 
 class ListingCreate(BaseModel):
+    category_id: Optional[uuid.UUID] = None
     type: ListingType
     brand: str
     model: str
     year: int
     price: Decimal
     currency: Currency = Currency.USD
+    is_negotiable: bool = False
+    prepayment_amount: Optional[Decimal] = None
     mileage: Optional[int] = None
     fuel: Optional[FuelType] = None
     transmission: Optional[TransmissionType] = None
+    body_type: Optional[BodyType] = None
+    drive_type: Optional[str] = None
+    engine_volume: Optional[str] = None
+    has_turbine: Optional[bool] = None
+    condition: Optional[str] = None
+    is_customs_cleared: bool = True
+    taxi_license: bool = False
     color: Optional[str] = None
     city: str
     description: Optional[str] = None
+    
+    # Social & Video
+    youtube_link: Optional[str] = None
+    tiktok_link: Optional[str] = None
+    video_url: Optional[str] = None
+
+    # Contact Info
+    contact_name: Optional[str] = None
+    contact_email: Optional[EmailStr] = None
+    contact_phone: Optional[str] = None
+    contact_method: Optional[str] = "phone_and_chat"
+    whatsapp_number: Optional[str] = None
+
     installment_available: bool = False
     image_urls: list[str] = []
     rental_rules: Optional[RentalRules] = None
@@ -208,23 +231,82 @@ class ListingCreate(BaseModel):
             raise ValueError("Cannot upload more than 20 images per listing")
         return v
 
+    @field_validator("image_urls")
+    @classmethod
+    def image_urls_allowed_domains(cls, v: list[str]) -> list[str]:
+        for url in v:
+            if not (
+                url.startswith("https://res.cloudinary.com/")
+                or url.startswith("/uploads/")
+                or url.startswith("http://localhost")
+            ):
+                raise ValueError(
+                    "Invalid image URL: only Cloudinary and local upload URLs are accepted"
+                )
+        return v
+
 
 class ListingUpdate(BaseModel):
     """All fields optional — only provided fields will be updated."""
+    category_id: Optional[uuid.UUID] = None
     type: Optional[ListingType] = None
     brand: Optional[str] = None
     model: Optional[str] = None
     year: Optional[int] = None
     price: Optional[Decimal] = None
     currency: Optional[Currency] = None
+    is_negotiable: Optional[bool] = None
+    prepayment_amount: Optional[Decimal] = None
     mileage: Optional[int] = None
     fuel: Optional[FuelType] = None
     transmission: Optional[TransmissionType] = None
+    body_type: Optional[BodyType] = None
+    drive_type: Optional[str] = None
+    engine_volume: Optional[str] = None
+    has_turbine: Optional[bool] = None
+    condition: Optional[str] = None
+    is_customs_cleared: Optional[bool] = None
+    taxi_license: Optional[bool] = None
     color: Optional[str] = None
     city: Optional[str] = None
     description: Optional[str] = None
+    
+    youtube_link: Optional[str] = None
+    tiktok_link: Optional[str] = None
+    video_url: Optional[str] = None
+
+    contact_name: Optional[str] = None
+    contact_email: Optional[EmailStr] = None
+    contact_phone: Optional[str] = None
+    contact_method: Optional[str] = None
+    whatsapp_number: Optional[str] = None
+
     installment_available: Optional[bool] = None
     rental_rules: Optional[RentalRules] = None
+    image_urls: Optional[list[str]] = None
+
+    @field_validator("image_urls")
+    @classmethod
+    def image_urls_max_count(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if v is not None and len(v) > 20:
+            raise ValueError("Cannot upload more than 20 images per listing")
+        return v
+
+    @field_validator("image_urls")
+    @classmethod
+    def image_urls_allowed_domains(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if v is None:
+            return v
+        for url in v:
+            if not (
+                url.startswith("https://res.cloudinary.com/")
+                or url.startswith("/uploads/")
+                or url.startswith("http://localhost")
+            ):
+                raise ValueError(
+                    "Invalid image URL: only Cloudinary and local upload URLs are accepted"
+                )
+        return v
 
 
 class ListingResponse(BaseModel):
@@ -232,18 +314,39 @@ class ListingResponse(BaseModel):
 
     id: uuid.UUID
     user_id: uuid.UUID
+    category_id: Optional[uuid.UUID] = None
     type: ListingType
     brand: str
     model: str
     year: int
     price: Decimal
     currency: Currency
+    is_negotiable: bool
+    prepayment_amount: Optional[Decimal] = None
     mileage: Optional[int] = None
     fuel: Optional[FuelType] = None
     transmission: Optional[TransmissionType] = None
+    body_type: Optional[BodyType] = None
+    drive_type: Optional[str] = None
+    engine_volume: Optional[str] = None
+    has_turbine: Optional[bool] = None
+    condition: Optional[str] = None
+    is_customs_cleared: bool
+    taxi_license: bool
     color: Optional[str] = None
     city: str
     description: Optional[str] = None
+    
+    youtube_link: Optional[str] = None
+    tiktok_link: Optional[str] = None
+    video_url: Optional[str] = None
+
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_method: Optional[str] = None
+    whatsapp_number: Optional[str] = None
+
     installment_available: bool
     is_dealer_listing: bool
     is_active: bool

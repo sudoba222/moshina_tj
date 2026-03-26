@@ -7,6 +7,7 @@ import { t } from '@/lib/i18n'
 import { favoritesApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useChatDrawer } from '@/lib/ChatDrawerContext'
+import StaffStatusRibbon from '@/components/StaffStatusRibbon'
 import type { Listing, Lang } from '@/types'
 
 interface CarCardProps {
@@ -110,6 +111,7 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
   const [imgLoaded, setImgLoaded] = useState(false)
 
   const { user } = useAuth()
+  const isStaff = user ? ['admin', 'moderator', 'manager', 'support'].includes(user.role) : false
   const { openChat } = useChatDrawer()
   const router = useRouter()
   const [favorited, setFavorited] = useState<boolean>(
@@ -296,86 +298,98 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
               </span>
             </div>
           )}
+
+          {/* Staff status ribbon — shown to staff users when not in moderatorMode (moderatorMode has its own status badge) */}
+          {isStaff && !moderatorMode && (
+            <StaffStatusRibbon listing={listing} />
+          )}
         </div>
 
         {/* Content */}
-        <div style={{ padding: '12px 14px' }}>
+        <div style={{ padding: '12px 14px 14px' }}>
+          {/* Brand + Model */}
+          <p style={{
+            fontSize: '13px',
+            fontWeight: 600,
+            color: 'var(--text-secondary)',
+            marginBottom: '3px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            letterSpacing: '0.01em',
+          }}>
+            {listing.brand} {listing.model}
+          </p>
+
           {/* Price — prominent */}
           <p style={{
-            fontSize: '18px',
+            fontSize: '19px',
             fontWeight: 900,
             color: 'var(--accent)',
-            marginBottom: '4px',
+            marginBottom: '8px',
             letterSpacing: '-0.03em',
             lineHeight: 1.1,
           }}>
             {formatPrice(Number(listing.price), listing.currency)}
           </p>
 
-          {/* Brand + Model */}
-          <p style={{
-            fontSize: '14px',
-            fontWeight: 600,
-            color: 'var(--text)',
-            marginBottom: '6px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}>
-            {listing.brand} {listing.model}
-          </p>
-
-          {/* Specs row */}
+          {/* Specs chips */}
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
-            gap: '4px 0',
-            fontSize: '12px',
-            color: 'var(--text-muted)',
+            gap: '4px',
+            marginBottom: '8px',
           }}>
-            <span>{listing.year}</span>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              background: 'var(--tag-bg)',
+              padding: '2px 7px',
+              borderRadius: '4px',
+            }}>
+              {listing.year}
+            </span>
             {listing.mileage != null && (
-              <>
-                <span style={{ margin: '0 5px', opacity: 0.5 }}>·</span>
-                <span>{formatMileage(listing.mileage)}</span>
-              </>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                background: 'var(--tag-bg)',
+                padding: '2px 7px',
+                borderRadius: '4px',
+              }}>
+                {formatMileage(listing.mileage)}
+              </span>
             )}
             {listing.transmission && (
-              <>
-                <span style={{ margin: '0 5px', opacity: 0.5 }}>·</span>
-                <span>{listing.transmission}</span>
-              </>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                background: 'var(--tag-bg)',
+                padding: '2px 7px',
+                borderRadius: '4px',
+              }}>
+                {listing.transmission}
+              </span>
             )}
           </div>
 
-          {/* Location */}
-          {listing.city && (
-            <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="var(--text-muted)" strokeWidth="1.5">
-                <path d="M6 1C4.07 1 2.5 2.57 2.5 4.5c0 2.6 3.5 6.5 3.5 6.5s3.5-3.9 3.5-6.5C9.5 2.57 7.93 1 6 1z" />
-                <circle cx="6" cy="4.5" r="1" />
-              </svg>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{listing.city}</span>
-            </div>
-          )}
-
-          {/* Date + poster row */}
-          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+          {/* Location + date row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            {listing.city ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', minWidth: 0 }}>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" style={{ flexShrink: 0 }}>
+                  <path d="M6 1C4.07 1 2.5 2.57 2.5 4.5c0 2.6 3.5 6.5 3.5 6.5s3.5-3.9 3.5-6.5C9.5 2.57 7.93 1 6 1z" />
+                  <circle cx="6" cy="4.5" r="1" />
+                </svg>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{listing.city}</span>
+              </div>
+            ) : <span />}
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
               {formatDate(listing.created_at, lang)}
             </span>
-            {listing.user_name && (
-              <span style={{
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: '120px',
-              }}>
-                {listing.user_name}
-              </span>
-            )}
           </div>
 
           {/* Write message button — only for other sellers */}
@@ -389,18 +403,19 @@ export default function CarCard({ listing, lang, className, moderatorMode = fals
                 alignItems: 'center',
                 gap: '5px',
                 width: '100%',
-                padding: '7px 10px',
+                padding: '8px 10px',
                 fontSize: '12px',
-                fontWeight: 600,
+                fontWeight: 700,
                 color: 'var(--accent)',
                 background: 'transparent',
-                border: '1px solid var(--accent)',
+                border: '1.5px solid var(--accent)',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 justifyContent: 'center',
                 transition: 'background 0.15s ease',
+                minHeight: '36px',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'color-mix(in srgb, var(--accent) 10%, transparent)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-dim)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
               <ChatIcon />

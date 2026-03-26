@@ -15,7 +15,46 @@ import logging
 from typing import Optional
 from uuid import UUID
 
+import httpx
+
+from app.config import settings
+
 logger = logging.getLogger(__name__)
+
+
+async def _send_telegram_message(
+    chat_id: str,
+    text: str,
+    parse_mode: str = "Markdown",
+    inline_button: Optional[tuple[str, str]] = None,
+) -> None:
+    """Send a message via the Telegram Bot API directly using httpx.
+
+    Silently returns if bot token is not configured or on any transient error.
+    """
+    bot_token = settings.telegram_bot_token
+    if not bot_token or not chat_id:
+        return
+
+    payload: dict = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": parse_mode,
+    }
+    if inline_button:
+        label, url = inline_button
+        payload["reply_markup"] = {
+            "inline_keyboard": [[{"text": label, "url": url}]]
+        }
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                json=payload,
+            )
+    except Exception as exc:
+        logger.warning("telegram_notifier: HTTP send failed for chat_id=%s: %s", chat_id, exc)
 
 
 async def send_telegram_notification(
@@ -32,12 +71,11 @@ async def send_telegram_notification(
 
     Silently returns if:
       - user has no telegram_chat_id
-      - bot application is not running
+      - bot token is not configured
       - user has blocked the bot (Forbidden error is logged, not raised)
     """
     from app.database import SessionLocal
     from app.models import User
-    from app.telegram_bot import get_bot_application
 
     db = SessionLocal()
     try:
@@ -47,16 +85,6 @@ async def send_telegram_notification(
 
         chat_id = user.telegram_chat_id
         lang = getattr(user, "language", "ru") or "ru"
-
-        application = get_bot_application()
-        if not application:
-            logger.warning(
-                "telegram_notifier: bot application not running, skipping notification for user %s",
-                user_id,
-            )
-            return
-
-        bot = application.bot
 
         if notification_type == "listing_approved":
             car_name = payload.get("car_name", "")
@@ -70,16 +98,11 @@ async def send_telegram_notification(
                 text = f"✅ Ваше объявление «{car_name}» опубликовано!\n[Посмотреть]({url})"
                 button_label = "Смотреть →"
 
-            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
-            keyboard = InlineKeyboardMarkup(
-                [[InlineKeyboardButton(button_label, url=url)]]
-            )
-            await bot.send_message(
+            await _send_telegram_message(
                 chat_id=chat_id,
                 text=text,
-                reply_markup=keyboard,
                 parse_mode="Markdown",
+                inline_button=(button_label, url),
             )
 
         elif notification_type == "new_message":
@@ -94,23 +117,19 @@ async def send_telegram_notification(
                 text = f"📩 Новое сообщение от {sender}:\n_{preview}_"
                 button_label = "Ответить →"
 
-            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
-            keyboard = InlineKeyboardMarkup(
-                [[InlineKeyboardButton(button_label, url=url)]]
-            )
-            await bot.send_message(
+            await _send_telegram_message(
                 chat_id=chat_id,
                 text=text,
-                reply_markup=keyboard,
                 parse_mode="Markdown",
+                inline_button=(button_label, url),
             )
 
         elif notification_type == "support_reply":
             reply_text = payload.get("text", "")
-            await bot.send_message(
+            await _send_telegram_message(
                 chat_id=chat_id,
                 text=f"💬 Поддержка: {reply_text}",
+                parse_mode="",
             )
 
         else:

@@ -416,7 +416,7 @@ function DealersPageInner() {
 // ── Page export with Suspense boundary ────────────────────────────────────────
 export default function AdminDealersPage() {
   return (
-    <Suspense>
+    <Suspense fallback={null}>
       <DealersPageInner />
     </Suspense>
   )

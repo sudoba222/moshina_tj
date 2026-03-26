@@ -438,7 +438,7 @@ function CategoriesPageInner() {
 
 export default function AdminCategoriesPage() {
   return (
-    <Suspense>
+    <Suspense fallback={null}>
       <CategoriesPageInner />
     </Suspense>
   )

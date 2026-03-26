@@ -452,7 +452,7 @@ function BrandsPageInner() {
 
 export default function AdminBrandsPage() {
   return (
-    <Suspense>
+    <Suspense fallback={null}>
       <BrandsPageInner />
     </Suspense>
   )

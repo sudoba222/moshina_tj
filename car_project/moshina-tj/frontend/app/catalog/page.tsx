@@ -35,6 +35,20 @@ const TRANSMISSIONS_OPTIONS = [
   { value: 'Механика', labelKey: 'options.transMechanical' },
   { value: 'Вариатор', labelKey: 'options.transCvt' },
 ]
+const BODY_TYPES_OPTIONS = [
+  { value: 'sedan',       labelKey: 'options.bodySedan' },
+  { value: 'suv',         labelKey: 'options.bodySuv' },
+  { value: 'hatchback',   labelKey: 'options.bodyHatchback' },
+  { value: 'minivan',     labelKey: 'options.bodyMinivan' },
+  { value: 'pickup',      labelKey: 'options.bodyPickup' },
+  { value: 'coupe',       labelKey: 'options.bodyCoupe' },
+  { value: 'wagon',       labelKey: 'options.bodyWagon' },
+  { value: 'crossover',   labelKey: 'options.bodyCrossover' },
+  { value: 'convertible', labelKey: 'options.bodyConvertible' },
+  { value: 'van',         labelKey: 'options.bodyVan' },
+  { value: 'bus',         labelKey: 'options.bodyBus' },
+  { value: 'other',       labelKey: 'options.bodyOther' },
+]
 const COLORS = [
   { label: 'Белый',    value: 'Белый',     swatch: '#f5f5f5' },
   { label: 'Чёрный',   value: 'Черный',    swatch: '#1a1a1a' },
@@ -98,11 +112,12 @@ function CatalogContent() {
   const [transmission, setTransmission] = useState(searchParams.get('transmission') ?? '')
   const [color, setColor] = useState(searchParams.get('color') ?? '')
   const [maxMileage, setMaxMileage] = useState(searchParams.get('max_mileage') ?? '')
+  const [bodyType, setBodyType] = useState(searchParams.get('body_type') ?? '')
   const [installmentOnly, setInstallmentOnly] = useState(searchParams.get('installment') === 'true')
   const [sort, setSort] = useState(searchParams.get('sort') ?? '')
   const [page, setPage] = useState(Number(searchParams.get('page') ?? '1'))
 
-  const activeFilterCount = [type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, color, maxMileage]
+  const activeFilterCount = [type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, color, maxMileage, bodyType]
     .filter(Boolean).length + (installmentOnly ? 1 : 0)
 
   // Dynamic brands/models from API
@@ -125,6 +140,7 @@ function CatalogContent() {
       if (maxYear) filters.max_year = Number(maxYear)
       if (fuel) filters.fuel = fuel
       if (transmission) filters.transmission = transmission
+      if (bodyType) filters.body_type = bodyType
       if (color) filters.color = color
       if (maxMileage) filters.max_mileage = Number(maxMileage)
       if (installmentOnly) filters.installment = true
@@ -154,7 +170,7 @@ function CatalogContent() {
     } finally {
       setLoading(false)
     }
-  }, [type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, color, maxMileage, installmentOnly, sort, page, searchParams])
+  }, [type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, bodyType, color, maxMileage, installmentOnly, sort, page, searchParams])
 
   useEffect(() => {
     fetchListings()
@@ -173,6 +189,7 @@ function CatalogContent() {
     if (maxYear) params.set('max_year', maxYear)
     if (fuel) params.set('fuel', fuel)
     if (transmission) params.set('transmission', transmission)
+    if (bodyType) params.set('body_type', bodyType)
     if (color) params.set('color', color)
     if (maxMileage) params.set('max_mileage', maxMileage)
     if (installmentOnly) params.set('installment', 'true')
@@ -185,7 +202,7 @@ function CatalogContent() {
   function resetFilters() {
     setType(''); setCity(''); setBrand(''); setModel('')
     setMinPrice(''); setMaxPrice(''); setMinYear(''); setMaxYear('')
-    setFuel(''); setTransmission(''); setColor(''); setMaxMileage('')
+    setFuel(''); setTransmission(''); setBodyType(''); setColor(''); setMaxMileage('')
     setInstallmentOnly(false); setSort(''); setPage(1)
     router.push('/catalog')
   }
@@ -445,6 +462,46 @@ function CatalogContent() {
           </div>
         </div>
 
+        {/* Body type */}
+        <div>
+          <label style={labelStyle}>{t('catalog.bodyType', lang)}</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            <button
+              onClick={() => setBodyType('')}
+              style={{
+                padding: '4px 9px',
+                borderRadius: '20px',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                background: bodyType === '' ? 'var(--accent)' : 'var(--surface)',
+                color: bodyType === '' ? 'var(--color-white)' : 'var(--text-muted)',
+                border: bodyType === '' ? '1px solid var(--accent)' : '1px solid var(--border)',
+              }}
+            >
+              {t('catalog.bodyTypeAll', lang)}
+            </button>
+            {BODY_TYPES_OPTIONS.map((bt) => (
+              <button
+                key={bt.value}
+                onClick={() => setBodyType(bt.value === bodyType ? '' : bt.value)}
+                style={{
+                  padding: '4px 9px',
+                  borderRadius: '20px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: bodyType === bt.value ? 'var(--accent)' : 'var(--surface)',
+                  color: bodyType === bt.value ? 'var(--color-white)' : 'var(--text-muted)',
+                  border: bodyType === bt.value ? '1px solid var(--accent)' : '1px solid var(--border)',
+                }}
+              >
+                {t(bt.labelKey, lang)}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Color swatches */}
         <div>
           <label style={labelStyle}>{t('catalog.color', lang)}</label>
@@ -461,7 +518,7 @@ function CatalogContent() {
                   height: '26px',
                   borderRadius: '50%',
                   background: c.swatch,
-                  border: color === c.value ? '2.5px solid var(--accent)' : '2px solid var(--border)',
+                  border: color === c.value ? '2.5px solid var(--accent)' : '1.5px solid var(--border)',
                   cursor: 'pointer',
                   boxShadow: color === c.value ? '0 0 0 2px var(--card), 0 0 0 4px var(--accent)' : 'none',
                   outline: 'none',

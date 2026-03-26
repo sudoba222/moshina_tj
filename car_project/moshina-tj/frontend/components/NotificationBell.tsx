@@ -132,7 +132,7 @@ export default function NotificationBell() {
               height: '16px',
               padding: '0 4px',
               background: 'var(--color-error, #ef4444)',
-              color: '#fff',
+              color: 'var(--color-white)',
               fontSize: '10px',
               fontWeight: 800,
               borderRadius: '8px',

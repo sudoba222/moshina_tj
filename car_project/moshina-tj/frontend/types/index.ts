@@ -4,6 +4,7 @@ export type Currency = 'USD' | 'TJS'
 export type UserRole = 'user' | 'dealer' | 'admin' | 'moderator' | 'manager' | 'support'
 export type FuelType = 'Бензин' | 'Дизель' | 'Газ' | 'Электро' | 'Гибрид'
 export type TransmissionType = 'Автомат' | 'Механика' | 'Вариатор'
+export type BodyType = 'sedan' | 'suv' | 'hatchback' | 'minivan' | 'pickup' | 'coupe' | 'wagon' | 'crossover' | 'convertible' | 'van' | 'bus' | 'other'
 
 export interface ListingImage {
   id: string
@@ -27,21 +28,51 @@ export interface RentalRules {
 
 export type ListingStatus = 'pending' | 'active' | 'rejected' | 'draft'
 
+export interface CarCategory {
+  id: string
+  name_ru: string
+  name_tj: string
+  slug: string
+  icon_url: string | null
+  description_ru: string | null
+  description_tj: string | null
+  filter_config: Record<string, unknown> | null
+  display_order: number
+}
+
 export interface Listing {
   id: string
   user_id: string
+  category_id?: string | null
   type: ListingType
   brand: string
   model: string
   year: number
   price: number
   currency: Currency
+  is_negotiable: boolean
+  prepayment_amount?: number | null
   mileage: number | null
   fuel: FuelType | null
   transmission: TransmissionType | null
+  body_type?: BodyType | null
+  drive_type?: string | null
+  engine_volume?: string | null
+  has_turbine?: boolean | null
+  condition?: string | null
+  is_customs_cleared: boolean
+  taxi_license: boolean
   color: string | null
   city: string
   description: string | null
+  youtube_link?: string | null
+  tiktok_link?: string | null
+  video_url?: string | null
+  contact_name?: string | null
+  contact_email?: string | null
+  contact_phone?: string | null
+  contact_method?: string | null
+  whatsapp_number?: string | null
   installment_available: boolean
   is_dealer_listing: boolean
   is_active: boolean

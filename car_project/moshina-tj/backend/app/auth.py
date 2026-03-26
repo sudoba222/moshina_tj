@@ -80,7 +80,12 @@ def get_current_user(
             detail="Token payload missing subject",
         )
 
-    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    user = (
+        db.query(User)
+        .options(joinedload(User.dealer_profile))
+        .filter(User.id == user_id, User.is_deleted == False)
+        .first()
+    )
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -133,6 +138,8 @@ def get_current_user_optional(
             .first()
         )
         if user and user.is_banned:
+            return None
+        if user and payload.get("ver", 0) != user.token_version:
             return None
         return user
     except JWTError:

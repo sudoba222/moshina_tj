@@ -28,6 +28,7 @@ interface DealersApiResponse {
 }
 
 async function fetchAllListingIds(): Promise<ListingItem[]> {
+  if (!API_URL) return []
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 8000)
@@ -56,6 +57,7 @@ async function fetchAllListingIds(): Promise<ListingItem[]> {
 }
 
 async function fetchAllDealerIds(): Promise<DealerItem[]> {
+  if (!API_URL) return []
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000)

@@ -17,7 +17,7 @@ from app.auth import (
     verify_password,
 )
 from app.database import get_db
-from app.email_service import send_email_otp
+from app.email_service import send_email_otp, send_welcome_email, send_password_changed
 from app.models import OtpCode, TelegramToken, User
 from app.schemas import ApiResponse, AuthResponse, Token, UserCreate, UserResponse
 
@@ -56,8 +56,8 @@ class ChangePasswordPayload(BaseModel):
     @field_validator("new_password")
     @classmethod
     def new_password_min_length(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("Password must be at least 6 characters")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
         if len(v) > 128:
             raise ValueError("Password must be at most 128 characters")
         return v
@@ -143,8 +143,8 @@ class ResetPasswordPayload(BaseModel):
     @field_validator("new_password")
     @classmethod
     def password_min_length(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("Password must be at least 6 characters")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
         return v
 
 
@@ -166,8 +166,8 @@ class EmailRegisterPayload(BaseModel):
     @field_validator("password")
     @classmethod
     def password_min_length(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("Password must be at least 6 characters")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
         if len(v) > 128:
             raise ValueError("Password must be at most 128 characters")
         return v
@@ -196,10 +196,9 @@ class ResendEmailOtpPayload(BaseModel):
 
 def _send_sms(phone: str, message: str) -> bool:
     """Send SMS via Twilio if configured, else log the code (dev mode)."""
-    import os
-    sid = os.getenv("TWILIO_ACCOUNT_SID")
-    token = os.getenv("TWILIO_AUTH_TOKEN")
-    from_num = os.getenv("TWILIO_FROM_NUMBER")
+    sid = settings.twilio_account_sid
+    token = settings.twilio_auth_token
+    from_num = settings.twilio_from_number
     if sid and token and from_num:
         try:
             from twilio.rest import Client
@@ -326,15 +325,18 @@ def update_profile(
 @router.put("/change-password", response_model=ApiResponse[None])
 def change_password(
     payload: ChangePasswordPayload,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if not verify_password(payload.current_password, current_user.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
-    if len(payload.new_password) < 6:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must be at least 6 characters")
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must be at least 8 characters")
     current_user.password_hash = hash_password(payload.new_password)
     db.commit()
+    if current_user.email:
+        background_tasks.add_task(send_password_changed, current_user.email)
     return ApiResponse(success=True, data=None, message="Password changed successfully")
 
 
@@ -346,11 +348,12 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
     Rate-limited to 5 per hour per IP.
     In dev mode (no Twilio env vars), the code is returned in the response for testing.
     """
-    import os
 
-    # Invalidate any existing unused OTPs for this phone before issuing a new one
+    # Invalidate any existing unused phone_auth OTPs for this phone before issuing a new one
+    # (filter by purpose to avoid accidentally cancelling password_reset codes)
     db.query(OtpCode).filter(
         OtpCode.phone == payload.phone,
+        OtpCode.purpose == "phone_auth",
         OtpCode.is_used == False,
     ).update({"is_used": True})
 
@@ -361,15 +364,16 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
     db.add(otp)
     db.commit()
 
-    message = f"Ваш код подтверждения TajCar.tj: {code}. Действителен 10 минут."
+    message = f"Ваш код подтверждения MOSHINA.TJ: {code}. Действителен 10 минут."
     _send_sms(payload.phone, message)
 
-    is_dev = not os.getenv("TWILIO_ACCOUNT_SID") and settings.environment != "production"
-    response_data: dict = {"dev_code": code} if is_dev else {}
+    # Never expose raw OTP codes in the response body — log server-side only
+    if not settings.twilio_account_sid and settings.environment != "production":
+        logger.debug("[DEV OTP] phone=%s code=%s", payload.phone, code)
 
     return ApiResponse(
         success=True,
-        data=response_data,
+        data={},
         message="OTP sent",
     )
 
@@ -462,7 +466,7 @@ def verify_otp(request: Request, response: Response, payload: VerifyOtpPayload, 
         # New user — register; prefer payload name, fall back to Telegram name
         name = (payload.name or "").strip() or tg_name or None
         chosen_password = payload.password.strip() if payload.password else None
-        if not chosen_password or len(chosen_password) < 6:
+        if not chosen_password or len(chosen_password) < 8:
             chosen_password = secrets.token_hex(16)  # random if not provided
         user = User(
             phone=payload.phone,
@@ -518,17 +522,19 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
         # Unverified account exists — resend OTP instead of blocking
         code = _generate_and_store_email_otp(payload.email, db)
-        is_dev = not __import__("os").getenv("RESEND_API_KEY")
         send_email_otp(payload.email, code, purpose="verify")
+        # Never expose raw OTP codes in the response body — log server-side only
+        if not settings.resend_api_key and settings.environment != "production":
+            logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
         return ApiResponse(
             success=True,
-            data={"dev_code": code} if is_dev else {},
+            data={},
             message="Verification code resent to your email",
         )
 
     # Create user with email_verified=False
     user = User(
-        phone=f"email_{secrets.token_hex(4)}",  # placeholder — phone required by schema
+        phone=f"email_{secrets.token_hex(8)}",  # placeholder — phone required by schema
         name=payload.name,
         email=payload.email,
         password_hash=hash_password(payload.password),
@@ -540,13 +546,14 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
     code = _generate_and_store_email_otp(payload.email, db)
     db.commit()
 
-    import os
-    is_dev = not os.getenv("RESEND_API_KEY") and settings.environment != "production"
     send_email_otp(payload.email, code, purpose="verify")
+    # Never expose raw OTP codes in the response body — log server-side only
+    if not settings.resend_api_key and settings.environment != "production":
+        logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
 
     return ApiResponse(
         success=True,
-        data={"dev_code": code} if is_dev else {},
+        data={},
         message="Registration successful. Check your email for the verification code.",
     )
 
@@ -599,12 +606,18 @@ def verify_email_otp(request: Request, response: Response, payload: VerifyEmailO
     user.email_verified = True
     db.commit()
 
+    # Send welcome email (fire-and-forget — don't block the response)
+    try:
+        send_welcome_email(user.email, user.name)
+    except Exception:
+        pass
+
     token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
-        message="Email verified. Welcome to TajCar.tj!",
+        message="Email verified. Welcome to MOSHINA.TJ!",
     )
 
 
@@ -643,14 +656,15 @@ def resend_email_otp(request: Request, payload: ResendEmailOtpPayload, db: Sessi
     if user.email_verified:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is already verified")
 
-    import os
     code = _generate_and_store_email_otp(payload.email, db)
-    is_dev = not os.getenv("RESEND_API_KEY") and settings.environment != "production"
     send_email_otp(payload.email, code, purpose="verify")
+    # Never expose raw OTP codes in the response body — log server-side only
+    if not settings.resend_api_key and settings.environment != "production":
+        logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
 
     return ApiResponse(
         success=True,
-        data={"dev_code": code} if is_dev else {},
+        data={},
         message="Verification code sent",
     )
 
@@ -661,7 +675,6 @@ def resend_email_otp(request: Request, payload: ResendEmailOtpPayload, db: Sessi
 @limiter.limit("3/hour")
 def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Session = Depends(get_db)):
     """Send a password-reset OTP to the user's phone or email."""
-    import os
     identifier = payload.identifier.strip()
     is_email = "@" in identifier
 
@@ -680,9 +693,11 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
         db.add(OtpCode(email=identifier, purpose="password_reset", code=code, expires_at=expires_at))
         db.commit()
-        is_dev = not os.getenv("RESEND_API_KEY") and settings.environment != "production"
         send_email_otp(identifier, code, purpose="login")
-        return ApiResponse(success=True, data={"dev_code": code} if is_dev else {}, message="Code sent to your email")
+        # Never expose raw OTP codes in the response body — log server-side only
+        if not settings.resend_api_key and settings.environment != "production":
+            logger.debug("[DEV OTP] email=%s code=%s", identifier, code)
+        return ApiResponse(success=True, data={}, message="Code sent to your email")
     else:
         user = db.query(User).filter(User.phone == identifier, User.is_deleted == False).first()
         if not user:
@@ -696,10 +711,12 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
         db.add(OtpCode(phone=identifier, purpose="password_reset", code=code, expires_at=expires_at))
         db.commit()
-        message_text = f"Ваш код сброса пароля TajCar.tj: {code}. Действителен 10 минут."
+        message_text = f"Ваш код сброса пароля MOSHINA.TJ: {code}. Действителен 10 минут."
         _send_sms(identifier, message_text)
-        is_dev = not os.getenv("TWILIO_ACCOUNT_SID") and settings.environment != "production"
-        return ApiResponse(success=True, data={"dev_code": code} if is_dev else {}, message="Code sent to your phone")
+        # Never expose raw OTP codes in the response body — log server-side only
+        if not settings.twilio_account_sid and settings.environment != "production":
+            logger.debug("[DEV OTP] phone=%s code=%s", identifier, code)
+        return ApiResponse(success=True, data={}, message="Code sent to your phone")
 
 
 @router.post("/forgot-password-telegram", response_model=ApiResponse[dict])
@@ -710,7 +727,6 @@ def forgot_password_telegram(
     db: Session = Depends(get_db),
 ):
     """Send a password-reset OTP via Telegram if user has a linked Telegram account."""
-    import os
     import httpx as _httpx
 
     identifier = payload.identifier.strip()
@@ -753,15 +769,15 @@ def forgot_password_telegram(
     db.commit()
 
     # Send OTP via Telegram Bot API (sync httpx)
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    bot_token = settings.telegram_bot_token
     if bot_token:
         tg_text = (
-            f"🔐 Ваш код сброса пароля TajCar.tj: *{code}*\n\n"
+            f"🔐 Ваш код сброса пароля MOSHINA.TJ: *{code}*\n\n"
             f"Действителен 10 минут.\nНикому не сообщайте этот код."
         )
         try:
             with _httpx.Client(timeout=10) as client:
-                client.post(
+                resp = client.post(
                     f"https://api.telegram.org/bot{bot_token}/sendMessage",
                     json={
                         "chat_id": user.telegram_chat_id,
@@ -769,13 +785,22 @@ def forgot_password_telegram(
                         "parse_mode": "Markdown",
                     },
                 )
+                resp.raise_for_status()
         except Exception:
             logger.exception("Failed to send Telegram reset code to %s", user.telegram_chat_id)
+            return ApiResponse(
+                success=False,
+                data={"available": False},
+                message="Failed to deliver code via Telegram. Please try another method.",
+            )
+    else:
+        # Dev mode: log the code so it is visible in server output
+        if settings.environment != "production":
+            logger.debug("[DEV OTP] telegram chat_id=%s code=%s", user.telegram_chat_id, code)
 
-    is_dev = not bot_token and settings.environment != "production"
     return ApiResponse(
         success=True,
-        data={"available": True, "dev_code": code if is_dev else None},
+        data={"available": True},
         message="Code sent to your Telegram",
     )
 
@@ -788,13 +813,14 @@ def reset_password(request: Request, payload: ResetPasswordPayload, db: Session 
     identifier = payload.identifier.strip()
     is_email = "@" in identifier
 
+    # Look up the most recent unused, unexpired OTP without the code filter first,
+    # so we can enforce brute-force protection regardless of whether the code matches.
     if is_email:
         otp = (
             db.query(OtpCode)
             .filter(
                 OtpCode.email == identifier,
                 OtpCode.purpose == "password_reset",
-                OtpCode.code == payload.code,
                 OtpCode.is_used == False,
                 OtpCode.expires_at > now,
             )
@@ -808,7 +834,6 @@ def reset_password(request: Request, payload: ResetPasswordPayload, db: Session 
             .filter(
                 OtpCode.phone == identifier,
                 OtpCode.purpose == "password_reset",
-                OtpCode.code == payload.code,
                 OtpCode.is_used == False,
                 OtpCode.expires_at > now,
             )
@@ -819,6 +844,21 @@ def reset_password(request: Request, payload: ResetPasswordPayload, db: Session 
 
     if not otp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired code")
+
+    # Per-identifier brute-force protection: lock after 5 failed attempts
+    if otp.attempts >= 5:
+        otp.is_used = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many incorrect attempts. Request a new code.",
+        )
+
+    if otp.code != payload.code:
+        otp.attempts += 1
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired code")
+
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
     if user.is_banned:
@@ -859,9 +899,8 @@ def send_otp_telegram(
     The Telegram bot (/start <token>) will generate and send the OTP.
     The user then verifies via the regular POST /auth/verify-otp endpoint.
     """
-    import os
 
-    bot_username = os.getenv("TELEGRAM_BOT_USERNAME")
+    bot_username = settings.telegram_bot_username or None
     if not bot_username:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -906,9 +945,8 @@ def google_auth(
     Frontend sends the token from Google Identity Services.
     Backend verifies with google-auth and finds or creates the user.
     """
-    import os
 
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    client_id = settings.google_client_id or None
     if not client_id:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -991,11 +1029,10 @@ def apple_auth(
     Frontend sends the token from Apple Sign In JS.
     Backend fetches Apple's JWKS and verifies the JWT locally.
     """
-    import os
     import httpx
     from jose import jwt as jose_jwt, JWTError
 
-    client_id = os.getenv("APPLE_CLIENT_ID")
+    client_id = settings.apple_client_id or None
     if not client_id:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -1083,20 +1120,17 @@ def apple_auth(
 @router.get("/google/redirect")
 def google_oauth_redirect() -> Any:
     """Redirect the user to Google's OAuth consent page."""
-    import os, urllib.parse
+    import urllib.parse
     from fastapi.responses import RedirectResponse as _RedirectResponse
 
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    client_id = settings.google_client_id or None
+    client_secret = settings.google_client_secret or None
     if not client_id or not client_secret:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Google OAuth is not configured on this server (missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET)",
         )
-    redirect_uri = os.getenv(
-        "GOOGLE_REDIRECT_URI",
-        "https://tajcar-api.onrender.com/api/v1/auth/google/callback",
-    )
+    redirect_uri = settings.google_redirect_uri
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -1121,19 +1155,15 @@ async def google_oauth_callback(
     SQLAlchemy MissingGreenlet errors that occur with Depends(get_db) in
     async routes.
     """
-    import os
     import httpx
     import urllib.parse as _up
     from fastapi.responses import RedirectResponse as _RedirectResponse
     from app.database import SessionLocal
 
-    frontend_url = os.getenv("FRONTEND_URL", "https://tajcar-frontend.vercel.app")
-    client_id = os.getenv("GOOGLE_CLIENT_ID", "")
-    client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
-    redirect_uri = os.getenv(
-        "GOOGLE_REDIRECT_URI",
-        "https://tajcar-api.onrender.com/api/v1/auth/google/callback",
-    )
+    frontend_url = settings.frontend_url
+    client_id = settings.google_client_id
+    client_secret = settings.google_client_secret
+    redirect_uri = settings.google_redirect_uri
 
     if error or not code:
         return _RedirectResponse(f"{frontend_url}/auth/login?error=google_cancelled")

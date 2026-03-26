@@ -1,6 +1,7 @@
 'use client'
 import { useState, FormEvent, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { useLang } from '@/lib/LanguageContext'
 import { useAuth } from '@/lib/AuthContext'
@@ -81,14 +82,17 @@ export default function Navbar() {
           {/* Logo */}
           <Link
             href="/"
-            style={{ flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: '1px' }}
+            style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
           >
-            <span style={{ fontWeight: 800, fontSize: '20px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>
-              TajCar
-            </span>
-            <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-muted)' }}>
-              .tj
-            </span>
+            <Image src="/logo-icon.png" alt="TajCar.tj" width={36} height={24} style={{ objectFit: 'contain', display: 'block' }} priority />
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '1px' }}>
+              <span style={{ fontWeight: 800, fontSize: '20px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>
+                MOSHINA
+              </span>
+              <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text)' }}>
+                .TJ
+              </span>
+            </div>
           </Link>
 
           {/* Search */}
@@ -292,19 +296,23 @@ export default function Navbar() {
             <Link
               href="/post"
               style={{
-                height: '36px',
-                padding: '0 14px',
+                height: '38px',
+                padding: '0 16px',
                 background: 'var(--accent)',
                 color: 'var(--color-white)',
                 fontWeight: 700,
                 fontSize: '13px',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
                 whiteSpace: 'nowrap',
+                transition: 'background 0.15s ease, transform 0.1s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
               }}
               className="hidden md:inline-flex"
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-hover)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent)' }}
             >
               <PlusIcon />
               {t('nav.addListing', lang)}
@@ -314,15 +322,18 @@ export default function Navbar() {
             <button
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Toggle menu"
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav-drawer"
               className="flex md:hidden items-center justify-center"
               style={{
-                width: '36px',
-                height: '36px',
+                width: '44px',
+                height: '44px',
                 background: 'none',
                 border: '1.5px solid var(--border)',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 cursor: 'pointer',
                 color: 'var(--text)',
+                flexShrink: 0,
               }}
             >
               {mobileOpen ? (
@@ -362,6 +373,19 @@ export default function Navbar() {
                   borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
                   whiteSpace: 'nowrap',
                   transition: 'color 0.15s, border-color 0.15s',
+                  textDecoration: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.color = 'var(--text)'
+                    e.currentTarget.style.borderBottomColor = 'var(--border-strong)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.color = 'var(--text-secondary)'
+                    e.currentTarget.style.borderBottomColor = 'transparent'
+                  }
                 }}
               >
                 {t(tab.key, lang)}
@@ -383,15 +407,21 @@ export default function Navbar() {
       {/* Mobile drawer — panel */}
       {mobileOpen && (
         <div
+          id="mobile-nav-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
           className="md:hidden animate-slide-right"
           style={{
             position: 'fixed',
             top: 0,
             left: 0,
             bottom: 0,
-            width: '280px',
+            width: '288px',
+            maxWidth: 'calc(100vw - 48px)',
             background: 'var(--nav-bg)',
             borderRight: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-md)',
             zIndex: 300,
             display: 'flex',
             flexDirection: 'column',
@@ -400,9 +430,12 @@ export default function Navbar() {
         >
           {/* Drawer header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid var(--border)' }}>
-            <Link href="/" onClick={() => setMobileOpen(false)} style={{ display: 'flex', alignItems: 'baseline', gap: '1px' }}>
-              <span style={{ fontWeight: 800, fontSize: '18px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>TajCar</span>
-              <span style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text-muted)' }}>.tj</span>
+            <Link href="/" onClick={() => setMobileOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+              <Image src="/logo-icon.png" alt="TajCar.tj" width={30} height={20} style={{ objectFit: 'contain', display: 'block' }} />
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '1px' }}>
+                <span style={{ fontWeight: 800, fontSize: '18px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>MOSHINA</span>
+                <span style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text)' }}>.TJ</span>
+              </div>
             </Link>
             <button
               onClick={() => setMobileOpen(false)}

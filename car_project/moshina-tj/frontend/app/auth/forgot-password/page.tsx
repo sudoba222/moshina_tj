@@ -65,19 +65,19 @@ function OtpInput({ value, onChange, hasError }: OtpInputProps) {
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)} onPaste={handlePaste}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = hasError ? '#ef4444' : 'var(--accent)'
+            e.currentTarget.style.borderColor = hasError ? 'var(--color-error)' : 'var(--accent)'
             e.currentTarget.style.boxShadow = hasError
               ? '0 0 0 3px rgba(239,68,68,0.18)'
               : '0 0 0 3px var(--accent-dim,rgba(220,38,38,0.12))'
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = hasError ? '#ef4444' : 'var(--border)'
+            e.currentTarget.style.borderColor = hasError ? 'var(--color-error)' : 'var(--border)'
             e.currentTarget.style.boxShadow = 'none'
           }}
           style={{
             width: '48px', height: '56px', textAlign: 'center', fontSize: '22px', fontWeight: 700,
             fontFamily: 'var(--font)', color: 'var(--text)', background: 'var(--bg)',
-            border: `2px solid ${hasError ? '#ef4444' : 'var(--border)'}`, borderRadius: '12px',
+            border: `2px solid ${hasError ? 'var(--color-error)' : 'var(--border)'}`, borderRadius: '12px',
             outline: 'none', transition: 'border-color 0.15s, box-shadow 0.15s',
           }} />
       ))}
@@ -94,7 +94,7 @@ const baseInput: React.CSSProperties = {
 
 const btnStyle = (loading: boolean, disabled = false): React.CSSProperties => ({
   width: '100%', background: (loading || disabled) ? 'var(--text-muted)' : 'var(--accent)',
-  color: '#fff', fontWeight: 700, fontSize: '15px', padding: '13px', borderRadius: '12px',
+  color: 'var(--color-white)', fontWeight: 700, fontSize: '15px', padding: '13px', borderRadius: '12px',
   border: 'none', cursor: (loading || disabled) ? 'not-allowed' : 'pointer',
   fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
 })
@@ -283,8 +283,8 @@ export default function ForgotPasswordPage() {
 
       {/* Logo */}
       <Link href="/" style={{ marginBottom: '32px', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-        <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>TajCar</span>
-        <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-muted)' }}>.tj</span>
+        <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>MOSHINA</span><span style={{ fontSize: 'inherit', color: 'var(--text)', fontWeight: 800 }}>.TJ</span>
+
       </Link>
 
       <div style={{ width: '100%', maxWidth: '400px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(24px,5vw,40px)', overflow: 'hidden' }}>
@@ -306,7 +306,7 @@ export default function ForgotPasswordPage() {
                   width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: activeStep >= s ? 'var(--accent)' : 'var(--surface)',
                   border: `2px solid ${activeStep >= s ? 'var(--accent)' : 'var(--border)'}`,
-                  color: activeStep >= s ? '#fff' : 'var(--text-muted)',
+                  color: activeStep >= s ? 'var(--color-white)' : 'var(--text-muted)',
                   fontSize: '12px', fontWeight: 700, transition: 'background 0.2s, border-color 0.2s',
                 }}>
                   {activeStep > s ? (
@@ -335,11 +335,11 @@ export default function ForgotPasswordPage() {
                 placeholder={lang === 'ru' ? '+992... или you@example.com' : '+992... ё you@example.com'}
                 onChange={(e) => setIdentifier(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSendCode('default') }}
-                style={{ ...baseInput, borderColor: step1Error ? '#ef4444' : 'var(--border)' }}
+                style={{ ...baseInput, borderColor: step1Error ? 'var(--color-error)' : 'var(--border)' }}
               />
             </div>
             {step1Error && (
-              <p role="alert" style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600 }}>{step1Error}</p>
+              <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600 }}>{step1Error}</p>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button type="button" onClick={() => handleSendCode('default')} disabled={step1Loading} style={btnStyle(step1Loading)}>
@@ -353,7 +353,7 @@ export default function ForgotPasswordPage() {
                 style={{
                   width: '100%',
                   background: step1Loading ? 'var(--text-muted)' : 'var(--color-telegram)',
-                  color: '#fff',
+                  color: 'var(--color-white)',
                   fontWeight: 700,
                   fontSize: '15px',
                   padding: '13px',
@@ -382,7 +382,7 @@ export default function ForgotPasswordPage() {
         {step === 2 && (
           <div className="fp-step">
             {devCode && (
-              <div style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: '#713f12', marginBottom: '16px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: 'var(--color-warning, #ca8a04)', marginBottom: '16px', textAlign: 'center' }}>
                 {lang === 'ru' ? 'Режим разработки — код заполнен автоматически' : 'Ҳолати таҳия — рамз худкор пур шуд'}
               </div>
             )}
@@ -405,7 +405,7 @@ export default function ForgotPasswordPage() {
             <OtpInput value={digits} onChange={setDigits} hasError={!!otpError} />
 
             {otpError && (
-              <p role="alert" style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600, textAlign: 'center', marginTop: '12px' }}>{otpError}</p>
+              <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600, textAlign: 'center', marginTop: '12px' }}>{otpError}</p>
             )}
 
             <button type="button" onClick={handleConfirmOtp} disabled={otpLoading} style={{ ...btnStyle(otpLoading), marginTop: '20px' }}>
@@ -449,7 +449,7 @@ export default function ForgotPasswordPage() {
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  style={{ ...baseInput, paddingRight: '44px', borderColor: step3Error ? '#ef4444' : 'var(--border)' }}
+                  style={{ ...baseInput, paddingRight: '44px', borderColor: step3Error ? 'var(--color-error)' : 'var(--border)' }}
                 />
                 <button type="button" onClick={() => setShowNew((v) => !v)}
                   aria-label={lang === 'ru' ? 'Показать пароль' : 'Рамзро нишон диҳ'}
@@ -471,7 +471,7 @@ export default function ForgotPasswordPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleResetPassword() }}
-                  style={{ ...baseInput, paddingRight: '44px', borderColor: step3Error ? '#ef4444' : 'var(--border)' }}
+                  style={{ ...baseInput, paddingRight: '44px', borderColor: step3Error ? 'var(--color-error)' : 'var(--border)' }}
                 />
                 <button type="button" onClick={() => setShowConfirm((v) => !v)}
                   aria-label={lang === 'ru' ? 'Показать пароль' : 'Рамзро нишон диҳ'}
@@ -482,7 +482,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             {step3Error && (
-              <p role="alert" style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600 }}>{step3Error}</p>
+              <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600 }}>{step3Error}</p>
             )}
 
             <button type="button" onClick={handleResetPassword} disabled={step3Loading} style={btnStyle(step3Loading)}>

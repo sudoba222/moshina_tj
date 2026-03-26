@@ -92,6 +92,13 @@ function LoginPageInner() {
   const { login } = useAuth()
   const { lang } = useLang()
 
+  const ROLE_REDIRECT: Record<string, string> = {
+    admin: '/admin',
+    moderator: '/moderator',
+    manager: '/manager',
+    support: '/support',
+  }
+
   const [loginMode, setLoginMode] = useState<'phone' | 'email'>('phone')
   const [identifier, setIdentifier] = useState('+992')
   const [emailIdentifier, setEmailIdentifier] = useState('')
@@ -139,7 +146,9 @@ function LoginPageInner() {
         : await authApi.login(identifier.trim(), password)
       const data = res.data.data!
       login(data.token.access_token, data.user)
-      router.push('/')
+      const redirectTo = searchParams.get('redirect') ?? '/'
+      const destination = ROLE_REDIRECT[data.user?.role] ?? redirectTo
+      router.push(destination)
     } catch (err) {
       setError(extractApiError(err, lang === 'ru' ? 'Неверные данные' : 'Маълумот нодуруст аст'))
     } finally {
@@ -148,13 +157,13 @@ function LoginPageInner() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* Logo */}
       <Link href="/" style={{ marginBottom: '32px', display: 'flex', alignItems: 'baseline', gap: '2px', textDecoration: 'none' }}>
-        <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>TajCar</span>
-        <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-muted)' }}>.tj</span>
+        <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>MOSHINA</span><span style={{ fontSize: 'inherit', color: 'var(--text)', fontWeight: 800 }}>.TJ</span>
+
       </Link>
 
       {/* Card */}
@@ -210,6 +219,7 @@ function LoginPageInner() {
                 onChange={(e) => setEmailIdentifier(e.target.value)}
                 placeholder={t('auth.emailPlaceholder', lang)}
                 style={{ ...baseInput, borderColor: error ? 'var(--color-error)' : 'var(--border)' }}
+                onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
               />
             )}
           </div>
@@ -226,6 +236,7 @@ function LoginPageInner() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 style={{ ...baseInput, borderColor: error ? 'var(--color-error)' : 'var(--border)', paddingRight: '44px' }}
+                onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
               />
               <button
                 type="button"
@@ -263,7 +274,7 @@ function LoginPageInner() {
         <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <OrDivider label={t('auth.orContinueWith', lang)} />
           <a
-            href={`${process.env.NEXT_PUBLIC_API_URL ?? 'https://tajcar-api.onrender.com/api/v1'}/auth/google/redirect`}
+            href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/auth/google/redirect`}
             style={{
               display: 'flex',
               alignItems: 'center',

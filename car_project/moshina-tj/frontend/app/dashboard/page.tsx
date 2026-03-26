@@ -31,7 +31,7 @@ function SearchParamsReader({ onParams }: { onParams: (tab: Tab | null, conv: st
 export default function DashboardPage() {
   const router = useRouter()
   const { lang } = useLang()
-  const { user, updateUser } = useAuth()
+  const { user, loading: authLoading, updateUser } = useAuth()
 
   const [tab, setTab] = useState<Tab>('profile')
   const [listings, setListings] = useState<Listing[]>([])
@@ -72,11 +72,12 @@ export default function DashboardPage() {
   const [pwdLoading, setPwdLoading] = useState(false)
 
   useEffect(() => {
+    if (authLoading) return
     if (!user) { router.replace('/auth/login'); return }
     setName(user.name ?? '')
     setPhone(user.phone ?? '')
     setWhatsappNumber(user.whatsapp_number ?? '')
-  }, [user, router])
+  }, [user, authLoading, router])
 
   // Load conversations when Messages tab is active
   useEffect(() => {
@@ -395,7 +396,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <InfoRow label={t('auth.phone', lang)} value={user.phone} />
+                    <InfoRow label={t('auth.phone', lang)} value={user.phone && user.phone.startsWith('+') ? user.phone : '—'} />
                     <InfoRow label={t('admin.name', lang)} value={user.name ?? '—'} />
                     {user.email && <InfoRow label="Email" value={user.email} />}
                     {user.whatsapp_number && <InfoRow label={t('settings.whatsapp', lang)} value={user.whatsapp_number} />}
@@ -519,7 +520,7 @@ export default function DashboardPage() {
 
           {/* ── Messages tab ── */}
           {tab === 'messages' && (
-            <div className="animate-fade-in" style={{ height: 'calc(100vh - 280px)', minHeight: '400px', display: 'flex', gap: '0', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
+            <div className="animate-fade-in" style={{ height: 'calc(100dvh - 280px)', minHeight: '400px', display: 'flex', gap: '0', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
               {/* Conversation list — hidden on mobile when a conv is selected */}
               <div style={{
                 width: selectedConvId ? undefined : '100%',

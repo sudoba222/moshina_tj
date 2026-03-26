@@ -94,7 +94,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               margin: 0,
             }}
           >
-            Произошла критическая ошибка
+            Произошла ошибка / Хато рӯй дод
           </h1>
 
           <p
@@ -105,7 +105,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               margin: 0,
             }}
           >
-            Что-то пошло не так. Попробуйте обновить страницу.
+            Что-то пошло не так. / Чизе нодуруст шуд.
           </p>
 
           {error.digest && (
@@ -140,7 +140,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               width: '100%',
             }}
           >
-            Попробовать снова
+            Попробовать снова / Дубора кӯшиш кунед
           </button>
         </div>
       </body>

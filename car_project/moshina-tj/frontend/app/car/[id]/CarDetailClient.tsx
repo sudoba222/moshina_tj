@@ -7,11 +7,12 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import ImageLightbox from '@/components/ImageLightbox'
-import { listingsApi, usersApi, searchApi, favoritesApi } from '@/lib/api'
+import { listingsApi, usersApi, searchApi, favoritesApi, adminApi } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { useAuth } from '@/lib/AuthContext'
 import { useChatDrawer } from '@/lib/ChatDrawerContext'
 import { t } from '@/lib/i18n'
+import StaffStatusRibbon from '@/components/StaffStatusRibbon'
 import type { Listing, UserPublicProfile, RentalRules } from '@/types'
 
 // ─── Spec Row (no emoji) ─────────────────────────────────────────────────────
@@ -80,6 +81,26 @@ const PinIcon = () => (
     <circle cx="12" cy="10" r="3" />
   </svg>
 )
+const EngineIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 10h10v4H7zM5 12h2m10 0h2m-11-2V8m10 2V8m-10 6v2m10-2v2" />
+  </svg>
+)
+const DriveIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="7" cy="17" r="2" /><circle cx="17" cy="17" r="2" /><path d="M7 17h10M9 17v-4h6v4" />
+  </svg>
+)
+const TurbineIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" /><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" />
+  </svg>
+)
+const ShieldIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+)
 const EyeIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -131,6 +152,118 @@ const HeartIcon = ({ filled }: { filled: boolean }) => (
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
   </svg>
 )
+
+// ─── Staff Toolbar ────────────────────────────────────────────────────────────
+interface StaffToolbarProps {
+  listing: Listing
+  onReject: () => void
+  onBanUser: () => void
+}
+
+function StaffEditIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
+function StaffRejectIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  )
+}
+
+function StaffBanIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="7" r="4" />
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+      <line x1="3" y1="3" x2="21" y2="21" />
+    </svg>
+  )
+}
+
+function StaffToolbar({ listing, onReject, onBanUser }: StaffToolbarProps) {
+  const { lang } = useLang()
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 24,
+      right: 24,
+      zIndex: 200,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+      alignItems: 'flex-end',
+    }}>
+      <div style={{
+        background: 'var(--card)',
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        padding: '8px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        fontSize: 11,
+        color: 'var(--text-muted)',
+        fontWeight: 600,
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase',
+      }}>
+        {t('staff.staffActions', lang)}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <a
+          href={`/admin/listings?id=${listing.id}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 10,
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            color: 'var(--text)', fontSize: 13, fontWeight: 600,
+            textDecoration: 'none', cursor: 'pointer',
+          }}
+        >
+          <StaffEditIcon />
+          {t('staff.editListing', lang)}
+        </a>
+        {listing.status !== 'rejected' && (
+          <button
+            onClick={onReject}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 10,
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              color: 'rgb(239,68,68)', fontSize: 13, fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <StaffRejectIcon />
+            {t('staff.rejectListing', lang)}
+          </button>
+        )}
+        <button
+          onClick={onBanUser}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 10,
+            background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)',
+            color: 'rgb(239,68,68)', fontSize: 13, fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          <StaffBanIcon />
+          {t('staff.banUser', lang)}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 // ─── Rental Rules Card ───────────────────────────────────────────────────────
 function RentalRulesCard({ rules, lang }: { rules: RentalRules; lang: 'ru' | 'tj' }) {
@@ -225,18 +358,20 @@ function RentalRulesCard({ rules, lang }: { rules: RentalRules; lang: 'ru' | 'tj
 
 // ─── Contact Modal ───────────────────────────────────────────────────────────
 function ContactModal({
+  listing,
   profile,
-  listingId,
   lang,
   onClose,
 }: {
+  listing: Listing
   profile: UserPublicProfile
-  listingId: string
   lang: 'ru' | 'tj'
   onClose: () => void
 }) {
-  const phone = profile.phone
-  const waPhone = phone?.replace(/\D/g, '')
+  const contactName = listing.contact_name || profile.name || (lang === 'ru' ? 'Продавец' : 'Фурӯшанда')
+  const phone = listing.contact_phone || profile.phone
+  const whatsapp = listing.whatsapp_number || profile.whatsapp_number || (listing.contact_phone ? listing.contact_phone : profile.phone)
+  const waPhone = whatsapp?.replace(/\D/g, '')
 
   return (
     <>
@@ -290,11 +425,11 @@ function ContactModal({
             color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '20px', fontWeight: 800, flexShrink: 0,
           }}>
-            {(profile.name ?? 'U').charAt(0).toUpperCase()}
+            {contactName.charAt(0).toUpperCase()}
           </div>
           <div>
             <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>
-              {profile.name ?? (lang === 'ru' ? 'Продавец' : 'Фурӯшанда')}
+              {contactName}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
               {profile.role}
@@ -384,6 +519,7 @@ export default function CarDetailClient() {
   const router = useRouter()
   const { lang } = useLang()
   const { user } = useAuth()
+  const isStaff = user ? ['admin', 'moderator', 'manager', 'support'].includes(user.role) : false
 
   const [listing, setListing] = useState<Listing | null>(null)
   const [related, setRelated] = useState<Listing[]>([])
@@ -401,6 +537,9 @@ export default function CarDetailClient() {
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [shareCopied, setShareCopied] = useState(false)
   const [descExpanded, setDescExpanded] = useState(false)
+  const [staffRejectOpen, setStaffRejectOpen] = useState(false)
+  const [staffRejectReason, setStaffRejectReason] = useState('')
+  const [staffActionLoading, setStaffActionLoading] = useState(false)
   // Swipe tracking for the main gallery on mobile
   const touchStartX = useRef<number | null>(null)
 
@@ -469,6 +608,32 @@ export default function CarDetailClient() {
     }
   }
 
+  const handleStaffReject = async () => {
+    if (!listing || !staffRejectReason.trim()) return
+    setStaffActionLoading(true)
+    try {
+      await adminApi.rejectListing(listing.id, staffRejectReason)
+      setListing((prev: Listing | null) => prev ? { ...prev, status: 'rejected', rejection_reason: staffRejectReason } : prev)
+      setStaffRejectOpen(false)
+      setStaffRejectReason('')
+    } catch {
+      // ignore
+    }
+    setStaffActionLoading(false)
+  }
+
+  const handleStaffBanUser = async () => {
+    if (!listing) return
+    if (!window.confirm(t('staff.confirmBan', lang))) return
+    setStaffActionLoading(true)
+    try {
+      await adminApi.banUser(listing.user_id, 'Banned by staff')
+    } catch {
+      // ignore
+    }
+    setStaffActionLoading(false)
+  }
+
   useEffect(() => {
     if (!id) return
     setLoading(true)
@@ -526,8 +691,8 @@ export default function CarDetailClient() {
     : null
 
   const formatPrice = (price: number, currency: string) => {
-    if (currency === 'USD') return `$${Number(price).toLocaleString('ru-RU')}`
-    return `${Number(price).toLocaleString('ru-RU')} ${t('common.tjs', lang)}`
+    const formatted = currency === 'USD' ? `$${Number(price).toLocaleString('ru-RU')}` : `${Number(price).toLocaleString('ru-RU')} ${t('common.tjs', lang)}`
+    return listing.is_negotiable ? `${formatted} (${lang === 'ru' ? 'Торг' : 'Муомила'})` : formatted
   }
 
   const specs: SpecRowProps[] = [
@@ -535,6 +700,12 @@ export default function CarDetailClient() {
     ...(listing.mileage != null ? [{ icon: <RoadIcon />, label: t('carDetail.mileage', lang), value: `${listing.mileage.toLocaleString('ru-RU')} ${t('carDetail.km', lang)}` }] : []),
     ...(listing.fuel ? [{ icon: <FuelIcon />, label: t('carDetail.fuel', lang), value: listing.fuel }] : []),
     ...(listing.transmission ? [{ icon: <GearIcon />, label: t('carDetail.transmission', lang), value: listing.transmission }] : []),
+    ...(listing.drive_type ? [{ icon: <DriveIcon />, label: lang === 'ru' ? 'Привод' : 'Привод', value: listing.drive_type }] : []),
+    ...(listing.engine_volume ? [{ icon: <EngineIcon />, label: lang === 'ru' ? 'Объем' : 'Ҳаҷм', value: listing.engine_volume }] : []),
+    ...(listing.has_turbine !== null ? [{ icon: <TurbineIcon />, label: 'Турбина', value: listing.has_turbine ? (lang === 'ru' ? 'Да' : 'Ҳа') : (lang === 'ru' ? 'Нет' : 'Не') }] : []),
+    ...(listing.condition ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Состояние' : 'Ҳолат', value: listing.condition }] : []),
+    ...(listing.is_customs_cleared ? [{ icon: <ShieldIcon />, label: lang === 'ru' ? 'Растаможен' : 'Боҷхона', value: lang === 'ru' ? 'Да' : 'Ҳа' }] : []),
+    ...(listing.taxi_license ? [{ icon: <RoadIcon />, label: 'Такси', value: lang === 'ru' ? 'Да' : 'Ҳа' }] : []),
     ...(listing.color ? [{ icon: <ColorIcon />, label: t('carDetail.color', lang), value: listing.color }] : []),
     { icon: <PinIcon />, label: t('carDetail.city', lang), value: listing.city },
   ]
@@ -543,7 +714,7 @@ export default function CarDetailClient() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
 
-      <main style={{ flex: 1 }} className="pb-mobile">
+      <main style={{ flex: 1, paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} className="md:pb-0">
         <div className="max-w-7xl mx-auto px-4 md:px-6" style={{ paddingTop: '28px', paddingBottom: '60px' }}>
           {/* Back */}
           <button
@@ -599,6 +770,11 @@ export default function CarDetailClient() {
                       <circle cx="16.5" cy="17" r="2.5" />
                     </svg>
                   </div>
+                )}
+
+                {/* Staff status ribbon */}
+                {isStaff && (
+                  <StaffStatusRibbon listing={listing} size="md" />
                 )}
 
                 {/* Views badge */}
@@ -717,6 +893,37 @@ export default function CarDetailClient() {
                   </div>
                 </div>
               )}
+
+              {/* Video links */}
+              {(listing.youtube_link || listing.tiktok_link) && (
+                <div style={{ marginTop: '28px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px' }}>
+                    {lang === 'ru' ? 'Видео' : 'Видео'}
+                  </h3>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    {listing.youtube_link && (
+                      <a href={listing.youtube_link} target="_blank" rel="noopener noreferrer" style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '10px 16px', borderRadius: '10px',
+                        background: '#FF0000', color: '#FFF',
+                        fontSize: '14px', fontWeight: 700, textDecoration: 'none',
+                      }}>
+                        YouTube
+                      </a>
+                    )}
+                    {listing.tiktok_link && (
+                      <a href={listing.tiktok_link} target="_blank" rel="noopener noreferrer" style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '10px 16px', borderRadius: '10px',
+                        background: '#000', color: '#FFF',
+                        fontSize: '14px', fontWeight: 700, textDecoration: 'none',
+                      }}>
+                        TikTok
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right: price + actions */}
@@ -744,9 +951,15 @@ export default function CarDetailClient() {
                   {listing.year}{listing.city ? ` · ${listing.city}` : ''}
                 </p>
 
-                <p style={{ fontSize: '32px', fontWeight: 800, color: 'var(--accent)', marginBottom: '24px' }}>
+                <p style={{ fontSize: '32px', fontWeight: 800, color: 'var(--accent)', marginBottom: listing.prepayment_amount ? '4px' : '24px' }}>
                   {formatPrice(listing.price, listing.currency)}
                 </p>
+
+                {listing.prepayment_amount && (
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '24px' }}>
+                    {lang === 'ru' ? 'Предоплата' : 'Пешпардохт'}: {listing.prepayment_amount.toLocaleString('ru-RU')} TJS
+                  </p>
+                )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {/* Contact seller */}
@@ -944,7 +1157,130 @@ export default function CarDetailClient() {
         </div>
       </main>
 
+      {/* Mobile sticky CTA bar — replaces bottom nav on car detail */}
+      {listing && (
+        <div
+          className="md:hidden"
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 200,
+            background: 'var(--card)',
+            borderTop: '1px solid var(--border)',
+            padding: '10px 16px',
+            paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {t('carDetail.contact', lang)}
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1 }}>
+              {formatPrice(listing.price, listing.currency)}
+            </div>
+          </div>
+          <button
+            onClick={() => setContactOpen(true)}
+            style={{
+              background: 'var(--accent)',
+              color: 'var(--color-white)',
+              fontWeight: 700,
+              fontSize: '15px',
+              padding: '12px 20px',
+              borderRadius: '12px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flexShrink: 0,
+              minHeight: '44px',
+            }}
+          >
+            <PhoneIcon />
+            {t('carDetail.contact', lang)}
+          </button>
+        </div>
+      )}
+
       <Footer />
+
+      {/* Staff toolbar */}
+      {isStaff && listing && (
+        <StaffToolbar
+          listing={listing}
+          onReject={() => setStaffRejectOpen(true)}
+          onBanUser={handleStaffBanUser}
+        />
+      )}
+
+      {/* Staff reject modal */}
+      {staffRejectOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 300,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setStaffRejectOpen(false)}
+        >
+          <div
+            style={{
+              background: 'var(--card)', borderRadius: 16,
+              padding: 24, width: '100%', maxWidth: 400,
+              display: 'flex', flexDirection: 'column', gap: 16,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>
+              {t('staff.rejectReason', lang)}
+            </div>
+            <textarea
+              value={staffRejectReason}
+              onChange={(e) => setStaffRejectReason(e.target.value)}
+              rows={3}
+              style={{
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderRadius: 10, padding: '10px 14px',
+                color: 'var(--text)', fontSize: 14, resize: 'vertical',
+                width: '100%',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setStaffRejectOpen(false)}
+                style={{
+                  padding: '8px 16px', borderRadius: 8,
+                  background: 'var(--surface)', border: '1px solid var(--border)',
+                  color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                {t('common.cancel', lang)}
+              </button>
+              <button
+                onClick={handleStaffReject}
+                disabled={staffActionLoading || !staffRejectReason.trim()}
+                style={{
+                  padding: '8px 16px', borderRadius: 8,
+                  background: 'var(--color-error, #ef4444)', border: 'none',
+                  color: 'var(--color-white)', fontSize: 13, fontWeight: 700,
+                  cursor: staffActionLoading ? 'not-allowed' : 'pointer',
+                  opacity: staffActionLoading || !staffRejectReason.trim() ? 0.6 : 1,
+                }}
+              >
+                {t('staff.rejectListing', lang)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Image lightbox */}
       {images && (
@@ -956,48 +1292,11 @@ export default function CarDetailClient() {
         />
       )}
 
-      {/* Sticky mobile contact bar — hidden on md+, sits above the bottom nav */}
-      <div
-        className="md:hidden"
-        style={{
-          position: 'fixed',
-          bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))',
-          left: 0,
-          right: 0,
-          background: 'var(--card)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          borderTop: '1px solid var(--border)',
-          padding: '10px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          zIndex: 150,
-          boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', lineHeight: 1.1 }}>
-            {formatPrice(listing.price, listing.currency)}
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {listing.brand} {listing.model} {listing.year}
-          </div>
-        </div>
-        <button
-          onClick={() => setContactOpen(true)}
-          style={{ height: '44px', padding: '0 16px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '14px', borderRadius: '10px', border: 'none', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
-          <PhoneIcon />
-          {t('carDetail.call', lang)}
-        </button>
-      </div>
-
       {/* Contact modal */}
       {contactOpen && sellerProfile && (
         <ContactModal
+          listing={listing}
           profile={sellerProfile}
-          listingId={listing.id}
           lang={lang}
           onClose={() => setContactOpen(false)}
         />

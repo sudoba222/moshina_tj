@@ -95,7 +95,7 @@ const baseInput: React.CSSProperties = {
   outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box',
 }
 const submitBtn = (loading: boolean): React.CSSProperties => ({
-  width: '100%', background: loading ? 'var(--text-muted)' : 'var(--accent)', color: '#fff',
+  width: '100%', background: loading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)',
   fontWeight: 700, fontSize: '15px', padding: '13px', borderRadius: '12px', border: 'none',
   cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font)',
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -105,8 +105,8 @@ const submitBtn = (loading: boolean): React.CSSProperties => ({
 function DevBanner({ lang }: { lang: string }) {
   return (
     <div style={{
-      background: '#fef9c3', border: '1px solid #fde047', borderRadius: '8px',
-      padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: '#713f12',
+      background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: '8px',
+      padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: 'var(--color-warning, #ca8a04)',
       marginBottom: '16px', textAlign: 'center',
     }}>
       {lang === 'ru' ? 'Режим разработки — код заполнен автоматически' : 'Ҳолати таҳияи — рамз худкор пур шуд'}
@@ -239,6 +239,7 @@ function PhoneTab({ lang }: { lang: string }) {
         <input type="text" autoComplete="name" value={name}
           placeholder={lang === 'ru' ? 'Ваше имя' : 'Номи шумо'}
           onChange={(e) => setName(e.target.value)}
+          onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
           style={baseInput} />
       </div>
       <div>
@@ -260,6 +261,7 @@ function PhoneTab({ lang }: { lang: string }) {
         <input type="password" autoComplete="new-password" value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSendOtp() }}
+          onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
           style={baseInput} />
       </div>
       {error && <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600 }}>{error}</p>}
@@ -280,8 +282,8 @@ function PhoneTab({ lang }: { lang: string }) {
         }}
       >
         {loading ? <Spinner /> : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.93c-.12.56-.47.7-.94.44l-2.62-1.93-1.26 1.21c-.14.14-.26.26-.52.26l.19-2.66 4.82-4.36c.21-.19-.05-.3-.32-.11L7.93 14.7l-2.56-.8c-.56-.17-.57-.56.12-.83l10.01-3.86c.46-.17.87.11.14.59z" fill="#229ED9"/>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--color-telegram)' }}>
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.93c-.12.56-.47.7-.94.44l-2.62-1.93-1.26 1.21c-.14.14-.26.26-.52.26l.19-2.66 4.82-4.36c.21-.19-.05-.3-.32-.11L7.93 14.7l-2.56-.8c-.56-.17-.57-.56.12-.83l10.01-3.86c.46-.17.87.11.14.59z" fill="currentColor"/>
           </svg>
         )}
         {t('auth.continueTelegram', lang as import('@/types').Lang)}
@@ -314,11 +316,11 @@ function PhoneTab({ lang }: { lang: string }) {
             rel="noopener noreferrer"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
-              color: '#229ED9', fontSize: '13px', fontWeight: 600,
+              color: 'var(--color-telegram)', fontSize: '13px', fontWeight: 600,
               textDecoration: 'none',
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="#229ED9">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.93c-.12.56-.47.7-.94.44l-2.62-1.93-1.26 1.21c-.14.14-.26.26-.52.26l.19-2.66 4.82-4.36c.21-.19-.05-.3-.32-.11L7.93 14.7l-2.56-.8c-.56-.17-.57-.56.12-.83l10.01-3.86c.46-.17.87.11.14.59z"/>
             </svg>
             {lang === 'ru' ? 'Открыть бот снова' : 'Боти Telegram-ро дубора кушоед'}
@@ -435,6 +437,7 @@ function EmailTab({ lang }: { lang: string }) {
         <input type="text" autoComplete="name" value={name}
           placeholder={lang === 'ru' ? 'Ваше имя' : 'Номи шумо'}
           onChange={(e) => setName(e.target.value)}
+          onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
           style={baseInput} />
       </div>
       <div>
@@ -444,6 +447,7 @@ function EmailTab({ lang }: { lang: string }) {
         <input type="email" autoComplete="email" value={email}
           placeholder="you@example.com"
           onChange={(e) => setEmail(e.target.value)}
+          onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
           style={{ ...baseInput, borderColor: error ? 'var(--color-error)' : 'var(--border)' }} />
       </div>
       <div>
@@ -452,6 +456,7 @@ function EmailTab({ lang }: { lang: string }) {
         </label>
         <input type="password" autoComplete="new-password" value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
           style={baseInput} />
       </div>
       {error && <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600 }}>{error}</p>}
@@ -527,17 +532,17 @@ export default function RegisterPage() {
     flex: 1, padding: '10px', border: 'none', borderRadius: '8px', fontFamily: 'var(--font)',
     fontWeight: 700, fontSize: '14px', cursor: 'pointer',
     background: active ? 'var(--accent)' : 'transparent',
-    color: active ? '#fff' : 'var(--text-muted)',
+    color: active ? 'var(--color-white)' : 'var(--text-muted)',
     transition: 'background 0.15s, color 0.15s',
   })
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
       <style>{`@keyframes fadeSlideIn { from { opacity:0;transform:translateY(12px) } to { opacity:1;transform:translateY(0) } } .otp-step { animation: fadeSlideIn 0.25s ease; }`}</style>
 
       <Link href="/" style={{ marginBottom: '32px', display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-        <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>TajCar</span>
-        <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-muted)' }}>.tj</span>
+        <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>MOSHINA</span><span style={{ fontSize: 'inherit', color: 'var(--text)', fontWeight: 800 }}>.TJ</span>
+
       </Link>
 
       <div className="slide-up" style={{ width: '100%', maxWidth: '400px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(24px,5vw,40px)', overflow: 'hidden' }}>
@@ -562,7 +567,7 @@ export default function RegisterPage() {
           <OrDivider label={t('auth.orContinueWith', lang)} />
           <div style={{ marginTop: '12px' }}>
             <a
-              href={`${process.env.NEXT_PUBLIC_API_URL ?? 'https://tajcar-api.onrender.com/api/v1'}/auth/google/redirect`}
+              href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/auth/google/redirect`}
               style={{
                 display: 'flex',
                 alignItems: 'center',

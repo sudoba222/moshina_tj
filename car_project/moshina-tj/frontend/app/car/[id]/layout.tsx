@@ -76,7 +76,7 @@ function buildJsonLd(listing: Listing): object {
       url: `${SITE_URL}/car/${listing.id}`,
       seller: {
         '@type': 'Organization',
-        name: 'TajCar.tj',
+        name: 'MOSHINA.TJ',
         url: SITE_URL,
       },
     },
@@ -111,7 +111,7 @@ export async function generateMetadata({
     title,
     description,
     openGraph: {
-      title: `${title} | TajCar.tj`,
+      title: `${title} | MOSHINA.TJ`,
       description,
       type: 'website',
       url: `${SITE_URL}/car/${id}`,
@@ -121,7 +121,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${title} | TajCar.tj`,
+      title: `${title} | MOSHINA.TJ`,
       description,
       ...(primaryImage && { images: [primaryImage] }),
     },

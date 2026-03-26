@@ -22,12 +22,15 @@ export default function AuctionPage() {
             margin: '0 auto 24px',
           }}>
             <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 3l7 7" />
-              <path d="M10 3l-7 7" />
-              <path d="M13 13l7 7" />
-              <path d="M20 13l-7 7" />
-              <path d="M13 3l4 4-8.5 8.5-4-4z" />
-              <path d="M14.5 21H21" />
+              {/* Gavel head */}
+              <path d="M14 4l6 6-1.5 1.5-6-6z" />
+              <path d="M4 14l6 6 1.5-1.5-6-6z" />
+              {/* Gavel handle */}
+              <line x1="9" y1="15" x2="6" y2="18" />
+              {/* Podium */}
+              <line x1="3" y1="21" x2="13" y2="21" />
+              {/* Strike line */}
+              <path d="M7.5 8.5l8 8" />
             </svg>
           </div>
 

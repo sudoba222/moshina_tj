@@ -394,7 +394,7 @@ function UsersPageInner() {
 
 export default function AdminUsersPage() {
   return (
-    <Suspense>
+    <Suspense fallback={null}>
       <UsersPageInner />
     </Suspense>
   )

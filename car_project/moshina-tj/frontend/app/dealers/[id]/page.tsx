@@ -167,7 +167,7 @@ export default function DealerDetailPage() {
                     {dealer.business_name}
                   </h1>
                   {dealer.verified && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: '#16a34a', background: 'rgba(22, 163, 74, 0.1)', padding: '3px 10px', borderRadius: '6px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '3px 10px', borderRadius: '6px' }}>
                       <CheckIcon />
                       {t('dealers.verified', lang)}
                     </span>

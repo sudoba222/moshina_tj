@@ -100,7 +100,7 @@ export default function UserListingsPage() {
 
           {/* Mini profile header */}
           <div className="animate-fade-in-up" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', marginBottom: '28px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '12px', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 800, flexShrink: 0 }}>
+            <div style={{ width: '52px', height: '52px', borderRadius: '12px', background: 'var(--accent)', color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 800, flexShrink: 0 }}>
               {(profile.name ?? 'U').charAt(0).toUpperCase()}
             </div>
             <div>

@@ -45,7 +45,7 @@ export default function ChatWidget() {
         height: '52px',
         borderRadius: '50%',
         background: 'var(--accent)',
-        color: '#fff',
+        color: 'var(--color-white)',
         border: 'none',
         cursor: loading ? 'not-allowed' : 'pointer',
         display: 'flex',

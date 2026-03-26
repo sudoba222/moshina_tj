@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
 const apiOrigin = apiUrl ? new URL(apiUrl).origin : ''
+// Derive WebSocket origin from API origin (https: → wss:, http: → ws:)
+const wsOrigin = apiOrigin ? apiOrigin.replace(/^http/, 'ws') : ''
+const isDev = process.env.NODE_ENV !== 'production'
 
 const nextConfig = {
   // ── Performance ───────────────────────────────────────────────────────────
@@ -56,7 +59,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com",
-              `connect-src 'self' http://localhost:8000${apiOrigin ? ` ${apiOrigin}` : ''}`,
+              `connect-src 'self'${isDev ? ' http://localhost:8000 ws://localhost:8000' : ''}${apiOrigin ? ` ${apiOrigin}` : ''}${wsOrigin ? ` ${wsOrigin}` : ''}`,
               "frame-ancestors 'none'",
             ].join('; '),
           },

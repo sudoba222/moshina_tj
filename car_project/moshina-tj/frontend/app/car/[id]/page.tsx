@@ -1,11 +1,6 @@
 import type { Metadata } from 'next'
-import dynamic from 'next/dynamic'
 import { JsonLd } from '@/components/JsonLd'
-
-// Dynamically import the heavy client component so it ships as a separate chunk
-const CarDetailClient = dynamic(() => import('./CarDetailClient'), {
-  ssr: false,
-})
+import CarDetailClient from './CarDetailClient'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tajcar.tj'
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
@@ -40,9 +35,10 @@ async function fetchListingMeta(id: string): Promise<ListingMeta | null> {
 }
 
 export async function generateMetadata(
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
-  const listing = await fetchListingMeta(params.id)
+  const { id } = await params
+  const listing = await fetchListingMeta(id)
 
   if (!listing) {
     return {
@@ -65,7 +61,7 @@ export async function generateMetadata(
     listing.images.find((img) => img.is_primary) ?? listing.images[0]
   const ogImage = primaryImage?.url ?? `${SITE_URL}/og-image.png`
 
-  const pageUrl = `${SITE_URL}/car/${params.id}`
+  const pageUrl = `${SITE_URL}/car/${id}`
 
   return {
     title,
@@ -90,9 +86,10 @@ export async function generateMetadata(
 }
 
 export default async function CarDetailPage(
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const listing = await fetchListingMeta(params.id)
+  const { id } = await params
+  const listing = await fetchListingMeta(id)
 
   const vehicleSchema = listing
     ? {
@@ -113,13 +110,13 @@ export default async function CarDetailPage(
           price: listing.price,
           priceCurrency: listing.currency,
           availability: 'https://schema.org/InStock',
-          url: `${SITE_URL}/car/${params.id}`,
+          url: `${SITE_URL}/car/${id}`,
         },
         ...(listing.images.length > 0 && {
           image: [listing.images[0].url],
         }),
         ...(listing.description && { description: listing.description }),
-        vehicleIdentificationNumber: params.id,
+        vehicleIdentificationNumber: id,
       }
     : null
 

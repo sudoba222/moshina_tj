@@ -228,6 +228,7 @@ function AdminSidebarNav({
 function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const { user } = useAuth()
+  const { lang } = useLang()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [stats, setStats] = useState<AdminStats | null>(null)
   const pathname = usePathname()
@@ -273,7 +274,7 @@ function AdminShell({ children }: { children: ReactNode }) {
         }}
       >
         <div className="text-[14px] font-bold" style={{ color: 'var(--text)' }}>
-          {t('admin.title', 'ru')}
+          {t('admin.title', lang)}
         </div>
         <button
           onClick={() => setMobileOpen(true)}

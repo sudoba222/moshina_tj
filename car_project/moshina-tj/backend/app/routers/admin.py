@@ -15,6 +15,7 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.models import AuditLog, Currency, Dealer, FuelType, Listing, ListingLog, ListingStatus, TransmissionType, User, UserRole, log_audit
 from app.services.telegram_notifier import send_telegram_notification
+from app.email_service import send_listing_approved, send_listing_rejected, send_account_banned, send_dealer_verified
 from app.schemas import (
     AdminStats,
     ApiResponse,
@@ -115,6 +116,25 @@ class CreateUserPayload(BaseModel):
     password: str
     role: UserRole = UserRole.user
 
+    @field_validator("phone")
+    @classmethod
+    def phone_must_be_valid(cls, v: str) -> str:
+        v = v.strip()
+        if not v.startswith("+"):
+            raise ValueError("Phone number must start with '+'")
+        if len(v) < 7 or len(v) > 20:
+            raise ValueError("Phone number must be between 7 and 20 characters")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if len(v) > 128:
+            raise ValueError("Password must be at most 128 characters")
+        return v
+
 
 class EditUserPayload(BaseModel):
     name: Optional[str] = None
@@ -152,10 +172,10 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_admin))
         cast(User.created_at, SADate) == today,
     ).count()
 
-    total_listings = db.query(Listing).count()
-    active_listings = db.query(Listing).filter(Listing.status == ListingStatus.active).count()
-    pending_listings = db.query(Listing).filter(Listing.status == ListingStatus.pending).count()
-    rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.rejected).count()
+    total_listings = db.query(Listing).filter(Listing.is_deleted != True).count()
+    active_listings = db.query(Listing).filter(Listing.status == ListingStatus.active, Listing.is_deleted != True).count()
+    pending_listings = db.query(Listing).filter(Listing.status == ListingStatus.pending, Listing.is_deleted != True).count()
+    rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.rejected, Listing.is_deleted != True).count()
 
     total_dealers = db.query(Dealer).count()
     verified_dealers = db.query(Dealer).filter(Dealer.verified == True).count()
@@ -305,6 +325,7 @@ def update_user_role(
 def ban_user(
     user_id: str,
     payload: BanPayload,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
@@ -313,11 +334,16 @@ def ban_user(
     user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    _STAFF_ROLES = {UserRole.admin, UserRole.moderator, UserRole.manager, UserRole.support}
+    if user.role in _STAFF_ROLES and current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot ban staff accounts")
     user.is_banned = True
     user.ban_reason = payload.reason
     log_audit(db, current_user.id, "ban_user", "user", user.id, {"reason": payload.reason})
     db.commit()
     db.refresh(user)
+    if user.email:
+        background_tasks.add_task(send_account_banned, user.email, payload.reason)
     return ApiResponse(success=True, data=UserResponse.model_validate(user), message="User banned")
 
 
@@ -419,6 +445,7 @@ class AdminListingUserInfo(BaseModel):
     name: Optional[str] = None
     phone: str
     email: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 
 class AdminListingLastLog(BaseModel):
@@ -451,7 +478,9 @@ class AdminListingItem(BaseModel):
 class AdminListingLogEntry(BaseModel):
     id: uuid.UUID
     action: str
+    actor_id: Optional[uuid.UUID] = None
     actor_name: Optional[str] = None
+    actor_role: Optional[str] = None
     from_status: Optional[str] = None
     to_status: Optional[str] = None
     reason: Optional[str] = None
@@ -643,13 +672,16 @@ def admin_listing_detail(
             name=listing.user.name,
             phone=listing.user.phone,
             email=listing.user.email,
+            created_at=listing.user.created_at,
         )
 
     logs_out = [
         AdminListingLogEntry(
             id=log.id,
             action=log.action,
+            actor_id=log.actor.id if log.actor else None,
             actor_name=log.actor.name if log.actor else None,
+            actor_role=log.actor.role.value if log.actor else None,
             from_status=log.from_status,
             to_status=log.to_status,
             reason=log.reason,
@@ -689,6 +721,99 @@ def admin_listing_detail(
     return ApiResponse(success=True, data=detail, message="Listing fetched")
 
 
+@router.get("/staff/search", response_model=ApiResponse[dict])
+def staff_search_listings(
+    listing_id: Optional[str] = Query(default=None, description="Exact listing UUID"),
+    user_phone: Optional[str] = Query(default=None, description="Partial phone match"),
+    user_name: Optional[str] = Query(default=None, description="Partial name match"),
+    status: Optional[str] = Query(default=None, description="pending|active|rejected|draft|all"),
+    moderator_id: Optional[str] = Query(default=None, description="UUID of moderator who processed it"),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    _: User = Depends(_require_staff),
+):
+    """Advanced staff search — includes ALL statuses (pending, active, rejected, draft)."""
+    import uuid as _uuid
+
+    query = (
+        db.query(Listing)
+        .options(joinedload(Listing.images), joinedload(Listing.user))
+    )
+
+    if listing_id:
+        try:
+            lid = _uuid.UUID(listing_id)
+            query = query.filter(Listing.id == lid)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid listing_id UUID")
+
+    if status and status != "all":
+        try:
+            status_enum = ListingStatus(status)
+            query = query.filter(Listing.status == status_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+
+    if moderator_id:
+        try:
+            mid = _uuid.UUID(moderator_id)
+            query = query.filter(Listing.moderated_by == mid)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid moderator_id UUID")
+
+    if user_phone or user_name:
+        query = query.join(User, Listing.user_id == User.id)
+        if user_phone:
+            query = query.filter(User.phone.ilike(f"%{user_phone}%"))
+        if user_name:
+            query = query.filter(User.name.ilike(f"%{user_name}%"))
+
+    total = query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    items = query.order_by(Listing.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+
+    result_items = []
+    for item in items:
+        primary_url = next((img.url for img in item.images if img.is_primary), None)
+        if primary_url is None and item.images:
+            primary_url = item.images[0].url
+
+        user_out = None
+        if item.user:
+            user_out = AdminListingUserInfo(
+                id=item.user.id,
+                name=item.user.name,
+                phone=item.user.phone,
+                email=item.user.email,
+                created_at=item.user.created_at,
+            )
+
+        result_items.append(AdminListingItem(
+            id=item.id,
+            brand=item.brand,
+            model=item.model,
+            year=item.year,
+            price=item.price,
+            currency=item.currency.value,
+            city=item.city,
+            status=item.status,
+            is_active=item.is_active,
+            views=item.views,
+            created_at=item.created_at,
+            updated_at=item.updated_at,
+            user=user_out,
+            primary_image_url=primary_url,
+            last_log=None,
+        ))
+
+    return ApiResponse(
+        success=True,
+        data={"items": [i.model_dump() for i in result_items], "total": total, "page": page, "pages": pages},
+        message="Search results",
+    )
+
+
 @router.put("/listings/{listing_id}/activate", response_model=ApiResponse[ListingResponse])
 def activate_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
@@ -726,7 +851,7 @@ def deactivate_listing(listing_id: str, db: Session = Depends(get_db), current_u
         actor_id=current_user.id,
         action="deactivated",
         from_status=old_status,
-        to_status="inactive",
+        to_status="rejected",
     ))
     db.commit()
     db.refresh(listing)
@@ -753,6 +878,14 @@ def admin_edit_listing(
     for key, val in fields.items():
         setattr(listing, key, val)
     log_audit(db, current_user.id, "edit_listing", "listing", listing.id, {"changes": fields})
+    db.add(ListingLog(
+        listing_id=listing.id,
+        actor_id=current_user.id,
+        action="staff_edit",
+        from_status=listing.status.value if listing.status else None,
+        to_status=listing.status.value if listing.status else None,
+        reason=f"Staff edit: {', '.join(fields.keys()) if fields else 'status change'}",
+    ))
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing updated")
@@ -768,7 +901,17 @@ def admin_delete_listing(
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     log_audit(db, current_user.id, "delete_listing", "listing", listing.id, {"brand": listing.brand, "model": listing.model})
-    db.delete(listing)
+    prev_status = listing.status.value if listing.status else None
+    listing.is_deleted = True
+    listing.is_active = False
+    listing.status = ListingStatus.rejected
+    db.add(ListingLog(
+        listing_id=listing.id,
+        actor_id=current_user.id,
+        action="admin_deleted",
+        from_status=prev_status,
+        to_status="deleted",
+    ))
     db.commit()
     return ApiResponse(success=True, data=None, message="Listing deleted")
 
@@ -853,7 +996,7 @@ def pending_listings(
 
     query = (
         db.query(Listing)
-        .options(joinedload(Listing.images))
+        .options(joinedload(Listing.user), joinedload(Listing.images))
         .filter(
             Listing.status == ListingStatus.pending,
             or_(
@@ -899,7 +1042,7 @@ def approve_listing(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
 ):
-    listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.user), joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     old_status = listing.status.value if listing.status else None
@@ -929,9 +1072,20 @@ def approve_listing(
     db.commit()
     db.refresh(listing)
 
-    # Send Telegram notification if user has linked Telegram
+    car_name = f"{listing.brand} {listing.model} {listing.year}"
+    listing_url = f"https://tajcar.tj/car/{listing.id}"
+
+    # Email notification
+    if listing.user and listing.user.email:
+        background_tasks.add_task(
+            send_listing_approved,
+            listing.user.email,
+            car_name,
+            listing_url,
+        )
+
+    # Telegram notification
     if listing.user and listing.user.telegram_chat_id:
-        car_name = f"{listing.brand} {listing.model} {listing.year}"
         background_tasks.add_task(
             send_telegram_notification,
             listing.user_id,
@@ -946,6 +1100,7 @@ def approve_listing(
 def reject_listing(
     listing_id: str,
     payload: RejectPayload,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
 ):
@@ -978,6 +1133,19 @@ def reject_listing(
     ))
     db.commit()
     db.refresh(listing)
+
+    # Email notification
+    if listing.user and listing.user.email:
+        car_name = f"{listing.brand} {listing.model} {listing.year}"
+        edit_url = f"https://tajcar.tj/post?edit={listing.id}"
+        background_tasks.add_task(
+            send_listing_rejected,
+            listing.user.email,
+            car_name,
+            payload.reason,
+            edit_url,
+        )
+
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing rejected")
 
 
@@ -1009,14 +1177,27 @@ def admin_dealers(
 
 
 @router.put("/dealers/{dealer_id}/verify", response_model=ApiResponse[DealerResponse])
-def verify_dealer(dealer_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
-    dealer = db.query(Dealer).filter(Dealer.id == dealer_id).first()
+def verify_dealer(
+    dealer_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    dealer = db.query(Dealer).options(joinedload(Dealer.user)).filter(Dealer.id == dealer_id).first()
     if not dealer:
         raise HTTPException(status_code=404, detail="Dealer not found")
     dealer.verified = True
     log_audit(db, current_user.id, "verify_dealer", "dealer", dealer.id)
     db.commit()
     db.refresh(dealer)
+    if dealer.user and dealer.user.email:
+        profile_url = f"https://tajcar.tj/dealers/{dealer_id}"
+        background_tasks.add_task(
+            send_dealer_verified,
+            dealer.user.email,
+            dealer.business_name,
+            profile_url,
+        )
     return ApiResponse(success=True, data=DealerResponse.model_validate(dealer), message="Dealer verified")
 
 
@@ -1083,6 +1264,16 @@ def moderator_edit_listing(
         listing.transmission = payload.transmission
     if payload.color is not None:
         listing.color = payload.color.strip()
+    changed = {k: v for k, v in payload.model_dump(exclude_none=True).items()}
+    log_audit(db, current_user.id, "moderator_edit_listing", "listing", listing.id, {"changes": changed})
+    db.add(ListingLog(
+        listing_id=listing.id,
+        actor_id=current_user.id,
+        action="staff_edit",
+        from_status=listing.status.value if listing.status else None,
+        to_status=listing.status.value if listing.status else None,
+        reason=f"Moderator inline edit: {', '.join(changed.keys())}",
+    ))
     db.commit()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing updated")
@@ -1290,6 +1481,121 @@ def moderator_activity(db: Session = Depends(get_db), _: User = Depends(require_
         })
 
     return ApiResponse(success=True, data=result, message="Moderator activity fetched")
+
+
+@router.get("/my-activity", response_model=ApiResponse[dict])
+def my_moderation_activity(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_require_staff),
+):
+    """Personal moderation log: all ListingLog entries where actor_id == current user."""
+    base_query = (
+        db.query(ListingLog)
+        .options(
+            joinedload(ListingLog.listing).joinedload(Listing.images),
+        )
+        .filter(ListingLog.actor_id == current_user.id)
+        .order_by(ListingLog.created_at.desc())
+    )
+    total = base_query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    logs = base_query.offset((page - 1) * limit).limit(limit).all()
+
+    items = []
+    for log in logs:
+        listing = log.listing
+        primary_url = None
+        if listing and listing.images:
+            primary_url = next((img.url for img in listing.images if img.is_primary), listing.images[0].url if listing.images else None)
+        items.append({
+            "log_id": str(log.id),
+            "action": log.action,
+            "from_status": log.from_status,
+            "to_status": log.to_status,
+            "reason": log.reason,
+            "created_at": log.created_at.isoformat(),
+            "listing": {
+                "id": str(listing.id),
+                "brand": listing.brand,
+                "model": listing.model,
+                "year": listing.year,
+                "status": listing.status.value,
+                "primary_image_url": primary_url,
+            } if listing else None,
+        })
+
+    return ApiResponse(
+        success=True,
+        data={"items": items, "total": total, "page": page, "pages": pages},
+        message="Activity fetched",
+    )
+
+
+@router.get("/moderator-logs/{moderator_id}", response_model=ApiResponse[dict])
+def moderator_logs(
+    moderator_id: str,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Admin-only: full chronological listing-log history for a specific staff member."""
+    import uuid as _uuid
+    try:
+        mid = _uuid.UUID(moderator_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid moderator_id UUID")
+
+    moderator = db.query(User).filter(User.id == mid).first()
+    if not moderator:
+        raise HTTPException(status_code=404, detail="Moderator not found")
+
+    base_query = (
+        db.query(ListingLog)
+        .options(joinedload(ListingLog.listing).joinedload(Listing.images))
+        .filter(ListingLog.actor_id == mid)
+        .order_by(ListingLog.created_at.desc())
+    )
+    total = base_query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    logs = base_query.offset((page - 1) * limit).limit(limit).all()
+
+    items = []
+    for log in logs:
+        listing = log.listing
+        primary_url = None
+        if listing and listing.images:
+            primary_url = next((img.url for img in listing.images if img.is_primary), listing.images[0].url if listing.images else None)
+        items.append({
+            "log_id": str(log.id),
+            "action": log.action,
+            "from_status": log.from_status,
+            "to_status": log.to_status,
+            "reason": log.reason,
+            "created_at": log.created_at.isoformat(),
+            "listing": {
+                "id": str(listing.id),
+                "brand": listing.brand,
+                "model": listing.model,
+                "year": listing.year,
+                "status": listing.status.value,
+                "primary_image_url": primary_url,
+            } if listing else None,
+        })
+
+    return ApiResponse(
+        success=True,
+        data={
+            "moderator": {"id": str(moderator.id), "name": moderator.name, "phone": moderator.phone, "role": moderator.role.value},
+            "items": items,
+            "total": total,
+            "page": page,
+            "pages": pages,
+        },
+        message="Moderator logs fetched",
+    )
 
 
 @router.get("/moderation/session/history", response_model=ApiResponse[list])

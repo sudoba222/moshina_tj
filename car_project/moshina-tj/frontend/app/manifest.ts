@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'TajCar.tj — Авторынок Таджикистана',
-    short_name: 'TajCar.tj',
+    name: 'MOSHINA.TJ — Авторынок Таджикистана',
+    short_name: 'MOSHINA.TJ',
     description: 'Покупка, аренда и рассрочка автомобилей по всему Таджикистану',
     start_url: '/',
     display: 'standalone',

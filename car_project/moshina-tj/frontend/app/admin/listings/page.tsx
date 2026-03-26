@@ -471,7 +471,7 @@ function ListingsPageInner() {
 
 export default function AdminListingsPage() {
   return (
-    <Suspense>
+    <Suspense fallback={null}>
       <ListingsPageInner />
     </Suspense>
   )

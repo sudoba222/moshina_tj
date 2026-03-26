@@ -130,7 +130,7 @@ export default function AdminLoginPage() {
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ marginBottom: 8 }}>
             <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.02em' }}>
-              TajCar.tj
+              MOSHINA.TJ
             </span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>

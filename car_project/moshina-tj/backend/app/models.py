@@ -61,6 +61,21 @@ class TransmissionType(str, enum.Enum):
     cvt = "Вариатор"
 
 
+class BodyType(str, enum.Enum):
+    sedan = "sedan"
+    suv = "suv"
+    hatchback = "hatchback"
+    minivan = "minivan"
+    pickup = "pickup"
+    coupe = "coupe"
+    wagon = "wagon"
+    crossover = "crossover"
+    convertible = "convertible"
+    van = "van"
+    bus = "bus"
+    other = "other"
+
+
 class ListingStatus(str, enum.Enum):
     pending = "pending"      # Awaiting moderator review
     active = "active"        # Approved and visible to public
@@ -133,6 +148,12 @@ class Listing(Base):
         nullable=False,
         index=True,
     )
+    category_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     type = Column(Enum(ListingType, name="listingtype"), nullable=False)
     brand = Column(String(100), nullable=False, index=True)
     model = Column(String(100), nullable=False, index=True)
@@ -144,12 +165,34 @@ class Listing(Base):
         default=Currency.USD,
         server_default="USD",
     )
+    is_negotiable = Column(Boolean, nullable=False, default=False, server_default="false")
+    prepayment_amount = Column(Numeric(12, 2), nullable=True)
     mileage = Column(Integer, nullable=True)
     fuel = Column(Enum(FuelType, name="fueltype"), nullable=True)
     transmission = Column(Enum(TransmissionType, name="transmissiontype"), nullable=True)
+    body_type = Column(Enum(BodyType, name="bodytype"), nullable=True, index=True)
+    drive_type = Column(String(50), nullable=True)
+    engine_volume = Column(String(50), nullable=True)
+    has_turbine = Column(Boolean, nullable=True)
+    condition = Column(String(50), nullable=True)  # New, Used
+    is_customs_cleared = Column(Boolean, nullable=False, default=True, server_default="true")
+    taxi_license = Column(Boolean, nullable=False, default=False, server_default="false")
     color = Column(String(50), nullable=True)
     city = Column(String(100), nullable=False, index=True)
     description = Column(Text, nullable=True)
+    
+    # Social & Video
+    youtube_link = Column(String(500), nullable=True)
+    tiktok_link = Column(String(500), nullable=True)
+    video_url = Column(String(500), nullable=True)
+
+    # Contact Info (Overrides user defaults if provided)
+    contact_name = Column(String(100), nullable=True)
+    contact_email = Column(String(200), nullable=True)
+    contact_phone = Column(String(50), nullable=True)
+    contact_method = Column(String(50), nullable=True)  # "phone_and_chat", "phone_only"
+    whatsapp_number = Column(String(50), nullable=True)
+
     installment_available = Column(Boolean, nullable=False, default=False, server_default="false")
     is_dealer_listing = Column(Boolean, nullable=False, default=False, server_default="false")
     is_active = Column(Boolean, nullable=False, default=True, server_default="true", index=True)
@@ -182,6 +225,7 @@ class Listing(Base):
 
     # Relationships
     user = relationship("User", back_populates="listings", foreign_keys=[user_id])
+    category = relationship("Category", foreign_keys=[category_id])
     images = relationship(
         "ListingImage",
         back_populates="listing",
@@ -413,6 +457,7 @@ class CarModel(Base):
 class Category(Base):
     __tablename__ = "categories"
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    parent_id = Column(UUID(as_uuid=True), ForeignKey("categories.id", ondelete="CASCADE"), nullable=True, index=True)
     name_ru = Column(String(100), nullable=False)
     name_tj = Column(String(100), nullable=False)
     slug = Column(String(100), nullable=False, unique=True)
@@ -423,6 +468,9 @@ class Category(Base):
     display_order = Column(Integer, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    parent = relationship("Category", remote_side=[id], backref="subcategories")
 
 
 class Banner(Base):

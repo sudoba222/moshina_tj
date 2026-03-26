@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import parse_qsl
@@ -28,6 +29,7 @@ from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import SessionLocal
 from app.models import OtpCode, TelegramToken, User
 
@@ -35,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
-SITE_URL = os.getenv("NEXT_PUBLIC_SITE_URL", "https://tajcar-frontend.vercel.app")
+SITE_URL = os.getenv("NEXT_PUBLIC_SITE_URL", "https://tajcar.tj")
 
 
 def _normalize_phone(phone: str) -> str:
@@ -47,11 +49,17 @@ def _normalize_phone(phone: str) -> str:
 @router.post("/webhook")
 async def telegram_webhook(request: Request) -> dict[str, str]:
     """Receive updates from Telegram."""
-    secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
-    if secret:
-        header_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
-        if not secrets.compare_digest(header_secret, secret):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret")
+    webhook_secret = settings.telegram_webhook_secret
+    if not webhook_secret:
+        # Webhook secret is mandatory — reject all requests when not configured
+        logger.error(
+            "TELEGRAM_WEBHOOK_SECRET is not set. "
+            "Rejecting webhook request to prevent unauthenticated Telegram updates."
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Webhook not configured")
+    header_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if not secrets.compare_digest(header_secret, webhook_secret):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret")
 
     try:
         update: dict[str, Any] = await request.json()
@@ -79,10 +87,10 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
 
     if not text.startswith("/start"):
         await _send_message(chat_id, (
-            "Привет! Я бот TajCar.tj\n\n"
+            "Привет! Я бот MOSHINA.TJ\n\n"
             f"Сайт: {SITE_URL}\n\n"
             "Откройте сайт → Регистрация → «Войти через Telegram», чтобы начать."
-        ), url_button=("Открыть TajCar.tj", SITE_URL))
+        ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
         return {"ok": "true"}
 
     parts = text.strip().split(maxsplit=1)
@@ -90,10 +98,10 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
 
     if not token_str:
         await _send_message(chat_id, (
-            "Привет! Я бот TajCar.tj\n\n"
+            "Привет! Я бот MOSHINA.TJ\n\n"
             f"Сайт: {SITE_URL}\n\n"
             "Откройте сайт → Регистрация → «Войти через Telegram», чтобы начать."
-        ), url_button=("Открыть TajCar.tj", SITE_URL))
+        ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
         return {"ok": "true"}
 
     await _handle_start(chat_id, token_str, telegram_name)
@@ -119,7 +127,7 @@ async def _handle_start(chat_id: str, token_str: str, telegram_name: str | None)
             await _send_message(chat_id, (
                 "Ссылка недействительна или истекла.\n"
                 f"Вернитесь на сайт и запросите новую ссылку: {SITE_URL}"
-            ), url_button=("Открыть TajCar.tj", SITE_URL))
+            ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
             return
 
         # Save chat_id and name on token — marks it as "waiting for contact"
@@ -169,7 +177,7 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
         if not tg_token:
             await _send_message(chat_id, (
                 "Сессия истекла. Вернитесь на сайт и начните заново."
-            ), url_button=("Открыть TajCar.tj", SITE_URL))
+            ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
             return
 
         token_phone = _normalize_phone(tg_token.phone)
@@ -179,12 +187,10 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
             tg_token.is_used = True
             db.commit()
             await _send_message(chat_id, (
-                f"Номер не совпадает.\n\n"
-                f"На сайте вы ввели: {tg_token.phone}\n"
-                f"В вашем Telegram: {shared_phone}\n\n"
+                "Номер телефона не совпадает с тем, что вы ввели на сайте.\n\n"
                 "Введите на сайте тот же номер, что зарегистрирован в Telegram, "
                 "или используйте другой способ входа."
-            ), url_button=("Открыть TajCar.tj", SITE_URL))
+            ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
             return
 
         # Check if this Telegram account is already linked to a DIFFERENT phone
@@ -202,16 +208,18 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
             await _send_message(chat_id, (
                 "Этот Telegram-аккаунт уже привязан к другому номеру.\n\n"
                 "Войдите через тот номер или обратитесь в поддержку."
-            ), url_button=("Открыть TajCar.tj", SITE_URL))
+            ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
             return
 
         # ✅ Phone verified — generate OTP
         code = str(secrets.randbelow(900000) + 100000)
         expires_at = now + timedelta(minutes=10)
 
-        # Invalidate old unused OTPs for this phone
+        # Invalidate old unused phone_auth OTPs for this phone only;
+        # do NOT touch password_reset OTPs.
         db.query(OtpCode).filter(
             OtpCode.phone == tg_token.phone,
+            OtpCode.purpose == "phone_auth",
             OtpCode.is_used == False,
         ).update({"is_used": True})
 
@@ -234,12 +242,12 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
         await _send_message(
             chat_id,
             f"Номер подтверждён\n\n"
-            f"Ваш код TajCar\\.tj:\n\n`{code}`\n\n_{spaced}_\n\n"
+            f"Ваш код MOSHINA\\.TJ:\n\n`{code}`\n\n_{spaced}_\n\n"
             f"Нажмите на код, чтобы скопировать\\.\n"
             f"Введите его на сайте — код действует 10 минут\\.\n"
             f"Никому не передавайте этот код\\.",
             parse_mode="MarkdownV2",
-            url_button=("Открыть TajCar.tj", f"{SITE_URL}/auth/register"),
+            url_button=("Открыть MOSHINA.TJ", f"{SITE_URL}/auth/register"),
         )
 
     except Exception:
@@ -254,15 +262,15 @@ async def send_welcome_message(chat_id: str, name: str | None) -> None:
     greeting = f"Добро пожаловать{', ' + name if name else ''}!"
     await _send_message(
         chat_id,
-        f"{greeting}\n\nВы успешно вошли в TajCar.tj.\nПерейдите на сайт, чтобы просмотреть объявления.",
-        url_button=("Открыть TajCar.tj", SITE_URL),
+        f"{greeting}\n\nВы успешно вошли в MOSHINA.TJ.\nПерейдите на сайт, чтобы просмотреть объявления.",
+        url_button=("Открыть MOSHINA.TJ", SITE_URL),
     )
 
 
 async def _send_contact_request(chat_id: str, text: str) -> None:
     """Send a message with a 'Share phone number' keyboard button."""
     import httpx
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    bot_token = settings.telegram_bot_token
     if not bot_token or not chat_id:
         return
     payload: dict[str, Any] = {
@@ -292,7 +300,7 @@ async def _send_message(
 ) -> None:
     """Send a message via the Telegram Bot API, optionally with one URL button."""
     import httpx
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    bot_token = settings.telegram_bot_token
     if not bot_token or not chat_id:
         return
     try:
@@ -357,6 +365,14 @@ def _validate_telegram_init_data(init_data: str, bot_token: str) -> dict | None:
     ).hexdigest()
 
     if not hmac.compare_digest(computed, received_hash):
+        return None
+
+    # Reject replayed initData older than 10 minutes
+    try:
+        auth_date = int(params.get("auth_date", "0"))
+    except (ValueError, TypeError):
+        return None
+    if time.time() - auth_date > 600:
         return None
 
     user_str = params.get("user", "{}")
@@ -435,14 +451,17 @@ async def webapp_login(payload: WebAppLoginPayload, response: Response) -> dict:
             token_version=user.token_version,
         )
 
-        # Set HttpOnly cookie so the frontend JS layer is not required
+        # Set HttpOnly cookie using the same settings as the main auth flow
+        # so that cross-origin (Vercel + Render) requests work correctly.
+        is_prod = settings.environment == "production"
         response.set_cookie(
             key="token",
             value=token,
             httponly=True,
-            secure=True,
-            samesite="lax",
+            secure=is_prod,
+            samesite="none" if is_prod else "lax",
             max_age=60 * 60 * 24 * 7,  # 7 days
+            path="/",
         )
 
         return {
