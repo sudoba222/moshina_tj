@@ -14,6 +14,7 @@ import { JsonLd } from '@/components/JsonLd'
 import CookieBanner from '@/components/CookieBanner'
 import YandexMetrika from '@/components/YandexMetrika'
 import SplashScreen from '@/components/SplashScreen'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -155,6 +156,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </ThemeProvider>
 
         <YandexMetrika />
+        <SpeedInsights />
       </body>
     </html>
   )
