@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<Tab>('profile')
   const [listings, setListings] = useState<Listing[]>([])
   const [listingsLoading, setListingsLoading] = useState(false)
-  const [listingsFilter, setListingsFilter] = useState<'active' | 'inactive'>('active')
+  const [listingsFilter, setListingsFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [listingsPage, setListingsPage] = useState(1)
   const [listingsTotalPages, setListingsTotalPages] = useState(1)
 
@@ -192,9 +192,11 @@ export default function DashboardPage() {
     display: 'block',
   }
 
-  const filteredListings = listings.filter((l) =>
-    listingsFilter === 'active' ? l.is_active : !l.is_active
-  )
+  const filteredListings = listings.filter((l) => {
+    if (listingsFilter === 'all') return true
+    if (listingsFilter === 'active') return l.status === 'active' && l.is_active
+    return !l.is_active || l.status === 'pending' || l.status === 'rejected'
+  })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -389,20 +391,32 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                 {/* Active/Inactive toggle */}
                 <div style={{ display: 'flex', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-                  {(['active', 'inactive'] as const).map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setListingsFilter(f)}
-                      style={{
-                        padding: '7px 16px', fontSize: '13px', fontWeight: 700,
-                        background: listingsFilter === f ? 'var(--accent)' : 'var(--surface)',
-                        color: listingsFilter === f ? 'var(--color-white)' : 'var(--text-muted)',
-                        border: 'none', cursor: 'pointer',
-                      }}
-                    >
-                      {t(`dashboard.${f}` as Parameters<typeof t>[0], lang)}
-                    </button>
-                  ))}
+                  {(['all', 'active', 'inactive'] as const).map((f) => {
+                    const label = f === 'all'
+                      ? (lang === 'ru' ? 'Все' : 'Ҳама')
+                      : t(`dashboard.${f}` as Parameters<typeof t>[0], lang)
+                    // count pending in "all" tab
+                    const pendingCount = listings.filter((l) => l.status === 'pending').length
+                    return (
+                      <button
+                        key={f}
+                        onClick={() => setListingsFilter(f)}
+                        style={{
+                          padding: '7px 16px', fontSize: '13px', fontWeight: 700,
+                          background: listingsFilter === f ? 'var(--accent)' : 'var(--surface)',
+                          color: listingsFilter === f ? 'var(--color-white)' : 'var(--text-muted)',
+                          border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                        }}
+                      >
+                        {label}
+                        {f === 'all' && pendingCount > 0 && (
+                          <span style={{ background: 'var(--color-warning-alt)', color: 'var(--color-white)', fontSize: '10px', fontWeight: 800, borderRadius: '10px', padding: '1px 5px', lineHeight: 1.4 }}>
+                            {pendingCount}
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
                 <Link
                   href="/post"

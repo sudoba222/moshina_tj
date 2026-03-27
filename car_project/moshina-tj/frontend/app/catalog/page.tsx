@@ -6,7 +6,7 @@ import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import Pagination from '@/components/Pagination'
 import { listingsApi, searchApi, type ListingFilters } from '@/lib/api'
-import { useBrands, useModels } from '@/hooks/useCatalogData'
+import { SORTED_BRANDS } from '@/lib/vehicleData'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { Listing } from '@/types'
@@ -120,10 +120,9 @@ function CatalogContent() {
   const activeFilterCount = [type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, color, maxMileage, bodyType]
     .filter(Boolean).length + (installmentOnly ? 1 : 0)
 
-  // Dynamic brands/models from API
-  const { brands, loading: brandsLoading } = useBrands()
-  const selectedBrandId = brands.find((b) => b.name === brand)?.id ?? null
-  const { models: catalogModels, loading: modelsLoading } = useModels(selectedBrandId)
+  // Local brands/models from static data
+  const selectedBrandData = SORTED_BRANDS.find((b) => b.name === brand) ?? null
+  const catalogModels = selectedBrandData?.models ?? []
 
   const fetchListings = useCallback(async () => {
     setLoading(true)
@@ -292,26 +291,21 @@ function CatalogContent() {
           <select
             id="filter-brand"
             value={brand}
-            disabled={brandsLoading}
             onChange={(e) => { setBrand(e.target.value); setModel('') }}
-            style={{ ...inputStyle, opacity: brandsLoading ? 0.5 : 1 }}
+            style={inputStyle}
           >
-            <option value="">{brandsLoading ? t('common.loading', lang) : t('catalog.allBrands', lang)}</option>
-            {brands.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
+            <option value="">{t('catalog.allBrands', lang)}</option>
+            {SORTED_BRANDS.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
           </select>
         </div>
 
         {/* Model */}
         <div>
           <label htmlFor="filter-model" style={labelStyle}>{t('catalog.model', lang)}</label>
-          {modelsLoading ? (
-            <select id="filter-model" disabled style={{ ...inputStyle, opacity: 0.5 }}>
-              <option>{t('common.loading', lang)}</option>
-            </select>
-          ) : catalogModels.length > 0 ? (
-            <select id="filter-model" value={model} onChange={(e) => setModel(e.target.value)} style={inputStyle}>
+          {catalogModels.length > 0 ? (
+            <select id="filter-model" value={model} onChange={(e) => setModel(e.target.value)} style={inputStyle} disabled={!brand}>
               <option value="">{t('filters.all', lang)}</option>
-              {catalogModels.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+              {catalogModels.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           ) : (
             <input

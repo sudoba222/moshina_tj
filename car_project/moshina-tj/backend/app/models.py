@@ -195,6 +195,7 @@ class Listing(Base):
 
     installment_available = Column(Boolean, nullable=False, default=False, server_default="false")
     is_dealer_listing = Column(Boolean, nullable=False, default=False, server_default="false")
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default="false")
     is_active = Column(Boolean, nullable=False, default=True, server_default="true", index=True)
     status = Column(
         Enum(ListingStatus, name="listingstatus"),

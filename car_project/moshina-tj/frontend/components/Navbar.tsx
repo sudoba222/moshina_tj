@@ -1,5 +1,5 @@
 'use client'
-import { useState, FormEvent, useRef, useEffect } from 'react'
+import { useState, FormEvent, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useLang } from '@/lib/LanguageContext'
@@ -7,6 +7,8 @@ import { useAuth } from '@/lib/AuthContext'
 import { t } from '@/lib/i18n'
 import ThemeToggle from './ThemeToggle'
 import LanguageToggle from './LanguageToggle'
+import { searchApi, type SuggestionItem } from '@/lib/api'
+import { SORTED_BRANDS } from '@/lib/vehicleData'
 import type { UserRole } from '@/types'
 
 const NAV_LINKS = [
@@ -75,13 +77,42 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [dropOpen, setDropOpen] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
+  const [showSugg, setShowSugg] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function outside(e: MouseEvent) {
       if (dropRef.current && !dropRef.current.contains(e.target as Node)) setDropOpen(false)
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSugg(false)
     }
     document.addEventListener('mousedown', outside)
     return () => document.removeEventListener('mousedown', outside)
+  }, [])
+
+  const fetchSuggestions = useCallback((q: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (q.trim().length < 2) { setSuggestions([]); setShowSugg(false); return }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await searchApi.suggestions(q.trim())
+        const items = res.data.data ?? []
+        if (items.length > 0) {
+          setSuggestions(items.slice(0, 6))
+          setShowSugg(true)
+          return
+        }
+      } catch { /* fall through to local */ }
+      // Local fallback: match brand names
+      const lower = q.toLowerCase()
+      const localHits = SORTED_BRANDS
+        .filter((b) => b.name.toLowerCase().includes(lower))
+        .slice(0, 6)
+        .map((b): SuggestionItem => ({ term: b.name, type: 'brand', count: 0 }))
+      setSuggestions(localHits)
+      setShowSugg(localHits.length > 0)
+    }, 250)
   }, [])
 
   // Close drawer on route change
@@ -89,7 +120,15 @@ export default function Navbar() {
 
   function onSearch(e: FormEvent) {
     e.preventDefault()
+    setShowSugg(false)
     router.push(query.trim() ? `/catalog?q=${encodeURIComponent(query.trim())}` : '/catalog')
+  }
+
+  function pickSuggestion(item: SuggestionItem) {
+    setQuery(item.term)
+    setShowSugg(false)
+    const param = item.type === 'brand' ? 'brand' : item.type === 'city' ? 'city' : 'q'
+    router.push(`/catalog?${param}=${encodeURIComponent(item.term)}`)
   }
 
   function active(href: string) {
@@ -131,18 +170,42 @@ export default function Navbar() {
           </nav>
 
           {/* Desktop search */}
-          <form onSubmit={onSearch} role="search" className="hidden md:flex" style={{ flex: 1, maxWidth: '420px' }}>
-            <div style={{ display: 'flex', width: '100%', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid var(--border)', background: 'var(--bg)' }}>
-              <input
-                type="search" value={query} onChange={(e) => setQuery(e.target.value)}
-                placeholder={t('hero.searchPlaceholder', lang)}
-                style={{ flex: 1, height: '38px', padding: '0 14px', background: 'transparent', border: 'none', fontSize: '14px', color: 'var(--text)', outline: 'none' }}
-              />
-              <button type="submit" style={{ height: '38px', padding: '0 16px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
-                {t('hero.searchBtn', lang)}
-              </button>
-            </div>
-          </form>
+          <div ref={searchRef} className="hidden md:flex" style={{ flex: 1, maxWidth: '420px', position: 'relative' }}>
+            <form onSubmit={onSearch} role="search" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', width: '100%', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid var(--border)', background: 'var(--bg)' }}>
+                <input
+                  type="search" value={query}
+                  onChange={(e) => { setQuery(e.target.value); fetchSuggestions(e.target.value) }}
+                  onFocus={() => { if (suggestions.length > 0) setShowSugg(true) }}
+                  placeholder={t('hero.searchPlaceholder', lang)}
+                  autoComplete="off"
+                  style={{ flex: 1, height: '38px', padding: '0 14px', background: 'transparent', border: 'none', fontSize: '14px', color: 'var(--text)', outline: 'none' }}
+                />
+                <button type="submit" style={{ height: '38px', padding: '0 16px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                  {t('hero.searchBtn', lang)}
+                </button>
+              </div>
+            </form>
+            {showSugg && suggestions.length > 0 && (
+              <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.14)', overflow: 'hidden', zIndex: 300 }}>
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s) }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none', textAlign: 'left' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'none' }}
+                  >
+                    <span style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 500 }}>{s.term}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {s.type === 'brand' ? (lang === 'ru' ? 'Марка' : 'Марка') : s.type === 'city' ? (lang === 'ru' ? 'Город' : 'Шаҳр') : (lang === 'ru' ? 'Модель' : 'Модел')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div style={{ flex: 1 }} className="flex-1 md:hidden" />
 
@@ -254,15 +317,35 @@ export default function Navbar() {
           </div>
 
           {/* Mobile search */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', position: 'relative' }}>
             <form onSubmit={(e) => { onSearch(e); setMobileOpen(false) }} role="search" style={{ display: 'flex', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid var(--border)' }}>
-              <input type="search" value={query} onChange={(e) => setQuery(e.target.value)}
+              <input type="search" value={query}
+                onChange={(e) => { setQuery(e.target.value); fetchSuggestions(e.target.value) }}
+                onFocus={() => { if (suggestions.length > 0) setShowSugg(true) }}
                 placeholder={t('hero.searchPlaceholder', lang)}
+                autoComplete="off"
                 style={{ flex: 1, height: '44px', padding: '0 13px', background: 'var(--bg)', border: 'none', fontSize: '14px', color: 'var(--text)', outline: 'none' }} />
               <button type="submit" style={{ height: '44px', padding: '0 14px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '13px', flexShrink: 0 }}>
                 {t('hero.searchBtn', lang)}
               </button>
             </form>
+            {showSugg && suggestions.length > 0 && (
+              <div style={{ position: 'absolute', left: '16px', right: '16px', top: 'calc(100% - 1px)', background: 'var(--card)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden', zIndex: 400 }}>
+                {suggestions.map((s, i) => (
+                  <button key={i} type="button"
+                    onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s); setMobileOpen(false) }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', borderTop: i > 0 ? '1px solid var(--border)' : 'none', textAlign: 'left' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'none' }}
+                  >
+                    <span style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 500 }}>{s.term}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                      {s.type === 'brand' ? (lang === 'ru' ? 'Марка' : 'Марка') : s.type === 'city' ? (lang === 'ru' ? 'Город' : 'Шаҳр') : (lang === 'ru' ? 'Модель' : 'Модел')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Nav links */}

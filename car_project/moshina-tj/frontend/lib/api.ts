@@ -291,8 +291,8 @@ export const adminApi = {
     api.put<ApiResponse<User>>(`/admin/users/${userId}`, data),
 
   // Listings
-  getListings: (listing_status?: string, page = 1, search?: string) =>
-    api.get<ApiResponse<PaginatedListings>>('/admin/listings', { params: { listing_status: listing_status || undefined, page, search: search || undefined } }),
+  getListings: (status?: string, page = 1, search?: string) =>
+    api.get<ApiResponse<PaginatedListings>>('/admin/listings', { params: { status: status || undefined, page, search: search || undefined } }),
   activateListing: (id: string) =>
     api.put<ApiResponse<Listing>>(`/admin/listings/${id}/activate`),
   deactivateListing: (id: string) =>

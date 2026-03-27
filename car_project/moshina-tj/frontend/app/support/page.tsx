@@ -8,7 +8,6 @@ import { adminApi, chatApi, supportApi } from '@/lib/api'
 import type { ChatMessage, SupportTicket } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
-import { useSocket } from '@/lib/SocketContext'
 import { t } from '@/lib/i18n'
 import type { SupportStats, User, Listing, UserRole } from '@/types'
 
@@ -63,8 +62,6 @@ export default function SupportPage() {
   const router = useRouter()
   const { lang } = useLang()
   const { user } = useAuth()
-  const { onMessage } = useSocket()
-
   const [tab, setTab] = useState<Tab>('stats')
   const [stats, setStats] = useState<SupportStats | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
@@ -128,12 +125,11 @@ export default function SupportPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Real-time WebSocket messages
+  // Real-time WebSocket messages (disabled — socket removed)
   useEffect(() => {
-    const unsub = onMessage((msg) => {
-      if (msg.conversation_id === selectedTicketId) {
-        setMessages((prev) => [...prev, msg])
-        chatApi.markRead(selectedTicketId).catch(() => {})
+    const unsub = () => {}
+    if (false) {
+      // placeholder to keep the effect structure
       } else {
         setTickets((prev) => prev.map((tk) =>
           tk.id === msg.conversation_id
@@ -143,7 +139,7 @@ export default function SupportPage() {
       }
     })
     return unsub
-  }, [onMessage, selectedTicketId])
+  }, [selectedTicketId])
 
   async function handleSend() {
     if (!selectedTicketId || !msgInput.trim() || sendingMessage) return
