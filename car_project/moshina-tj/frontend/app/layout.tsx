@@ -30,19 +30,44 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'TAJCAR.TJ — Авто рынок Таджикистана | Автомобили в Таджикистане',
+    default: 'TAJCAR.TJ — Мошинҳои фурушӣ дар Тоҷикистон | Авторынок Таджикистана',
     template: '%s | TAJCAR.TJ',
   },
   description:
-    'Купите или продайте автомобиль в Таджикистане. Тысячи объявлений — новые и подержанные авто, аренда, рассрочка. TAJCAR.TJ — главный авторынок Таджикистана.',
+    'Харид ва фуруши мошин дар Тоҷикистон. Купите или продайте автомобиль в Таджикистане. Тысячи объявлений — Toyota, Mercedes, BMW. TajCar.tj — главный авторынок Таджикистана.',
   keywords: [
+    // Russian
     'авто таджикистан',
     'купить машину душанбе',
     'продать авто таджикистан',
-    'tajcar tj',
+    'авторынок таджикистана',
     'автомобили душанбе',
     'аренда авто таджикистан',
+    'купить авто душанбе',
+    'продажа авто таджикистан',
+    'подержанные авто таджикистан',
+    'машина худжанд',
+    'автомобиль бохтар',
+    'автосалон душанбе',
+    // Tajik
+    'мошинхои фуруши',
+    'харид мошин точикистон',
+    'мошин дар душанбе',
+    'мошинхои дастдавум',
+    'бозори мошин точикистон',
+    'мошинхои барки',
+    // Brand-specific (high search volume)
+    'купить toyota душанбе',
+    'chevrolet таджикистан',
+    'lexus душанбе',
+    'bmw таджикистан',
+    'mercedes душанбе',
+    'hyundai таджикистан',
+    // Technical
+    'tajcar',
+    'tajcar.tj',
     'mashina tj',
+    'avto tj',
   ],
   authors: [{ name: 'TAJCAR.TJ' }],
   creator: 'TAJCAR.TJ',
@@ -63,8 +88,8 @@ export const metadata: Metadata = {
     alternateLocale: 'tg_TJ',
     url: SITE_URL,
     siteName: 'TAJCAR.TJ',
-    title: 'TAJCAR.TJ — Авто рынок Таджикистана',
-    description: 'Купите или продайте автомобиль в Таджикистане. Тысячи объявлений.',
+    title: 'TAJCAR.TJ — Мошинҳои фурушӣ | Авторынок Таджикистана',
+    description: 'Харид ва фуруши мошин дар Тоҷикистон. Тысячи объявлений на TajCar.tj.',
     images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'TAJCAR.TJ' }],
   },
   twitter: {
@@ -113,14 +138,64 @@ const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'AutoDealer',
   name: 'TAJCAR.TJ',
-  description: 'Главный авторынок Таджикистана',
+  alternateName: ['ТаджКар', 'Bозори мошин Тоҷикистон'],
+  description: 'Главный авторынок Таджикистана | Бозори мошини Тоҷикистон',
   url: SITE_URL,
-  areaServed: { '@type': 'Country', name: 'Tajikistan' },
+  logo: `${SITE_URL}/icon-512.png`,
+  sameAs: ['https://t.me/tajcar_tj'],
+  areaServed: [
+    { '@type': 'Country', name: 'Tajikistan', '@id': 'https://www.wikidata.org/wiki/Q863' },
+  ],
   address: {
     '@type': 'PostalAddress',
     addressCountry: 'TJ',
     addressLocality: 'Душанбе',
+    addressRegion: 'Dushanbe',
   },
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'customer service',
+    availableLanguage: ['Russian', 'Tajik'],
+  },
+}
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Как купить машину в Таджикистане?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'На TajCar.tj вы найдёте тысячи объявлений о продаже автомобилей в Таджикистане. Выберите марку, модель и город, свяжитесь с продавцом напрямую.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Чи тавр мошин харидан мумкин аст?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Дар TajCar.tj шумо метавонед ҳазорҳо эълони фурӯши мошинро дар Тоҷикистон пайдо кунед.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Как продать машину в Душанбе?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Разместите бесплатное объявление на TajCar.tj. Заполните форму, добавьте фото и ваше объявление увидят тысячи покупателей в Таджикистане.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Электромобили в Таджикистане — где купить BYD?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'TajCar.tj имеет большой выбор электромобилей в Таджикистане: BYD, Tesla, Zeekr и другие. Используйте фильтр "Электро" в каталоге.',
+      },
+    },
+  ],
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -133,6 +208,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={outfit.className}>
         <JsonLd data={websiteSchema} />
         <JsonLd data={organizationSchema} />
+        <JsonLd data={faqSchema} />
         <ThemeProvider>
           <AuthProvider>
             <LanguageProvider initialLang={lang}>

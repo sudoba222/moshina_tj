@@ -39,6 +39,7 @@
   /* Convenience aliases used in inline styles */
   --font: inherit;
   --danger: var(--color-error);
+  --footer-bg: #111827;
 }
 
 html.dark {
@@ -58,6 +59,7 @@ html.dark {
   --nav-bg: #1a1e27;
   --nav-bg-rgb: 26, 30, 39;
   --tag-bg: #232838;
+  --footer-bg: #0f1117;
 }
 
 *,

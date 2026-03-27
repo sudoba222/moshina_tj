@@ -106,6 +106,7 @@ export interface PaginatedResponse<T> {
 
 export interface User {
   id: string
+  user_number?: number
   phone: string
   name: string | null
   email: string | null

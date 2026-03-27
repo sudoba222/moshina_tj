@@ -287,6 +287,11 @@ export default function DashboardPage() {
                       {user.email}
                     </div>
                   )}
+                  {user.user_number !== undefined && (
+                    <div style={{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      ID: #{user.user_number}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '3px 10px', borderRadius: '8px', textTransform: 'capitalize' }}>
                       {user.role}

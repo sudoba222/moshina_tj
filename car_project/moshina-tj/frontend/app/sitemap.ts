@@ -39,7 +39,7 @@ async function fetchAllListingIds(): Promise<ListingItem[]> {
     clearTimeout(timeoutId)
     if (!first.ok) return []
     const firstData: ListingsApiResponse = await first.json()
-    const pages = Math.min(firstData.data?.pages ?? 1, 10) // cap at 10 pages to prevent timeout
+    const pages = Math.min(firstData.data?.pages ?? 1, 50) // cap at 50 pages to prevent timeout
 
     const requests = Array.from({ length: pages }, (_, i) =>
       fetch(`${API_URL}/listings?page=${i + 1}&limit=100`, {
@@ -81,6 +81,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/rent`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${SITE_URL}/dealers`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${SITE_URL}/installment`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${SITE_URL}/dushanbe`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.85 },
+    { url: `${SITE_URL}/khujand`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.85 },
+    { url: `${SITE_URL}/bokhtar`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${SITE_URL}/kulob`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.75 },
+    { url: `${SITE_URL}/istaravshan`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.75 },
+    { url: `${SITE_URL}/tursunzoda`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${SITE_URL}/electric`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.85 },
+    { url: `${SITE_URL}/about`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/terms`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${SITE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
   ]
 
   const [listings, dealers] = await Promise.all([

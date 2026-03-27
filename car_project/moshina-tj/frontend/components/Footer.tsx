@@ -41,7 +41,7 @@ export default function Footer() {
   const year = new Date().getFullYear()
 
   return (
-    <footer style={{ background: '#0f1117', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 'auto' }}>
+    <footer style={{ background: 'var(--footer-bg)', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 'auto' }}>
 
       {/* ── Main grid ── */}
       <div className="max-w-7xl mx-auto" style={{ padding: 'clamp(40px,6vw,64px) clamp(16px,4vw,32px) 0' }}>
