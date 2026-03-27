@@ -482,7 +482,18 @@ def update_listing(
                         img.is_primary = (index == 0)
                         break
 
+    _USER_SETTABLE_LISTING_FIELDS = frozenset({
+        "category_id", "type", "brand", "model", "year", "price", "currency",
+        "is_negotiable", "prepayment_amount", "mileage", "fuel", "transmission",
+        "body_type", "drive_type", "engine_volume", "has_turbine", "condition",
+        "is_customs_cleared", "taxi_license", "color", "city", "description",
+        "youtube_link", "tiktok_link", "video_url", "contact_name", "contact_email",
+        "contact_phone", "contact_method", "whatsapp_number", "installment_available",
+        "rental_rules",
+    })
     for field, value in update_data.items():
+        if field not in _USER_SETTABLE_LISTING_FIELDS:
+            continue
         # rental_rules arrives as a JSON-serializable dict — assign directly
         setattr(listing, field, value)
 

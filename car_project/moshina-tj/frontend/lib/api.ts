@@ -111,7 +111,6 @@ api.interceptors.response.use(
     ) {
       // Clear in-memory token so stale headers are not re-sent
       setInMemoryToken(null)
-      localStorage.removeItem('auth_token')
       localStorage.removeItem('user')
       window.location.href = '/auth/login'
     }

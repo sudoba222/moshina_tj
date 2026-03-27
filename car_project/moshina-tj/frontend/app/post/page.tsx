@@ -219,7 +219,17 @@ function PostPage() {
     if (isEdit) return
     try {
       const raw = localStorage.getItem(DRAFT_KEY)
-      if (raw) setForm(JSON.parse(raw) as FormState)
+      if (raw) {
+        const parsed = JSON.parse(raw) as FormState & { _savedAt?: number }
+        const savedAt = parsed._savedAt
+        const sevenDays = 7 * 24 * 60 * 60 * 1000
+        if (savedAt && Date.now() - savedAt > sevenDays) {
+          localStorage.removeItem(DRAFT_KEY)
+        } else {
+          const { _savedAt: _ts, ...formData } = parsed
+          setForm(formData as FormState)
+        }
+      }
     } catch { localStorage.removeItem(DRAFT_KEY) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -227,7 +237,7 @@ function PostPage() {
   // Save draft
   useEffect(() => {
     if (isEdit) return
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(form))
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...form, _savedAt: Date.now() }))
   }, [form, isEdit])
 
   // Load listing in edit mode

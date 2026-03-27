@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @model_validator(mode="after")
+    def _validate_secret_key(self) -> "Settings":
+        if len(self.secret_key) < 32:
+            raise ValueError(
+                "SECRET_KEY must be at least 32 characters. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        return self
+
+    @model_validator(mode="after")
     def _warn_empty_staff_phones(self) -> "Settings":
         if self.environment != "development":
             for field in ("admin_phone", "moderator_phone", "manager_phone", "support_phone"):

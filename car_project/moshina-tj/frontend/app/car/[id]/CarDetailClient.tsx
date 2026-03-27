@@ -364,6 +364,7 @@ function ContactModal({
 }) {
   const contactName = listing.contact_name || profile.name || (lang === 'ru' ? 'Продавец' : 'Фурӯшанда')
   const phone = listing.contact_phone || profile.phone
+  const safeTelPhone = (phone ?? '').replace(/[^\d+\-() ]/g, '')
   const whatsapp = listing.whatsapp_number || profile.whatsapp_number || (listing.contact_phone ? listing.contact_phone : profile.phone)
   const waPhone = whatsapp?.replace(/\D/g, '')
 
@@ -434,7 +435,7 @@ function ContactModal({
         {phone ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <a
-              href={`tel:${phone}`}
+              href={`tel:${safeTelPhone}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1132,7 +1133,7 @@ export default function CarDetailClient() {
           {/* Call button */}
           {(listing.contact_phone || sellerProfile?.phone) && (
             <a
-              href={`tel:${listing.contact_phone || sellerProfile?.phone}`}
+              href={`tel:${(listing.contact_phone || sellerProfile?.phone || '').replace(/[^\d+\-() ]/g, '')}`}
               style={{
                 flex: 1,
                 minWidth: 0,

@@ -334,6 +334,7 @@ def change_password(
     if len(payload.new_password) < 8:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must be at least 8 characters")
     current_user.password_hash = hash_password(payload.new_password)
+    current_user.token_version = (current_user.token_version or 0) + 1
     db.commit()
     if current_user.email:
         background_tasks.add_task(send_password_changed, current_user.email)
@@ -693,7 +694,7 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
         db.add(OtpCode(email=identifier, purpose="password_reset", code=code, expires_at=expires_at))
         db.commit()
-        send_email_otp(identifier, code, purpose="login")
+        send_email_otp(identifier, code, purpose="reset")
         # Never expose raw OTP codes in the response body — log server-side only
         if not settings.resend_api_key and settings.environment != "production":
             logger.debug("[DEV OTP] email=%s code=%s", identifier, code)
@@ -866,6 +867,7 @@ def reset_password(request: Request, payload: ResetPasswordPayload, db: Session 
 
     otp.is_used = True
     user.password_hash = hash_password(payload.new_password)
+    user.token_version = (user.token_version or 0) + 1
     db.commit()
 
     return ApiResponse(success=True, data=None, message="Password updated successfully")

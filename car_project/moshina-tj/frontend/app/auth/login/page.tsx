@@ -146,7 +146,9 @@ function LoginPageInner() {
         : await authApi.login(identifier.trim(), password)
       const data = res.data.data!
       login(data.token.access_token, data.user)
-      const redirectTo = searchParams.get('redirect') ?? '/'
+      const raw = searchParams.get('redirect') ?? '/'
+      // Only allow same-origin relative paths — reject absolute URLs and protocol-relative URLs
+      const redirectTo = raw.startsWith('/') && !raw.startsWith('//') && !raw.includes(':') ? raw : '/'
       const destination = ROLE_REDIRECT[data.user?.role] ?? redirectTo
       router.push(destination)
     } catch (err) {

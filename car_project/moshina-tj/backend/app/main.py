@@ -160,7 +160,6 @@ def seed_staff_accounts() -> None:
                     name=acc["name"],
                     password_hash=hash_password(_DEFAULT_STAFF_PASSWORD),
                     role=acc["role"],
-                    is_active=True,
                 ))
         db.commit()
     except Exception:  # noqa: BLE001 — don't crash the server if seeding fails

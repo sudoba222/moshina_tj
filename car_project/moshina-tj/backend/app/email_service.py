@@ -16,8 +16,14 @@ send_password_changed(to)                                  — password change c
 from __future__ import annotations
 
 import base64
+import html as _html_module
 import logging
 from typing import Optional
+
+
+def _e(value: str) -> str:
+    """Escape a user-controlled value for safe HTML interpolation."""
+    return _html_module.escape(str(value), quote=True)
 
 logger = logging.getLogger(__name__)
 
@@ -288,6 +294,7 @@ def send_email_otp(to_email: str, code: str, purpose: str = "verify") -> bool:
 # ---------------------------------------------------------------------------
 
 def send_listing_approved(to_email: str, car_name: str, listing_url: str) -> bool:
+    car_name = _e(car_name)
     subject = f"Объявление опубликовано — {car_name}"
 
     html = (
@@ -361,10 +368,12 @@ def send_listing_rejected(
     reason: Optional[str],
     edit_url: str,
 ) -> bool:
+    car_name = _e(car_name)
     subject = f"Объявление отклонено — {car_name}"
 
     reason_block = ""
     if reason:
+        reason = _e(reason)
         reason_block = f"""\
           <!-- Reason box -->
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -427,7 +436,7 @@ def send_listing_rejected(
 # ---------------------------------------------------------------------------
 
 def send_welcome_email(to_email: str, name: Optional[str] = None) -> bool:
-    display_name = name or "водитель"
+    display_name = _e(name) if name else "водитель"
     subject = f"Добро пожаловать на TajCar.tj, {display_name}!"
 
     html = (
@@ -538,15 +547,15 @@ def send_new_message_notification(
     message_preview: Optional[str],
     chat_url: str,
 ) -> bool:
-    sender  = sender_name or "Пользователь"
+    sender  = _e(sender_name) if sender_name else "Пользователь"
     subject = f"Новое сообщение от {sender} — TajCar.tj"
 
-    # First letter of sender name for avatar circle
-    avatar_letter = sender[0].upper() if sender else "П"
+    # First letter of sender name for avatar circle (escape after slicing)
+    avatar_letter = _e(sender[0].upper()) if sender else "П"
 
     preview_block = ""
     if message_preview:
-        safe_preview = message_preview[:200]
+        safe_preview = _e(message_preview[:200])
         preview_block = f"""\
           <!-- Chat bubble -->
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -604,6 +613,7 @@ def send_account_banned(to_email: str, reason: Optional[str] = None) -> bool:
 
     reason_block = ""
     if reason:
+        reason = _e(reason)
         reason_block = f"""\
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="margin-top:20px;background:{_ERROR_BG};border:1.5px solid {_ERROR_BD};border-radius:10px;">
@@ -649,6 +659,7 @@ def send_account_banned(to_email: str, reason: Optional[str] = None) -> bool:
 # ---------------------------------------------------------------------------
 
 def send_dealer_verified(to_email: str, dealer_name: str, profile_url: str) -> bool:
+    dealer_name = _e(dealer_name)
     subject = "Ваш дилерский аккаунт верифицирован — TajCar.tj"
 
     verified_badge = f"""\

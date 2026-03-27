@@ -46,8 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       setUser(freshUser)
-      localStorage.setItem('user', JSON.stringify(freshUser))
-      document.cookie = `auth_session=${freshUser.role ?? 'user'}; path=/; max-age=604800; samesite=lax`
+      const { phone: _phone, email: _email, whatsapp_number: _wa, ban_reason: _br, ...safeUser } = freshUser
+      localStorage.setItem('user', JSON.stringify(safeUser))
+      const secureFlag = window.location.protocol === 'https:' ? '; Secure' : ''
+      document.cookie = `auth_session=${freshUser.role ?? 'user'}; path=/; max-age=604800; samesite=lax${secureFlag}`
     }).catch(() => {
       // Token expired or revoked — clear everything
       _clearAuth()
@@ -69,19 +71,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // since SameSite=None HttpOnly cookies require Secure + same-eTLD+1).
     setInMemoryToken(accessToken)
     setToken(accessToken)
-    localStorage.setItem('user', JSON.stringify(userData))
+    const { phone: _phone, email: _email, whatsapp_number: _wa, ban_reason: _br, ...safeUser } = userData
+    localStorage.setItem('user', JSON.stringify(safeUser))
     setUser(userData)
-    document.cookie = `auth_session=${userData.role ?? 'user'}; path=/; max-age=604800; samesite=lax`
+    const secureFlag = window.location.protocol === 'https:' ? '; Secure' : ''
+    document.cookie = `auth_session=${userData.role ?? 'user'}; path=/; max-age=604800; samesite=lax${secureFlag}`
   }
 
   function logout() {
     authApi.logout().catch(() => {}) // best-effort server-side token revocation
+    localStorage.removeItem('post_draft_v2')
     _clearAuth()
   }
 
   function updateUser(userData: User) {
     setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
+    const { phone: _phone, email: _email, whatsapp_number: _wa, ban_reason: _br, ...safeUser } = userData
+    localStorage.setItem('user', JSON.stringify(safeUser))
   }
 
   return (
