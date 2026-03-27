@@ -1121,43 +1121,95 @@ export default function CarDetailClient() {
             zIndex: 200,
             background: 'var(--card)',
             borderTop: '1px solid var(--border)',
-            padding: '10px 16px',
+            padding: '10px 12px',
             paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: '8px',
             boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
           }}
         >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {/* Call button */}
+          {(listing.contact_phone || sellerProfile?.phone) && (
+            <a
+              href={`tel:${listing.contact_phone || sellerProfile?.phone}`}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '7px',
+                background: 'var(--accent)',
+                color: 'var(--color-white)',
+                fontWeight: 700,
+                fontSize: '14px',
+                padding: '13px 10px',
+                borderRadius: '12px',
+                textDecoration: 'none',
+                minHeight: '48px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+              }}
+            >
+              <PhoneIcon />
+              {t('contact.call', lang)}
+            </a>
+          )}
+          {/* WhatsApp button */}
+          {(() => {
+            const wa = listing.whatsapp_number || listing.contact_phone || sellerProfile?.phone
+            const waNum = wa?.replace(/\D/g, '')
+            if (!waNum) return null
+            return (
+              <a
+                href={`https://wa.me/${waNum}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '7px',
+                  background: 'var(--color-whatsapp)',
+                  color: 'var(--color-white)',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  padding: '13px 10px',
+                  borderRadius: '12px',
+                  textDecoration: 'none',
+                  minHeight: '48px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                }}
+              >
+                <WhatsAppIcon />
+                WhatsApp
+              </a>
+            )
+          })()}
+          {/* Fallback: if no phone at all, show modal button */}
+          {!listing.contact_phone && !sellerProfile?.phone && (
+            <button
+              onClick={() => setContactOpen(true)}
+              style={{
+                flex: 1,
+                background: 'var(--accent)',
+                color: 'var(--color-white)',
+                fontWeight: 700,
+                fontSize: '14px',
+                padding: '13px 10px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                minHeight: '48px',
+              }}
+            >
               {t('carDetail.contact', lang)}
-            </div>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1 }}>
-              {formatPrice(listing.price, listing.currency)}
-            </div>
-          </div>
-          <button
-            onClick={() => setContactOpen(true)}
-            style={{
-              background: 'var(--accent)',
-              color: 'var(--color-white)',
-              fontWeight: 700,
-              fontSize: '15px',
-              padding: '12px 20px',
-              borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              flexShrink: 0,
-              minHeight: '44px',
-            }}
-          >
-            <PhoneIcon />
-            {t('carDetail.contact', lang)}
-          </button>
+            </button>
+          )}
         </div>
       )}
 
