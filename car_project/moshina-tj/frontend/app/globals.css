@@ -472,3 +472,11 @@ img { transition: opacity 0.3s ease; }
   }
   .promo-banner-cta { align-self: flex-start; }
 }
+
+/* ── Dashboard menu rows ─────────────────────────────────────────────────── */
+.menu-row-last {
+  border-bottom: none !important;
+}
+button[style*="border-bottom: 1px solid var(--border)"]:last-child {
+  border-bottom: none;
+}

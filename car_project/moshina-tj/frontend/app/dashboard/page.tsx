@@ -31,7 +31,7 @@ function SearchParamsReader({ onParams }: { onParams: (tab: Tab | null, conv: st
 export default function DashboardPage() {
   const router = useRouter()
   const { lang } = useLang()
-  const { user, loading: authLoading, updateUser } = useAuth()
+  const { user, loading: authLoading, updateUser, logout } = useAuth()
 
   const [tab, setTab] = useState<Tab>('profile')
   const [listings, setListings] = useState<Listing[]>([])
@@ -338,77 +338,120 @@ export default function DashboardPage() {
 
           {/* ── Profile tab ── */}
           {tab === 'profile' && (
-            <div className="animate-fade-in">
-              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(20px, 4vw, 36px)', maxWidth: '560px' }}>
-                {/* Avatar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
-                  <div style={{
-                    width: '72px', height: '72px', borderRadius: '16px',
-                    background: 'var(--accent)', color: 'var(--color-white)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '28px', fontWeight: 800, flexShrink: 0,
-                  }}>
-                    {(user.name ?? user.phone).charAt(0).toUpperCase()}
+            <div className="animate-fade-in" style={{ maxWidth: '560px' }}>
+
+              {/* Profile hero */}
+              <div style={{
+                background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px',
+                padding: 'clamp(16px, 4vw, 24px)', marginBottom: '12px',
+                display: 'flex', alignItems: 'center', gap: '16px',
+              }}>
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '18px',
+                  background: 'var(--accent)', color: 'var(--color-white)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '26px', fontWeight: 800, flexShrink: 0,
+                }}>
+                  {(user.name ?? user.phone ?? '?').charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.name ?? (user.phone && user.phone.startsWith('+') ? user.phone : '—')}
                   </div>
-                  <div>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>
-                      {user.name ?? user.phone}
+                  {user.email && (
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user.email}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'capitalize' }}>
+                  )}
+                  <div style={{ marginTop: '5px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: '6px', textTransform: 'capitalize' }}>
                       {user.role}
-                    </div>
+                    </span>
                   </div>
                 </div>
+              </div>
 
-                {editMode ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div>
-                      <label htmlFor="dash-name" style={labelStyle}>{t('admin.name', lang)}</label>
-                      <input id="dash-name" type="text" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
-                    </div>
-                    <div>
-                      <label htmlFor="dash-whatsapp" style={labelStyle}>{t('settings.whatsapp', lang)}</label>
-                      <input
-                        id="dash-whatsapp"
-                        type="tel"
-                        value={whatsappNumber}
-                        onChange={(e) => setWhatsappNumber(e.target.value)}
-                        placeholder={t('settings.whatsappPlaceholder', lang)}
-                        style={inputStyle}
-                      />
-                    </div>
-                    {profileError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{profileError}</p>}
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        onClick={saveProfile}
-                        disabled={profileSaving}
-                        style={{ flex: 1, background: profileSaving ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: profileSaving ? 'not-allowed' : 'pointer' }}
-                      >
-                        {profileSaving ? t('common.loading', lang) : t('dashboard.save', lang)}
-                      </button>
-                      <button
-                        onClick={() => { setEditMode(false); setProfileError('') }}
-                        style={{ padding: '11px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '10px', fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer' }}
-                      >
-                        {t('dashboard.cancel', lang)}
-                      </button>
-                    </div>
+              {/* Inline edit form */}
+              {editMode && (
+                <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(16px, 4vw, 24px)', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label htmlFor="dash-name" style={labelStyle}>{t('admin.name', lang)}</label>
+                    <input id="dash-name" type="text" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
                   </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <InfoRow label={t('auth.phone', lang)} value={user.phone && user.phone.startsWith('+') ? user.phone : '—'} />
-                    <InfoRow label={t('admin.name', lang)} value={user.name ?? '—'} />
-                    {user.email && <InfoRow label="Email" value={user.email} />}
-                    {user.whatsapp_number && <InfoRow label={t('settings.whatsapp', lang)} value={user.whatsapp_number} />}
-                    {profileSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{lang === 'ru' ? 'Сохранено' : 'Нигоҳ дошта шуд'}</p>}
-                    <button
-                      onClick={() => { setEditMode(true); setProfileSuccess(false) }}
-                      style={{ marginTop: '4px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: 'pointer' }}
-                    >
-                      {t('dashboard.editProfile', lang)}
+                  <div>
+                    <label htmlFor="dash-whatsapp" style={labelStyle}>{t('settings.whatsapp', lang)}</label>
+                    <input
+                      id="dash-whatsapp" type="tel" value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(e.target.value)}
+                      placeholder={t('settings.whatsappPlaceholder', lang)} style={inputStyle}
+                    />
+                  </div>
+                  {profileError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{profileError}</p>}
+                  {profileSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{lang === 'ru' ? 'Сохранено' : 'Нигоҳ дошта шуд'}</p>}
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={saveProfile} disabled={profileSaving}
+                      style={{ flex: 1, background: profileSaving ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: profileSaving ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
+                      {profileSaving ? t('common.loading', lang) : t('dashboard.save', lang)}
+                    </button>
+                    <button onClick={() => { setEditMode(false); setProfileError('') }}
+                      style={{ padding: '11px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '10px', fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer', fontSize: '14px' }}>
+                      {t('dashboard.cancel', lang)}
                     </button>
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* Info rows — hidden in edit mode */}
+              {!editMode && (
+                <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden', marginBottom: '12px' }}>
+                  <MenuRow
+                    icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
+                    label={t('admin.name', lang)}
+                    value={user.name ?? '—'}
+                  />
+                  <MenuRow
+                    icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.92 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>}
+                    label={t('auth.phone', lang)}
+                    value={user.phone && user.phone.startsWith('+') ? user.phone : '—'}
+                  />
+                  {user.email && (
+                    <MenuRow
+                      icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>}
+                      label="Email"
+                      value={user.email}
+                    />
+                  )}
+                  {user.whatsapp_number && (
+                    <MenuRow
+                      icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>}
+                      label={t('settings.whatsapp', lang)}
+                      value={user.whatsapp_number}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Action menu */}
+              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden' }}>
+                {!editMode ? (
+                  <MenuRow
+                    icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}
+                    label={t('dashboard.editProfile', lang)}
+                    onClick={() => { setEditMode(true); setProfileSuccess(false) }}
+                    accent
+                  />
+                ) : null}
+                <MenuRow
+                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
+                  label={t('dashboard.changePassword', lang)}
+                  onClick={() => setTab('settings')}
+                />
+                <MenuRow
+                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>}
+                  label={t('nav.logout', lang)}
+                  onClick={() => { logout(); router.replace('/') }}
+                  danger
+                />
               </div>
             </div>
           )}
@@ -564,56 +607,86 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     conversations.map((conv) => {
-                      const name = conv.type === 'support'
+                      const convName = conv.type === 'support'
                         ? t('chat.supportChat', lang)
                         : (conv.other_participant?.name ?? (lang === 'ru' ? 'Пользователь' : 'Корбар'))
-                      const initials = name.charAt(0).toUpperCase()
+                      const initials = convName.charAt(0).toUpperCase()
                       const isActive = selectedConvId === conv.id
+                      const timeStr = conv.last_message
+                        ? new Date(conv.last_message.created_at).toLocaleTimeString(lang === 'ru' ? 'ru-RU' : 'tg-TJ', { hour: '2-digit', minute: '2-digit' })
+                        : ''
                       return (
                         <button
                           key={conv.id}
                           onClick={() => setSelectedConvId(conv.id)}
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            width: '100%',
-                            padding: '12px 16px',
-                            background: isActive ? 'var(--accent-dim, rgba(37,99,235,0.08))' : 'transparent',
-                            border: 'none',
-                            borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
-                            borderBottom: '1px solid var(--border)',
-                            cursor: 'pointer',
-                            textAlign: 'left',
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            width: '100%', padding: '13px 16px',
+                            background: isActive ? 'var(--accent-dim)' : 'transparent',
+                            border: 'none', borderBottom: '1px solid var(--border)',
+                            cursor: 'pointer', textAlign: 'left', transition: 'background 0.12s',
                           }}
                           onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--surface)' }}
                           onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
                         >
-                          {/* Avatar */}
-                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isActive ? 'var(--accent)' : 'var(--surface)', color: isActive ? 'var(--color-white)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 800, flexShrink: 0 }}>
-                            {initials}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '130px' }}>
-                                {name}
+                          {/* Avatar with unread badge */}
+                          <div style={{ position: 'relative', flexShrink: 0 }}>
+                            <div style={{
+                              width: '46px', height: '46px', borderRadius: '50%',
+                              background: conv.type === 'support' ? 'var(--color-info)' : isActive ? 'var(--accent)' : 'var(--border-strong)',
+                              color: 'var(--color-white)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '17px', fontWeight: 800,
+                            }}>
+                              {conv.type === 'support' ? (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                </svg>
+                              ) : initials}
+                            </div>
+                            {conv.unread_count > 0 && (
+                              <span style={{
+                                position: 'absolute', top: '-2px', right: '-3px',
+                                minWidth: '18px', height: '18px',
+                                background: 'var(--accent)', color: 'var(--color-white)',
+                                fontSize: '10px', fontWeight: 800, borderRadius: '9px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                padding: '0 4px', border: '2px solid var(--card)',
+                              }}>
+                                {conv.unread_count > 99 ? '99+' : conv.unread_count}
                               </span>
-                              {conv.unread_count > 0 && (
-                                <span style={{ minWidth: '18px', height: '18px', background: 'var(--accent)', color: 'var(--color-white)', fontSize: '10px', fontWeight: 800, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', flexShrink: 0 }}>
-                                  {conv.unread_count}
+                            )}
+                          </div>
+
+                          {/* Text */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '3px' }}>
+                              <span style={{
+                                fontSize: '14px', fontWeight: conv.unread_count > 0 ? 800 : 600,
+                                color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px',
+                              }}>
+                                {convName}
+                              </span>
+                              {timeStr && (
+                                <span style={{ fontSize: '11px', color: conv.unread_count > 0 ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, fontWeight: conv.unread_count > 0 ? 700 : 400, marginLeft: '6px' }}>
+                                  {timeStr}
                                 </span>
                               )}
                             </div>
-                            {conv.last_message && (
-                              <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {conv.last_message.is_mine ? `${t('chat.you', lang)}: ` : ''}{conv.last_message.content}
+                            {conv.last_message ? (
+                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: conv.unread_count > 0 ? 600 : 400 }}>
+                                {conv.last_message.is_mine && (
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '3px', verticalAlign: 'middle', display: 'inline' }}>
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
+                                {conv.last_message.content}
                               </div>
-                            )}
-                            {conv.listing && (
-                              <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            ) : conv.listing ? (
+                              <div style={{ fontSize: '12px', color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {conv.listing.brand} {conv.listing.model} {conv.listing.year}
                               </div>
-                            )}
+                            ) : null}
                           </div>
                         </button>
                       )
@@ -841,6 +914,60 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
       <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>{value}</span>
     </div>
+  )
+}
+
+function MenuRow({
+  icon,
+  label,
+  value,
+  onClick,
+  accent,
+  danger,
+}: {
+  icon: React.ReactNode
+  label: string
+  value?: string
+  onClick?: () => void
+  accent?: boolean
+  danger?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '14px',
+        padding: '14px 16px',
+        background: 'none',
+        border: 'none',
+        borderBottom: '1px solid var(--border)',
+        cursor: onClick ? 'pointer' : 'default',
+        textAlign: 'left',
+        minHeight: '52px',
+      }}
+    >
+      <span style={{ color: danger ? 'var(--color-error)' : accent ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        {icon}
+      </span>
+      <span style={{ flex: 1, fontSize: '14px', fontWeight: 600, color: danger ? 'var(--color-error)' : accent ? 'var(--accent)' : 'var(--text)' }}>
+        {label}
+      </span>
+      {value && (
+        <span style={{ fontSize: '13px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px', textAlign: 'right' }}>
+          {value}
+        </span>
+      )}
+      {onClick && (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={danger ? 'var(--color-error)' : 'var(--text-muted)'} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}>
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      )}
+    </button>
   )
 }
 

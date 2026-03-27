@@ -125,6 +125,7 @@ export interface UserPublicProfile {
   created_at: string
   listing_count: number
   phone?: string
+  whatsapp_number?: string
 }
 
 export interface Dealer {

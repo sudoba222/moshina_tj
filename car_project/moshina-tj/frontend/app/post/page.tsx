@@ -4,8 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, uploadApi, authApi } from '@/lib/api'
+import { listingsApi, uploadApi, authApi, catalogApi } from '@/lib/api'
 import api from '@/lib/api'
+import type { CarCategory } from '@/lib/api'
 import { useBrands, useModels } from '@/hooks/useCatalogData'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
@@ -303,19 +304,35 @@ function PostPage() {
       .then((res) => {
         const listing = res.data.data
         setForm({
+          category_id: '',
           brand: listing.brand,
           model: listing.model,
           year: String(listing.year),
           price: String(listing.price),
           currency: listing.currency,
+          is_negotiable: false,
+          prepayment_amount: '',
           mileage: listing.mileage != null ? String(listing.mileage) : '',
           fuel: listing.fuel ?? '',
           transmission: listing.transmission ?? '',
           body_type: listing.body_type ?? '',
+          drive_type: '',
+          engine_volume: '',
+          has_turbine: null,
+          condition: '',
+          is_customs_cleared: false,
+          taxi_license: false,
           color: listing.color ?? '',
           city: listing.city,
           type: listing.type,
           description: listing.description ?? '',
+          youtube_link: '',
+          tiktok_link: '',
+          contact_name: '',
+          contact_email: '',
+          contact_phone: '',
+          contact_method: 'phone_and_chat',
+          whatsapp_number: '',
           installment_available: listing.installment_available,
         })
 
