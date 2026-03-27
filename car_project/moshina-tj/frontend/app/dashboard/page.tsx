@@ -15,14 +15,13 @@ import type { Listing } from '@/types'
 type Tab = 'profile' | 'listings' | 'favorites' | 'settings'
 
 // ─── SearchParams reader (must be inside Suspense) ────────────────────────────
-function SearchParamsReader({ onParams }: { onParams: (tab: Tab | null, conv: string | null) => void }) {
+function SearchParamsReader({ onParams }: { onParams: (tab: Tab | null) => void }) {
   const params = useSearchParams()
   const tabParam = params.get('tab') as Tab | null
-  const convParam = params.get('conv')
   useEffect(() => {
-    onParams(tabParam, convParam)
+    onParams(tabParam)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabParam, convParam])
+  }, [tabParam])
   return null
 }
 
@@ -202,9 +201,8 @@ export default function DashboardPage() {
       <Navbar />
 
       <Suspense fallback={null}>
-        <SearchParamsReader onParams={(tabParam, convParam) => {
+        <SearchParamsReader onParams={(tabParam) => {
           if (tabParam) setTab(tabParam)
-          if (convParam) setSelectedConvId(convParam)
         }} />
       </Suspense>
 
