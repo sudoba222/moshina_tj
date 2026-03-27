@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Syne } from 'next/font/google'
+import { Outfit } from 'next/font/google'
 import { cookies } from 'next/headers'
 import './globals.css'
 import { LanguageProvider } from '@/lib/LanguageContext'
@@ -15,11 +15,11 @@ import CookieBanner from '@/components/CookieBanner'
 import YandexMetrika from '@/components/YandexMetrika'
 import SplashScreen from '@/components/SplashScreen'
 
-const syne = Syne({
+const outfit = Outfit({
   subsets: ['latin'],
-  weight: ['400', '700', '800'],
+  weight: ['400', '500', '600', '700', '800', '900'],
   display: 'swap',
-  variable: '--font-syne',
+  variable: '--font-outfit',
 })
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tajcar.tj'
@@ -134,7 +134,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang={lang} suppressHydrationWarning>
-      <body className={syne.className}>
+      <body className={outfit.className}>
         <JsonLd data={websiteSchema} />
         <JsonLd data={organizationSchema} />
         <ThemeProvider>
