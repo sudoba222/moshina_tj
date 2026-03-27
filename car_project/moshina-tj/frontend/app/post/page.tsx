@@ -577,9 +577,10 @@ function PostPage() {
   }
 
   // ── Per-step validation before advancing ────────────────────────────────────
+  // Steps: 0=Type, 1=Category, 2=Brand/Model/Year, 3=Details, 4=Photos, 5=Contact
   function goNext() {
     setError('')
-    if (step === 1) {
+    if (step === 2) {
       if (!form.brand.trim()) {
         setError(lang === 'ru' ? 'Выберите марку автомобиля' : 'Маркаи мошинаро интихоб кунед')
         return
@@ -593,14 +594,14 @@ function PostPage() {
         return
       }
     }
-    if (step === 3) {
+    if (step === 4) {
       const totalImages = existingImageUrls.length + imageFiles.length
       if (totalImages === 0) {
         setError(lang === 'ru' ? 'Добавьте хотя бы одно фото' : 'Ҳадди ақал як акс илова кунед')
         return
       }
     }
-    setStep((s) => (s + 1) as 1 | 2 | 3 | 4)
+    setStep((s) => s + 1)
   }
 
   // Filtered brands for combobox
@@ -666,6 +667,7 @@ function PostPage() {
   const totalImageCount = existingImageUrls.length + imageFiles.length
 
   const stepLabels = [
+    lang === 'ru' ? 'Тип' : 'Навъ',
     lang === 'ru' ? 'Категория' : 'Категория',
     t('post.wizard_step1', lang),
     t('post.wizard_step2', lang),
@@ -737,70 +739,144 @@ function PostPage() {
 
           <form onSubmit={handleSubmit}>
 
-            {/* ── STEP 0: Category ── */}
+            {/* ── STEP 0: Listing Type ── */}
             {step === 0 && (
               <div style={cardStyle} className="animate-fade-in">
-                <label style={labelStyle}>{lang === 'ru' ? 'Выберите категорию' : 'Категорияро интихоб кунед'} *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '10px' }}>
-                  {categoriesLoading ? (
-                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{t('common.loading', lang)}...</p>
-                  ) : (
-                    categories.map((cat) => (
+                <div style={{ marginBottom: '4px' }}>
+                  <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}>
+                    {lang === 'ru' ? 'Что вы хотите сделать?' : 'Шумо чӣ мехоҳед?'}
+                  </p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {lang === 'ru' ? 'Выберите тип объявления' : 'Навъи эълонро интихоб кунед'}
+                  </p>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '12px' }}>
+                  {([
+                    {
+                      value: 'sale' as const,
+                      labelRu: 'Продажа',
+                      labelTj: 'Фурӯш',
+                      descRu: 'Продайте свой автомобиль',
+                      descTj: 'Мошинаи худро фурӯшед',
+                      icon: (
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l3-4h8l3 4h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2m-7 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m-4 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0" />
+                        </svg>
+                      ),
+                    },
+                    {
+                      value: 'rent' as const,
+                      labelRu: 'Аренда',
+                      labelTj: 'Иҷора',
+                      descRu: 'Сдайте авто в аренду',
+                      descTj: 'Мошинаро ба иҷора диҳед',
+                      icon: (
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="1" y="3" width="15" height="13" rx="2" />
+                          <path d="M16 8h4l3 3v5h-7V8z" />
+                          <circle cx="5.5" cy="18.5" r="2.5" />
+                          <circle cx="18.5" cy="18.5" r="2.5" />
+                        </svg>
+                      ),
+                    },
+                  ] as const).map(({ value, labelRu, labelTj, descRu, descTj, icon }) => {
+                    const isSelected = form.type === value
+                    return (
                       <button
-                        key={cat.id}
+                        key={value}
                         type="button"
-                        onClick={() => {
-                          handleField('category_id', cat.id)
-                          setStep(1)
-                        }}
+                        onClick={() => { handleField('type', value); setStep(1) }}
                         style={{
-                          textAlign: 'left',
-                          padding: '16px',
-                          borderRadius: '12px',
-                          background: form.category_id === cat.id ? 'var(--accent)' : 'var(--surface)',
-                          color: form.category_id === cat.id ? 'var(--color-white)' : 'var(--text)',
-                          border: form.category_id === cat.id ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          padding: '20px',
+                          borderRadius: '16px',
+                          background: isSelected ? 'var(--accent)' : 'var(--surface)',
+                          color: isSelected ? 'var(--color-white)' : 'var(--text)',
+                          border: isSelected ? '2px solid var(--accent)' : '2px solid var(--border)',
                           fontWeight: 700,
                           fontSize: '16px',
                           cursor: 'pointer',
                           transition: 'all 0.15s',
+                          textAlign: 'left',
+                          minHeight: '80px',
                         }}
                       >
-                        {lang === 'ru' ? cat.name_ru : cat.name_tj}
+                        <span style={{ flexShrink: 0, opacity: isSelected ? 1 : 0.6 }}>{icon}</span>
+                        <span>
+                          <span style={{ display: 'block', fontSize: '17px', fontWeight: 800 }}>
+                            {lang === 'ru' ? labelRu : labelTj}
+                          </span>
+                          <span style={{ display: 'block', fontSize: '13px', fontWeight: 500, opacity: 0.75, marginTop: '2px' }}>
+                            {lang === 'ru' ? descRu : descTj}
+                          </span>
+                        </span>
                       </button>
-                    ))
-                  )}
+                    )
+                  })}
                 </div>
               </div>
             )}
 
-            {/* ── STEP 1: Vehicle ── */}
+            {/* ── STEP 1: Category ── */}
             {step === 1 && (
               <div style={cardStyle} className="animate-fade-in">
-                {/* Type toggle */}
                 <div>
-                  <label style={labelStyle}>{t('post.type', lang)}</label>
-                  <div className="flex gap-3">
-                    {(['sale', 'rent'] as ListingType[]).map((v) => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => handleField('type', v)}
-                        style={{
-                          flex: 1, padding: '10px', borderRadius: '10px',
-                          fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                          background: form.type === v ? 'var(--accent)' : 'var(--surface)',
-                          color: form.type === v ? 'var(--color-white)' : 'var(--text-muted)',
-                          border: form.type === v ? '1px solid var(--accent)' : '1px solid var(--border)',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {v === 'sale' ? t('filters.sale', lang) : t('filters.rent', lang)}
-                      </button>
+                  <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}>
+                    {lang === 'ru' ? 'Выберите категорию' : 'Категорияро интихоб кунед'}
+                  </p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                    {lang === 'ru' ? 'К какому типу относится ваш автомобиль?' : 'Мошинаи шумо ба кадом навъ тааллуқ дорад?'}
+                  </p>
+                </div>
+                {categoriesLoading ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} style={{ height: '64px', borderRadius: '12px', background: 'var(--border)' }} className="skeleton" />
                     ))}
                   </div>
-                </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                    {categories.map((cat) => {
+                      const isSelected = form.category_id === cat.id
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            handleField('category_id', cat.id)
+                            setStep(2)
+                          }}
+                          style={{
+                            padding: '16px 12px',
+                            borderRadius: '14px',
+                            background: isSelected ? 'var(--accent)' : 'var(--surface)',
+                            color: isSelected ? 'var(--color-white)' : 'var(--text)',
+                            border: isSelected ? '2px solid var(--accent)' : '2px solid var(--border)',
+                            fontWeight: 700,
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            textAlign: 'center',
+                            minHeight: '64px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {lang === 'ru' ? cat.name_ru : cat.name_tj}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
+            {/* ── STEP 2: Brand / Model / Year ── */}
+            {step === 2 && (
+              <div style={cardStyle} className="animate-fade-in">
                 {/* Brand combobox */}
                 <div style={{ position: 'relative' }}>
                   <label htmlFor="brand-input" style={labelStyle}>{t('post.brand', lang)} *</label>
@@ -988,8 +1064,8 @@ function PostPage() {
               </div>
             )}
 
-            {/* ── STEP 2: Specs ── */}
-            {step === 2 && (
+            {/* ── STEP 3: Details (Specs) ── */}
+            {step === 3 && (
               <div style={cardStyle} className="animate-fade-in">
                 {/* Fuel chips */}
                 <div>
@@ -1080,6 +1156,13 @@ function PostPage() {
                   </div>
                 </div>
 
+              </div>
+            )}
+
+            {/* ── STEP 4: Description & Photos ── */}
+            {step === 4 && (
+              <div style={cardStyle} className="animate-fade-in">
+
                 {/* Description + AI */}
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -1135,13 +1218,8 @@ function PostPage() {
                     </p>
                   )}
                 </div>
-              </div>
-            )}
 
-            {/* ── STEP 3: Media ── */}
-            {step === 3 && (
-              <div style={cardStyle} className="animate-fade-in">
-                <div>
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <label style={{ ...labelStyle, marginBottom: 0 }}>{t('post.add_photos', lang)}</label>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('post.photos_hint', lang)}</span>
@@ -1251,8 +1329,8 @@ function PostPage() {
               </div>
             )}
 
-            {/* ── STEP 4: Deal & Contact ── */}
-            {step === 4 && (
+            {/* ── STEP 5: Deal & Contact ── */}
+            {step === 5 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in">
                 <div style={cardStyle}>
                   {/* Price + Currency */}
@@ -1330,7 +1408,7 @@ function PostPage() {
                   </div>
                   <div>
                     <label style={labelStyle}>{lang === 'ru' ? 'Способ связи' : 'Тарзи тамос'}</label>
-                    <select value={form.contact_method} onChange={(e) => handleField('contact_method', e.target.value as any)} style={inputStyle}>
+                    <select value={form.contact_method} onChange={(e) => handleField('contact_method', e.target.value as 'phone_and_chat' | 'phone_only')} style={inputStyle}>
                       <option value="phone_and_chat">{lang === 'ru' ? 'Телефон и чат' : 'Телефон ва чат'}</option>
                       <option value="phone_only">{lang === 'ru' ? 'Только телефон' : 'Танҳо телефон'}</option>
                     </select>
@@ -1417,10 +1495,10 @@ function PostPage() {
 
             {/* ── Navigation buttons ── */}
             <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              {step > 1 && (
+              {step > 0 && (
                 <button
                   type="button"
-                  onClick={() => { setError(''); setStep((s) => (s - 1) as 1 | 2 | 3 | 4) }}
+                  onClick={() => { setError(''); setStep((s) => Math.max(0, s - 1)) }}
                   style={{
                     flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
                     fontSize: '15px', cursor: 'pointer',
@@ -1431,19 +1509,21 @@ function PostPage() {
                   {t('post.back', lang)}
                 </button>
               )}
-              {step < 4 ? (
-                <button
-                  type="button"
-                  onClick={goNext}
-                  style={{
-                    flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
-                    fontSize: '15px', cursor: 'pointer',
-                    background: 'var(--accent)', color: 'var(--color-white)',
-                    border: '1px solid var(--accent)', transition: 'all 0.15s',
-                  }}
-                >
-                  {t('post.next', lang)}
-                </button>
+              {step < 5 ? (
+                step > 0 ? (
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    style={{
+                      flex: 1, padding: '13px', borderRadius: '12px', fontWeight: 700,
+                      fontSize: '15px', cursor: 'pointer',
+                      background: 'var(--accent)', color: 'var(--color-white)',
+                      border: '1px solid var(--accent)', transition: 'all 0.15s',
+                    }}
+                  >
+                    {t('post.next', lang)}
+                  </button>
+                ) : null
               ) : (
                 <button
                   type="submit"

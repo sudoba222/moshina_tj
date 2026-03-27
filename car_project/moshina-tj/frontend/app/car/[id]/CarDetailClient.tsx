@@ -194,9 +194,9 @@ function StaffToolbar({ listing, onReject, onBanUser }: StaffToolbarProps) {
   return (
     <div style={{
       position: 'fixed',
-      bottom: 24,
-      right: 24,
-      zIndex: 200,
+      bottom: 'max(80px, calc(80px + env(safe-area-inset-bottom, 0px)))',
+      right: 16,
+      zIndex: 500,
       display: 'flex',
       flexDirection: 'column',
       gap: 8,
@@ -1157,8 +1157,8 @@ export default function CarDetailClient() {
         </div>
       </main>
 
-      {/* Mobile sticky CTA bar — replaces bottom nav on car detail */}
-      {listing && (
+      {/* Mobile sticky CTA bar — replaces bottom nav on car detail (hidden for staff who use StaffToolbar) */}
+      {listing && !isStaff && (
         <div
           className="md:hidden"
           style={{

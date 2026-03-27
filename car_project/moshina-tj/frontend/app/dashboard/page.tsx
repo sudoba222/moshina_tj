@@ -63,6 +63,9 @@ export default function DashboardPage() {
   const [sendingMsg, setSendingMsg] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Listing count for profile hero
+  const [profileListingCount, setProfileListingCount] = useState<number | null>(null)
+
   // Password change
   const [currentPwd, setCurrentPwd] = useState('')
   const [newPwd, setNewPwd] = useState('')
@@ -77,6 +80,10 @@ export default function DashboardPage() {
     setName(user.name ?? '')
     setPhone(user.phone ?? '')
     setWhatsappNumber(user.whatsapp_number ?? '')
+    // Fetch listing count for profile hero
+    usersApi.getListings(user.id, 1)
+      .then((res) => setProfileListingCount(res.data.data.total ?? 0))
+      .catch(() => setProfileListingCount(0))
   }, [user, authLoading, router])
 
   // Load conversations when Messages tab is active
@@ -232,6 +239,17 @@ export default function DashboardPage() {
     }
   }
 
+  async function deleteListing(id: string) {
+    if (!window.confirm(lang === 'ru' ? 'Удалить объявление?' : 'Эълонро ҳазф кунем?')) return
+    try {
+      await listingsApi.remove(id)
+      setListings((prev) => prev.filter((l) => l.id !== id))
+      if (profileListingCount !== null) setProfileListingCount((c) => Math.max(0, (c ?? 1) - 1))
+    } catch {
+      // swallow
+    }
+  }
+
   async function toggleListingStatus(id: string, currentlyActive: boolean) {
     try {
       if (currentlyActive) {
@@ -343,30 +361,38 @@ export default function DashboardPage() {
               {/* Profile hero */}
               <div style={{
                 background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px',
-                padding: 'clamp(16px, 4vw, 24px)', marginBottom: '12px',
-                display: 'flex', alignItems: 'center', gap: '16px',
+                padding: 'clamp(20px, 4vw, 28px)', marginBottom: '12px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
+                textAlign: 'center',
               }}>
+                {/* Large avatar circle */}
                 <div style={{
-                  width: '64px', height: '64px', borderRadius: '18px',
+                  width: '84px', height: '84px', borderRadius: '50%',
                   background: 'var(--accent)', color: 'var(--color-white)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '26px', fontWeight: 800, flexShrink: 0,
+                  fontSize: '34px', fontWeight: 800, flexShrink: 0,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                 }}>
                   {(user.name ?? user.phone ?? '?').charAt(0).toUpperCase()}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)' }}>
                     {user.name ?? (user.phone && user.phone.startsWith('+') ? user.phone : '—')}
                   </div>
                   {user.email && (
-                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>
                       {user.email}
                     </div>
                   )}
-                  <div style={{ marginTop: '5px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: '6px', textTransform: 'capitalize' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '3px 10px', borderRadius: '8px', textTransform: 'capitalize' }}>
                       {user.role}
                     </span>
+                    {profileListingCount !== null && (
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', padding: '3px 10px', borderRadius: '8px' }}>
+                        {profileListingCount} {t('dashboard.myListings', lang).toLowerCase()}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -514,6 +540,7 @@ export default function DashboardPage() {
                       listing={listing}
                       lang={lang}
                       onToggle={() => toggleListingStatus(listing.id, listing.is_active)}
+                      onDelete={() => deleteListing(listing.id)}
                     />
                   ))}
                   {listingsPage < listingsTotalPages && (
@@ -975,10 +1002,12 @@ function DashboardListingRow({
   listing,
   lang,
   onToggle,
+  onDelete,
 }: {
   listing: Listing
   lang: 'ru' | 'tj'
   onToggle: () => void
+  onDelete: () => void
 }) {
   const primaryImage = listing.images.find((img) => img.is_primary) ?? listing.images[0]
   const formatPrice = (p: number, c: string) => c === 'USD' ? `$${p.toLocaleString('en-US')}` : `${p.toLocaleString()} сом.`
@@ -1089,6 +1118,37 @@ function DashboardListingRow({
             {listing.is_active ? t('dashboard.deactivate', lang) : t('dashboard.activate', lang)}
           </button>
         )}
+        <button
+          onClick={onDelete}
+          aria-label={lang === 'ru' ? 'Удалить' : 'Ҳазф'}
+          style={{
+            padding: '6px 10px',
+            background: 'none',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            color: 'var(--text-muted)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--color-error-dim)'
+            e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'
+            e.currentTarget.style.color = 'var(--color-error)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'none'
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.color = 'var(--text-muted)'
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" />
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+          </svg>
+        </button>
       </div>
     </div>
   )
