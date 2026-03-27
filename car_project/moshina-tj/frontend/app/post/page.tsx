@@ -200,6 +200,9 @@ function PostPage() {
   const selectedBrandData = SORTED_BRANDS.find((b) => b.name === form.brand) ?? null
   const localModels = selectedBrandData?.models ?? []
 
+  const [customBrand, setCustomBrand] = useState('')
+  const [customModel, setCustomModel] = useState('')
+
   // Auth guard
   useEffect(() => {
     authApi.me().catch(() => { logout(); router.replace('/auth/login') })
@@ -208,6 +211,7 @@ function PostPage() {
   // Reset model when brand changes
   useEffect(() => {
     setForm((prev) => ({ ...prev, model: '' }))
+    setCustomModel('')
   }, [form.brand])
 
   // Load draft (new mode only)
@@ -312,7 +316,9 @@ function PostPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    if (!form.brand || !form.model || !form.price || !form.city) {
+    const finalBrand = form.brand === 'Другое' ? customBrand.trim() : form.brand.trim()
+    const finalModel = form.model === 'Другое' ? customModel.trim() : form.model.trim()
+    if (!finalBrand || !finalModel || !form.price || !form.city) {
       setError(lang === 'ru' ? 'Заполните обязательные поля: марка, модель, цена, город' : 'Майдонҳои ҳатмӣ: марка, модел, нарх, шаҳр')
       return
     }
@@ -341,7 +347,7 @@ function PostPage() {
 
       const payload = {
         type: form.type,
-        brand: form.brand.trim(), model: form.model.trim(), year: Number(form.year),
+        brand: finalBrand, model: finalModel, year: Number(form.year),
         price: Number(form.price), currency: form.currency,
         is_negotiable: form.is_negotiable,
         mileage: form.mileage ? Number(form.mileage) : undefined,
@@ -502,9 +508,9 @@ function PostPage() {
                 <div>
                   <label style={lbl}>{lang === 'ru' ? 'Марка *' : 'Марка *'}</label>
                   <select
-                    required
+                    required={form.brand !== 'Другое'}
                     value={form.brand}
-                    onChange={(e) => setField('brand', e.target.value)}
+                    onChange={(e) => { setField('brand', e.target.value); setCustomBrand('') }}
                     style={inp}
                   >
                     <option value="">{lang === 'ru' ? '— Выберите марку —' : '— Маркаро интихоб кунед —'}</option>
@@ -512,24 +518,49 @@ function PostPage() {
                       <option key={b.name} value={b.name}>{b.name}</option>
                     ))}
                   </select>
+                  {form.brand === 'Другое' && (
+                    <input
+                      type="text"
+                      required
+                      value={customBrand}
+                      onChange={(e) => setCustomBrand(e.target.value)}
+                      placeholder={lang === 'ru' ? 'Введите название марки' : 'Номи маркаро ворид кунед'}
+                      style={{ ...inp, marginTop: '8px' }}
+                      autoFocus
+                    />
+                  )}
                 </div>
 
                 {/* Model */}
                 <div>
                   <label style={lbl}>{lang === 'ru' ? 'Модель *' : 'Модел *'}</label>
                   {localModels.length > 0 ? (
-                    <select
-                      required
-                      value={form.model}
-                      onChange={(e) => setField('model', e.target.value)}
-                      style={inp}
-                      disabled={!form.brand}
-                    >
-                      <option value="">{lang === 'ru' ? '— Выберите модель —' : '— Моделро интихоб кунед —'}</option>
-                      {localModels.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        required={form.model !== 'Другое'}
+                        value={form.model}
+                        onChange={(e) => { setField('model', e.target.value); setCustomModel('') }}
+                        style={inp}
+                        disabled={!form.brand}
+                      >
+                        <option value="">{lang === 'ru' ? '— Выберите модель —' : '— Моделро интихоб кунед —'}</option>
+                        {localModels.map((m) => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                        <option value="Другое">{lang === 'ru' ? 'Другое (ввести вручную)' : 'Дигар (дастӣ ворид кунед)'}</option>
+                      </select>
+                      {form.model === 'Другое' && (
+                        <input
+                          type="text"
+                          required
+                          value={customModel}
+                          onChange={(e) => setCustomModel(e.target.value)}
+                          placeholder={lang === 'ru' ? 'Введите название модели' : 'Номи моделро ворид кунед'}
+                          style={{ ...inp, marginTop: '8px' }}
+                          autoFocus
+                        />
+                      )}
+                    </>
                   ) : (
                     <input
                       type="text"
