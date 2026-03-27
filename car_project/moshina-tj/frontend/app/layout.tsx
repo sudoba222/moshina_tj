@@ -105,18 +105,12 @@ export const metadata: Metadata = {
       tg: SITE_URL,
     },
   },
-  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || process.env.NEXT_PUBLIC_YANDEX_VERIFICATION
-    ? {
-        verification: {
-          ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
-            ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
-            : {}),
-          ...(process.env.NEXT_PUBLIC_YANDEX_VERIFICATION
-            ? { yandex: process.env.NEXT_PUBLIC_YANDEX_VERIFICATION }
-            : {}),
-        },
-      }
-    : {}),
+  verification: {
+    google: 'row6KBizdW8jJmvkL5Ec-f_miqcHf6RAl7HgZFX4USU',
+    ...(process.env.NEXT_PUBLIC_YANDEX_VERIFICATION
+      ? { yandex: process.env.NEXT_PUBLIC_YANDEX_VERIFICATION }
+      : {}),
+  },
 }
 
 const websiteSchema = {
