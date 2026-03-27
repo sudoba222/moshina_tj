@@ -5,16 +5,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, authApi, usersApi, favoritesApi, chatApi } from '@/lib/api'
-import type { ConversationItem, ChatMessage } from '@/lib/api'
+import { listingsApi, authApi, usersApi, favoritesApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
-import { useSocket } from '@/lib/SocketContext'
 import { t } from '@/lib/i18n'
 import CarCard from '@/components/CarCard'
 import type { Listing } from '@/types'
 
-type Tab = 'profile' | 'listings' | 'favorites' | 'settings' | 'messages'
+type Tab = 'profile' | 'listings' | 'favorites' | 'settings'
 
 // ─── SearchParams reader (must be inside Suspense) ────────────────────────────
 function SearchParamsReader({ onParams }: { onParams: (tab: Tab | null, conv: string | null) => void }) {
@@ -52,17 +50,6 @@ export default function DashboardPage() {
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState(false)
 
-  // Messages state
-  const { onMessage, sendMessage: wsSend } = useSocket()
-  const [conversations, setConversations] = useState<ConversationItem[]>([])
-  const [convsLoading, setConvsLoading] = useState(false)
-  const [selectedConvId, setSelectedConvId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [msgsLoading, setMsgsLoading] = useState(false)
-  const [msgInput, setMsgInput] = useState('')
-  const [sendingMsg, setSendingMsg] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
   // Listing count for profile hero
   const [profileListingCount, setProfileListingCount] = useState<number | null>(null)
 
@@ -85,84 +72,6 @@ export default function DashboardPage() {
       .then((res) => setProfileListingCount(res.data.data.total ?? 0))
       .catch(() => setProfileListingCount(0))
   }, [user, authLoading, router])
-
-  // Load conversations when Messages tab is active
-  useEffect(() => {
-    if (tab !== 'messages' || !user) return
-    setConvsLoading(true)
-    chatApi.listConversations()
-      .then((res) => setConversations(res.data.data))
-      .catch(() => setConversations([]))
-      .finally(() => setConvsLoading(false))
-  }, [tab, user])
-
-  // Load messages for selected conversation
-  useEffect(() => {
-    if (!selectedConvId || tab !== 'messages') return
-    setMsgsLoading(true)
-    setMessages([])
-    chatApi.getMessages(selectedConvId, 1)
-      .then((res) => {
-        setMessages([...res.data.data.items].reverse())
-        chatApi.markRead(selectedConvId).catch(() => {})
-      })
-      .catch(() => setMessages([]))
-      .finally(() => setMsgsLoading(false))
-  }, [selectedConvId, tab])
-
-  // Auto-scroll on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  // Listen for incoming WS messages
-  useEffect(() => {
-    const unsub = onMessage((msg: ChatMessage) => {
-      if (msg.conversation_id === selectedConvId) {
-        setMessages((prev) => [...prev, msg])
-      } else {
-        // Update unread count in conversations list
-        setConversations((prev) => prev.map((c) =>
-          c.id === msg.conversation_id
-            ? { ...c, unread_count: c.unread_count + 1, last_message: { content: msg.content, created_at: msg.created_at, is_mine: false } }
-            : c
-        ))
-      }
-    })
-    return unsub
-  }, [onMessage, selectedConvId])
-
-  async function handleSendMessage() {
-    if (!msgInput.trim() || !selectedConvId || sendingMsg) return
-    const content = msgInput.trim()
-    setMsgInput('')
-    setSendingMsg(true)
-    try {
-      // Send via REST for persistence guarantee
-      const res = await chatApi.sendMessage(selectedConvId, content)
-      setMessages((prev) => [...prev, res.data.data])
-      // Also push via WS for real-time delivery to the recipient
-      wsSend(selectedConvId, content)
-    } catch {
-      setMsgInput(content)
-    } finally {
-      setSendingMsg(false)
-    }
-  }
-
-  async function handleOpenSupportChat() {
-    try {
-      const res = await chatApi.createOrGet({ type: 'support' })
-      const conv = res.data.data
-      setConversations((prev) => {
-        const exists = prev.find((c) => c.id === conv.id)
-        return exists ? prev : [conv, ...prev]
-      })
-      setSelectedConvId(conv.id)
-    } catch {
-      // swallow
-    }
-  }
 
   useEffect(() => {
     if (tab !== 'listings' || !user) return
@@ -308,12 +217,11 @@ export default function DashboardPage() {
 
           {/* Tabs */}
           <div className="scrollbar-hide" style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '28px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-            {(['profile', 'listings', 'favorites', 'messages', 'settings'] as Tab[]).map((tabKey) => {
+            {(['profile', 'listings', 'favorites', 'settings'] as Tab[]).map((tabKey) => {
               const labelMap: Record<Tab, string> = {
                 profile: t('dashboard.profile', lang),
                 listings: t('dashboard.myListings', lang),
                 favorites: t('favorites.title', lang),
-                messages: t('chat.messages', lang),
                 settings: t('dashboard.settings', lang),
               }
               return (
@@ -341,11 +249,6 @@ export default function DashboardPage() {
                   {tabKey === 'favorites' && (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill={tab === 'favorites' ? 'var(--accent)' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                    </svg>
-                  )}
-                  {tabKey === 'messages' && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                   )}
                   {labelMap[tabKey]}
@@ -583,289 +486,6 @@ export default function DashboardPage() {
                       initialFavorited={true}
                     />
                   ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Messages tab ── */}
-          {tab === 'messages' && (
-            <div className="animate-fade-in" style={{ height: 'calc(100dvh - 280px)', minHeight: '400px', display: 'flex', gap: '0', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
-              {/* Conversation list — hidden on mobile when a conv is selected */}
-              <div style={{
-                width: selectedConvId ? undefined : '100%',
-                flex: selectedConvId ? '0 0 280px' : '1',
-                borderRight: selectedConvId ? '1px solid var(--border)' : 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                background: 'var(--card)',
-                // Hide list on mobile when conversation is open
-              }}
-                className={selectedConvId ? 'hidden md:flex md:flex-col' : 'flex flex-col'}
-              >
-                {/* Sidebar header */}
-                <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
-                    {t('chat.conversations', lang)}
-                  </span>
-                  <button
-                    onClick={handleOpenSupportChat}
-                    style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', background: 'none', border: '1px solid var(--accent)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer' }}
-                  >
-                    {t('chat.supportChat', lang)}
-                  </button>
-                </div>
-
-                {/* List */}
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                  {convsLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--border)' }} className="skeleton" />
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ height: '12px', width: '60%', borderRadius: '4px', background: 'var(--border)' }} className="skeleton" />
-                          <div style={{ height: '10px', width: '80%', borderRadius: '4px', background: 'var(--border)' }} className="skeleton" />
-                        </div>
-                      </div>
-                    ))
-                  ) : conversations.length === 0 ? (
-                    <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                      {t('chat.noConversations', lang)}
-                    </div>
-                  ) : (
-                    conversations.map((conv) => {
-                      const convName = conv.type === 'support'
-                        ? t('chat.supportChat', lang)
-                        : (conv.other_participant?.name ?? (lang === 'ru' ? 'Пользователь' : 'Корбар'))
-                      const initials = convName.charAt(0).toUpperCase()
-                      const isActive = selectedConvId === conv.id
-                      const timeStr = conv.last_message
-                        ? new Date(conv.last_message.created_at).toLocaleTimeString(lang === 'ru' ? 'ru-RU' : 'tg-TJ', { hour: '2-digit', minute: '2-digit' })
-                        : ''
-                      return (
-                        <button
-                          key={conv.id}
-                          onClick={() => setSelectedConvId(conv.id)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '12px',
-                            width: '100%', padding: '13px 16px',
-                            background: isActive ? 'var(--accent-dim)' : 'transparent',
-                            border: 'none', borderBottom: '1px solid var(--border)',
-                            cursor: 'pointer', textAlign: 'left', transition: 'background 0.12s',
-                          }}
-                          onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--surface)' }}
-                          onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
-                        >
-                          {/* Avatar with unread badge */}
-                          <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <div style={{
-                              width: '46px', height: '46px', borderRadius: '50%',
-                              background: conv.type === 'support' ? 'var(--color-info)' : isActive ? 'var(--accent)' : 'var(--border-strong)',
-                              color: 'var(--color-white)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: '17px', fontWeight: 800,
-                            }}>
-                              {conv.type === 'support' ? (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                                </svg>
-                              ) : initials}
-                            </div>
-                            {conv.unread_count > 0 && (
-                              <span style={{
-                                position: 'absolute', top: '-2px', right: '-3px',
-                                minWidth: '18px', height: '18px',
-                                background: 'var(--accent)', color: 'var(--color-white)',
-                                fontSize: '10px', fontWeight: 800, borderRadius: '9px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                padding: '0 4px', border: '2px solid var(--card)',
-                              }}>
-                                {conv.unread_count > 99 ? '99+' : conv.unread_count}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Text */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '3px' }}>
-                              <span style={{
-                                fontSize: '14px', fontWeight: conv.unread_count > 0 ? 800 : 600,
-                                color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px',
-                              }}>
-                                {convName}
-                              </span>
-                              {timeStr && (
-                                <span style={{ fontSize: '11px', color: conv.unread_count > 0 ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, fontWeight: conv.unread_count > 0 ? 700 : 400, marginLeft: '6px' }}>
-                                  {timeStr}
-                                </span>
-                              )}
-                            </div>
-                            {conv.last_message ? (
-                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: conv.unread_count > 0 ? 600 : 400 }}>
-                                {conv.last_message.is_mine && (
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '3px', verticalAlign: 'middle', display: 'inline' }}>
-                                    <polyline points="20 6 9 17 4 12" />
-                                  </svg>
-                                )}
-                                {conv.last_message.content}
-                              </div>
-                            ) : conv.listing ? (
-                              <div style={{ fontSize: '12px', color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {conv.listing.brand} {conv.listing.model} {conv.listing.year}
-                              </div>
-                            ) : null}
-                          </div>
-                        </button>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* Chat window */}
-              {selectedConvId ? (
-                <div
-                  style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg)', minWidth: 0 }}
-                  className="flex flex-col"
-                >
-                  {/* Chat header */}
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--card)', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                    {/* Back button — mobile only */}
-                    <button
-                      onClick={() => setSelectedConvId(null)}
-                      aria-label={t('chat.back', lang)}
-                      className="flex md:hidden"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
-                    </button>
-                    {(() => {
-                      const conv = conversations.find((c) => c.id === selectedConvId)
-                      const name = conv?.type === 'support'
-                        ? t('chat.supportChat', lang)
-                        : (conv?.other_participant?.name ?? (lang === 'ru' ? 'Пользователь' : 'Корбар'))
-                      return (
-                        <>
-                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--accent)', color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
-                            {name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>{name}</div>
-                            {conv?.listing && (
-                              <div style={{ fontSize: '11px', color: 'var(--accent)' }}>
-                                {conv.listing.brand} {conv.listing.model} {conv.listing.year}
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )
-                    })()}
-                  </div>
-
-                  {/* Messages */}
-                  <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {msgsLoading ? (
-                      <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', marginTop: '24px' }}>
-                        {t('common.loading', lang)}
-                      </div>
-                    ) : messages.length === 0 ? (
-                      <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', marginTop: '24px' }}>
-                        {t('chat.noMessages', lang)}
-                      </div>
-                    ) : (
-                      messages.map((msg) => {
-                        const isMine = msg.sender_id === user?.id
-                        return (
-                          <div
-                            key={msg.id}
-                            style={{
-                              display: 'flex',
-                              justifyContent: isMine ? 'flex-end' : 'flex-start',
-                            }}
-                          >
-                            <div style={{
-                              maxWidth: '70%',
-                              padding: '9px 13px',
-                              borderRadius: isMine ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                              background: isMine ? 'var(--accent)' : 'var(--surface)',
-                              border: isMine ? 'none' : '1px solid var(--border)',
-                              color: isMine ? 'var(--color-white)' : 'var(--text)',
-                            }}>
-                              <div style={{ fontSize: '14px', lineHeight: 1.5, wordBreak: 'break-word' }}>
-                                {msg.content}
-                              </div>
-                              <div style={{ fontSize: '10px', marginTop: '4px', opacity: 0.7, textAlign: isMine ? 'right' : 'left' }}>
-                                {new Date(msg.created_at).toLocaleTimeString(lang === 'ru' ? 'ru-RU' : 'tg-TJ', { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-
-                  {/* Input */}
-                  <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--card)', display: 'flex', gap: '10px', alignItems: 'flex-end', flexShrink: 0 }}>
-                    <textarea
-                      value={msgInput}
-                      onChange={(e) => setMsgInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault()
-                          void handleSendMessage()
-                        }
-                      }}
-                      placeholder={t('chat.typeMessage', lang)}
-                      rows={1}
-                      style={{
-                        flex: 1,
-                        padding: '10px 14px',
-                        background: 'var(--bg)',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: '10px',
-                        fontSize: '14px',
-                        color: 'var(--text)',
-                        outline: 'none',
-                        resize: 'none',
-                        lineHeight: 1.5,
-                        maxHeight: '100px',
-                        overflowY: 'auto',
-                      }}
-                    />
-                    <button
-                      onClick={() => void handleSendMessage()}
-                      disabled={!msgInput.trim() || sendingMsg}
-                      aria-label={t('chat.send', lang)}
-                      style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '10px',
-                        background: msgInput.trim() && !sendingMsg ? 'var(--accent)' : 'var(--border)',
-                        color: 'var(--color-white)',
-                        border: 'none',
-                        cursor: !msgInput.trim() || sendingMsg ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        transition: 'background 0.15s ease',
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13" />
-                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                // Empty state on desktop when no conv selected
-                <div className="hidden md:flex" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: 'var(--text-muted)' }}>
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ opacity: 0.3 }}>
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <p style={{ fontSize: '14px' }}>{t('chat.noConversations', lang)}</p>
                 </div>
               )}
             </div>

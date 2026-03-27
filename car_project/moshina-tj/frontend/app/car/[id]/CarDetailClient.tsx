@@ -10,7 +10,6 @@ import ImageLightbox from '@/components/ImageLightbox'
 import { listingsApi, usersApi, searchApi, favoritesApi, adminApi } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { useAuth } from '@/lib/AuthContext'
-import { useChatDrawer } from '@/lib/ChatDrawerContext'
 import { t } from '@/lib/i18n'
 import StaffStatusRibbon from '@/components/StaffStatusRibbon'
 import type { Listing, UserPublicProfile, RentalRules } from '@/types'
@@ -122,11 +121,6 @@ const CreditCardIcon = () => (
     <rect x="1" y="1" width="22" height="16" rx="2" />
     <line x1="1" y1="7" x2="23" y2="7" />
     <line x1="5" y1="12" x2="9" y2="12" />
-  </svg>
-)
-const ChatIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 )
 const ShareIcon = () => (
@@ -529,10 +523,8 @@ export default function CarDetailClient() {
   const [notFound, setNotFound] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
   const [contactOpen, setContactOpen] = useState(false)
-  const { openChat } = useChatDrawer()
   const [favorited, setFavorited] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
-  const [chatLoading, setChatLoading] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [shareCopied, setShareCopied] = useState(false)
@@ -557,17 +549,6 @@ export default function CarDetailClient() {
       // non-fatal
     }
   }, [])
-
-  async function handleChatWithSeller() {
-    if (!user) { router.push('/auth/login'); return }
-    if (!id || !listing || chatLoading) return
-    setChatLoading(true)
-    try {
-      await openChat(listing.user_id, id)
-    } finally {
-      setChatLoading(false)
-    }
-  }
 
   async function handleFavoriteToggle() {
     if (!user) {
@@ -1046,35 +1027,6 @@ export default function CarDetailClient() {
                     <ShareIcon />
                     {shareCopied ? t('share.copied', lang) : t('share.btn', lang)}
                   </button>
-
-                  {/* Chat with Seller */}
-                  {user && listing.user_id !== user.id && (
-                    <button
-                      onClick={handleChatWithSeller}
-                      disabled={chatLoading}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        background: 'var(--surface)',
-                        color: 'var(--text-secondary)',
-                        fontWeight: 700,
-                        fontSize: '15px',
-                        padding: '13px',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border)',
-                        cursor: chatLoading ? 'not-allowed' : 'pointer',
-                        opacity: chatLoading ? 0.6 : 1,
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => { if (!chatLoading) { e.currentTarget.style.background = 'var(--card)'; e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' } }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
-                    >
-                      <ChatIcon />
-                      {t('carDetail.chatWithSeller', lang)}
-                    </button>
-                  )}
 
                   {/* Installment */}
                   {listing.installment_available && (
