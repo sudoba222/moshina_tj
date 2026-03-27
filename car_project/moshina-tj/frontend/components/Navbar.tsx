@@ -143,7 +143,7 @@ export default function Navbar() {
 
       {/* ── Main bar ── */}
       <div style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)' }}>
-        <div className="max-w-7xl mx-auto" style={{ padding: '0 clamp(14px,3vw,28px)', height: '64px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <div className="max-w-7xl mx-auto" style={{ padding: '0 clamp(14px,3vw,28px)', height: '56px', display: 'flex', alignItems: 'center', gap: '20px' }}>
 
           {/* Logo */}
           <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
@@ -311,7 +311,7 @@ export default function Navbar() {
               <Logo size="sm" />
             </Link>
             <button onClick={() => setMobileOpen(false)} aria-label="Close menu"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: '4px' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', minWidth: '44px', minHeight: '44px' }}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="2" x2="16" y2="16"/><line x1="16" y1="2" x2="2" y2="16"/></svg>
             </button>
           </div>
@@ -348,35 +348,39 @@ export default function Navbar() {
             )}
           </div>
 
+          {/* Post CTA — prominent at the top of the drawer nav */}
+          <div style={{ padding: '12px 16px 4px' }}>
+            <Link href="/post" onClick={() => setMobileOpen(false)}
+              style={{ height: '48px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '15px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><line x1="6.5" y1="1" x2="6.5" y2="12"/><line x1="1" y1="6.5" x2="12" y2="6.5"/></svg>
+              {t('nav.addListing', lang)}
+            </Link>
+          </div>
+
           {/* Nav links */}
           <nav style={{ flex: 1, padding: '8px 0' }}>
             {NAV_LINKS.map(({ href, key }) => (
               <Link key={href} href={href} onClick={() => setMobileOpen(false)}
-                style={{ display: 'flex', alignItems: 'center', height: '50px', padding: '0 20px', fontSize: '15px', fontWeight: active(href) ? 700 : 500, color: active(href) ? 'var(--accent)' : 'var(--text)', borderLeft: `3px solid ${active(href) ? 'var(--accent)' : 'transparent'}`, transition: 'all 0.1s' }}>
+                style={{ display: 'flex', alignItems: 'center', height: '50px', padding: '0 20px', fontSize: '15px', fontWeight: active(href) ? 700 : 500, color: active(href) ? 'var(--accent)' : 'var(--text)', borderLeft: `3px solid ${active(href) ? 'var(--accent)' : 'transparent'}`, transition: 'all 0.1s', textDecoration: 'none' }}>
                 {t(key, lang)}
               </Link>
             ))}
             {user && (
               <Link href="/dashboard" onClick={() => setMobileOpen(false)}
-                style={{ display: 'flex', alignItems: 'center', height: '50px', padding: '0 20px', fontSize: '15px', fontWeight: active('/dashboard') ? 700 : 500, color: active('/dashboard') ? 'var(--accent)' : 'var(--text)', borderLeft: `3px solid ${active('/dashboard') ? 'var(--accent)' : 'transparent'}` }}>
+                style={{ display: 'flex', alignItems: 'center', height: '50px', padding: '0 20px', fontSize: '15px', fontWeight: active('/dashboard') ? 700 : 500, color: active('/dashboard') ? 'var(--accent)' : 'var(--text)', borderLeft: `3px solid ${active('/dashboard') ? 'var(--accent)' : 'transparent'}`, textDecoration: 'none' }}>
                 {t('nav.dashboard', lang)}
               </Link>
             )}
             {user && roleLink && (
               <Link href={roleLink.href} onClick={() => setMobileOpen(false)}
-                style={{ display: 'flex', alignItems: 'center', height: '50px', padding: '0 20px', fontSize: '15px', fontWeight: 600, color: 'var(--accent)', borderLeft: '3px solid transparent' }}>
+                style={{ display: 'flex', alignItems: 'center', height: '50px', padding: '0 20px', fontSize: '15px', fontWeight: 600, color: 'var(--accent)', borderLeft: '3px solid transparent', textDecoration: 'none' }}>
                 {t(roleLink.key, lang)}
               </Link>
             )}
           </nav>
 
-          {/* Bottom actions */}
+          {/* Bottom actions — language, theme, login/logout */}
           <div style={{ padding: '16px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <Link href="/post" onClick={() => setMobileOpen(false)}
-              style={{ height: '48px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '15px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6.5" y1="1" x2="6.5" y2="12"/><line x1="1" y1="6.5" x2="12" y2="6.5"/></svg>
-              {t('nav.addListing', lang)}
-            </Link>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <LanguageToggle />
               <ThemeToggle />

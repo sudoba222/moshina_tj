@@ -33,7 +33,7 @@ export default async function Image() {
             height="72"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#3b82f6"
+            stroke="#c83808"
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"

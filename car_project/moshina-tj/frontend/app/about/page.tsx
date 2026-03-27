@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     'TAJCAR.TJ — главный авторынок Таджикистана. Узнайте больше о платформе, нашей миссии и преимуществах.',
 }
 
-function StatCard({ value, label }: { value: string; label: string }) {
+function StatCard({ value, label }: { value: string | number; label: string }) {
   return (
     <div
       style={{
@@ -111,7 +111,35 @@ function TagIcon() {
   )
 }
 
-export default function AboutPage() {
+interface StatsData {
+  listings_count: number
+  dealers_count: number
+  cities_count: number
+  users_count: number
+}
+
+async function fetchStats(): Promise<StatsData | null> {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  if (!baseUrl) return null
+  try {
+    const res = await fetch(`${baseUrl}/stats`, { next: { revalidate: 300 } })
+    if (!res.ok) return null
+    const json = await res.json()
+    if (!json?.success || !json?.data) return null
+    return json.data as StatsData
+  } catch {
+    return null
+  }
+}
+
+function formatStat(value: number | null | undefined): string {
+  if (value == null) return '—'
+  return value.toLocaleString('ru-RU')
+}
+
+export default async function AboutPage() {
+  const stats = await fetchStats()
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
@@ -227,9 +255,9 @@ export default function AboutPage() {
               Платформа в цифрах
             </h2>
             <div className="flex flex-wrap gap-4">
-              <StatCard value="500+" label="объявлений" />
-              <StatCard value="10" label="городов" />
-              <StatCard value="20+" label="дилеров" />
+              <StatCard value={formatStat(stats?.listings_count)} label="объявлений" />
+              <StatCard value={formatStat(stats?.cities_count)} label="городов" />
+              <StatCard value={formatStat(stats?.dealers_count)} label="дилеров" />
               <StatCard value="2024" label="год основания" />
             </div>
           </section>

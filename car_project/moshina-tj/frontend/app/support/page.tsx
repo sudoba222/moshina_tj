@@ -127,18 +127,7 @@ export default function SupportPage() {
 
   // Real-time WebSocket messages (disabled — socket removed)
   useEffect(() => {
-    const unsub = () => {}
-    if (false) {
-      // placeholder to keep the effect structure
-      } else {
-        setTickets((prev) => prev.map((tk) =>
-          tk.id === msg.conversation_id
-            ? { ...tk, unread_count: tk.unread_count + 1 }
-            : tk
-        ))
-      }
-    })
-    return unsub
+    // no-op: socket infrastructure removed
   }, [selectedTicketId])
 
   async function handleSend() {

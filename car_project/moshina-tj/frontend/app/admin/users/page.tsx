@@ -209,7 +209,16 @@ function UsersPageInner() {
                 users.map((u) => (
                   <tr key={u.id}>
                     <td style={tdStyle}>{u.phone}</td>
-                    <td style={tdStyle}>{u.name ?? '—'}</td>
+                    <td style={tdStyle}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span>{u.name ?? '—'}</span>
+                        {u.user_number !== undefined && (
+                          <span style={{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            #{u.user_number}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td style={tdStyle}>
                       <span className="px-2 py-0.5 rounded-[100px] text-[11px] font-semibold" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>{u.role}</span>
                     </td>
