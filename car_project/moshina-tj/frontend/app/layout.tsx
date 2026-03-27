@@ -5,11 +5,7 @@ import './globals.css'
 import { LanguageProvider } from '@/lib/LanguageContext'
 import { AuthProvider } from '@/lib/AuthContext'
 import { ThemeProvider } from '@/lib/ThemeContext'
-import { SocketProvider } from '@/lib/SocketContext'
 import MobileBottomNav from '@/components/MobileBottomNav'
-import ChatWidget from '@/components/ChatWidget'
-import ChatDrawer from '@/components/ChatDrawer'
-import { ChatDrawerProvider } from '@/lib/ChatDrawerContext'
 import { JsonLd } from '@/components/JsonLd'
 import CookieBanner from '@/components/CookieBanner'
 import YandexMetrika from '@/components/YandexMetrika'
@@ -139,18 +135,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <JsonLd data={organizationSchema} />
         <ThemeProvider>
           <AuthProvider>
-            <ChatDrawerProvider>
-              <SocketProvider>
-                <LanguageProvider initialLang={lang}>
-                  <SplashScreen />
-                  {children}
-                  <MobileBottomNav />
-                  <ChatWidget />
-                  <ChatDrawer />
-                  <CookieBanner />
-                </LanguageProvider>
-              </SocketProvider>
-            </ChatDrawerProvider>
+            <LanguageProvider initialLang={lang}>
+            <SplashScreen />
+            {children}
+            <MobileBottomNav />
+            <CookieBanner />
+          </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>
 

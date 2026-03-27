@@ -7,7 +7,6 @@ import { useAuth } from '@/lib/AuthContext'
 import { t } from '@/lib/i18n'
 import ThemeToggle from './ThemeToggle'
 import LanguageToggle from './LanguageToggle'
-import NotificationBell from './NotificationBell'
 import type { UserRole } from '@/types'
 
 const NAV_LINKS = [
@@ -153,8 +152,6 @@ export default function Navbar() {
               <LanguageToggle />
               <ThemeToggle />
             </div>
-
-            {user && <div className="hidden md:flex"><NotificationBell /></div>}
 
             {/* User menu */}
             {user ? (

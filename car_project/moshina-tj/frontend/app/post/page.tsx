@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { listingsApi, uploadApi, authApi } from '@/lib/api'
 import api from '@/lib/api'
-import { useBrands, useModels } from '@/hooks/useCatalogData'
+import { SORTED_BRANDS } from '@/lib/vehicleData'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
@@ -196,10 +196,9 @@ function PostPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
 
-  // Dynamic brands/models
-  const { brands, loading: brandsLoading } = useBrands()
-  const selectedBrandId = brands.find((b) => b.name === form.brand)?.id ?? null
-  const { models, loading: modelsLoading } = useModels(selectedBrandId)
+  // Local brands/models from static data
+  const selectedBrandData = SORTED_BRANDS.find((b) => b.name === form.brand) ?? null
+  const localModels = selectedBrandData?.models ?? []
 
   // Auth guard
   useEffect(() => {
@@ -507,15 +506,10 @@ function PostPage() {
                     value={form.brand}
                     onChange={(e) => setField('brand', e.target.value)}
                     style={inp}
-                    disabled={brandsLoading}
                   >
-                    <option value="">
-                      {brandsLoading
-                        ? (lang === 'ru' ? 'Загрузка...' : 'Бор мешавад...')
-                        : (lang === 'ru' ? '— Выберите марку —' : '— Маркаро интихоб кунед —')}
-                    </option>
-                    {brands.map((b) => (
-                      <option key={b.id} value={b.name}>{b.name}</option>
+                    <option value="">{lang === 'ru' ? '— Выберите марку —' : '— Маркаро интихоб кунед —'}</option>
+                    {SORTED_BRANDS.map((b) => (
+                      <option key={b.name} value={b.name}>{b.name}</option>
                     ))}
                   </select>
                 </div>
@@ -523,17 +517,17 @@ function PostPage() {
                 {/* Model */}
                 <div>
                   <label style={lbl}>{lang === 'ru' ? 'Модель *' : 'Модел *'}</label>
-                  {models.length > 0 ? (
+                  {localModels.length > 0 ? (
                     <select
                       required
                       value={form.model}
                       onChange={(e) => setField('model', e.target.value)}
                       style={inp}
-                      disabled={modelsLoading || !form.brand}
+                      disabled={!form.brand}
                     >
                       <option value="">{lang === 'ru' ? '— Выберите модель —' : '— Моделро интихоб кунед —'}</option>
-                      {models.map((m) => (
-                        <option key={m.id} value={m.name}>{m.name}</option>
+                      {localModels.map((m) => (
+                        <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
                   ) : (
@@ -546,9 +540,7 @@ function PostPage() {
                       placeholder={
                         !form.brand
                           ? (lang === 'ru' ? 'Сначала выберите марку' : 'Аввал маркаро интихоб кунед')
-                          : modelsLoading
-                            ? (lang === 'ru' ? 'Загрузка...' : 'Бор мешавад...')
-                            : (lang === 'ru' ? 'Введите модель' : 'Моделро ворид кунед')
+                          : (lang === 'ru' ? 'Введите модель' : 'Моделро ворид кунед')
                       }
                       style={{ ...inp, opacity: !form.brand ? 0.5 : 1 }}
                     />
