@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import HeroBannerSlider from '@/components/HeroBannerSlider'
+import AdBannerSection from '@/components/AdBanner'
 import { listingsApi, catalogApi, statsApi } from '@/lib/api'
 import type { AdBanner, MarketplaceStats } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
@@ -212,6 +213,13 @@ export default function HomePage() {
                 ))}
               </div>
             )}
+          </div>
+        </section>
+
+        {/* ── Ad Banner ─────────────────────────────────────────────────────── */}
+        <section className="ad-banner-section" style={{ padding: '0 16px 32px' }}>
+          <div className="max-w-7xl mx-auto">
+            <AdBannerSection />
           </div>
         </section>
       </main>

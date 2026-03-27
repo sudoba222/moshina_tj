@@ -34,7 +34,7 @@ export default async function Image({ params }: { params: { id: string } }) {
 
   const title = listing
     ? `${listing.brand} ${listing.model} ${listing.year}`
-    : 'MOSHINA.TJ'
+    : 'TAJCAR.TJ'
 
   const price = listing
     ? listing.currency === 'USD'
@@ -71,7 +71,7 @@ export default async function Image({ params }: { params: { id: string } }) {
         >
           {/* Site name */}
           <div style={{ fontSize: 22, color: '#3b82f6', fontWeight: 600, letterSpacing: '0.08em' }}>
-            MOSHINA.TJ
+            TAJCAR.TJ
           </div>
 
           {/* Car name */}

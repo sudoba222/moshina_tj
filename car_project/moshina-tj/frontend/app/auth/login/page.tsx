@@ -162,7 +162,7 @@ function LoginPageInner() {
 
       {/* Logo */}
       <Link href="/" style={{ marginBottom: '32px', display: 'flex', alignItems: 'baseline', gap: '2px', textDecoration: 'none' }}>
-        <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>MOSHINA</span><span style={{ fontSize: 'inherit', color: 'var(--text)', fontWeight: 800 }}>.TJ</span>
+        <span style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent)', letterSpacing: '-0.02em' }}>TAJCAR</span><span style={{ fontSize: 'inherit', color: 'var(--text)', fontWeight: 800 }}>.TJ</span>
 
       </Link>
 

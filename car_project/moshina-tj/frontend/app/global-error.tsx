@@ -56,7 +56,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 letterSpacing: '-0.03em',
               }}
             >
-              MOSHINA
+              TAJCAR
             </span>
             <span
               style={{

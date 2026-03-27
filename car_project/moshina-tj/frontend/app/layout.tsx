@@ -34,23 +34,23 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'MOSHINA.TJ — Авто рынок Таджикистана | Автомобили в Таджикистане',
-    template: '%s | MOSHINA.TJ',
+    default: 'TAJCAR.TJ — Авто рынок Таджикистана | Автомобили в Таджикистане',
+    template: '%s | TAJCAR.TJ',
   },
   description:
-    'Купите или продайте автомобиль в Таджикистане. Тысячи объявлений — новые и подержанные авто, аренда, рассрочка. MOSHINA.TJ — главный авторынок Таджикистана.',
+    'Купите или продайте автомобиль в Таджикистане. Тысячи объявлений — новые и подержанные авто, аренда, рассрочка. TAJCAR.TJ — главный авторынок Таджикистана.',
   keywords: [
     'авто таджикистан',
     'купить машину душанбе',
     'продать авто таджикистан',
-    'moshina tj',
+    'tajcar tj',
     'автомобили душанбе',
     'аренда авто таджикистан',
     'mashina tj',
   ],
-  authors: [{ name: 'MOSHINA.TJ' }],
-  creator: 'MOSHINA.TJ',
-  publisher: 'MOSHINA.TJ',
+  authors: [{ name: 'TAJCAR.TJ' }],
+  creator: 'TAJCAR.TJ',
+  publisher: 'TAJCAR.TJ',
   robots: {
     index: true,
     follow: true,
@@ -66,14 +66,14 @@ export const metadata: Metadata = {
     locale: 'ru_TJ',
     alternateLocale: 'tg_TJ',
     url: SITE_URL,
-    siteName: 'MOSHINA.TJ',
-    title: 'MOSHINA.TJ — Авто рынок Таджикистана',
+    siteName: 'TAJCAR.TJ',
+    title: 'TAJCAR.TJ — Авто рынок Таджикистана',
     description: 'Купите или продайте автомобиль в Таджикистане. Тысячи объявлений.',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'MOSHINA.TJ' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'TAJCAR.TJ' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MOSHINA.TJ — Авто рынок Таджикистана',
+    title: 'TAJCAR.TJ — Авто рынок Таджикистана',
     description: 'Купите или продайте автомобиль в Таджикистане.',
     images: ['/og-image.png'],
   },
@@ -101,7 +101,7 @@ export const metadata: Metadata = {
 const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'MOSHINA.TJ',
+  name: 'TAJCAR.TJ',
   url: SITE_URL,
   potentialAction: {
     '@type': 'SearchAction',
@@ -116,7 +116,7 @@ const websiteSchema = {
 const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'AutoDealer',
-  name: 'MOSHINA.TJ',
+  name: 'TAJCAR.TJ',
   description: 'Главный авторынок Таджикистана',
   url: SITE_URL,
   areaServed: { '@type': 'Country', name: 'Tajikistan' },

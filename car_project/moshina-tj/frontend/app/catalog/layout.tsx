@@ -15,11 +15,11 @@ export const metadata: Metadata = {
     'Chevrolet Таджикистан',
   ],
   openGraph: {
-    title: 'Каталог автомобилей Таджикистана | MOSHINA.TJ',
+    title: 'Каталог автомобилей Таджикистана | TAJCAR.TJ',
     description: 'Поиск и фильтрация автомобилей в Таджикистане.',
     type: 'website',
     locale: 'ru_TJ',
-    siteName: 'MOSHINA.TJ',
+    siteName: 'TAJCAR.TJ',
   },
   alternates: {
     canonical: `${SITE_URL}/catalog`,
@@ -33,7 +33,7 @@ const breadcrumbSchema = {
     {
       '@type': 'ListItem',
       position: 1,
-      name: 'MOSHINA.TJ',
+      name: 'TAJCAR.TJ',
       item: SITE_URL,
     },
     {

@@ -24,7 +24,7 @@ function CarIcon() {
 }
 
 export const metadata = {
-  title: '404 — Страница не найдена / Саҳифа ёфт нашуд | MOSHINA.TJ',
+  title: '404 — Страница не найдена / Саҳифа ёфт нашуд | TAJCAR.TJ',
 }
 
 export default async function NotFound() {
@@ -72,7 +72,7 @@ export default async function NotFound() {
               letterSpacing: '-0.03em',
             }}
           >
-            MOSHINA
+            TAJCAR
           </span>
           <span
             style={{

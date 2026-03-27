@@ -3,8 +3,8 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Политика конфиденциальности | MOSHINA.TJ',
-  description: 'Политика конфиденциальности платформы MOSHINA.TJ.',
+  title: 'Политика конфиденциальности | TAJCAR.TJ',
+  description: 'Политика конфиденциальности платформы TAJCAR.TJ.',
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -75,13 +75,13 @@ export default function PrivacyPage() {
             Политика конфиденциальности
           </h1>
           <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-            Дата вступления в силу: 1 января 2025 г. &nbsp;&middot;&nbsp; Платформа MOSHINA.TJ
+            Дата вступления в силу: 1 января 2025 г. &nbsp;&middot;&nbsp; Платформа TAJCAR.TJ
           </p>
         </div>
 
         <Section title="1. Введение">
           <p>
-            MOSHINA.TJ уважает конфиденциальность пользователей и обязуется защищать
+            TAJCAR.TJ уважает конфиденциальность пользователей и обязуется защищать
             персональные данные в соответствии с законодательством Республики Таджикистан.
             Настоящая Политика объясняет, какие данные мы собираем, как их используем и
             каковы ваши права.
@@ -187,7 +187,7 @@ export default function PrivacyPage() {
             <Li>Возразить против обработки данных в определённых целях.</Li>
           </ul>
           <p>
-            Для реализации прав обратитесь по адресу: <strong>support@moshina.tj</strong>.
+            Для реализации прав обратитесь по адресу: <strong>support@tajcar.tj</strong>.
             Мы ответим в течение 10 рабочих дней.
           </p>
         </Section>
@@ -211,8 +211,8 @@ export default function PrivacyPage() {
         <Section title="10. Контактная информация">
           <p>По вопросам конфиденциальности обращайтесь:</p>
           <ul style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <Li>Email: support@moshina.tj</Li>
-            <Li>Telegram: @MoshinaTJ</Li>
+            <Li>Email: support@tajcar.tj</Li>
+            <Li>Telegram: @TajCarTJ</Li>
             <Li>Адрес: г. Душанбе, Республика Таджикистан</Li>
           </ul>
         </Section>

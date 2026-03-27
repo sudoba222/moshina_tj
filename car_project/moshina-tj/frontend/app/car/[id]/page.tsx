@@ -55,7 +55,7 @@ export async function generateMetadata(
   const title = `${listing.brand} ${listing.model} ${listing.year} — ${priceStr}`
   const description = listing.description
     ? listing.description.slice(0, 155)
-    : `${listing.brand} ${listing.model} ${listing.year}, ${listing.city}. ${priceStr} на MOSHINA.TJ — авторынок Таджикистана.`
+    : `${listing.brand} ${listing.model} ${listing.year}, ${listing.city}. ${priceStr} на TAJCAR.TJ — авторынок Таджикистана.`
 
   const primaryImage =
     listing.images.find((img) => img.is_primary) ?? listing.images[0]
@@ -73,7 +73,7 @@ export async function generateMetadata(
       url: pageUrl,
       type: 'website',
       locale: 'ru_TJ',
-      siteName: 'MOSHINA.TJ',
+      siteName: 'TAJCAR.TJ',
       images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
     },
     twitter: {

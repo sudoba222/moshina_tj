@@ -233,7 +233,7 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
               {t('admin.title', lang)}
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
-              MOSHINA.TJ
+              TAJCAR.TJ
             </div>
           </div>
         </div>
@@ -385,7 +385,7 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
       {/* ── Footer ── */}
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
-          MOSHINA.TJ &copy; {new Date().getFullYear()}
+          TAJCAR.TJ &copy; {new Date().getFullYear()}
         </div>
       </div>
     </aside>

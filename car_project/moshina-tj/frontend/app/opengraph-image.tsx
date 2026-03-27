@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
-export const alt = 'MOSHINA.TJ — Авто рынок Таджикистана'
+export const alt = 'TAJCAR.TJ — Авто рынок Таджикистана'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -50,7 +50,7 @@ export default async function Image() {
               letterSpacing: '-0.03em',
             }}
           >
-            MOSHINA.TJ
+            TAJCAR.TJ
           </div>
         </div>
         <div

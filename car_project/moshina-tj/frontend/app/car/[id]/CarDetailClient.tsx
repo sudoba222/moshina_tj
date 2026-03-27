@@ -590,7 +590,7 @@ export default function CarDetailClient() {
     const url = window.location.href
     const title = listing
       ? `${listing.brand} ${listing.model} ${listing.year}`
-      : 'MOSHINA.TJ'
+      : 'TAJCAR.TJ'
     if (navigator.share) {
       try {
         await navigator.share({ title, url })

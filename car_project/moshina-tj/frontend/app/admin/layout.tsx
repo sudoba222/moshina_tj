@@ -123,7 +123,7 @@ function AdminSidebarNav({
               {t('admin.title', lang)}
             </div>
             <div className="text-[11px] mt-px" style={{ color: 'var(--text-muted)' }}>
-              MOSHINA.TJ
+              TAJCAR.TJ
             </div>
           </div>
         </div>
@@ -219,7 +219,7 @@ function AdminSidebarNav({
 
       {/* Footer */}
       <div className="px-4 py-3 border-t text-center text-[11px]" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-        MOSHINA.TJ &copy; {new Date().getFullYear()}
+        TAJCAR.TJ &copy; {new Date().getFullYear()}
       </div>
     </aside>
   )

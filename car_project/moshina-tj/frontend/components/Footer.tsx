@@ -31,9 +31,9 @@ export default function Footer() {
             <Link
               href="/"
               style={{ display: 'inline-flex', alignItems: 'baseline', gap: '1px', textDecoration: 'none' }}
-              aria-label="MOSHINA.TJ — home"
+              aria-label="TAJCAR.TJ — home"
             >
-              <span style={{ fontWeight: 800, fontSize: '18px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>MOSHINA</span>
+              <span style={{ fontWeight: 800, fontSize: '18px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>TAJCAR</span>
               <span style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text)' }}>.TJ</span>
             </Link>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px', maxWidth: '200px', lineHeight: 1.55 }}>

@@ -4,9 +4,9 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'О нас | MOSHINA.TJ',
+  title: 'О нас | TAJCAR.TJ',
   description:
-    'MOSHINA.TJ — главный авторынок Таджикистана. Узнайте больше о платформе, нашей миссии и преимуществах.',
+    'TAJCAR.TJ — главный авторынок Таджикистана. Узнайте больше о платформе, нашей миссии и преимуществах.',
 }
 
 function StatCard({ value, label }: { value: string; label: string }) {
@@ -136,7 +136,7 @@ export default function AboutPage() {
                   letterSpacing: '-0.03em',
                 }}
               >
-                MOSHINA
+                TAJCAR
               </span>
               <span
                 style={{
@@ -234,7 +234,7 @@ export default function AboutPage() {
             </div>
           </section>
 
-          {/* Why MOSHINA.TJ */}
+          {/* Why TAJCAR.TJ */}
           <section style={{ marginBottom: '52px' }}>
             <h2
               style={{
@@ -245,7 +245,7 @@ export default function AboutPage() {
                 letterSpacing: '-0.02em',
               }}
             >
-              Почему MOSHINA.TJ
+              Почему TAJCAR.TJ
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FeatureCard
@@ -312,7 +312,7 @@ export default function AboutPage() {
               }}
             >
               <a
-                href="mailto:support@moshina.tj"
+                href="mailto:support@tajcar.tj"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -326,7 +326,7 @@ export default function AboutPage() {
                   textDecoration: 'none',
                 }}
               >
-                support@moshina.tj
+                support@tajcar.tj
               </a>
               <Link
                 href="/catalog"

@@ -84,10 +84,10 @@ export default function Navbar() {
             href="/"
             style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
           >
-            <Image src="/logo-icon.png" alt="TajCar.tj" width={36} height={24} style={{ objectFit: 'contain', display: 'block' }} priority />
+            <Image src="/logo-icon.png" alt="TajCar.tj" width={36} height={24} style={{ objectFit: 'contain', display: 'block', background: 'transparent' }} priority />
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '1px' }}>
               <span style={{ fontWeight: 800, fontSize: '20px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>
-                MOSHINA
+                TAJCAR
               </span>
               <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text)' }}>
                 .TJ
@@ -431,9 +431,9 @@ export default function Navbar() {
           {/* Drawer header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid var(--border)' }}>
             <Link href="/" onClick={() => setMobileOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-              <Image src="/logo-icon.png" alt="TajCar.tj" width={30} height={20} style={{ objectFit: 'contain', display: 'block' }} />
+              <Image src="/logo-icon.png" alt="TajCar.tj" width={30} height={20} style={{ objectFit: 'contain', display: 'block', background: 'transparent' }} />
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '1px' }}>
-                <span style={{ fontWeight: 800, fontSize: '18px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>MOSHINA</span>
+                <span style={{ fontWeight: 800, fontSize: '18px', color: 'var(--accent)', letterSpacing: '-0.03em' }}>TAJCAR</span>
                 <span style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text)' }}>.TJ</span>
               </div>
             </Link>
