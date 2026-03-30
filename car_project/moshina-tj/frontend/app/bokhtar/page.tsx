@@ -6,7 +6,7 @@ import Footer from '@/components/Footer'
 export const metadata: Metadata = {
   title: 'Автомобили в Бохтаре — купить и продать машину | TAJCAR.TJ',
   description:
-    'Объявления о продаже автомобилей в Бохтаре (бывший Курган-Тюбе). Toyota, Chevrolet, Hyundai. Мошинхои фуруши дар Бохтар — TajCar.tj',
+    'Объявления о продаже автомобилей в Бохтаре (Курган-Тюбе) — административном центре Хатлонской области. Toyota, Chevrolet, Hyundai от 2000 до 10000$. Мошинхои фуруши дар Бохтар — TajCar.tj',
   keywords: [
     'купить машину бохтар',
     'авто бохтар',
@@ -14,11 +14,21 @@ export const metadata: Metadata = {
     'мошин бохтар',
     'курган тюбе авто',
     'автомобиль бохтар',
+    'купить авто курган тюбе',
+    'авто хатлон',
+    'chevrolet cobalt бохтар',
+    'toyota бохтар',
+    'подержанные авто бохтар',
+    'авто до 5000 бохтар',
+    'мошинхои фуруши дар бохтар',
+    'харид мошин бохтар',
+    'авторынок хатлонская область',
   ],
   alternates: { canonical: '/bokhtar' },
   openGraph: {
     title: 'Автомобили в Бохтаре | TAJCAR.TJ',
-    description: 'Купить авто в Бохтаре. Объявления на TajCar.tj',
+    description:
+      'Купить авто в Бохтаре от 2000$. Toyota, Chevrolet, Hyundai — объявления от частных продавцов и дилеров Хатлонской области.',
     url: 'https://tajcar.tj/bokhtar',
     type: 'website',
   },
@@ -124,27 +134,54 @@ export default function BokhtarPage() {
               background: 'var(--card)',
               border: '1px solid var(--border)',
               borderRadius: 16,
-              padding: '24px',
+              padding: '28px 24px',
             }}
           >
             <h2
-              style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', margin: '0 0 12px' }}
+              style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px' }}
             >
               Авторынок Бохтара — автомобили Хатлонской области
             </h2>
-            <p
-              style={{
-                fontSize: 14,
-                color: 'var(--text-secondary)',
-                lineHeight: 1.7,
-                margin: 0,
-              }}
-            >
-              Бохтар (бывший Курган-Тюбе) — административный центр Хатлонской области и один из
-              крупнейших городов юга Таджикистана. На TajCar.tj вы найдёте актуальные объявления о
-              продаже авто от продавцов Бохтара и всей Хатлонской области. Широкий выбор
-              подержанных автомобилей по доступным ценам.
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: '0 0 14px' }}>
+              Бохтар (до 2018 года — Курган-Тюбе) — административный центр Хатлонской области и один из быстро развивающихся городов юга Таджикистана. С ростом населения и деловой активности в регионе спрос на автомобили здесь стабильно растёт. TajCar.tj объединяет объявления от продавцов Бохтара, Колхозобода, Джиликуля и других районов Хатлонской области. Цены на авто в регионе — от 2 000 до 10 000 долларов.
             </p>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: '0 0 14px' }}>
+              Наиболее востребованные автомобили в Бохтаре — Chevrolet Cobalt и Captiva, Toyota Corolla, Hyundai Accent и Kia Rio. Бюджетный сегмент представлен Daewoo Nexia и ВАЗ. Chevrolet Cobalt продолжает оставаться самым продаваемым автомобилем в регионе благодаря низкой цене и простоте обслуживания. При покупке авто в Бохтаре рекомендуем проверять историю обслуживания и осматривать машину на сервисе — особенно если покупаете у частного лица. На TajCar.tj каждое объявление проходит модерацию.
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: '0 0 20px' }}>
+              Дар TajCar.tj шумо метавонед мошинхои фуруши дар Бохтар ва Вилояти Хатлонро пайдо кунед. Шевролет Кобалт, Тойота Королла, Хюндай — маъмултарин мошинхои минтака. Нархи мошинхо аз 2 000 то 10 000 доллар. Хар як эълон тафтиш карда мешавад.
+            </p>
+
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: '0 0 14px' }}>
+              Частые вопросы о покупке авто в Бохтаре
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>
+                  Где найти авто в Бохтаре (Курган-Тюбе)?
+                </p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  TajCar.tj — самая удобная площадка для поиска авто в Бохтаре. Используйте фильтр «Город: Бохтар» и смотрите свежие объявления от продавцов Хатлонской области. Для широкого охвата также можно искать по всей области.
+                </p>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>
+                  Какие авто самые популярные в Бохтаре?
+                </p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  Chevrolet Cobalt, Toyota Corolla и Hyundai Accent — лидеры продаж в регионе. Они доступны по цене, экономичны и просты в обслуживании. Для загородных поездок выбирают Toyota Land Cruiser или Chevrolet Captiva.
+                </p>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>
+                  Как безопасно купить авто у частного лица в Бохтаре?
+                </p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  Договоритесь об осмотре при дневном свете, проверьте документы на машину и при возможности съездите на диагностику. Объявления на TajCar.tj прошли проверку модераторов, что снижает риск мошенничества.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </main>

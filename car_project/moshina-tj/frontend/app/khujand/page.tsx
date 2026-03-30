@@ -6,7 +6,7 @@ import Footer from '@/components/Footer'
 export const metadata: Metadata = {
   title: 'Автомобили в Худжанде — купить и продать машину | TAJCAR.TJ',
   description:
-    'Тысячи объявлений о продаже автомобилей в Худжанде. Toyota, Chevrolet, Hyundai по лучшим ценам. Мошинхои фуруши дар Хуҷанд — TajCar.tj',
+    'Объявления о продаже автомобилей в Худжанде. Toyota, Chevrolet Cobalt, Daewoo Nexia, Hyundai от 2500 до 15000$. Авторынок Согдийской области. Мошинхои фуруши дар Хуҷанд — TajCar.tj',
   keywords: [
     'купить машину худжанд',
     'авто худжанд',
@@ -14,11 +14,22 @@ export const metadata: Metadata = {
     'мошин худжанд',
     'авторынок худжанд',
     'машина худжанд',
+    'купить toyota худжанд',
+    'chevrolet cobalt худжанд',
+    'daewoo nexia худжанд',
+    'авто согдийская область',
+    'авто север таджикистана',
+    'подержанные авто худжанд',
+    'авто до 5000 долларов худжанд',
+    'мошинхои фуруши дар хучанд',
+    'харид мошин хучанд',
+    'авто в рассрочку худжанд',
   ],
   alternates: { canonical: '/khujand' },
   openGraph: {
     title: 'Автомобили в Худжанде | TAJCAR.TJ',
-    description: 'Купить авто в Худжанде. Тысячи объявлений на TajCar.tj',
+    description:
+      'Купить авто в Худжанде от 2500$. Toyota, Chevrolet, Daewoo, Hyundai — объявления от частных продавцов и дилеров Согдийской области.',
     url: 'https://tajcar.tj/khujand',
     type: 'website',
   },
@@ -125,27 +136,54 @@ export default function KhujandPage() {
               background: 'var(--card)',
               border: '1px solid var(--border)',
               borderRadius: 16,
-              padding: '24px',
+              padding: '28px 24px',
             }}
           >
             <h2
-              style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', margin: '0 0 12px' }}
+              style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px' }}
             >
               Авторынок Худжанда — автомобили Согдийской области
             </h2>
-            <p
-              style={{
-                fontSize: 14,
-                color: 'var(--text-secondary)',
-                lineHeight: 1.7,
-                margin: 0,
-              }}
-            >
-              Худжанд — второй по величине город Таджикистана и центр Согдийской области. На
-              TajCar.tj вы найдёте объявления о продаже автомобилей от продавцов Худжанда и всего
-              севера страны. Популярные марки в регионе: Toyota, Chevrolet Cobalt, Daewoo Nexia,
-              Hyundai Accent. Быстрая связь с продавцами — звоните напрямую через платформу.
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: '0 0 14px' }}>
+              Худжанд — второй по величине город Таджикистана и главный экономический центр Согдийской области. Автомобильный рынок Худжанда занимает второе место в стране по объёму сделок. На TajCar.tj представлены объявления от частных владельцев и дилеров Худжанда, Исфары, Канибадама и других городов севера Таджикистана. Цены здесь немного ниже, чем в Душанбе: подержанные автомобили в хорошем состоянии стоят от 2 500 до 15 000 долларов.
             </p>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: '0 0 14px' }}>
+              Самые популярные марки в Худжанде и Согдийской области — Toyota Corolla и Camry, Chevrolet Cobalt и Aveo, Daewoo Nexia и Matiz, Hyundai Accent. Daewoo Nexia и Chevrolet Cobalt особенно востребованы за низкую стоимость обслуживания и доступность запчастей. Toyota Corolla — надёжный выбор для тех, кто ищет автомобиль для ежедневных поездок. TajCar.tj предоставляет прямую связь с продавцом без посредников — вы звоните напрямую и договариваетесь об осмотре.
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: '0 0 20px' }}>
+              Дар TajCar.tj шумо метавонед мошинхои фуруши дар Хуҷанд ва вилояти Сугдро пайдо кунед. Нархи мошинхо аз 2 500 то 15 000 доллар. Тойота, Шевролет, Дэу — маъмултарин мошинхо дар ин минтака. Бо фурушанда мустакиман тамос гиред.
+            </p>
+
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: '0 0 14px' }}>
+              Частые вопросы о покупке авто в Худжанде
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>
+                  Где купить машину в Худжанде?
+                </p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  На TajCar.tj — крупнейшей онлайн-площадке Таджикистана. Здесь собраны объявления от частных лиц и дилеров Худжанда и всей Согдийской области. Используйте фильтр «Город: Худжанд» и выбирайте из сотен вариантов.
+                </p>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>
+                  Какие авто самые дешёвые в Худжанде?
+                </p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  Самые доступные варианты — Daewoo Nexia, Chevrolet Cobalt, Opel Vectra и ВАЗ. Их цена начинается от 2 500–3 500 долларов. Запчасти на эти машины легко найти в Худжанде и стоят недорого.
+                </p>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>
+                  Можно ли продать машину в Худжанде через интернет?
+                </p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  Да. Зарегистрируйтесь на TajCar.tj, разместите объявление с фото и ценой — покупатели из Худжанда и всего Таджикистана увидят его уже через несколько минут после проверки модератором.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </main>

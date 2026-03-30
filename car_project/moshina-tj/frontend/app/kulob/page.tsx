@@ -6,7 +6,7 @@ import Footer from '@/components/Footer'
 export const metadata: Metadata = {
   title: 'Автомобили в Кулябе — купить и продать машину | TAJCAR.TJ',
   description:
-    'Объявления о продаже автомобилей в Кулябе. Toyota, Chevrolet, Daewoo по доступным ценам. Мошинхои фуруши дар Кӯлоб — TajCar.tj',
+    'Объявления о продаже автомобилей в Кулябе и Хатлонской области. Toyota Land Cruiser, Chevrolet Cobalt, Daewoo от 1500 до 8000$. Мошинхои фуруши дар Кӯлоб — TajCar.tj',
   keywords: [
     'купить машину куляб',
     'авто куляб',
@@ -14,11 +14,20 @@ export const metadata: Metadata = {
     'мошин куляб',
     'автомобиль куляб',
     'мошин кулоб',
+    'toyota land cruiser куляб',
+    'chevrolet cobalt куляб',
+    'авто хатлонская область',
+    'подержанные авто куляб',
+    'авто до 5000 долларов куляб',
+    'мошинхои фуруши дар кулоб',
+    'харид мошин кулоб',
+    'авто юг таджикистана',
   ],
   alternates: { canonical: '/kulob' },
   openGraph: {
     title: 'Автомобили в Кулябе | TAJCAR.TJ',
-    description: 'Купить авто в Кулябе. Объявления на TajCar.tj',
+    description:
+      'Купить авто в Кулябе от 1500$. Toyota, Chevrolet, Daewoo — объявления от частных продавцов юга Таджикистана.',
     url: 'https://tajcar.tj/kulob',
     type: 'website',
   },
@@ -124,27 +133,54 @@ export default function KulobPage() {
               background: 'var(--card)',
               border: '1px solid var(--border)',
               borderRadius: 16,
-              padding: '24px',
+              padding: '28px 24px',
             }}
           >
             <h2
-              style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', margin: '0 0 12px' }}
+              style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px' }}
             >
               Авторынок Куляба — автомобили юга Таджикистана
             </h2>
-            <p
-              style={{
-                fontSize: 14,
-                color: 'var(--text-secondary)',
-                lineHeight: 1.7,
-                margin: 0,
-              }}
-            >
-              Куляб — один из крупных городов Хатлонской области Таджикистана. На TajCar.tj вы
-              найдёте актуальные объявления о продаже авто от продавцов Куляба. Широкий выбор
-              подержанных автомобилей — Toyota, Chevrolet, Daewoo — по доступным ценам. Связь с
-              продавцом напрямую без посредников.
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: '0 0 14px' }}>
+              Куляб — один из крупнейших городов Хатлонской области и важный региональный центр юга Таджикистана. Автомобильный рынок здесь активно развивается: жители Куляба, Дангары, Шуробода и соседних районов регулярно ищут и продают машины. TajCar.tj — удобный способ купить или продать авто в Кулябе без посредников. Цены на подержанные автомобили в Кулябе начинаются от 1 500 долларов, средний бюджет покупки — 3 500–7 000 долларов.
             </p>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: '0 0 14px' }}>
+              Особой популярностью в Кулябе пользуется Toyota Land Cruiser — за проходимость и надёжность на горных дорогах юга страны. Среди бюджетных вариантов лидируют Chevrolet Cobalt, Daewoo Nexia и ВАЗ-2107. Для семей актуален Opel Astra и Hyundai Accent. Все продавцы на TajCar.tj — реальные люди: частные лица и небольшие дилеры. Каждое объявление проверяется модераторами до публикации, что снижает риск встретить мошенников.
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: '0 0 20px' }}>
+              Дар TajCar.tj шумо метавонед мошинхои фуруши дар Кӯлоб ва Вилояти Хатлонро пайдо кунед. Тойота Ленд Крузер, Шевролет Кобалт ва Дэу — маъмултарин мошинхо дар ин минтака. Нархи мошинхо аз 1 500 то 8 000 доллар. Бо фурушанда мустакиман тамос гиред.
+            </p>
+
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: '0 0 14px' }}>
+              Частые вопросы о покупке авто в Кулябе
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>
+                  Какие машины популярны в Кулябе?
+                </p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  Toyota Land Cruiser Prado и 70 series пользуются большим спросом из-за горного рельефа региона. Среди доступных вариантов — Chevrolet Cobalt, Daewoo Nexia и ВАЗ. Эти автомобили дешёвы в обслуживании и ремонте.
+                </p>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>
+                  Сколько стоит машина в Кулябе?
+                </p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  Минимальные цены на рабочие подержанные автомобили в Кулябе — от 1 500 долларов. Среднебюджетные варианты — 3 500–7 000 долларов. Toyota Land Cruiser в хорошем состоянии стоит от 8 000 долларов.
+                </p>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>
+                  Как продать авто в Кулябе быстро?
+                </p>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                  Разместите объявление на TajCar.tj — это бесплатно. Добавьте 3–5 фото хорошего качества, укажите реальную цену и точное описание состояния. Объявления с фотографиями получают в среднем втрое больше звонков.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </main>
