@@ -192,7 +192,7 @@ export default function ForgotPasswordPage() {
         const res = await authApi.forgotPasswordTelegram(identifier.trim())
         if (!res.data.data?.available) {
           setStep1Error(t('forgotPassword.errorTelegramNotLinked', lang as Lang))
-          return
+      return
         }
         const dc = res.data.data?.dev_code ?? null
         setDevCode(dc)

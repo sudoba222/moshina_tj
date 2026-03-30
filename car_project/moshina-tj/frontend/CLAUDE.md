@@ -26,6 +26,7 @@ The project uses a custom translation helper in `lib/i18n.ts`.
 
 ## 4. Type System & Models
 *   **User Profiles**: Added `whatsapp_number?: string` to `UserPublicProfile` interface in `types/index.ts` to resolve build errors in `CarDetailClient`.
+*   **Sitemap Resilience**: Added defensive array checks and null-safety to `app/sitemap.ts` to prevent "map is not a function" errors when API calls fail during prerendering.
 
 ## 4. Coding Standards for Claude
 *   **Always use `t(key, lang)`** for translations.

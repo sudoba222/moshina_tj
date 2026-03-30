@@ -39,14 +39,18 @@ async function fetchAllListingIds(): Promise<ListingItem[]> {
     clearTimeout(timeoutId)
     if (!first.ok) return []
     const firstData: ListingsApiResponse = await first.json()
-    const pages = Math.min(firstData.data?.pages ?? 1, 50) // cap at 50 pages to prevent timeout
+    
+    // Defensive check for nested data structure
+    if (!firstData?.data) return []
+    
+    const pages = Math.min(firstData.data.pages ?? 1, 50) // cap at 50 pages to prevent timeout
 
     const requests = Array.from({ length: pages }, (_, i) =>
       fetch(`${API_URL}/listings?page=${i + 1}&limit=100`, {
         next: { revalidate: 3600 },
       })
         .then((r) => r.json() as Promise<ListingsApiResponse>)
-        .then((d) => d.data?.items ?? [])
+        .then((d) => (Array.isArray(d?.data?.items) ? d.data.items : []))
         .catch((): ListingItem[] => [])
     )
     const results = await Promise.all(requests)
@@ -68,7 +72,7 @@ async function fetchAllDealerIds(): Promise<DealerItem[]> {
     clearTimeout(timeoutId)
     if (!res.ok) return []
     const data: DealersApiResponse = await res.json()
-    return data.data ?? []
+    return Array.isArray(data?.data) ? data.data : []
   } catch {
     return []
   }
@@ -93,10 +97,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
   ]
 
-  const [listings, dealers] = await Promise.all([
-    fetchAllListingIds(),
-    fetchAllDealerIds(),
+  const [listingsRaw, dealersRaw] = await Promise.all([
+    fetchAllListingIds().catch(() => [] as ListingItem[]),
+    fetchAllDealerIds().catch(() => [] as DealerItem[]),
   ])
+
+  // Extra safety check to ensure we have arrays
+  const listings = Array.isArray(listingsRaw) ? listingsRaw : []
+  const dealers = Array.isArray(dealersRaw) ? dealersRaw : []
 
   const listingRoutes: MetadataRoute.Sitemap = listings.map((l) => ({
     url: `${SITE_URL}/car/${l.id}`,
