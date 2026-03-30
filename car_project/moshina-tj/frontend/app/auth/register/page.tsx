@@ -6,6 +6,7 @@ import { authApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
+import type { Lang } from '@/types'
 import PhoneInput from '@/components/PhoneInput'
 
 // ─── Error helper ─────────────────────────────────────────────────────────────
@@ -102,7 +103,7 @@ const submitBtn = (loading: boolean): React.CSSProperties => ({
 })
 
 // ─── Dev banner ───────────────────────────────────────────────────────────────
-function DevBanner({ lang }: { lang: string }) {
+function DevBanner({ lang }: { lang: Lang }) {
   return (
     <div style={{
       background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: '8px',
@@ -115,7 +116,7 @@ function DevBanner({ lang }: { lang: string }) {
 }
 
 // ─── Back button ──────────────────────────────────────────────────────────────
-function BackButton({ lang, onClick }: { lang: string; onClick: () => void }) {
+function BackButton({ lang, onClick }: { lang: Lang; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
       style={{
@@ -132,7 +133,7 @@ function BackButton({ lang, onClick }: { lang: string; onClick: () => void }) {
 }
 
 // ─── Phone tab (3-step: form → OTP) ──────────────────────────────────────────
-function PhoneTab({ lang }: { lang: string }) {
+function PhoneTab({ lang }: { lang: Lang }) {
   const router = useRouter()
   const { login } = useAuth()
   const [step, setStep] = useState<1 | 2>(1)
@@ -169,11 +170,11 @@ function PhoneTab({ lang }: { lang: string }) {
 
   async function handleSendOtp() {
     setError('')
-    if (!name.trim()) { setError(t('register.errorEnterName', lang as import("@/types").Lang)); return }
+    if (!name.trim()) { setError(t('register.errorEnterName', lang)); return }
     const localDigits = phone.replace(/^\+\d{1,4}/, '')
-    if (!localDigits.trim()) { setError(t('register.errorEnterPhone', lang as import("@/types").Lang)); return }
-    if (!password.trim()) { setError(t('register.errorEnterPassword', lang as import("@/types").Lang)); return }
-    if (password.length < 6) { setError(t('register.errorPasswordLength', lang as import("@/types").Lang)); return }
+    if (!localDigits.trim()) { setError(t('register.errorEnterPhone', lang)); return }
+    if (!password.trim()) { setError(t('register.errorEnterPassword', lang)); return }
+    if (password.length < 6) { setError(t('register.errorPasswordLength', lang)); return }
     try {
       setLoading(true)
       const res = await authApi.sendOtp(fullPhone)
@@ -182,14 +183,14 @@ function PhoneTab({ lang }: { lang: string }) {
       setDigits(dc ? dc.split('').slice(0, 6) : ['', '', '', '', '', ''])
       setStep(2); startCountdown()
     } catch (err) {
-      setError(extractApiError(err, t('register.errorSendCode', lang as import("@/types").Lang)))
+      setError(extractApiError(err, t('register.errorSendCode', lang)))
     } finally { setLoading(false) }
   }
 
   async function handleSendOtpTelegram() {
     setError('')
     const localDigitsTg = phone.replace(/^\+\d{1,4}/, '')
-    if (!localDigitsTg.trim()) { setError(t('register.errorEnterPhone', lang as import("@/types").Lang)); return }
+    if (!localDigitsTg.trim()) { setError(t('register.errorEnterPhone', lang)); return }
     try {
       setLoading(true)
       const res = await authApi.sendOtpTelegram(fullPhone)
@@ -199,21 +200,21 @@ function PhoneTab({ lang }: { lang: string }) {
       if (link) window.open(link, '_blank', 'noopener,noreferrer')
       setStep(2); startCountdown()
     } catch (err) {
-      setError(extractApiError(err, t('register.errorTryLater', lang as import("@/types").Lang)))
+      setError(extractApiError(err, t('register.errorTryLater', lang)))
     } finally { setLoading(false) }
   }
 
   async function handleVerify() {
     setError('')
     const code = digits.join('')
-    if (code.length < 6) { setError(t('register.errorEnterAllDigits', lang as import("@/types").Lang)); return }
+    if (code.length < 6) { setError(t('register.errorEnterAllDigits', lang)); return }
     try {
       setLoading(true)
       const res = await authApi.verifyOtp(fullPhone, code, name, password)
       const data = res.data.data!
       login(data.token.access_token, data.user); router.push('/')
     } catch (err) {
-      setError(extractApiError(err, t('register.errorWrongCode', lang as import("@/types").Lang)))
+      setError(extractApiError(err, t('register.errorWrongCode', lang)))
     } finally { setLoading(false) }
   }
 
@@ -225,7 +226,7 @@ function PhoneTab({ lang }: { lang: string }) {
       const dc = res.data.data?.dev_code ?? null
       setDevCode(dc); if (dc) setDigits(dc.split('').slice(0, 6))
       startCountdown()
-    } catch { setError(t('register.errorSend', lang as import("@/types").Lang)) } finally { setLoading(false) }
+    } catch { setError(t('register.errorSend', lang)) } finally { setLoading(false) }
   }
 
   const countdownStr = `${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}`
@@ -234,17 +235,17 @@ function PhoneTab({ lang }: { lang: string }) {
     <div className="otp-step" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-          {t('auth.name', lang as import("@/types").Lang)}
+          {t('auth.name', lang)}
         </label>
         <input type="text" autoComplete="name" value={name}
-          placeholder={t('auth.namePlaceholder', lang as import("@/types").Lang)}
+          placeholder={t('auth.namePlaceholder', lang)}
           onChange={(e) => setName(e.target.value)}
           onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
           style={baseInput} />
       </div>
       <div>
         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-          {t('auth.phone', lang as import("@/types").Lang)}
+          {t('auth.phone', lang)}
         </label>
         <PhoneInput
           value={phone}
@@ -256,7 +257,7 @@ function PhoneTab({ lang }: { lang: string }) {
       </div>
       <div>
         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-          {t('auth.password', lang as import("@/types").Lang)}
+          {t('auth.password', lang)}
         </label>
         <input type="password" autoComplete="new-password" value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -267,7 +268,7 @@ function PhoneTab({ lang }: { lang: string }) {
       {error && <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600 }}>{error}</p>}
       <button type="button" onClick={handleSendOtp} disabled={loading} style={submitBtn(loading)}>
         {loading && <Spinner />}
-        {t('register.getSmsCode', lang as import("@/types").Lang)}
+        {t('register.getSmsCode', lang)}
       </button>
       <button
         type="button"
@@ -296,12 +297,12 @@ function PhoneTab({ lang }: { lang: string }) {
       {devCode !== null && process.env.NODE_ENV === 'development' && <DevBanner lang={lang} />}
       <BackButton lang={lang} onClick={() => { setStep(1); setError(''); setTelegramDeepLink(null) }} />
       <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', marginBottom: '8px', textAlign: 'center' }}>
-        {t('register.enterCode', lang as import("@/types").Lang)}
+        {t('register.enterCode', lang)}
       </h2>
       <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '28px' }}>
         {telegramDeepLink
-          ? t('register.telegramOpened', lang as import("@/types").Lang)
-          : t('register.codeSentTo', lang as import("@/types").Lang).replace('{phone}', fullPhone)
+          ? t('register.telegramOpened', lang)
+          : t('register.codeSentTo', lang).replace('{phone}', fullPhone)
         }
       </p>
 
@@ -321,7 +322,7 @@ function PhoneTab({ lang }: { lang: string }) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.93c-.12.56-.47.7-.94.44l-2.62-1.93-1.26 1.21c-.14.14-.26.26-.52.26l.19-2.66 4.82-4.36c.21-.19-.05-.3-.32-.11L7.93 14.7l-2.56-.8c-.56-.17-.57-.56.12-.83l10.01-3.86c.46-.17.87.11.14.59z"/>
             </svg>
-            {t('register.reopenBot', lang as import("@/types").Lang)}
+            {t('register.reopenBot', lang)}
           </a>
         </div>
       )}
@@ -330,18 +331,18 @@ function PhoneTab({ lang }: { lang: string }) {
       {error && <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600, textAlign: 'center', marginTop: '12px' }}>{error}</p>}
       <button type="button" onClick={handleVerify} disabled={loading} style={{ ...submitBtn(loading), marginTop: '20px' }}>
         {loading && <Spinner />}
-        {t('register.confirm', lang as import("@/types").Lang)}
+        {t('register.confirm', lang)}
       </button>
       <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px' }}>
         {countdown > 0 ? (
           <span style={{ color: 'var(--text-muted)' }}>
-            {t('register.resendAfter', lang as import("@/types").Lang)}{' '}
+            {t('register.resendAfter', lang)}{' '}
             <span style={{ fontWeight: 700, color: 'var(--text)' }}>{countdownStr}</span>
           </span>
         ) : (
           <button type="button" disabled={loading} onClick={handleResend}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: '13px', fontFamily: 'var(--font)' }}>
-            {t('register.resendAgain', lang as import("@/types").Lang)}
+            {t('register.resendAgain', lang)}
           </button>
         )}
       </div>
@@ -350,7 +351,7 @@ function PhoneTab({ lang }: { lang: string }) {
 }
 
 // ─── Email tab (2-step: form → OTP) ──────────────────────────────────────────
-function EmailTab({ lang }: { lang: string }) {
+function EmailTab({ lang }: { lang: Lang }) {
   const router = useRouter()
   const { login } = useAuth()
   const [step, setStep] = useState<'form' | 'otp'>('form')
@@ -562,7 +563,7 @@ export default function RegisterPage() {
 
         {/* Google sign-up */}
         <div style={{ marginTop: '20px' }}>
-          <OrDivider label={t('auth.orContinueWith', lang as import("@/types").Lang)} />
+          <OrDivider label={t('auth.orContinueWith', lang)} />
           <div style={{ marginTop: '12px' }}>
             <a
               href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/auth/google/redirect`}
@@ -585,7 +586,7 @@ export default function RegisterPage() {
               }}
             >
               <GoogleIcon />
-              {t('auth.continueGoogle', lang as import("@/types").Lang)}
+              {t('auth.continueGoogle', lang)}
             </a>
           </div>
         </div>
