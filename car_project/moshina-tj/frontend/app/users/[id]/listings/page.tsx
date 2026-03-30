@@ -105,7 +105,7 @@ export default function UserListingsPage() {
             </div>
             <div>
               <h1 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text)' }}>
-                {profile.name ?? (lang === 'ru' ? 'Пользователь' : 'Корбар')}
+                {profile.name ?? t('userProfile.anonymousUser', lang)}
               </h1>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                 {t('userProfile.member', lang)} {formatDate(profile.created_at, lang)} · {total} {t('userProfile.listings', lang)}

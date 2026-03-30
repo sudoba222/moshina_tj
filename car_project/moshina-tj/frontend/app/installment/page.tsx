@@ -323,7 +323,7 @@ export default function InstallmentPage() {
                       <div style={{ height: '8px', borderRadius: '4px', overflow: 'hidden', background: 'var(--border)', margin: '12px 0 16px' }}>
                         <div style={{ display: 'flex', height: '100%' }}>
                           <div style={{ width: `${principalPct}%`, background: 'var(--accent)', transition: 'width 0.3s ease' }} />
-                          <div style={{ width: `${interestPct}%`, background: '#e67e22', transition: 'width 0.3s ease' }} />
+                          <div style={{ width: `${interestPct}%`, background: 'var(--color-warning)', transition: 'width 0.3s ease' }} />
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
@@ -332,7 +332,7 @@ export default function InstallmentPage() {
                           {t('installment.labelDown', lang)} {principalPct}%
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                          <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#e67e22', flexShrink: 0, display: 'inline-block' }} />
+                          <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--color-warning)', flexShrink: 0, display: 'inline-block' }} />
                           {t('installment.labelInterest', lang)} {interestPct}%
                         </div>
                       </div>

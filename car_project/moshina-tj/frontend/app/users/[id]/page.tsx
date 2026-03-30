@@ -141,7 +141,7 @@ export default function UserProfilePage() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
                   <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)' }}>
-                    {profile.name ?? (lang === 'ru' ? 'Пользователь' : 'Корбар')}
+                    {profile.name ?? t('userProfile.anonymousUser', lang)}
                   </h1>
                   <RoleBadge role={profile.role} />
                 </div>

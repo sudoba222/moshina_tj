@@ -298,7 +298,7 @@ export default function ManagerPage() {
                   border: '1px solid rgba(245,158,11,0.3)', borderRadius: '12px',
                   display: 'flex', alignItems: 'center', gap: '12px',
                 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                   </svg>
                   <span style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 600 }}>
