@@ -90,7 +90,7 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
             "Привет! Я бот MOSHINA.TJ\n\n"
             f"Сайт: {SITE_URL}\n\n"
             "Откройте сайт → Регистрация → «Войти через Telegram», чтобы начать."
-        ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
+        ), url_button=("Открыть TajCar.tj", SITE_URL))
         return {"ok": "true"}
 
     parts = text.strip().split(maxsplit=1)
@@ -101,7 +101,7 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
             "Привет! Я бот MOSHINA.TJ\n\n"
             f"Сайт: {SITE_URL}\n\n"
             "Откройте сайт → Регистрация → «Войти через Telegram», чтобы начать."
-        ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
+        ), url_button=("Открыть TajCar.tj", SITE_URL))
         return {"ok": "true"}
 
     await _handle_start(chat_id, token_str, telegram_name)
@@ -127,7 +127,7 @@ async def _handle_start(chat_id: str, token_str: str, telegram_name: str | None)
             await _send_message(chat_id, (
                 "Ссылка недействительна или истекла.\n"
                 f"Вернитесь на сайт и запросите новую ссылку: {SITE_URL}"
-            ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
+            ), url_button=("Открыть TajCar.tj", SITE_URL))
             return
 
         # Save chat_id and name on token — marks it as "waiting for contact"
@@ -177,7 +177,7 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
         if not tg_token:
             await _send_message(chat_id, (
                 "Сессия истекла. Вернитесь на сайт и начните заново."
-            ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
+            ), url_button=("Открыть TajCar.tj", SITE_URL))
             return
 
         token_phone = _normalize_phone(tg_token.phone)
@@ -190,7 +190,7 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
                 "Номер телефона не совпадает с тем, что вы ввели на сайте.\n\n"
                 "Введите на сайте тот же номер, что зарегистрирован в Telegram, "
                 "или используйте другой способ входа."
-            ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
+            ), url_button=("Открыть TajCar.tj", SITE_URL))
             return
 
         # Check if this Telegram account is already linked to a DIFFERENT phone
@@ -208,7 +208,7 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
             await _send_message(chat_id, (
                 "Этот Telegram-аккаунт уже привязан к другому номеру.\n\n"
                 "Войдите через тот номер или обратитесь в поддержку."
-            ), url_button=("Открыть MOSHINA.TJ", SITE_URL))
+            ), url_button=("Открыть TajCar.tj", SITE_URL))
             return
 
         # ✅ Phone verified — generate OTP
@@ -247,7 +247,7 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
             f"Введите его на сайте — код действует 10 минут\\.\n"
             f"Никому не передавайте этот код\\.",
             parse_mode="MarkdownV2",
-            url_button=("Открыть MOSHINA.TJ", f"{SITE_URL}/auth/register"),
+            url_button=("Открыть TajCar.tj", f"{SITE_URL}/auth/register"),
         )
 
     except Exception:
@@ -263,7 +263,7 @@ async def send_welcome_message(chat_id: str, name: str | None) -> None:
     await _send_message(
         chat_id,
         f"{greeting}\n\nВы успешно вошли в MOSHINA.TJ.\nПерейдите на сайт, чтобы просмотреть объявления.",
-        url_button=("Открыть MOSHINA.TJ", SITE_URL),
+        url_button=("Открыть TajCar.tj", SITE_URL),
     )
 
 

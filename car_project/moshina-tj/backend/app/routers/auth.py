@@ -365,7 +365,7 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
     db.add(otp)
     db.commit()
 
-    message = f"Ваш код подтверждения MOSHINA.TJ: {code}. Действителен 10 минут."
+    message = f"Ваш код подтверждения TajCar.tj: {code}. Действителен 10 минут."
     _send_sms(payload.phone, message)
 
     # Never expose raw OTP codes in the response body — log server-side only
@@ -618,7 +618,7 @@ def verify_email_otp(request: Request, response: Response, payload: VerifyEmailO
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
-        message="Email verified. Welcome to MOSHINA.TJ!",
+        message="Email verified. Welcome to TajCar.tj!",
     )
 
 
