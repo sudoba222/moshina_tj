@@ -74,9 +74,25 @@ def require_support_or_above(current_user: User = Depends(get_current_user)) -> 
 class BanPayload(BaseModel):
     reason: Optional[str] = None
 
+    @field_validator("reason")
+    @classmethod
+    def reason_max_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 500:
+            raise ValueError("Ban reason must be at most 500 characters")
+        return v
+
 
 class RejectPayload(BaseModel):
     reason: str
+
+    @field_validator("reason")
+    @classmethod
+    def reason_not_empty_and_max_length(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Rejection reason cannot be empty")
+        if len(v) > 2000:
+            raise ValueError("Rejection reason must be at most 2000 characters")
+        return v
 
 
 class SkipPayload(BaseModel):
@@ -244,7 +260,14 @@ def list_users(
     if role is not None:
         query = query.filter(User.role == role)
     if search:
-        query = query.filter(User.phone.ilike(f"%{search}%") | User.name.ilike(f"%{search}%"))
+        # Try numeric search by user_number
+        try:
+            num = int(search.strip())
+            query = query.filter(User.user_number == num)
+        except ValueError:
+            query = query.filter(
+                User.phone.ilike(f"%{search}%") | User.name.ilike(f"%{search}%")
+            )
     if is_banned is not None:
         query = query.filter(User.is_banned == is_banned)
 
@@ -525,6 +548,7 @@ def admin_listings(
     user_id: Optional[str] = None,
     brand: Optional[str] = None,
     city: Optional[str] = None,
+    include_deleted: bool = Query(default=False, description="Include soft-deleted listings"),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -535,6 +559,9 @@ def admin_listings(
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
     )
+
+    if not include_deleted:
+        query = query.filter(Listing.is_deleted == False)
 
     if status and status != "all":
         try:
@@ -844,14 +871,15 @@ def deactivate_listing(listing_id: str, db: Session = Depends(get_db), current_u
         raise HTTPException(status_code=404, detail="Listing not found")
     old_status = listing.status.value if listing.status else None
     listing.is_active = False
-    listing.status = ListingStatus.rejected
+    # Do NOT change the status — admin deactivation only hides the listing
+    # (is_active=False) without altering the moderation status.
     log_audit(db, current_user.id, "deactivate_listing", "listing", listing.id)
     db.add(ListingLog(
         listing_id=listing.id,
         actor_id=current_user.id,
         action="deactivated",
         from_status=old_status,
-        to_status="rejected",
+        to_status=old_status,
     ))
     db.commit()
     db.refresh(listing)
@@ -869,10 +897,14 @@ def admin_edit_listing(
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     fields = payload.model_dump(exclude_none=True)
+    old_status = listing.status.value if listing.status else None
+    new_status = old_status
     if "status" in fields:
         try:
-            listing.status = ListingStatus(fields.pop("status"))
-            listing.is_active = listing.status == ListingStatus.active
+            new_status_enum = ListingStatus(fields.pop("status"))
+            listing.status = new_status_enum
+            new_status = new_status_enum.value
+            listing.is_active = new_status_enum == ListingStatus.active
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid status")
     for key, val in fields.items():
@@ -882,8 +914,8 @@ def admin_edit_listing(
         listing_id=listing.id,
         actor_id=current_user.id,
         action="staff_edit",
-        from_status=listing.status.value if listing.status else None,
-        to_status=listing.status.value if listing.status else None,
+        from_status=old_status,
+        to_status=new_status,
         reason=f"Staff edit: {', '.join(fields.keys()) if fields else 'status change'}",
     ))
     db.commit()
@@ -1045,6 +1077,10 @@ def approve_listing(
     listing = db.query(Listing).options(joinedload(Listing.user), joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    if listing.user_id == current_user.id:
+        raise HTTPException(status_code=403, detail="You cannot moderate your own listing")
+    if listing.status == ListingStatus.active:
+        raise HTTPException(status_code=400, detail="Listing is already active")
     old_status = listing.status.value if listing.status else None
     listing.status = ListingStatus.active
     listing.is_active = True
@@ -1107,6 +1143,10 @@ def reject_listing(
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    if listing.user_id == current_user.id:
+        raise HTTPException(status_code=403, detail="You cannot moderate your own listing")
+    if listing.status == ListingStatus.rejected:
+        raise HTTPException(status_code=400, detail="Listing is already rejected")
     old_status = listing.status.value if listing.status else None
     listing.status = ListingStatus.rejected
     listing.is_active = False
@@ -1221,7 +1261,7 @@ class ModeratorListingPatch(BaseModel):
     brand: Optional[str] = None
     model: Optional[str] = None
     description: Optional[str] = None
-    price: Optional[int] = None
+    price: Optional[Decimal] = None
     currency: Optional[str] = None
     year: Optional[int] = None
     city: Optional[str] = None
@@ -1229,6 +1269,31 @@ class ModeratorListingPatch(BaseModel):
     fuel: Optional[str] = None
     transmission: Optional[str] = None
     color: Optional[str] = None
+
+    @field_validator("brand", "model", "city")
+    @classmethod
+    def strip_and_not_empty(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("Field cannot be empty")
+            if len(v) > 100:
+                raise ValueError("Field cannot exceed 100 characters")
+        return v
+
+    @field_validator("description")
+    @classmethod
+    def description_max(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 5000:
+            raise ValueError("Description cannot exceed 5000 characters")
+        return v
+
+    @field_validator("price")
+    @classmethod
+    def price_positive(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v <= 0:
+            raise ValueError("Price must be greater than zero")
+        return v
 
 @router.patch("/moderation/{listing_id}/edit", response_model=ApiResponse[ListingResponse])
 def moderator_edit_listing(
@@ -1238,7 +1303,6 @@ def moderator_edit_listing(
     current_user: User = Depends(require_moderator),
 ):
     """Allows a moderator to fix listing fields inline before approving."""
-    from app.models import FuelType, TransmissionType, Currency as CurrencyEnum
     listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
@@ -1250,8 +1314,6 @@ def moderator_edit_listing(
         listing.description = payload.description.strip()
     if payload.price is not None:
         listing.price = payload.price
-    if payload.currency is not None:
-        listing.currency = payload.currency
     if payload.year is not None:
         listing.year = payload.year
     if payload.city is not None:
@@ -1259,9 +1321,20 @@ def moderator_edit_listing(
     if payload.mileage is not None:
         listing.mileage = payload.mileage
     if payload.fuel is not None:
-        listing.fuel = payload.fuel
+        try:
+            listing.fuel = FuelType(payload.fuel)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid fuel type: {payload.fuel}")
     if payload.transmission is not None:
-        listing.transmission = payload.transmission
+        try:
+            listing.transmission = TransmissionType(payload.transmission)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid transmission type: {payload.transmission}")
+    if payload.currency is not None:
+        try:
+            listing.currency = Currency(payload.currency)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid currency: {payload.currency}")
     if payload.color is not None:
         listing.color = payload.color.strip()
     changed = {k: v for k, v in payload.model_dump(exclude_none=True).items()}
@@ -1657,7 +1730,7 @@ def moderator_stats(db: Session = Depends(get_db), current_user: User = Depends(
             "sessions": len(sessions),
         }
 
-    all_s = db.query(ModerationSession).filter(ModerationSession.moderator_id == current_user.id, ModerationSession.is_active == False).all()
+    all_s = db.query(ModerationSession).filter(ModerationSession.moderator_id == current_user.id).all()
     today_s = [s for s in all_s if s.started_at >= today]
     week_s  = [s for s in all_s if s.started_at >= week_ago]
 

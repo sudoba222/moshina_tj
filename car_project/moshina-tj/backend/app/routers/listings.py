@@ -193,7 +193,7 @@ def list_listings(
     query = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
-        .filter(Listing.status == ListingStatus.active)
+        .filter(Listing.status == ListingStatus.active, Listing.is_deleted == False)
     )
 
     if type:
@@ -268,7 +268,7 @@ def featured_listings(db: Session = Depends(get_db)):
     listings = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
-        .filter(Listing.status == ListingStatus.active)
+        .filter(Listing.status == ListingStatus.active, Listing.is_deleted == False)
         .order_by(Listing.views.desc())
         .limit(8)
         .all()

@@ -40,7 +40,11 @@ def my_listings(
         .filter(Listing.user_id == current_user.id, Listing.is_deleted == False)
     )
     if status_filter and status_filter != "all":
-        query = query.filter(Listing.status == status_filter)
+        try:
+            status_enum = ListingStatus(status_filter)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid status value: {status_filter}")
+        query = query.filter(Listing.status == status_enum)
 
     total = query.count()
     pages = math.ceil(total / limit) if total > 0 else 1
@@ -75,7 +79,10 @@ def get_my_favorites(
         db.query(Listing)
         .options(joinedload(Listing.images))
         .join(Favorite, Favorite.listing_id == Listing.id)
-        .filter(Favorite.user_id == current_user.id)
+        .filter(
+            Favorite.user_id == current_user.id,
+            Listing.is_deleted == False,
+        )
         .order_by(Favorite.created_at.desc())
     )
     total = query.count()
@@ -119,7 +126,11 @@ def get_user_profile(
 
     listing_count = (
         db.query(Listing)
-        .filter(Listing.user_id == user_id, Listing.status == ListingStatus.active)
+        .filter(
+            Listing.user_id == user_id,
+            Listing.status == ListingStatus.active,
+            Listing.is_deleted == False,
+        )
         .count()
     )
 
@@ -156,7 +167,11 @@ def get_user_listings(
     query = (
         db.query(Listing)
         .options(joinedload(Listing.images))
-        .filter(Listing.user_id == user_id, Listing.status == ListingStatus.active)
+        .filter(
+            Listing.user_id == user_id,
+            Listing.status == ListingStatus.active,
+            Listing.is_deleted == False,
+        )
     )
     total = query.count()
     pages = math.ceil(total / limit) if total > 0 else 1

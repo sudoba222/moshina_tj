@@ -447,7 +447,7 @@ async def webapp_login(payload: WebAppLoginPayload, response: Response) -> dict:
             )
 
         token = create_access_token(
-            {"sub": str(user.id)},
+            {"sub": str(user.id), "role": user.role.value},
             token_version=user.token_version,
         )
 

@@ -241,7 +241,7 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     db.commit()
     db.refresh(user)
 
-    token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
@@ -254,7 +254,7 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     "/login",
     response_model=ApiResponse[AuthResponse],
 )
-@limiter.limit("30/15minutes")
+@limiter.limit("5/15minutes")
 def login(request: Request, response: Response, payload: UserCreate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
     if not user or not verify_password(payload.password, user.password_hash):
@@ -268,7 +268,7 @@ def login(request: Request, response: Response, payload: UserCreate, db: Session
             detail="Account is suspended",
         )
 
-    token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
@@ -486,7 +486,7 @@ def verify_otp(request: Request, response: Response, payload: VerifyOtpPayload, 
         from app.routers.telegram_webhook import send_welcome_message
         background_tasks.add_task(send_welcome_message, chat_id_for_bot, user.name)
 
-    token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
@@ -613,7 +613,7 @@ def verify_email_otp(request: Request, response: Response, payload: VerifyEmailO
     except Exception:
         pass
 
-    token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
@@ -623,7 +623,7 @@ def verify_email_otp(request: Request, response: Response, payload: VerifyEmailO
 
 
 @router.post("/login-email", response_model=ApiResponse[AuthResponse])
-@limiter.limit("30/15minutes")
+@limiter.limit("10/15minutes")
 def login_email(request: Request, response: Response, payload: EmailLoginPayload, db: Session = Depends(get_db)):
     """Login with email + password."""
     user = db.query(User).filter(User.email == payload.email, User.is_deleted == False).first()
@@ -638,7 +638,7 @@ def login_email(request: Request, response: Response, payload: EmailLoginPayload
             detail="Email not verified. Please check your inbox for the verification code.",
         )
 
-    token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
@@ -1002,7 +1002,7 @@ def google_auth(
     db.commit()
     db.refresh(user)
 
-    token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
@@ -1108,7 +1108,7 @@ def apple_auth(
     db.commit()
     db.refresh(user)
 
-    token = Token(access_token=create_access_token({"sub": str(user.id)}, token_version=user.token_version))
+    token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
@@ -1121,7 +1121,12 @@ def apple_auth(
 
 @router.get("/google/redirect")
 def google_oauth_redirect() -> Any:
-    """Redirect the user to Google's OAuth consent page."""
+    """Redirect the user to Google's OAuth consent page.
+
+    A CSRF `state` token is generated here, stored in an HttpOnly cookie,
+    and sent to Google. The callback validates the returned state against
+    the cookie before exchanging the authorization code.
+    """
     import urllib.parse
     from fastapi.responses import RedirectResponse as _RedirectResponse
 
@@ -1133,6 +1138,7 @@ def google_oauth_redirect() -> Any:
             detail="Google OAuth is not configured on this server (missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET)",
         )
     redirect_uri = settings.google_redirect_uri
+    state = secrets.token_urlsafe(32)
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -1140,9 +1146,21 @@ def google_oauth_redirect() -> Any:
         "scope": "openid email profile",
         "access_type": "online",
         "prompt": "select_account",
+        "state": state,
     }
     url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
-    return _RedirectResponse(url)
+    response = _RedirectResponse(url)
+    is_prod = settings.environment == "production"
+    response.set_cookie(
+        key="oauth_state",
+        value=state,
+        httponly=True,
+        samesite="none" if is_prod else "lax",
+        max_age=600,  # 10 minutes — enough time to complete the OAuth dance
+        path="/",
+        secure=is_prod,
+    )
+    return response
 
 
 @router.get("/google/callback")
@@ -1150,6 +1168,7 @@ async def google_oauth_callback(
     request: Request,
     code: str = "",
     error: str = "",
+    state: str = "",
 ) -> Any:
     """Exchange the OAuth code for user info, find/create user, redirect to frontend.
 
@@ -1166,6 +1185,12 @@ async def google_oauth_callback(
     client_id = settings.google_client_id
     client_secret = settings.google_client_secret
     redirect_uri = settings.google_redirect_uri
+
+    # Validate CSRF state before doing anything else (P2-2)
+    expected_state = request.cookies.get("oauth_state", "")
+    if not state or not expected_state or not secrets.compare_digest(state, expected_state):
+        logger.warning("Google OAuth state mismatch — possible CSRF attempt")
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=oauth_state_mismatch")
 
     if error or not code:
         return _RedirectResponse(f"{frontend_url}/auth/login?error=google_cancelled")
@@ -1190,9 +1215,8 @@ async def google_oauth_callback(
 
     access_token = token_data.get("access_token")
     if not access_token:
-        google_err = token_data.get("error", "unknown")
-        logger.error("Google token exchange returned no access_token: %s", token_data)
-        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed&detail={google_err}")
+        logger.error("Google token exchange returned no access_token: %s", token_data.get("error", "unknown"))
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
 
     # Fetch user info from Google
     try:
@@ -1243,6 +1267,7 @@ async def google_oauth_callback(
         user_id = str(user.id)
         token_version = user.token_version
         user_name = user.name
+        user_role = user.role.value
     except Exception:
         db.rollback()
         logger.exception("Google OAuth DB error")
@@ -1250,14 +1275,20 @@ async def google_oauth_callback(
     finally:
         db.close()
 
-    jwt_token = create_access_token({"sub": user_id}, token_version=token_version)
+    jwt_token = create_access_token({"sub": user_id, "role": user_role}, token_version=token_version)
+    is_prod = settings.environment == "production"
+
+    def _oauth_redirect(url: str) -> _RedirectResponse:
+        """Build a redirect that sets the JWT as an HttpOnly cookie and clears the state cookie."""
+        resp = _RedirectResponse(url)
+        _set_auth_cookie(resp, jwt_token)
+        resp.delete_cookie("oauth_state", path="/")
+        return resp
 
     # New users (or users with no name) → name setup page
     if is_new_user or not user_name:
         encoded_name = _up.quote(name or "", safe="")
-        return _RedirectResponse(
-            f"{frontend_url}/auth/google-setup?token={jwt_token}&name={encoded_name}"
-        )
+        return _oauth_redirect(f"{frontend_url}/auth/google-setup?name={encoded_name}")
 
     # Existing users → straight to callback (auto-login)
-    return _RedirectResponse(f"{frontend_url}/auth/callback?token={jwt_token}")
+    return _oauth_redirect(f"{frontend_url}/auth/callback")

@@ -341,7 +341,7 @@ function ListingsPageInner() {
             </div>
             <div className="mb-[10px]">
               <label className="block text-[11px] font-semibold uppercase tracking-[0.05em] mb-[3px]" style={{ color: 'var(--text-muted)' }}>
-                {lang === 'ru' ? 'Описание' : 'Тавсиф'}
+                {t('adminForm.descriptionLabel', lang)}
               </label>
               <textarea
                 value={String(editListingForm.description ?? '')}

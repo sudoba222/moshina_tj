@@ -108,7 +108,7 @@ function AdminSidebarNav({
         <div className="flex items-center gap-[10px] mb-3">
           <Link
             href="/dashboard"
-            aria-label={lang === 'ru' ? 'Назад в профиль' : 'Ба профил баргашт'}
+            aria-label={t('adminForm.backToProfile', lang)}
             className="flex items-center justify-center w-7 h-7 rounded-[6px] border shrink-0"
             style={{
               color: 'var(--text-secondary)',

@@ -62,6 +62,7 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    user_number: Optional[int] = None
     phone: str
     name: Optional[str] = None
     email: Optional[str] = None
@@ -88,6 +89,7 @@ class UserPublicResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    user_number: Optional[int] = None
     name: Optional[str] = None
     role: UserRole
     avatar_url: Optional[str] = None
@@ -234,15 +236,46 @@ class ListingCreate(BaseModel):
     @field_validator("image_urls")
     @classmethod
     def image_urls_allowed_domains(cls, v: list[str]) -> list[str]:
+        from app.config import settings as _settings
         for url in v:
             if not (
                 url.startswith("https://res.cloudinary.com/")
                 or url.startswith("/uploads/")
-                or url.startswith("http://localhost")
+                or (_settings.environment != "production" and url.startswith("http://localhost"))
             ):
                 raise ValueError(
                     "Invalid image URL: only Cloudinary and local upload URLs are accepted"
                 )
+        return v
+
+    @field_validator("youtube_link")
+    @classmethod
+    def validate_youtube_link(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        _YOUTUBE_DOMAINS = ("youtube.com/", "youtu.be/", "www.youtube.com/")
+        if not v.startswith("https://") or not any(d in v for d in _YOUTUBE_DOMAINS):
+            raise ValueError("youtube_link must be a valid https://youtube.com or https://youtu.be URL")
+        return v
+
+    @field_validator("tiktok_link")
+    @classmethod
+    def validate_tiktok_link(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        _TIKTOK_DOMAINS = ("tiktok.com/", "vm.tiktok.com/")
+        if not v.startswith("https://") or not any(d in v for d in _TIKTOK_DOMAINS):
+            raise ValueError("tiktok_link must be a valid https://tiktok.com URL")
+        return v
+
+    @field_validator("video_url")
+    @classmethod
+    def validate_video_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        _VIDEO_DOMAINS = ("youtube.com/", "youtu.be/", "www.youtube.com/", "tiktok.com/", "vm.tiktok.com/")
+        if not v.startswith("https://") or not any(d in v for d in _VIDEO_DOMAINS):
+            raise ValueError("video_url must be a valid https:// YouTube or TikTok URL")
         return v
 
 
@@ -297,15 +330,46 @@ class ListingUpdate(BaseModel):
     def image_urls_allowed_domains(cls, v: Optional[list[str]]) -> Optional[list[str]]:
         if v is None:
             return v
+        from app.config import settings as _settings
         for url in v:
             if not (
                 url.startswith("https://res.cloudinary.com/")
                 or url.startswith("/uploads/")
-                or url.startswith("http://localhost")
+                or (_settings.environment != "production" and url.startswith("http://localhost"))
             ):
                 raise ValueError(
                     "Invalid image URL: only Cloudinary and local upload URLs are accepted"
                 )
+        return v
+
+    @field_validator("youtube_link")
+    @classmethod
+    def validate_youtube_link(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        _YOUTUBE_DOMAINS = ("youtube.com/", "youtu.be/", "www.youtube.com/")
+        if not v.startswith("https://") or not any(d in v for d in _YOUTUBE_DOMAINS):
+            raise ValueError("youtube_link must be a valid https://youtube.com or https://youtu.be URL")
+        return v
+
+    @field_validator("tiktok_link")
+    @classmethod
+    def validate_tiktok_link(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        _TIKTOK_DOMAINS = ("tiktok.com/", "vm.tiktok.com/")
+        if not v.startswith("https://") or not any(d in v for d in _TIKTOK_DOMAINS):
+            raise ValueError("tiktok_link must be a valid https://tiktok.com URL")
+        return v
+
+    @field_validator("video_url")
+    @classmethod
+    def validate_video_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        _VIDEO_DOMAINS = ("youtube.com/", "youtu.be/", "www.youtube.com/", "tiktok.com/", "vm.tiktok.com/")
+        if not v.startswith("https://") or not any(d in v for d in _VIDEO_DOMAINS):
+            raise ValueError("video_url must be a valid https:// YouTube or TikTok URL")
         return v
 
 

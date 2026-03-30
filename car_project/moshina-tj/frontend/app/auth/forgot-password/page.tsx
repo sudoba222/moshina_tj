@@ -180,7 +180,7 @@ export default function ForgotPasswordPage() {
   async function handleSendCode(via: 'default' | 'telegram' = 'default') {
     setStep1Error('')
     if (!identifier.trim()) {
-      setStep1Error(lang === 'ru' ? 'Введите телефон или email' : 'Телефон ё email-ро ворид кунед')
+      setStep1Error(t('forgotPassword.errorEnterIdentifier', lang))
       return
     }
     try {
@@ -189,7 +189,7 @@ export default function ForgotPasswordPage() {
       if (via === 'telegram') {
         const res = await authApi.forgotPasswordTelegram(identifier.trim())
         if (!res.data.data?.available) {
-          setStep1Error(lang === 'ru' ? 'Telegram не подключён к этому аккаунту' : 'Telegram ба ин ҳисоб пайваст нест')
+          setStep1Error(t('forgotPassword.errorTelegramNotLinked', lang))
           return
         }
         const dc = res.data.data?.dev_code ?? null
@@ -206,7 +206,7 @@ export default function ForgotPasswordPage() {
         startCountdown()
       }
     } catch (err) {
-      setStep1Error(extractApiError(err, lang === 'ru' ? 'Ошибка отправки кода' : 'Хатои фиристодани рамз'))
+      setStep1Error(extractApiError(err, t('forgotPassword.errorSendCode', lang)))
     } finally {
       setStep1Loading(false)
     }
@@ -224,7 +224,7 @@ export default function ForgotPasswordPage() {
       else setDigits(['', '', '', '', '', ''])
       startCountdown()
     } catch {
-      setOtpError(lang === 'ru' ? 'Ошибка отправки' : 'Хатои фиристодан')
+      setOtpError(t('forgotPassword.errorSend', lang))
     } finally {
       setOtpLoading(false)
     }
@@ -254,7 +254,7 @@ export default function ForgotPasswordPage() {
       return
     }
     if (newPassword !== confirmPassword) {
-      setStep3Error(lang === 'ru' ? 'Пароли не совпадают' : 'Рамзҳо мувофиқ нестанд')
+      setStep3Error(t('forgotPassword.errorPasswordsMismatch', lang))
       return
     }
     try {
@@ -263,7 +263,7 @@ export default function ForgotPasswordPage() {
       setStep('success')
       setTimeout(() => router.push('/auth/login'), 2000)
     } catch (err) {
-      setStep3Error(extractApiError(err, lang === 'ru' ? 'Ошибка сброса пароля' : 'Хатои барқарорсозии рамз'))
+      setStep3Error(extractApiError(err, t('forgotPassword.errorResetPassword', lang)))
     } finally {
       setStep3Loading(false)
     }
@@ -291,10 +291,10 @@ export default function ForgotPasswordPage() {
 
         {/* Header */}
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)', marginBottom: '6px', textAlign: 'center' }}>
-          {lang === 'ru' ? 'Восстановление пароля' : 'Барқарорсозии рамз'}
+          {t('forgotPassword.title', lang)}
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '28px' }}>
-          {lang === 'ru' ? 'Шаг ' : 'Қадам '}{activeStep}{lang === 'ru' ? ' из 3' : ' аз 3'}
+          {t('forgotPassword.stepOf', lang).replace('{step}', String(activeStep))}
         </p>
 
         {/* Step dots */}
@@ -328,11 +328,11 @@ export default function ForgotPasswordPage() {
           <div className="fp-step" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-                {lang === 'ru' ? 'Телефон или Email' : 'Телефон ё Email'}
+                {t('forgotPassword.identifierLabel', lang)}
               </label>
               <input
                 type="text" autoComplete="username" value={identifier}
-                placeholder={lang === 'ru' ? '+992... или you@example.com' : '+992... ё you@example.com'}
+                placeholder={t('forgotPassword.identifierPlaceholder', lang)}
                 onChange={(e) => setIdentifier(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSendCode('default') }}
                 style={{ ...baseInput, borderColor: step1Error ? 'var(--color-error)' : 'var(--border)' }}
@@ -344,7 +344,7 @@ export default function ForgotPasswordPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button type="button" onClick={() => handleSendCode('default')} disabled={step1Loading} style={btnStyle(step1Loading)}>
                 {step1Loading && method !== 'telegram' && <Spinner />}
-                {lang === 'ru' ? 'Отправить код' : 'Рамз фиристед'}
+                {t('forgotPassword.sendCode', lang)}
               </button>
               <button
                 type="button"
@@ -372,7 +372,7 @@ export default function ForgotPasswordPage() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
                 </svg>
-                {lang === 'ru' ? 'Получить код в Telegram' : 'Рамз дар Telegram'}
+                {t('forgotPassword.getTelegramCode', lang)}
               </button>
             </div>
           </div>
@@ -382,24 +382,24 @@ export default function ForgotPasswordPage() {
         {step === 2 && (
           <div className="fp-step">
             {devCode && (
-              <div style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: 'var(--color-warning, #ca8a04)', marginBottom: '16px', textAlign: 'center' }}>
-                {lang === 'ru' ? 'Режим разработки — код заполнен автоматически' : 'Ҳолати таҳия — рамз худкор пур шуд'}
+              <div style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: 'var(--color-warning)', marginBottom: '16px', textAlign: 'center' }}>
+                {t('register.devBanner', lang)}
               </div>
             )}
 
             <button type="button" onClick={() => { setStep(1); setOtpError('') }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '20px', padding: 0, fontFamily: 'var(--font)' }}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 2L4 7l5 5" /></svg>
-              {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+              {t('authForm.back', lang)}
             </button>
 
             <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', marginBottom: '8px', textAlign: 'center' }}>
-              {lang === 'ru' ? 'Введите код' : 'Рамзро ворид кунед'}
+              {t('register.enterCode', lang)}
             </h2>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '28px' }}>
               {method === 'telegram'
-                ? (lang === 'ru' ? 'Код отправлен в ваш Telegram' : 'Рамз ба Telegram-и шумо фиристода шуд')
-                : (lang === 'ru' ? `Код отправлен на ${identifier}` : `Рамз ба ${identifier} фиристода шуд`)}
+                ? t('forgotPassword.codeSentTelegram', lang)
+                : t('register.codeSentTo', lang).replace('{phone}', identifier)}
             </p>
 
             <OtpInput value={digits} onChange={setDigits} hasError={!!otpError} />
@@ -422,7 +422,7 @@ export default function ForgotPasswordPage() {
               ) : (
                 <button type="button" disabled={otpLoading} onClick={handleResend}
                   style={{ background: 'none', border: 'none', cursor: otpLoading ? 'not-allowed' : 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: '13px', fontFamily: 'var(--font)' }}>
-                  {lang === 'ru' ? 'Отправить снова' : 'Дубора фиристед'}
+                  {t('register.resendAgain', lang)}
                 </button>
               )}
             </div>
@@ -435,13 +435,13 @@ export default function ForgotPasswordPage() {
             <button type="button" onClick={() => { setStep(2); setStep3Error('') }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', padding: 0, fontFamily: 'var(--font)', alignSelf: 'flex-start' }}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 2L4 7l5 5" /></svg>
-              {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+              {t('authForm.back', lang)}
             </button>
 
             {/* New password */}
             <div>
               <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-                {lang === 'ru' ? 'Новый пароль' : 'Рамзи нав'}
+                {t('dashboard.newPassword', lang)}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -452,7 +452,7 @@ export default function ForgotPasswordPage() {
                   style={{ ...baseInput, paddingRight: '44px', borderColor: step3Error ? 'var(--color-error)' : 'var(--border)' }}
                 />
                 <button type="button" onClick={() => setShowNew((v) => !v)}
-                  aria-label={lang === 'ru' ? 'Показать пароль' : 'Рамзро нишон диҳ'}
+                  aria-label={showNew ? t('authForm.hidePassword', lang) : t('authForm.showPassword', lang)}
                   style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 0 }}>
                   <EyeIcon open={showNew} />
                 </button>
@@ -462,7 +462,7 @@ export default function ForgotPasswordPage() {
             {/* Confirm password */}
             <div>
               <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-                {lang === 'ru' ? 'Подтвердить пароль' : 'Рамзро тасдиқ кунед'}
+                {t('dashboard.confirmPassword', lang)}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -474,7 +474,7 @@ export default function ForgotPasswordPage() {
                   style={{ ...baseInput, paddingRight: '44px', borderColor: step3Error ? 'var(--color-error)' : 'var(--border)' }}
                 />
                 <button type="button" onClick={() => setShowConfirm((v) => !v)}
-                  aria-label={lang === 'ru' ? 'Показать пароль' : 'Рамзро нишон диҳ'}
+                  aria-label={showConfirm ? t('authForm.hidePassword', lang) : t('authForm.showPassword', lang)}
                   style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 0 }}>
                   <EyeIcon open={showConfirm} />
                 </button>
@@ -487,7 +487,7 @@ export default function ForgotPasswordPage() {
 
             <button type="button" onClick={handleResetPassword} disabled={step3Loading} style={btnStyle(step3Loading)}>
               {step3Loading && <Spinner />}
-              {lang === 'ru' ? 'Сохранить пароль' : 'Рамзро захира кунед'}
+              {t('authForm.savePassword', lang)}
             </button>
           </div>
         )}
@@ -497,12 +497,10 @@ export default function ForgotPasswordPage() {
           <div className="fp-step" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', paddingTop: '8px', paddingBottom: '8px' }}>
             <CheckCircleIcon />
             <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)', textAlign: 'center' }}>
-              {lang === 'ru' ? 'Пароль изменён!' : 'Рамз иваз шуд!'}
+              {t('forgotPassword.passwordChanged', lang)}
             </h2>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center' }}>
-              {lang === 'ru'
-                ? 'Перенаправление на страницу входа...'
-                : 'Ба саҳифаи даромад равона мешавед...'}
+              {t('forgotPassword.redirectingToLogin', lang)}
             </p>
           </div>
         )}
@@ -511,7 +509,7 @@ export default function ForgotPasswordPage() {
         {step !== 'success' && (
           <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--text-muted)' }}>
             <Link href="/auth/login" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-              {lang === 'ru' ? 'Назад к входу' : 'Бозгашт ба даромад'}
+              {t('authForm.backToLogin', lang)}
             </Link>
           </p>
         )}

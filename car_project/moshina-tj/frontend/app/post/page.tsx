@@ -453,13 +453,13 @@ function PostPage() {
             <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                {lang === 'ru' ? 'Тип объявления' : 'Навъи эълон'}
+                {t('postForm.typeLabel', lang)}
               </SectionTitle>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {[
-                  { v: 'sale' as const, ru: 'Продажа', tj: 'Фурӯш' },
-                  { v: 'rent' as const, ru: 'Аренда',  tj: 'Иҷора' },
-                ].map(({ v, ru, tj }) => (
+                  { v: 'sale' as const, labelKey: 'postForm.typeSale' },
+                  { v: 'rent' as const, labelKey: 'postForm.typeRent' },
+                ].map(({ v, labelKey }) => (
                   <button key={v} type="button"
                     onClick={() => setField('type', v)}
                     style={{
@@ -471,7 +471,7 @@ function PostPage() {
                       transition: 'all 0.13s',
                     }}
                   >
-                    {lang === 'ru' ? ru : tj}
+                    {t(labelKey, lang)}
                   </button>
                 ))}
               </div>
@@ -481,7 +481,7 @@ function PostPage() {
             <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                {lang === 'ru' ? 'Категория транспорта' : 'Категорияи нақлиёт'}
+                {t('postForm.categoryLabel', lang)}
               </SectionTitle>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                 {VEHICLE_CATEGORIES.map((cat) => {
@@ -510,20 +510,20 @@ function PostPage() {
             <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                {lang === 'ru' ? 'Марка, модель и год' : 'Марка, модел ва сол'}
+                {t('postForm.brandModelYear', lang)}
               </SectionTitle>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {/* Brand */}
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Марка *' : 'Марка *'}</label>
+                  <label style={lbl}>{t('postForm.brandLabel', lang)}</label>
                   <select
                     required={form.brand !== 'Другое'}
                     value={form.brand}
                     onChange={(e) => { setField('brand', e.target.value); setCustomBrand('') }}
                     style={inp}
                   >
-                    <option value="">{lang === 'ru' ? '— Выберите марку —' : '— Маркаро интихоб кунед —'}</option>
+                    <option value="">{t('postForm.brandPlaceholder', lang)}</option>
                     {SORTED_BRANDS.map((b) => (
                       <option key={b.name} value={b.name}>{b.name}</option>
                     ))}
@@ -654,12 +654,12 @@ function PostPage() {
             <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                {lang === 'ru' ? 'Характеристики' : 'Хусусиятҳо'}
+                {t('postForm.specsLabel', lang)}
               </SectionTitle>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 {/* Fuel */}
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Топливо' : 'Сӯзишворӣ'}</label>
+                  <label style={lbl}>{t('postForm.fuelLabel', lang)}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {FUELS.map((f) => (
                       <Chip key={f.value} label={lang === 'ru' ? f.ru : f.tj} selected={form.fuel === f.value}
@@ -669,7 +669,7 @@ function PostPage() {
                 </div>
                 {/* Transmission */}
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Коробка передач' : 'Коробкаи гир'}</label>
+                  <label style={lbl}>{t('postForm.transLabel', lang)}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {TRANSMISSIONS.map((tr) => (
                       <Chip key={tr.value} label={lang === 'ru' ? tr.ru : tr.tj} selected={form.transmission === tr.value}
@@ -679,7 +679,7 @@ function PostPage() {
                 </div>
                 {/* Body type */}
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Тип кузова' : 'Навъи кузов'}</label>
+                  <label style={lbl}>{t('postForm.bodyLabel', lang)}</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {BODY_TYPES.map((bt) => (
                       <Chip key={bt.value} label={lang === 'ru' ? bt.ru : bt.tj} selected={form.body_type === bt.value}
@@ -690,42 +690,42 @@ function PostPage() {
                 {/* Condition + Drive + Engine */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
-                    <label style={lbl}>{lang === 'ru' ? 'Состояние' : 'Ҳолат'}</label>
+                    <label style={lbl}>{t('postForm.conditionLabel', lang)}</label>
                     <select value={form.condition} onChange={(e) => setField('condition', e.target.value)} style={inp}>
                       <option value="">—</option>
-                      <option value="Новый">{lang === 'ru' ? 'Новый' : 'Нав'}</option>
-                      <option value="С пробегом">{lang === 'ru' ? 'С пробегом' : 'Истифодашуда'}</option>
+                      <option value="Новый">{t('postForm.conditionNew', lang)}</option>
+                      <option value="С пробегом">{t('postForm.conditionUsed', lang)}</option>
                     </select>
                   </div>
                   <div>
-                    <label style={lbl}>{lang === 'ru' ? 'Привод' : 'Привод'}</label>
+                    <label style={lbl}>{t('postForm.driveLabel', lang)}</label>
                     <select value={form.drive_type} onChange={(e) => setField('drive_type', e.target.value)} style={inp}>
                       <option value="">—</option>
-                      <option value="Передний">{lang === 'ru' ? 'Передний' : 'Пеш'}</option>
-                      <option value="Задний">{lang === 'ru' ? 'Задний' : 'Қафо'}</option>
-                      <option value="Полный">{lang === 'ru' ? 'Полный' : 'Ҳамааш'}</option>
+                      <option value="Передний">{t('postForm.driveFront', lang)}</option>
+                      <option value="Задний">{t('postForm.driveRear', lang)}</option>
+                      <option value="Полный">{t('postForm.driveAll', lang)}</option>
                     </select>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
-                    <label style={lbl}>{lang === 'ru' ? 'Пробег (км)' : 'Масофа (км)'}</label>
+                    <label style={lbl}>{t('postForm.mileageLabel', lang)}</label>
                     <input type="number" min={0} value={form.mileage}
                       onChange={(e) => setField('mileage', e.target.value)}
                       placeholder="85000" style={inp} />
                   </div>
                   <div>
-                    <label style={lbl}>{lang === 'ru' ? 'Объем, л' : 'Ҳаҷм, л'}</label>
+                    <label style={lbl}>{t('postForm.engineLabel', lang)}</label>
                     <input type="text" value={form.engine_volume}
                       onChange={(e) => setField('engine_volume', e.target.value)}
                       placeholder="2.0" style={inp} />
                   </div>
                 </div>
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Цвет' : 'Ранг'}</label>
+                  <label style={lbl}>{t('postForm.colorLabel', lang)}</label>
                   <input type="text" value={form.color}
                     onChange={(e) => setField('color', e.target.value)}
-                    placeholder={lang === 'ru' ? 'Белый, Чёрный...' : 'Сафед, Сиёҳ...'}
+                    placeholder={t('postForm.colorPlaceholder', lang)}
                     style={inp} />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
@@ -733,7 +733,7 @@ function PostPage() {
                     <input type="checkbox" checked={form.is_customs_cleared}
                       onChange={(e) => setField('is_customs_cleared', e.target.checked)}
                       style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', flexShrink: 0 }} />
-                    {lang === 'ru' ? 'Растаможен' : 'Боҷхонашуда'}
+                    {t('postForm.customsCleared', lang)}
                   </label>
                 </div>
               </div>
@@ -798,20 +798,20 @@ function PostPage() {
             <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                {lang === 'ru' ? 'Описание' : 'Тавсиф'}
+                {t('postForm.descriptionLabel', lang)}
               </SectionTitle>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
                 {form.brand && form.model && (
                   <button type="button" onClick={handleAiRefine} disabled={aiLoading}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 700, color: 'var(--accent)', cursor: aiLoading ? 'not-allowed' : 'pointer', opacity: aiLoading ? 0.6 : 1 }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.5 3 3.5.5-2.5 2.5.5 3.5L12 11l-3 1.5.5-3.5L7 6.5 10.5 6z"/><path d="M5 19l1 2 2-1-1-2z"/><path d="M19 5l1 2 2-1-1-2z"/><line x1="8" y1="16" x2="16" y2="8"/></svg>
-                    {aiLoading ? (lang === 'ru' ? 'Генерация...' : 'Тавлид...') : (lang === 'ru' ? 'Улучшить с ИИ' : 'Бо ИИ беҳтар')}
+                    {aiLoading ? t('postForm.aiGenerating', lang) : t('postForm.aiImprove', lang)}
                   </button>
                 )}
               </div>
               <textarea rows={5} value={form.description}
                 onChange={(e) => setField('description', e.target.value)}
-                placeholder={lang === 'ru' ? 'Расскажите о состоянии машины, особенностях, истории обслуживания...' : 'Дар бораи ҳолати мошина, хусусиятҳо, таърихи хизматрасонӣ нақл кунед...'}
+                placeholder={t('postForm.descriptionPlaceholder', lang)}
                 style={{ ...inp, resize: 'vertical', lineHeight: 1.6, fontSize: '15px' }} />
               {aiError && <p style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-error)', fontWeight: 600 }}>{aiError}</p>}
             </div>
@@ -820,18 +820,18 @@ function PostPage() {
             <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.28 19 19.5 19.5 0 0 1 5 12.72 19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                {lang === 'ru' ? 'Контакты' : 'Тамос'}
+                {t('postForm.contactsLabel', lang)}
               </SectionTitle>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Ваше имя' : 'Номи шумо'}</label>
+                  <label style={lbl}>{t('postForm.yourName', lang)}</label>
                   <input type="text" value={form.contact_name}
                     onChange={(e) => setField('contact_name', e.target.value)}
-                    placeholder={lang === 'ru' ? 'Имя продавца' : 'Номи фурӯшанда'}
+                    placeholder={t('postForm.sellerNamePlaceholder', lang)}
                     style={inp} />
                 </div>
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Телефон' : 'Телефон'}</label>
+                  <label style={lbl}>{t('postForm.phoneLabelContact', lang)}</label>
                   <input type="tel" value={form.contact_phone}
                     onChange={(e) => setField('contact_phone', e.target.value)}
                     placeholder="+992 XX XXX XXXX" style={inp} />
@@ -897,7 +897,7 @@ function PostPage() {
                     <textarea rows={3} value={rental.notes}
                       onChange={(e) => setRental((p) => ({ ...p, notes: e.target.value }))}
                       style={{ ...inp, resize: 'vertical' }}
-                      placeholder={lang === 'ru' ? 'Дополнительные условия...' : 'Шартҳои иловагӣ...'} />
+                      placeholder={t('postForm.notesPlaceholder', lang)} />
                   </div>
                 </div>
               </div>
@@ -923,12 +923,12 @@ function PostPage() {
               }}
             >
               {uploading
-                ? (lang === 'ru' ? 'Загрузка фото...' : 'Аксҳо бор мешавад...')
+                ? t('postForm.uploading', lang)
                 : submitting
-                  ? (lang === 'ru' ? 'Отправка...' : 'Фиристода мешавад...')
+                  ? t('postForm.sending', lang)
                   : isEdit
-                    ? (lang === 'ru' ? 'Сохранить изменения' : 'Тағйиротро нигоҳ доред')
-                    : (lang === 'ru' ? 'Подать объявление' : 'Додани эълон')}
+                    ? t('postForm.saveChanges', lang)
+                    : t('postForm.submitListing', lang)}
             </button>
 
           </form>

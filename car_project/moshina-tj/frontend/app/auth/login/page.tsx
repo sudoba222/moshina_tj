@@ -111,14 +111,14 @@ function LoginPageInner() {
     const err = searchParams.get('error')
     const detail = searchParams.get('detail')
     if (err === 'google_cancelled') {
-      setError(lang === 'ru' ? 'Вход через Google отменён' : 'Воридшавӣ тавассути Google бекор шуд')
+      setError(t('authForm.googleCancelled', lang))
     } else if (err === 'google_failed') {
-      const msg = detail ? `Google: ${detail}` : (lang === 'ru' ? 'Ошибка входа через Google. Попробуйте другой способ.' : 'Хатои воридшавӣ тавассути Google.')
+      const msg = detail ? `Google: ${detail}` : t('authForm.googleError', lang)
       setError(msg)
     } else if (err === 'banned') {
-      setError(lang === 'ru' ? 'Аккаунт заблокирован' : 'Ҳисоб баста шудааст')
+      setError(t('authForm.accountBanned', lang))
     } else if (err === 'oauth_failed') {
-      setError(lang === 'ru' ? 'Ошибка авторизации. Попробуйте ещё раз.' : 'Хатои иҷозат. Дубора кӯшиш кунед.')
+      setError(t('authForm.authError', lang))
     }
   }, [searchParams, lang])
 
@@ -129,12 +129,12 @@ function LoginPageInner() {
     if (loginMode === 'phone') {
       const localDigits = identifier.replace(/^\+\d{1,4}/, '')
       if (!localDigits.trim() || !password) {
-        setError(lang === 'ru' ? 'Заполните все поля' : 'Ҳама майдонҳоро пур кунед')
+        setError(t('authForm.fillAllFields', lang))
         return
       }
     } else {
       if (!emailIdentifier.trim() || !password) {
-        setError(lang === 'ru' ? 'Заполните все поля' : 'Ҳама майдонҳоро пур кунед')
+        setError(t('authForm.fillAllFields', lang))
         return
       }
     }
@@ -152,7 +152,7 @@ function LoginPageInner() {
       const destination = ROLE_REDIRECT[data.user?.role] ?? redirectTo
       router.push(destination)
     } catch (err) {
-      setError(extractApiError(err, lang === 'ru' ? 'Неверные данные' : 'Маълумот нодуруст аст'))
+      setError(extractApiError(err, t('authForm.invalidCredentials', lang)))
     } finally {
       setLoading(false)
     }
@@ -171,7 +171,7 @@ function LoginPageInner() {
       {/* Card */}
       <div className="slide-up" style={{ width: '100%', maxWidth: '400px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(24px, 5vw, 40px)' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)', marginBottom: '28px', textAlign: 'center' }}>
-          {lang === 'ru' ? 'Вход' : 'Даромад'}
+          {t('authForm.loginTitle', lang)}
         </h1>
 
         <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -229,7 +229,7 @@ function LoginPageInner() {
           {/* Password */}
           <div>
             <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-              {lang === 'ru' ? 'Пароль' : 'Рамз'}
+              {t('authForm.passwordLabel', lang)}
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -243,7 +243,7 @@ function LoginPageInner() {
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? (lang === 'ru' ? 'Скрыть пароль' : 'Рамзро пинҳон кун') : (lang === 'ru' ? 'Показать пароль' : 'Рамзро нишон деҳ')}
+                aria-label={showPassword ? t('authForm.hidePassword', lang) : t('authForm.showPassword', lang)}
                 style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 0 }}
               >
                 <EyeIcon open={showPassword} />
@@ -261,13 +261,13 @@ function LoginPageInner() {
           {/* Submit */}
           <button type="submit" disabled={loading} style={btnStyle(loading)}>
             {loading && <Spinner />}
-            {lang === 'ru' ? 'Войти' : 'Даромадан'}
+            {t('authForm.loginBtn', lang)}
           </button>
 
           {/* Forgot password */}
           <div style={{ textAlign: 'center' }}>
             <Link href="/auth/forgot-password" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none' }}>
-              {lang === 'ru' ? 'Забыли пароль?' : 'Рамзро фаромӯш кардед?'}
+              {t('authForm.forgotPassword', lang)}
             </Link>
           </div>
         </form>
@@ -307,9 +307,9 @@ function LoginPageInner() {
 
         {/* Register link */}
         <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--text-muted)' }}>
-          {lang === 'ru' ? 'Нет аккаунта?' : 'Аккаунт надоред?'}{' '}
+          {t('authForm.noAccount', lang)}{' '}
           <Link href="/auth/register" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
-            {lang === 'ru' ? 'Зарегистрироваться' : 'Ба қайд гиред'}
+            {t('authForm.registerLink', lang)}
           </Link>
         </p>
       </div>

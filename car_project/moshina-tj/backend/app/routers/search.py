@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Query, Request
-from app.limiter import limiter
+from app.limiter import limiter  # noqa: F401 — needed for rate limit decorators
 from sqlalchemy import Float, Integer, String, cast, desc, func, literal, or_, text, union
 from sqlalchemy.orm import Session, joinedload
 
@@ -54,8 +54,11 @@ _DYM_EDIT_RATIO_MAX = 0.5
 # ---------------------------------------------------------------------------
 
 def _active_base(db: Session):
-    """Return a base query restricted to active listings."""
-    return db.query(Listing).filter(Listing.status == ListingStatus.active)
+    """Return a base query restricted to active, non-deleted listings."""
+    return db.query(Listing).filter(
+        Listing.status == ListingStatus.active,
+        Listing.is_deleted == False,
+    )
 
 
 def _log_search(db: Session, query: str, results_count: int, user_id=None) -> None:
@@ -81,7 +84,9 @@ def _log_search(db: Session, query: str, results_count: int, user_id=None) -> No
 # ---------------------------------------------------------------------------
 
 @router.get("", response_model=ApiResponse[list[ListingResponse]])
+@limiter.limit("60/minute")
 def search_listings(
+    request: Request,
     q: str = Query(..., min_length=1, description="Search term — brand, model, or city"),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -217,7 +222,9 @@ def _boost_exact(listings: list, q_lower: str) -> list:
 # ---------------------------------------------------------------------------
 
 @router.get("/suggestions", response_model=ApiResponse[list[SuggestionItem]])
+@limiter.limit("120/minute")
 def search_suggestions(
+    request: Request,
     q: str = Query(..., min_length=1, description="Partial search term for autocomplete"),
     db: Session = Depends(get_db),
 ):
@@ -382,7 +389,9 @@ def search_suggestions(
 # ---------------------------------------------------------------------------
 
 @router.get("/did-you-mean", response_model=ApiResponse[Optional[str]])
+@limiter.limit("60/minute")
 def did_you_mean(
+    request: Request,
     q: str = Query(..., min_length=1, description="Query to find a spelling correction for"),
     db: Session = Depends(get_db),
 ):
@@ -459,7 +468,8 @@ def did_you_mean(
 # ---------------------------------------------------------------------------
 
 @router.get("/popular", response_model=ApiResponse[list[str]])
-def popular_searches(db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def popular_searches(request: Request, db: Session = Depends(get_db)):
     """
     Returns top 10 most searched queries from the past 30 days by frequency.
 
@@ -520,7 +530,8 @@ def popular_searches(db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 @router.get("/trending", response_model=ApiResponse[dict])
-def trending(db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def trending(request: Request, db: Session = Depends(get_db)):
     """
     Returns top 5 brands and top 5 cities with the most new active listings
     created in the past 7 days.
@@ -586,7 +597,9 @@ def log_search_event(
 # ---------------------------------------------------------------------------
 
 @router.get("/recommendations", response_model=ApiResponse[list[ListingResponse]])
+@limiter.limit("60/minute")
 def recommendations(
+    request: Request,
     listing_id: Optional[UUID] = Query(
         default=None,
         description="When provided, return similar listings scored by multiple signals "

@@ -72,7 +72,7 @@ function UsersPageInner() {
       await adminApi.banUser(userId, banReason || undefined)
       setBanUserId(null)
       setBanReason('')
-      showToast(lang === 'ru' ? 'Пользователь заблокирован' : 'Корбар баста шуд', 'success')
+      showToast(t('adminForm.userBanned', lang), 'success')
       loadUsers(page, role, search)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -82,7 +82,7 @@ function UsersPageInner() {
   async function handleUnbanUser(userId: string) {
     try {
       await adminApi.unbanUser(userId)
-      showToast(lang === 'ru' ? 'Пользователь разблокирован' : 'Корбар кушода шуд', 'success')
+      showToast(t('adminForm.userUnbanned', lang), 'success')
       loadUsers(page, role, search)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -93,7 +93,7 @@ function UsersPageInner() {
     try {
       await adminApi.updateUserRole(userId, newRole)
       setChangeRoleUserId(null)
-      showToast(lang === 'ru' ? 'Роль изменена' : 'Нақш иваз шуд', 'success')
+      showToast(t('adminForm.roleChanged', lang), 'success')
       loadUsers(page, role, search)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -105,7 +105,7 @@ function UsersPageInner() {
     try {
       await adminApi.deleteUser(deleteUserId)
       setDeleteUserId(null)
-      showToast(lang === 'ru' ? 'Пользователь удалён' : 'Корбар ҳазф шуд', 'success')
+      showToast(t('adminForm.userDeleted', lang), 'success')
       loadUsers(page, role, search)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -119,7 +119,7 @@ function UsersPageInner() {
       await adminApi.createUser(createUserForm)
       setCreateUserOpen(false)
       setCreateUserForm({ phone: '', name: '', password: '', role: 'user' })
-      showToast(lang === 'ru' ? 'Пользователь создан' : 'Корбар сохта шуд', 'success')
+      showToast(t('adminForm.userCreated', lang), 'success')
       loadUsers(page, role, search)
     } catch (e) {
       setActionError(extractApiError(e, t('common.errorCreate', lang)))
@@ -138,7 +138,7 @@ function UsersPageInner() {
         email: editUserData.email || undefined,
       })
       setEditUserData(null)
-      showToast(lang === 'ru' ? 'Данные сохранены' : 'Маълумот нигоҳ дошта шуд', 'success')
+      showToast(t('adminForm.dataSaved', lang), 'success')
       loadUsers(page, role, search)
     } catch (e) {
       setActionError(extractApiError(e, t('common.errorSave', lang)))
@@ -156,7 +156,7 @@ function UsersPageInner() {
           className="flex items-center gap-[6px] px-4 py-2 rounded-lg text-[13px] font-bold cursor-pointer border-0"
           style={{ background: 'var(--accent)', color: 'var(--color-white)' }}
         >
-          <IconPlus /> {lang === 'ru' ? 'Добавить' : 'Илова'}
+          <IconPlus /> {t('adminForm.addUser', lang)}
         </button>
       </div>
 
@@ -202,7 +202,7 @@ function UsersPageInner() {
               ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-8 px-4" style={{ ...tdStyle, color: 'var(--text-muted)' }}>
-                    {lang === 'ru' ? 'Нет пользователей' : 'Корбарон нест'}
+                    {t('adminForm.noUsers', lang)}
                   </td>
                 </tr>
               ) : (
@@ -255,7 +255,7 @@ function UsersPageInner() {
                           className="px-[10px] py-1 rounded-[6px] text-[12px] cursor-pointer border"
                           style={{ background: 'var(--tag-bg)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
                         >
-                          {lang === 'ru' ? 'Изменить' : 'Таҳрир'}
+                          {t('adminForm.editAction', lang)}
                         </button>
                         <button
                           onClick={() => setDeleteUserId(u.id)}
@@ -318,11 +318,11 @@ function UsersPageInner() {
       {createUserOpen && (
         <ModalBackdrop onClose={() => setCreateUserOpen(false)}>
           <ModalCard maxWidth="420px">
-            <ModalTitle>{lang === 'ru' ? 'Новый пользователь' : 'Корбари нав'}</ModalTitle>
+            <ModalTitle>{t('adminForm.newUser', lang)}</ModalTitle>
             {([
-              { label: lang === 'ru' ? 'Телефон' : 'Телефон', key: 'phone', type: 'text', placeholder: '+992...' },
-              { label: lang === 'ru' ? 'Имя' : 'Ном', key: 'name', type: 'text', placeholder: '' },
-              { label: lang === 'ru' ? 'Пароль' : 'Парол', key: 'password', type: 'password', placeholder: '' },
+              { label: t('adminForm.phoneLabel', lang), key: 'phone', type: 'text', placeholder: '+992...' },
+              { label: t('adminForm.nameLabel', lang), key: 'name', type: 'text', placeholder: '' },
+              { label: t('adminForm.passwordLabel', lang), key: 'password', type: 'password', placeholder: '' },
             ] as const).map(({ label, key, type, placeholder }) => (
               <FormField key={key} label={label}>
                 <input
@@ -348,7 +348,7 @@ function UsersPageInner() {
             <ModalActions>
               <BtnSecondary onClick={() => setCreateUserOpen(false)}>{t('dashboard.cancel', lang)}</BtnSecondary>
               <BtnPrimary onClick={handleCreateUser} disabled={actionLoading}>
-                {lang === 'ru' ? 'Создать' : 'Сохтан'}
+                {t('adminForm.createAction', lang)}
               </BtnPrimary>
             </ModalActions>
           </ModalCard>
@@ -359,10 +359,10 @@ function UsersPageInner() {
       {editUserData && (
         <ModalBackdrop onClose={() => setEditUserData(null)}>
           <ModalCard maxWidth="420px">
-            <ModalTitle>{lang === 'ru' ? 'Редактировать пользователя' : 'Таҳрири корбар'}</ModalTitle>
+            <ModalTitle>{t('adminForm.editUser', lang)}</ModalTitle>
             {([
-              { label: lang === 'ru' ? 'Имя' : 'Ном', key: 'name' },
-              { label: lang === 'ru' ? 'Телефон' : 'Телефон', key: 'phone' },
+              { label: t('adminForm.nameLabel', lang), key: 'name' },
+              { label: t('adminForm.phoneLabel', lang), key: 'phone' },
               { label: 'Email', key: 'email' },
             ] as const).map(({ label, key }) => (
               <FormField key={key} label={label}>
@@ -386,7 +386,7 @@ function UsersPageInner() {
       {deleteUserId && (
         <ModalBackdrop onClose={() => setDeleteUserId(null)}>
           <ModalCard>
-            <ModalTitle>{lang === 'ru' ? 'Удалить пользователя?' : 'Корбарро ҳазф кунед?'}</ModalTitle>
+            <ModalTitle>{t('adminForm.deleteUserTitle', lang)}</ModalTitle>
             <p className="text-[13px] mb-[18px]" style={{ color: 'var(--text-muted)' }}>
               {t('admin.irreversible', lang)}
             </p>

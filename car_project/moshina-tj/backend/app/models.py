@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     DateTime,
@@ -94,6 +95,12 @@ class User(Base):
         UUID(as_uuid=True),
         primary_key=True,
         server_default=text("gen_random_uuid()"),
+    )
+    user_number = Column(
+        BigInteger,
+        nullable=True,
+        unique=True,
+        index=True,
     )
     phone = Column(String(50), unique=True, nullable=False, index=True)
     name = Column(String(100), nullable=True)

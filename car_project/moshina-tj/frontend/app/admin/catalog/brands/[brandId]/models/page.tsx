@@ -85,15 +85,13 @@ function ModelModal({
 
         <ModalActions>
           <BtnSecondary onClick={onClose}>
-            {lang === 'ru' ? 'Отмена' : 'Бекор'}
+            {t('adminForm.cancel', lang)}
           </BtnSecondary>
           <BtnPrimary
             onClick={() => onSave(name.trim())}
             disabled={saving || !name.trim()}
           >
-            {saving
-              ? lang === 'ru' ? 'Сохранение...' : 'Нигоҳ доштан...'
-              : lang === 'ru' ? 'Сохранить' : 'Нигоҳ доштан'}
+            {saving ? t('adminForm.saving', lang) : t('adminForm.save', lang)}
           </BtnPrimary>
         </ModalActions>
       </ModalCard>
@@ -125,12 +123,10 @@ function DeleteModelModal({
         </p>
         <ModalActions>
           <BtnSecondary onClick={onClose}>
-            {lang === 'ru' ? 'Отмена' : 'Бекор'}
+            {t('adminForm.cancel', lang)}
           </BtnSecondary>
           <BtnDanger onClick={onConfirm} disabled={deleting}>
-            {deleting
-              ? lang === 'ru' ? 'Удаление...' : 'Нест кардан...'
-              : t('admin.deleteBtn2', lang)}
+            {deleting ? t('adminForm.deleting', lang) : t('admin.deleteBtn2', lang)}
           </BtnDanger>
         </ModalActions>
       </ModalCard>
@@ -281,7 +277,7 @@ function ModelsPageInner() {
         <div className="flex items-center gap-3">
           <Link
             href="/admin/catalog/brands"
-            aria-label={lang === 'ru' ? 'Назад к маркам' : 'Ба маркаҳо бозгашт'}
+            aria-label={t('adminForm.backToBrands', lang)}
             className="flex items-center justify-center w-8 h-8 rounded-lg border"
             style={{
               background: 'var(--surface)',

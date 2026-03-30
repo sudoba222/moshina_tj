@@ -48,8 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(freshUser)
       const { phone: _phone, email: _email, whatsapp_number: _wa, ban_reason: _br, ...safeUser } = freshUser
       localStorage.setItem('user', JSON.stringify(safeUser))
-      const secureFlag = window.location.protocol === 'https:' ? '; Secure' : ''
-      document.cookie = `auth_session=${freshUser.role ?? 'user'}; path=/; max-age=604800; samesite=lax${secureFlag}`
     }).catch(() => {
       // Token expired or revoked — clear everything
       _clearAuth()
@@ -63,7 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     setUser(null)
     localStorage.removeItem('user')
-    document.cookie = 'auth_session=; path=/; max-age=0; samesite=lax'
   }
 
   function login(accessToken: string, userData: User) {
@@ -74,8 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { phone: _phone, email: _email, whatsapp_number: _wa, ban_reason: _br, ...safeUser } = userData
     localStorage.setItem('user', JSON.stringify(safeUser))
     setUser(userData)
-    const secureFlag = window.location.protocol === 'https:' ? '; Secure' : ''
-    document.cookie = `auth_session=${userData.role ?? 'user'}; path=/; max-age=604800; samesite=lax${secureFlag}`
   }
 
   function logout() {

@@ -18,6 +18,28 @@ const STAFF_ROLE_PATHS: Record<string, string[]> = {
   '/support':   ['admin', 'support'],
 }
 
+/**
+ * Decode JWT payload without verifying the signature.
+ * Safe for routing only — the backend verifies the signature on every API call.
+ * Returns null if the token is malformed or expired.
+ */
+function decodeJwtRole(token: string): string | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    // URL-safe base64 → standard base64
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'))
+    // Check expiry
+    if (payload.exp && typeof payload.exp === 'number') {
+      if (Date.now() / 1000 > payload.exp) return null
+    }
+    return typeof payload.role === 'string' ? payload.role : null
+  } catch {
+    return null
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -30,9 +52,9 @@ export function middleware(request: NextRequest) {
 
   if (!isProtected) return NextResponse.next()
 
-  // auth_session is a non-HttpOnly flag cookie set by AuthContext on login.
-  // Its value is the user's role (e.g. "admin", "user").
-  const role = request.cookies.get('auth_session')?.value
+  // Read role from the HttpOnly JWT cookie (cannot be forged by client-side JS)
+  const jwtToken = request.cookies.get('token')?.value
+  const role = jwtToken ? decodeJwtRole(jwtToken) : null
 
   if (!role) {
     // Admin/staff routes redirect to the admin login page, not the public login

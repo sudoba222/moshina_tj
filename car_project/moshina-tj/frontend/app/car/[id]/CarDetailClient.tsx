@@ -232,8 +232,8 @@ function StaffToolbar({ listing, onReject, onBanUser }: StaffToolbarProps) {
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 14px', borderRadius: 10,
-              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-              color: 'rgb(239,68,68)', fontSize: 13, fontWeight: 600,
+              background: 'var(--color-error-dim)', border: '1px solid var(--color-error-border, rgba(239,68,68,0.3))',
+              color: 'var(--color-error)', fontSize: 13, fontWeight: 600,
               cursor: 'pointer',
             }}
           >
@@ -246,8 +246,8 @@ function StaffToolbar({ listing, onReject, onBanUser }: StaffToolbarProps) {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 14px', borderRadius: 10,
-            background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)',
-            color: 'rgb(239,68,68)', fontSize: 13, fontWeight: 600,
+            background: 'var(--color-error-dim)', border: '1px solid var(--color-error-border, rgba(239,68,68,0.2))',
+            color: 'var(--color-error)', fontSize: 13, fontWeight: 600,
             cursor: 'pointer',
           }}
         >
@@ -362,7 +362,7 @@ function ContactModal({
   lang: 'ru' | 'tj'
   onClose: () => void
 }) {
-  const contactName = listing.contact_name || profile.name || (lang === 'ru' ? 'Продавец' : 'Фурӯшанда')
+  const contactName = listing.contact_name || profile.name || t('carDetailForm.seller', lang)
   const phone = listing.contact_phone || profile.phone
   const safeTelPhone = (phone ?? '').replace(/[^\d+\-() ]/g, '')
   const whatsapp = listing.whatsapp_number || profile.whatsapp_number || (listing.contact_phone ? listing.contact_phone : profile.phone)
@@ -880,14 +880,14 @@ export default function CarDetailClient() {
               {(listing.youtube_link || listing.tiktok_link) && (
                 <div style={{ marginTop: '28px' }}>
                   <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px' }}>
-                    {lang === 'ru' ? 'Видео' : 'Видео'}
+                    {t('carDetailForm.video', lang)}
                   </h3>
                   <div style={{ display: 'flex', gap: '12px' }}>
                     {listing.youtube_link && (
                       <a href={listing.youtube_link} target="_blank" rel="noopener noreferrer" style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
                         padding: '10px 16px', borderRadius: '10px',
-                        background: '#FF0000', color: '#FFF',
+                        background: 'var(--color-youtube, #FF0000)', color: 'var(--color-white)',
                         fontSize: '14px', fontWeight: 700, textDecoration: 'none',
                       }}>
                         YouTube
@@ -897,7 +897,7 @@ export default function CarDetailClient() {
                       <a href={listing.tiktok_link} target="_blank" rel="noopener noreferrer" style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
                         padding: '10px 16px', borderRadius: '10px',
-                        background: '#000', color: '#FFF',
+                        background: 'var(--color-tiktok, #000000)', color: 'var(--color-white)',
                         fontSize: '14px', fontWeight: 700, textDecoration: 'none',
                       }}>
                         TikTok
@@ -939,7 +939,7 @@ export default function CarDetailClient() {
 
                 {listing.prepayment_amount && (
                   <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '24px' }}>
-                    {lang === 'ru' ? 'Предоплата' : 'Пешпардохт'}: {listing.prepayment_amount.toLocaleString('ru-RU')} TJS
+                    {t('carDetailForm.prepayment', lang)}: {listing.prepayment_amount.toLocaleString('ru-RU')} TJS
                   </p>
                 )}
 
@@ -1008,7 +1008,7 @@ export default function CarDetailClient() {
                       fontSize: '15px',
                       padding: '13px',
                       borderRadius: '12px',
-                      border: shareCopied ? '1px solid rgba(22,163,74,0.35)' : '1px solid var(--border)',
+                      border: shareCopied ? '1px solid var(--color-success-border, rgba(22,163,74,0.35))' : '1px solid var(--border)',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                     }}
@@ -1274,7 +1274,7 @@ export default function CarDetailClient() {
                 disabled={staffActionLoading || !staffRejectReason.trim()}
                 style={{
                   padding: '8px 16px', borderRadius: 8,
-                  background: 'var(--color-error, #ef4444)', border: 'none',
+                  background: 'var(--color-error)', border: 'none',
                   color: 'var(--color-white)', fontSize: 13, fontWeight: 700,
                   cursor: staffActionLoading ? 'not-allowed' : 'pointer',
                   opacity: staffActionLoading || !staffRejectReason.trim() ? 0.6 : 1,

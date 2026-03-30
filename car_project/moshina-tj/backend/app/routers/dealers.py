@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import math
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
@@ -15,12 +17,24 @@ from app.schemas import (
 router = APIRouter(prefix="/dealers", tags=["dealers"])
 
 
-@router.get("", response_model=ApiResponse[list[DealerResponse]])
-def list_dealers(db: Session = Depends(get_db)):
-    dealers = db.query(Dealer).filter(Dealer.verified == True).all()
+@router.get("", response_model=ApiResponse[dict])
+def list_dealers(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Dealer).filter(Dealer.verified == True)
+    total = query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    dealers = query.order_by(Dealer.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
     return ApiResponse(
         success=True,
-        data=[DealerResponse.model_validate(d) for d in dealers],
+        data={
+            "items": [DealerResponse.model_validate(d) for d in dealers],
+            "total": total,
+            "page": page,
+            "pages": pages,
+        },
         message="Dealers fetched",
     )
 
@@ -34,7 +48,11 @@ def get_dealer(dealer_id: str, db: Session = Depends(get_db)):
     listings = (
         db.query(Listing)
         .options(joinedload(Listing.images))
-        .filter(Listing.user_id == dealer.user_id, Listing.status == ListingStatus.active)
+        .filter(
+            Listing.user_id == dealer.user_id,
+            Listing.status == ListingStatus.active,
+            Listing.is_deleted == False,
+        )
         .order_by(Listing.created_at.desc())
         .all()
     )
