@@ -382,18 +382,25 @@ function ContactModal({
         }}
       />
       <div
-        className="animate-scale-in"
         style={{
           position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 401,
+          pointerEvents: 'none',
+        }}
+      >
+      <div
+        className="animate-scale-in"
+        style={{
+          pointerEvents: 'auto',
           width: 'min(400px, 92vw)',
           background: 'var(--card)',
           border: '1px solid var(--border)',
           borderRadius: '20px',
           padding: '28px',
-          zIndex: 401,
           boxShadow: 'var(--shadow-md)',
         }}
       >
@@ -500,9 +507,10 @@ function ContactModal({
           </div>
         ) : (
           <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', padding: '20px 0' }}>
-            {lang === 'ru' ? 'Номер телефона скрыт' : 'Рақами телефон пинҳон аст'}
+            {t('carDetail.phoneHidden', lang)}
           </p>
         )}
+      </div>
       </div>
     </>
   )
@@ -674,7 +682,7 @@ export default function CarDetailClient() {
 
   const formatPrice = (price: number, currency: string) => {
     const formatted = currency === 'USD' ? `$${Number(price).toLocaleString('ru-RU')}` : `${Number(price).toLocaleString('ru-RU')} ${t('common.tjs', lang)}`
-    return listing.is_negotiable ? `${formatted} (${lang === 'ru' ? 'Торг' : 'Муомила'})` : formatted
+    return listing.is_negotiable ? `${formatted} (${t('carDetail.negotiable', lang)})` : formatted
   }
 
   const specs: SpecRowProps[] = [
@@ -682,12 +690,12 @@ export default function CarDetailClient() {
     ...(listing.mileage != null ? [{ icon: <RoadIcon />, label: t('carDetail.mileage', lang), value: `${listing.mileage.toLocaleString('ru-RU')} ${t('carDetail.km', lang)}` }] : []),
     ...(listing.fuel ? [{ icon: <FuelIcon />, label: t('carDetail.fuel', lang), value: listing.fuel }] : []),
     ...(listing.transmission ? [{ icon: <GearIcon />, label: t('carDetail.transmission', lang), value: listing.transmission }] : []),
-    ...(listing.drive_type ? [{ icon: <DriveIcon />, label: lang === 'ru' ? 'Привод' : 'Привод', value: listing.drive_type }] : []),
-    ...(listing.engine_volume ? [{ icon: <EngineIcon />, label: lang === 'ru' ? 'Объем' : 'Ҳаҷм', value: listing.engine_volume }] : []),
-    ...(listing.has_turbine !== null ? [{ icon: <TurbineIcon />, label: 'Турбина', value: listing.has_turbine ? (lang === 'ru' ? 'Да' : 'Ҳа') : (lang === 'ru' ? 'Нет' : 'Не') }] : []),
-    ...(listing.condition ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Состояние' : 'Ҳолат', value: listing.condition }] : []),
-    ...(listing.is_customs_cleared ? [{ icon: <ShieldIcon />, label: lang === 'ru' ? 'Растаможен' : 'Боҷхона', value: lang === 'ru' ? 'Да' : 'Ҳа' }] : []),
-    ...(listing.taxi_license ? [{ icon: <RoadIcon />, label: 'Такси', value: lang === 'ru' ? 'Да' : 'Ҳа' }] : []),
+    ...(listing.drive_type ? [{ icon: <DriveIcon />, label: t('carDetail.driveLabel', lang), value: listing.drive_type }] : []),
+    ...(listing.engine_volume ? [{ icon: <EngineIcon />, label: t('carDetail.engineLabel', lang), value: listing.engine_volume }] : []),
+    ...(listing.has_turbine !== null ? [{ icon: <TurbineIcon />, label: t('carDetail.turbineLabel', lang), value: listing.has_turbine ? t('carDetail.yesLabel', lang) : t('carDetail.noLabel', lang) }] : []),
+    ...(listing.condition ? [{ icon: <RoadIcon />, label: t('carDetail.conditionLabel', lang), value: listing.condition }] : []),
+    ...(listing.is_customs_cleared ? [{ icon: <ShieldIcon />, label: t('carDetail.customsCleared', lang), value: t('carDetail.yesLabel', lang) }] : []),
+    ...(listing.taxi_license ? [{ icon: <RoadIcon />, label: t('carDetail.taxiLabel', lang), value: t('carDetail.yesLabel', lang) }] : []),
     ...(listing.color ? [{ icon: <ColorIcon />, label: t('carDetail.color', lang), value: listing.color }] : []),
     { icon: <PinIcon />, label: t('carDetail.city', lang), value: listing.city },
   ]
