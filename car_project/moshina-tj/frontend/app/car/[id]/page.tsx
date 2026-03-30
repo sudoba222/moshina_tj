@@ -35,9 +35,9 @@ async function fetchListingMeta(id: string): Promise<ListingMeta | null> {
 }
 
 export async function generateMetadata(
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ): Promise<Metadata> {
-  const { id } = await params
+  const { id } = params
   const listing = await fetchListingMeta(id)
 
   if (!listing) {
@@ -86,9 +86,9 @@ export async function generateMetadata(
 }
 
 export default async function CarDetailPage(
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params
+  const { id } = params
   const listing = await fetchListingMeta(id)
 
   const vehicleSchema = listing

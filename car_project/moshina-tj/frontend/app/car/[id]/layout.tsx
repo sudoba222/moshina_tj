@@ -86,9 +86,9 @@ function buildJsonLd(listing: Listing): object {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }): Promise<Metadata> {
-  const { id } = await params
+  const { id } = params
   const listing = await getListing(id)
 
   if (!listing) {
@@ -136,9 +136,9 @@ export default async function CarLayout({
   params,
 }: {
   children: React.ReactNode
-  params: Promise<{ id: string }>
+  params: { id: string }
 }) {
-  const { id } = await params
+  const { id } = params
   const listing = await getListing(id)
   const jsonLd = listing ? buildJsonLd(listing) : null
 

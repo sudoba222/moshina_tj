@@ -33,9 +33,9 @@ async function getDealer(id: string): Promise<Dealer | null> {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }): Promise<Metadata> {
-  const { id } = await params
+  const { id } = params
   const dealer = await getDealer(id)
 
   if (!dealer) {
