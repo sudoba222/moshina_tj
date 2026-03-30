@@ -126,7 +126,7 @@ export interface UserPublicProfile {
   created_at: string
   listing_count: number
   phone?: string
-  whatsapp_number?: string
+  whatsapp_number?: string // Added to resolve Vercel build error
 }
 
 export interface Dealer {

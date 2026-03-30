@@ -24,6 +24,9 @@ The project uses a custom translation helper in `lib/i18n.ts`.
 *   **Type Safety**: All `t()` calls now use the explicit `Lang` type (`'ru' | 'tj'`).
 *   **Shadowing**: Ensured no local variables named `t` shadow the global translation function in auth pages.
 
+## 4. Type System & Models
+*   **User Profiles**: Added `whatsapp_number?: string` to `UserPublicProfile` interface in `types/index.ts` to resolve build errors in `CarDetailClient`.
+
 ## 4. Coding Standards for Claude
 *   **Always use `t(key, lang)`** for translations.
 *   **Always treat `params` as a Promise** in server components/layouts within the `app/` directory.
