@@ -930,6 +930,16 @@ export default function CarDetailClient() {
                       {t('badges.dealer', lang)}
                     </span>
                   )}
+                  {listing.availability === 'on_order' && (
+                    <span style={{ background: 'rgba(234,179,8,0.15)', color: 'rgb(161,120,0)', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px' }}>
+                      {t('post.availability_on_order', lang)}
+                    </span>
+                  )}
+                  {listing.availability === 'abroad' && (
+                    <span style={{ background: 'rgba(99,102,241,0.12)', color: 'rgb(79,70,229)', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px' }}>
+                      {t('post.availability_abroad', lang)}
+                    </span>
+                  )}
                 </div>
 
                 <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text)', marginBottom: '6px', lineHeight: 1.2 }}>

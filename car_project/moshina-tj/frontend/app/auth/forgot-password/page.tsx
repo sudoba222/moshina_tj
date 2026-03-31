@@ -251,8 +251,8 @@ export default function ForgotPasswordPage() {
       setStep3Error(lang === 'ru' ? 'Введите новый пароль' : 'Рамзи навро ворид кунед')
       return
     }
-    if (newPassword.length < 6) {
-      setStep3Error(lang === 'ru' ? 'Пароль не менее 6 символов' : 'Рамз камаш 6 аломат бошад')
+    if (newPassword.length < 8) {
+      setStep3Error(lang === 'ru' ? 'Пароль не менее 8 символов' : 'Рамз камаш 8 аломат бошад')
       return
     }
     if (newPassword !== confirmPassword) {

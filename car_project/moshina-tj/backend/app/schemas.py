@@ -413,6 +413,7 @@ class ListingResponse(BaseModel):
     contact_method: Optional[str] = None
     whatsapp_number: Optional[str] = None
 
+    availability: AvailabilityStatus = AvailabilityStatus.in_stock
     installment_available: bool
     is_dealer_listing: bool
     is_active: bool

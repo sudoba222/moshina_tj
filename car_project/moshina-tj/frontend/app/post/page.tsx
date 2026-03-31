@@ -94,6 +94,7 @@ interface FormState {
   contact_name: string
   contact_phone: string
   whatsapp_number: string
+  availability: 'in_stock' | 'on_order' | 'abroad'
   installment_available: boolean
 }
 
@@ -117,6 +118,7 @@ const initialForm: FormState = {
   condition: '', is_customs_cleared: true,
   color: '', city: '', type: 'sale', description: '',
   contact_name: '', contact_phone: '', whatsapp_number: '',
+  availability: 'in_stock',
   installment_available: false,
 }
 
@@ -259,6 +261,7 @@ function PostPage() {
           color: l.color ?? '', city: l.city, type: l.type,
           description: l.description ?? '',
           contact_name: '', contact_phone: '', whatsapp_number: '',
+          availability: (l.availability as 'in_stock' | 'on_order' | 'abroad') ?? 'in_stock',
           installment_available: l.installment_available,
         })
         if (l.type === 'rent' && l.rental_rules) {
@@ -373,6 +376,7 @@ function PostPage() {
         contact_name: form.contact_name.trim() || undefined,
         contact_phone: form.contact_phone.trim() || undefined,
         whatsapp_number: form.whatsapp_number.trim() || undefined,
+        availability: form.availability,
         installment_available: form.installment_available,
         image_urls: imageUrls,
         ...(rentalPayload ? { rental_rules: rentalPayload } : {}),
@@ -638,6 +642,22 @@ function PostPage() {
                     {CITIES_OPTIONS.map((c) => <option key={c.value} value={c.value}>{t(c.labelKey, lang)}</option>)}
                   </select>
                 </div>
+                {/* Availability */}
+                {form.type === 'sale' && (
+                  <div>
+                    <label style={lbl}>{t('post.availabilityLabel', lang)}</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {(['in_stock', 'on_order', 'abroad'] as const).map((v) => (
+                        <Chip
+                          key={v}
+                          label={t(`post.availability_${v}` as Parameters<typeof t>[0], lang)}
+                          selected={form.availability === v}
+                          onClick={() => setField('availability', v)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {/* Installment */}
                 {form.type === 'sale' && (
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>

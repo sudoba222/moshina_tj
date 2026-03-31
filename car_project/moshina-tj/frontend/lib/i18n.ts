@@ -83,6 +83,9 @@ const strings = {
     applyFilters:{ ru: 'Применить',           tj: 'Татбиқ' },
     filters:     { ru: 'Фильтры',             tj: 'Филтрҳо' },
     activeFilters:{ ru: 'активных',           tj: 'фаъол' },
+    searchPlaceholder: { ru: 'Марка, модель...', tj: 'Марка, модел...' },
+    recentSearches: { ru: 'Недавние',         tj: 'Охирин' },
+    clearHistory: { ru: 'Очистить',           tj: 'Тоза кунед' },
   },
   carDetail: {
     year:        { ru: 'Год',              tj: 'Сол' },
@@ -262,6 +265,10 @@ const strings = {
     cover_photo:  { ru: 'Обложка',              tj: 'Муқова' },
     add_photos:   { ru: 'Добавить фото',        tj: 'Акс илова кунед' },
     photos_hint:  { ru: 'до 8 фото, первое — обложка', tj: 'то 8 акс, аввал — муқова' },
+    availabilityLabel: { ru: 'Наличие',         tj: 'Мавҷудият' },
+    availability_in_stock: { ru: 'В наличии',   tj: 'Мавҷуд аст' },
+    availability_on_order: { ru: 'На заказ',    tj: 'Ба фармоиш' },
+    availability_abroad:   { ru: 'За рубежом',  tj: 'Дар хориҷа' },
   },
   rent: {
     title:       { ru: 'Аренда автомобилей',   tj: 'Иҷораи мошинҳо' },

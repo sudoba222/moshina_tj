@@ -5,6 +5,7 @@ export type UserRole = 'user' | 'dealer' | 'admin' | 'moderator' | 'manager' | '
 export type FuelType = 'Бензин' | 'Дизель' | 'Газ' | 'Электро' | 'Гибрид'
 export type TransmissionType = 'Автомат' | 'Механика' | 'Вариатор'
 export type BodyType = 'sedan' | 'suv' | 'hatchback' | 'minivan' | 'pickup' | 'coupe' | 'wagon' | 'crossover' | 'convertible' | 'van' | 'bus' | 'other'
+export type AvailabilityStatus = 'in_stock' | 'on_order' | 'abroad'
 
 export interface ListingImage {
   id: string
@@ -73,6 +74,7 @@ export interface Listing {
   contact_phone?: string | null
   contact_method?: string | null
   whatsapp_number?: string | null
+  availability: AvailabilityStatus
   installment_available: boolean
   is_dealer_listing: boolean
   is_active: boolean

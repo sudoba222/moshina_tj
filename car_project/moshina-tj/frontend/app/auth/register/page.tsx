@@ -174,7 +174,7 @@ function PhoneTab({ lang }: { lang: Lang }) {
     const localDigits = phone.replace(/^\+\d{1,4}/, '')
     if (!localDigits.trim()) { setError(t('register.errorEnterPhone', lang)); return }
     if (!password.trim()) { setError(t('register.errorEnterPassword', lang)); return }
-    if (password.length < 6) { setError(t('register.errorPasswordLength', lang)); return }
+    if (password.length < 8) { setError(t('register.errorPasswordLength', lang)); return }
     try {
       setLoading(true)
       const res = await authApi.sendOtp(fullPhone)
@@ -387,7 +387,7 @@ function EmailTab({ lang }: { lang: Lang }) {
     if (!name.trim() || !email.trim() || !password.trim()) {
       setError(lang === 'ru' ? 'Заполните все поля' : 'Ҳама майдонҳоро пур кунед'); return
     }
-    if (password.length < 6) { setError(lang === 'ru' ? 'Пароль минимум 6 символов' : 'Рамз бояд ҳадди ақал 6 аломат бошад'); return }
+    if (password.length < 8) { setError(lang === 'ru' ? 'Пароль минимум 8 символов' : 'Рамз бояд ҳадди ақал 8 аломат бошад'); return }
     try {
       setLoading(true)
       const res = await authApi.registerEmail(email, name, password)

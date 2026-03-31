@@ -323,7 +323,7 @@ function BrandsPageInner() {
                                   onChange={(e) => setNewModelName(e.target.value)}
                                   onKeyDown={(e) => { if (e.key === 'Enter') handleAddModel(b.id) }}
                                   placeholder={lang === 'ru' ? 'Название модели' : 'Номи модел'}
-                                  style={{ ...inputStyle, fontSize: '12px', padding: '6px 10px' }}
+                                  style={{ ...inputStyle, fontSize: '16px', padding: '6px 10px' }}
                                   autoFocus
                                 />
                                 <button

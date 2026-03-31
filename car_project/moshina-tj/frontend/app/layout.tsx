@@ -163,13 +163,13 @@ export const metadata: Metadata = {
     siteName: 'TAJCAR.TJ',
     title: 'TAJCAR.TJ — Мошинҳои фурушӣ | Авторынок Таджикистана',
     description: 'Харид ва фуруши мошин дар Тоҷикистон. Тысячи объявлений на TajCar.tj.',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'TAJCAR.TJ' }],
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'TAJCAR.TJ — Авторынок Таджикистана' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'TAJCAR.TJ — Авто рынок Таджикистана',
     description: 'Купите или продайте автомобиль в Таджикистане.',
-    images: ['/og-image.png'],
+    images: ['/opengraph-image'],
   },
   alternates: {
     canonical: SITE_URL,

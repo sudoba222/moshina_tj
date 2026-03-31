@@ -271,6 +271,16 @@ export default function CarCard({
                   {t('badges.installment', lang)}
                 </span>
               )}
+              {listing.availability === 'on_order' && (
+                <span style={{ background: 'rgba(234,179,8,0.85)', color: '#000', fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                  {t('post.availability_on_order', lang)}
+                </span>
+              )}
+              {listing.availability === 'abroad' && (
+                <span style={{ background: 'rgba(99,102,241,0.85)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                  {t('post.availability_abroad', lang)}
+                </span>
+              )}
             </div>
 
             {/* Moderator status badge — top right */}

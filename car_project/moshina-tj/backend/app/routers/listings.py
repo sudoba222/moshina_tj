@@ -186,6 +186,7 @@ def list_listings(
     fuel: Optional[FuelType] = None,
     transmission: Optional[TransmissionType] = None,
     body_type: Optional[BodyType] = None,
+    availability: Optional[AvailabilityStatus] = None,
     currency: Optional[Currency] = None,
     sort: Optional[str] = Query(default=None),
     page: int = Query(default=1, ge=1),
@@ -199,6 +200,8 @@ def list_listings(
 
     if type:
         query = query.filter(Listing.type == type)
+    if availability:
+        query = query.filter(Listing.availability == availability)
     if city:
         query = query.filter(Listing.city.ilike(f"%{city}%"))
     if brand:

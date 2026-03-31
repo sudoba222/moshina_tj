@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
@@ -10,6 +10,29 @@ import { SORTED_BRANDS } from '@/lib/vehicleData'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { Listing } from '@/types'
+
+const SEARCH_HISTORY_KEY = 'catalog_search_history'
+const MAX_HISTORY = 8
+
+function getSearchHistory(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+
+function saveToHistory(query: string) {
+  if (!query.trim()) return
+  const history = getSearchHistory()
+  const next = [query.trim(), ...history.filter((h) => h.toLowerCase() !== query.trim().toLowerCase())].slice(0, MAX_HISTORY)
+  localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
+}
+
+function clearSearchHistory() {
+  localStorage.removeItem(SEARCH_HISTORY_KEY)
+}
 
 const CITIES_OPTIONS = [
   { value: 'Душанбе',    labelKey: 'options.cityDushanbe' },
@@ -87,6 +110,197 @@ export default function CatalogPage() {
   )
 }
 
+// ─── Mobile search bar with history ──────────────────────────────────────────
+interface MobileCatalogSearchProps {
+  initialQuery: string
+  lang: 'ru' | 'tj'
+  onSearch: (query: string) => void
+}
+
+function MobileCatalogSearch({ initialQuery, lang, onSearch }: MobileCatalogSearchProps) {
+  const [query, setQuery] = useState(initialQuery)
+  const [focused, setFocused] = useState(false)
+  const [history, setHistory] = useState<string[]>([])
+  const inputRef = useRef<HTMLInputElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setHistory(getSearchHistory())
+  }, [focused])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setFocused(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function handleSubmit(q: string) {
+    const trimmed = q.trim()
+    if (trimmed) saveToHistory(trimmed)
+    setFocused(false)
+    inputRef.current?.blur()
+    onSearch(trimmed)
+  }
+
+  function handleClear() {
+    clearSearchHistory()
+    setHistory([])
+  }
+
+  const showDropdown = focused && (history.length > 0 || query.trim().length > 0)
+
+  return (
+    <div ref={wrapperRef} className="md:hidden" style={{ position: 'relative', marginBottom: '12px' }}>
+      {/* Search input */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        background: 'var(--card)',
+        border: `1.5px solid ${focused ? 'var(--accent)' : 'var(--border)'}`,
+        borderRadius: '12px',
+        padding: '0 14px',
+        gap: '10px',
+        transition: 'border-color 0.15s',
+        boxShadow: focused ? '0 0 0 3px var(--accent-dim, rgba(200,56,8,0.08))' : 'none',
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+          <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+        </svg>
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          placeholder={t('catalog.searchPlaceholder', lang)}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(query) }}
+          style={{
+            flex: 1,
+            background: 'none',
+            border: 'none',
+            outline: 'none',
+            fontSize: '16px',
+            color: 'var(--text)',
+            fontFamily: 'var(--font)',
+            padding: '13px 0',
+          }}
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => { setQuery(''); onSearch(''); inputRef.current?.focus() }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
+            aria-label="Clear"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="1" y1="1" x2="13" y2="13" /><line x1="13" y1="1" x2="1" y2="13" />
+            </svg>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => handleSubmit(query)}
+          style={{
+            background: 'var(--accent)',
+            color: 'var(--color-white)',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '8px 14px',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontFamily: 'var(--font)',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          {t('hero.searchBtn', lang)}
+        </button>
+      </div>
+
+      {/* History / suggestions dropdown */}
+      {showDropdown && history.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: 'calc(100% + 6px)',
+          left: 0,
+          right: 0,
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          zIndex: 200,
+          overflow: 'hidden',
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px 6px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {t('catalog.recentSearches', lang)}
+            </span>
+            <button
+              type="button"
+              onClick={handleClear}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600, color: 'var(--accent)', padding: 0, fontFamily: 'var(--font)' }}
+            >
+              {t('catalog.clearHistory', lang)}
+            </button>
+          </div>
+          {/* Items */}
+          {history.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); setQuery(item); handleSubmit(item) }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                width: '100%',
+                padding: '11px 14px',
+                background: 'none',
+                border: 'none',
+                borderTop: '1px solid var(--border)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontFamily: 'var(--font)',
+                color: 'var(--text)',
+                fontSize: '14px',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item}</span>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  const next = history.filter((h) => h !== item)
+                  localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
+                  setHistory(next)
+                }}
+                aria-label="Remove"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="1" y1="1" x2="11" y2="11" /><line x1="11" y1="1" x2="1" y2="11" />
+                </svg>
+              </button>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CatalogContent() {
   const { lang } = useLang()
   const router = useRouter()
@@ -98,6 +312,19 @@ function CatalogContent() {
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [didYouMean, setDidYouMean] = useState<string | null>(null)
+
+  // Mobile search query
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') ?? '')
+
+  function handleMobileSearch(query: string) {
+    setSearchQuery(query)
+    setBrand(query)
+    setPage(1)
+    const params = new URLSearchParams()
+    if (query) params.set('q', query)
+    params.set('page', '1')
+    router.push(`/catalog?${params.toString()}`, { scroll: false })
+  }
 
   // Filter state
   const [type, setType] = useState<string>(searchParams.get('type') ?? '')
@@ -601,6 +828,13 @@ function CatalogContent() {
 
       <main style={{ flex: 1 }} className="pb-mobile">
         <div className="max-w-7xl mx-auto px-4 md:px-6" style={{ paddingTop: '32px', paddingBottom: '60px' }}>
+
+          {/* Mobile search bar */}
+          <MobileCatalogSearch
+            initialQuery={searchQuery}
+            lang={lang}
+            onSearch={handleMobileSearch}
+          />
 
           {/* Title + mobile filter button */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>

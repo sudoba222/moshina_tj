@@ -329,7 +329,7 @@ function CategoriesPageInner() {
                 onChange={(e) => { setCreateForm((f) => ({ ...f, filter_config_raw: e.target.value })); setCreateJsonError('') }}
                 rows={5}
                 spellCheck={false}
-                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: '12px', resize: 'vertical' }}
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: '16px', resize: 'vertical' }}
               />
               {createJsonError && <ErrorText>{createJsonError}</ErrorText>}
             </FormField>
@@ -404,7 +404,7 @@ function CategoriesPageInner() {
                 onChange={(e) => { setEditForm((f) => ({ ...f, filter_config_raw: e.target.value })); setEditJsonError('') }}
                 rows={5}
                 spellCheck={false}
-                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: '12px', resize: 'vertical' }}
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: '16px', resize: 'vertical' }}
               />
               {editJsonError && <ErrorText>{editJsonError}</ErrorText>}
             </FormField>

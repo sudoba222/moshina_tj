@@ -368,13 +368,14 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
     message = f"Ваш код подтверждения TajCar.tj: {code}. Действителен 10 минут."
     _send_sms(payload.phone, message)
 
-    # Never expose raw OTP codes in the response body — log server-side only
+    dev_code = None
     if not settings.twilio_account_sid and settings.environment != "production":
         logger.debug("[DEV OTP] phone=%s code=%s", payload.phone, code)
+        dev_code = code
 
     return ApiResponse(
         success=True,
-        data={},
+        data={"dev_code": dev_code} if dev_code else {},
         message="OTP sent",
     )
 
@@ -525,12 +526,13 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
         # Unverified account exists — resend OTP instead of blocking
         code = _generate_and_store_email_otp(payload.email, db)
         send_email_otp(payload.email, code, purpose="verify")
-        # Never expose raw OTP codes in the response body — log server-side only
+        dev_code = None
         if not settings.resend_api_key and settings.environment != "production":
             logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
+            dev_code = code
         return ApiResponse(
             success=True,
-            data={},
+            data={"dev_code": dev_code} if dev_code else {},
             message="Verification code resent to your email",
         )
 
@@ -549,13 +551,14 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
     db.commit()
 
     send_email_otp(payload.email, code, purpose="verify")
-    # Never expose raw OTP codes in the response body — log server-side only
+    dev_code = None
     if not settings.resend_api_key and settings.environment != "production":
         logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
+        dev_code = code
 
     return ApiResponse(
         success=True,
-        data={},
+        data={"dev_code": dev_code} if dev_code else {},
         message="Registration successful. Check your email for the verification code.",
     )
 
@@ -660,13 +663,14 @@ def resend_email_otp(request: Request, payload: ResendEmailOtpPayload, db: Sessi
 
     code = _generate_and_store_email_otp(payload.email, db)
     send_email_otp(payload.email, code, purpose="verify")
-    # Never expose raw OTP codes in the response body — log server-side only
+    dev_code = None
     if not settings.resend_api_key and settings.environment != "production":
         logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
+        dev_code = code
 
     return ApiResponse(
         success=True,
-        data={},
+        data={"dev_code": dev_code} if dev_code else {},
         message="Verification code sent",
     )
 
@@ -696,10 +700,11 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         db.add(OtpCode(email=identifier, purpose="password_reset", code=code, expires_at=expires_at))
         db.commit()
         send_email_otp(identifier, code, purpose="reset")
-        # Never expose raw OTP codes in the response body — log server-side only
+        dev_code = None
         if not settings.resend_api_key and settings.environment != "production":
             logger.debug("[DEV OTP] email=%s code=%s", identifier, code)
-        return ApiResponse(success=True, data={}, message="Code sent to your email")
+            dev_code = code
+        return ApiResponse(success=True, data={"dev_code": dev_code} if dev_code else {}, message="Code sent to your email")
     else:
         user = db.query(User).filter(User.phone == identifier, User.is_deleted == False).first()
         if not user:
@@ -715,10 +720,11 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         db.commit()
         message_text = f"Ваш код сброса пароля TajCar.tj: {code}. Действителен 10 минут."
         _send_sms(identifier, message_text)
-        # Never expose raw OTP codes in the response body — log server-side only
+        dev_code = None
         if not settings.twilio_account_sid and settings.environment != "production":
             logger.debug("[DEV OTP] phone=%s code=%s", identifier, code)
-        return ApiResponse(success=True, data={}, message="Code sent to your phone")
+            dev_code = code
+        return ApiResponse(success=True, data={"dev_code": dev_code} if dev_code else {}, message="Code sent to your phone")
 
 
 @router.post("/forgot-password-telegram", response_model=ApiResponse[dict])
