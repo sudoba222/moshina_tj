@@ -1,39 +1,50 @@
 import type { MetadataRoute } from 'next'
 
-const PRIVATE_PATHS = [
-  '/admin',
-  '/moderator',
-  '/manager',
-  '/support',
-  '/dashboard',
-  '/auth/',
-  '/api/',
-]
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tajcar.tj'
 
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tajcar.tj'
   return {
     rules: [
       {
-        // Global rule — applies to all crawlers including Googlebot and YandexBot
-        // Specific bot rules below must repeat the disallow list to avoid overriding
         userAgent: '*',
-        allow: '/',
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        // Googlebot: same disallows — no override that would expose staff pages
-        userAgent: 'Googlebot',
-        allow: '/',
-        disallow: PRIVATE_PATHS,
-      },
-      {
-        userAgent: 'YandexBot',
-        allow: '/',
-        disallow: PRIVATE_PATHS,
+        allow: [
+          '/',
+          '/catalog',
+          '/car/',
+          '/dealers',
+          '/dealers/',
+          '/rent',
+          '/installment',
+          '/electric',
+          '/dushanbe',
+          '/khujand',
+          '/bokhtar',
+          '/kulob',
+          '/istaravshan',
+          '/tursunzoda',
+          '/about',
+          '/terms',
+          '/privacy',
+        ],
+        disallow: [
+          '/admin',
+          '/admin/',
+          '/moderator',
+          '/moderator/',
+          '/manager',
+          '/manager/',
+          '/support',
+          '/support/',
+          '/dashboard',
+          '/dashboard/',
+          '/auth',
+          '/auth/',
+          '/api',
+          '/api/',
+        ],
       },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    // Note: do NOT add host: — Next.js renders it as "Host: https://..." which is invalid
   }
 }
