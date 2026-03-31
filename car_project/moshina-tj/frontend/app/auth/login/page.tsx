@@ -104,6 +104,7 @@ function LoginPageInner() {
   const [emailIdentifier, setEmailIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -145,7 +146,7 @@ function LoginPageInner() {
         ? await authApi.loginEmail(emailIdentifier.trim(), password)
         : await authApi.login(identifier.trim(), password)
       const data = res.data.data!
-      login(data.token.access_token, data.user)
+      login(data.token.access_token, data.user, rememberMe)
       const raw = searchParams.get('redirect') ?? '/'
       // Only allow same-origin relative paths — reject absolute URLs and protocol-relative URLs
       const redirectTo = raw.startsWith('/') && !raw.startsWith('//') && !raw.includes(':') ? raw : '/'
@@ -251,6 +252,39 @@ function LoginPageInner() {
             </div>
           </div>
 
+          {/* Remember me + Forgot password row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <label htmlFor="remember-me" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: '18px', height: '18px', borderRadius: '5px', flexShrink: 0,
+                border: `2px solid ${rememberMe ? 'var(--accent)' : 'var(--border)'}`,
+                background: rememberMe ? 'var(--accent)' : 'var(--bg)',
+                transition: 'all 0.15s',
+              }}>
+                {rememberMe && (
+                  <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                    <path d="M1 4L4 7.5L10 1" stroke="var(--color-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </span>
+              <input
+                type="checkbox"
+                id="remember-me"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                aria-label={t('authForm.rememberMe', lang)}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                {t('authForm.rememberMe', lang)}
+              </span>
+            </label>
+            <Link href="/auth/forgot-password" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {t('authForm.forgotPassword', lang)}
+            </Link>
+          </div>
+
           {/* Error */}
           {error && (
             <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600, margin: 0 }}>
@@ -264,12 +298,6 @@ function LoginPageInner() {
             {t('authForm.loginBtn', lang)}
           </button>
 
-          {/* Forgot password */}
-          <div style={{ textAlign: 'center' }}>
-            <Link href="/auth/forgot-password" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none' }}>
-              {t('authForm.forgotPassword', lang)}
-            </Link>
-          </div>
         </form>
 
         {/* Social login */}

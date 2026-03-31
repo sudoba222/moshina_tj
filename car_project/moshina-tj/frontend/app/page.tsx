@@ -49,6 +49,12 @@ function formatStatNum(n: number): string {
   return n.toLocaleString('ru-RU')
 }
 
+interface StoredPrefs {
+  city?: string
+  lang?: string
+  brands?: string[]
+}
+
 export default function HomePage() {
   const { lang } = useLang()
   const router = useRouter()
@@ -56,6 +62,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<MarketplaceStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
+  const [userPrefs, setUserPrefs] = useState<StoredPrefs | null>(null)
 
   // Hero search state
   const [searchQuery, setSearchQuery] = useState('')
@@ -64,6 +71,19 @@ export default function HomePage() {
 
   // Active body type filter
   const [activeBodyType, setActiveBodyType] = useState('')
+
+  // Load user prefs and pre-fill city
+  useEffect(() => {
+    const stored = localStorage.getItem('user_prefs')
+    if (stored) {
+      try {
+        const prefs = JSON.parse(stored) as StoredPrefs
+        setUserPrefs(prefs)
+        if (prefs.city && !searchCity) setSearchCity(prefs.city)
+      } catch { /* ignore */ }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     function fetchStats() {
@@ -389,12 +409,52 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* ── Personalized brand pills (shown when user has preferred brands) ─── */}
+        {userPrefs?.brands && userPrefs.brands.length > 0 && (
+          <section style={{ padding: '12px 16px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round">
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                </svg>
+                {t('onboarding.forYou', lang)}
+              </span>
+              {userPrefs.brands.map((brand) => (
+                <button
+                  key={brand}
+                  onClick={() => router.push(`/catalog?brand=${brand}`)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    border: '1.5px solid var(--accent)',
+                    background: 'var(--accent)',
+                    color: 'var(--color-white)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font)',
+                    transition: 'opacity 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.82' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
+                >
+                  {brand}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── Featured listings grid ────────────────────────────────────────── */}
         <section style={{ padding: '20px 16px 0' }}>
           <div className="max-w-7xl mx-auto">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <h2 style={{ fontSize: 'clamp(15px, 2vw, 19px)', fontWeight: 700, color: 'var(--text)' }}>
-                {t('hero.latestListings', lang)}
+                {userPrefs?.brands && userPrefs.brands.length > 0
+                  ? t('onboarding.forYou', lang)
+                  : t('hero.latestListings', lang)
+                }
               </h2>
               <button
                 onClick={() => router.push('/catalog')}

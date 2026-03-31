@@ -6,8 +6,11 @@ import { authApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
-import type { Lang } from '@/types'
+import type { Lang, User } from '@/types'
 import PhoneInput from '@/components/PhoneInput'
+import WelcomeModal from '@/components/WelcomeModal'
+import OnboardingWizard from '@/components/OnboardingWizard'
+import type { UserPrefs } from '@/components/OnboardingWizard'
 
 // ─── Error helper ─────────────────────────────────────────────────────────────
 function extractApiError(err: unknown, fallback: string): string {
@@ -133,8 +136,7 @@ function BackButton({ lang, onClick }: { lang: Lang; onClick: () => void }) {
 }
 
 // ─── Phone tab (3-step: form → OTP) ──────────────────────────────────────────
-function PhoneTab({ lang }: { lang: Lang }) {
-  const router = useRouter()
+function PhoneTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => void }) {
   const { login } = useAuth()
   const [step, setStep] = useState<1 | 2>(1)
   const [name, setName] = useState('')
@@ -212,7 +214,8 @@ function PhoneTab({ lang }: { lang: Lang }) {
       setLoading(true)
       const res = await authApi.verifyOtp(fullPhone, code, name, password)
       const data = res.data.data!
-      login(data.token.access_token, data.user); router.push('/')
+      login(data.token.access_token, data.user)
+      onSuccess(data.user)
     } catch (err) {
       setError(extractApiError(err, t('register.errorWrongCode', lang)))
     } finally { setLoading(false) }
@@ -351,8 +354,7 @@ function PhoneTab({ lang }: { lang: Lang }) {
 }
 
 // ─── Email tab (2-step: form → OTP) ──────────────────────────────────────────
-function EmailTab({ lang }: { lang: Lang }) {
-  const router = useRouter()
+function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => void }) {
   const { login } = useAuth()
   const [step, setStep] = useState<'form' | 'otp'>('form')
   const [name, setName] = useState('')
@@ -408,7 +410,8 @@ function EmailTab({ lang }: { lang: Lang }) {
       setLoading(true)
       const res = await authApi.verifyEmailOtp(email, code)
       const data = res.data.data!
-      login(data.token.access_token, data.user); router.push('/')
+      login(data.token.access_token, data.user)
+      onSuccess(data.user)
     } catch (err) {
       setError(extractApiError(err, lang === 'ru' ? 'Неверный код' : 'Рамз нодуруст аст'))
     } finally { setLoading(false) }
@@ -525,7 +528,31 @@ function OrDivider({ label }: { label: string }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function RegisterPage() {
   const { lang } = useLang()
+  const router = useRouter()
   const [tab, setTab] = useState<'phone' | 'email'>('phone')
+  const [registeredUser, setRegisteredUser] = useState<User | null>(null)
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  function handleRegistrationSuccess(user: User) {
+    setRegisteredUser(user)
+    setShowWelcome(true)
+  }
+
+  function handleWelcomeContinue() {
+    setShowWelcome(false)
+    setShowOnboarding(true)
+  }
+
+  function handleWelcomeSkip() {
+    setShowWelcome(false)
+    router.push('/')
+  }
+
+  function handleOnboardingComplete(_prefs: UserPrefs) {
+    setShowOnboarding(false)
+    router.push('/')
+  }
 
   const tabBtn = (active: boolean): React.CSSProperties => ({
     flex: 1, padding: '10px', border: 'none', borderRadius: '8px', fontFamily: 'var(--font)',
@@ -536,6 +563,18 @@ export default function RegisterPage() {
   })
 
   return (
+    <>
+      {showWelcome && registeredUser && (
+        <WelcomeModal
+          userName={registeredUser.name ?? (lang === 'ru' ? 'Пользователь' : 'Корбар')}
+          lang={lang}
+          onContinue={handleWelcomeContinue}
+          onSkip={handleWelcomeSkip}
+        />
+      )}
+      {showOnboarding && (
+        <OnboardingWizard onComplete={handleOnboardingComplete} />
+      )}
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
       <style>{`@keyframes fadeSlideIn { from { opacity:0;transform:translateY(12px) } to { opacity:1;transform:translateY(0) } } .otp-step { animation: fadeSlideIn 0.25s ease; }`}</style>
 
@@ -559,7 +598,10 @@ export default function RegisterPage() {
           </button>
         </div>
 
-        {tab === 'phone' ? <PhoneTab lang={lang} /> : <EmailTab lang={lang} />}
+        {tab === 'phone'
+          ? <PhoneTab lang={lang} onSuccess={handleRegistrationSuccess} />
+          : <EmailTab lang={lang} onSuccess={handleRegistrationSuccess} />
+        }
 
         {/* Google sign-up */}
         <div style={{ marginTop: '20px' }}>
@@ -599,5 +641,6 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+    </>
   )
 }

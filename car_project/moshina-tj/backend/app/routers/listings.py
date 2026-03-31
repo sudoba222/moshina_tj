@@ -20,7 +20,7 @@ from app.services.telegram_notifier import send_telegram_notification
 _featured_cache: Dict[str, Any] = {}
 _FEATURED_CACHE_TTL = 120  # seconds
 from app.database import SessionLocal, get_db
-from app.models import BodyType, Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingLog, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
+from app.models import AvailabilityStatus, BodyType, Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingLog, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
 from app.schemas import (
     ApiResponse,
     ListingCreate,
