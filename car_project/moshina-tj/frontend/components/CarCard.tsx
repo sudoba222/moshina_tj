@@ -80,7 +80,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
       height="18"
       viewBox="0 0 24 24"
       fill={filled ? 'var(--color-error)' : 'none'}
-      stroke={filled ? 'var(--color-error)' : 'var(--color-white)'}
+      stroke={filled ? 'var(--color-error)' : 'var(--text-muted)'}
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -305,8 +305,7 @@ export default function CarCard({
                   width: '40px',
                   height: '40px',
                   borderRadius: '50%',
-                  background: 'var(--card)',
-                  opacity: 0.85,
+                  background: 'rgba(255,255,255,0.92)',
                   border: 'none',
                   cursor: 'pointer',
                   display: 'flex',

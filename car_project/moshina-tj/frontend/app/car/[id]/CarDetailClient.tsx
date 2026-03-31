@@ -382,6 +382,7 @@ function ContactModal({
         }}
       />
       <div
+        className="contact-modal-wrapper"
         style={{
           position: 'fixed',
           inset: 0,
@@ -393,14 +394,11 @@ function ContactModal({
         }}
       >
       <div
-        className="animate-scale-in"
+        className="contact-modal"
         style={{
           pointerEvents: 'auto',
-          width: 'min(400px, 92vw)',
           background: 'var(--card)',
           border: '1px solid var(--border)',
-          borderRadius: '20px',
-          padding: '28px',
           boxShadow: 'var(--shadow-md)',
         }}
       >
