@@ -7,7 +7,7 @@ from typing import Any, Dict, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
-from app.models import BodyType, Currency, FuelType, ListingStatus, ListingType, TransmissionType, UserRole
+from app.models import AvailabilityStatus, BodyType, Currency, FuelType, ListingStatus, ListingType, TransmissionType, UserRole
 
 # ---------------------------------------------------------------------------
 # Generic API wrapper
@@ -177,6 +177,7 @@ class ListingCreate(BaseModel):
     contact_method: Optional[str] = "phone_and_chat"
     whatsapp_number: Optional[str] = None
 
+    availability: AvailabilityStatus = AvailabilityStatus.in_stock
     installment_available: bool = False
     image_urls: list[str] = []
     rental_rules: Optional[RentalRules] = None
@@ -314,6 +315,7 @@ class ListingUpdate(BaseModel):
     contact_method: Optional[str] = None
     whatsapp_number: Optional[str] = None
 
+    availability: Optional[AvailabilityStatus] = None
     installment_available: Optional[bool] = None
     rental_rules: Optional[RentalRules] = None
     image_urls: Optional[list[str]] = None

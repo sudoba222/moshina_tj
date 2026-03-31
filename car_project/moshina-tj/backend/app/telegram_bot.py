@@ -518,6 +518,146 @@ async def _handle_search_message(update: Update, query_text: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# /help — list available commands
+# ---------------------------------------------------------------------------
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/help — show all available commands."""
+    text = (
+        "<b>Доступные команды:</b>\n\n"
+        "/start — Главное меню\n"
+        "/mylistings — Мои объявления\n"
+        "/status — Статус аккаунта\n"
+        "/help — Этот список\n\n"
+        "Также используйте кнопки меню для навигации."
+    )
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Открыть TajCar.tj", url="https://tajcar.tj")]
+    ])
+    await _safe_reply(update, text, parse_mode="HTML", reply_markup=keyboard)
+
+
+# ---------------------------------------------------------------------------
+# /mylistings — show listing counts by status
+# ---------------------------------------------------------------------------
+
+async def mylistings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/mylistings — show a summary of the user's listings."""
+    from app.database import SessionLocal
+    from app.models import Listing, ListingStatus, User
+    from sqlalchemy import func as sqlfunc
+
+    chat_id = str(update.effective_chat.id)
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(
+            User.telegram_chat_id == chat_id,
+            User.is_deleted == False,
+        ).first()
+
+        if not user:
+            await _safe_reply(
+                update,
+                "Аккаунт не привязан.\nОткройте tajcar.tj и войдите через Telegram.",
+            )
+            return
+
+        active_count = db.query(sqlfunc.count(Listing.id)).filter(
+            Listing.user_id == user.id, Listing.status == ListingStatus.active, Listing.is_deleted == False
+        ).scalar() or 0
+        pending_count = db.query(sqlfunc.count(Listing.id)).filter(
+            Listing.user_id == user.id, Listing.status == ListingStatus.pending, Listing.is_deleted == False
+        ).scalar() or 0
+        rejected_count = db.query(sqlfunc.count(Listing.id)).filter(
+            Listing.user_id == user.id, Listing.status == ListingStatus.rejected, Listing.is_deleted == False
+        ).scalar() or 0
+
+        lang = _lang(getattr(user, "language", None))
+        dashboard_url = "https://tajcar.tj/dashboard"
+
+        if lang == "tj":
+            text = (
+                f"<b>Эълонҳои шумо:</b>\n\n"
+                f"Фаъол: {active_count}\n"
+                f"Дар баррасӣ: {pending_count}\n"
+                f"Рад шуда: {rejected_count}"
+            )
+            btn_label = "Кабинети шахсӣ"
+        else:
+            text = (
+                f"<b>Ваши объявления:</b>\n\n"
+                f"Активных: {active_count}\n"
+                f"На проверке: {pending_count}\n"
+                f"Отклонённых: {rejected_count}"
+            )
+            btn_label = "Личный кабинет"
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(btn_label, url=dashboard_url)],
+        ])
+        await _safe_reply(update, text, parse_mode="HTML", reply_markup=keyboard)
+
+    except Exception:
+        logger.exception("Error in /mylistings handler")
+        await _safe_reply(update, "Произошла ошибка. Попробуйте позже.")
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# /status — show account status
+# ---------------------------------------------------------------------------
+
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/status — show account status and role."""
+    from app.database import SessionLocal
+    from app.models import User
+
+    chat_id = str(update.effective_chat.id)
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(
+            User.telegram_chat_id == chat_id,
+            User.is_deleted == False,
+        ).first()
+
+        if not user:
+            await _safe_reply(
+                update,
+                "Аккаунт не привязан.\nОткройте tajcar.tj и войдите через Telegram.",
+            )
+            return
+
+        lang = _lang(getattr(user, "language", None))
+        status_icon = "Заблокирован" if user.is_banned else "Активен"
+        role_label = user.role.value if user.role else "user"
+        name = user.name or "—"
+
+        if lang == "tj":
+            text = (
+                f"<b>Ҳолати аккаунт:</b>\n\n"
+                f"Ном: {name}\n"
+                f"Ҳолат: {'Маҳдуд' if user.is_banned else 'Фаъол'}\n"
+                f"Нақш: {role_label}"
+            )
+        else:
+            text = (
+                f"<b>Статус аккаунта:</b>\n\n"
+                f"Имя: {name}\n"
+                f"Статус: {status_icon}\n"
+                f"Роль: {role_label}"
+            )
+
+        await _safe_reply(update, text, parse_mode="HTML")
+
+    except Exception:
+        logger.exception("Error in /status handler")
+        await _safe_reply(update, "Произошла ошибка. Попробуйте позже.")
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
 # Entry point (polling mode)
 # ---------------------------------------------------------------------------
 
@@ -542,6 +682,9 @@ def main() -> None:
     set_bot_application(application)
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("mylistings", mylistings_command))
+    application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CallbackQueryHandler(handle_callback))
     # Handle text messages that are NOT commands
     application.add_handler(

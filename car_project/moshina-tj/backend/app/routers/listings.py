@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user, get_current_user_optional
 from app.services import image_service
+from app.services.telegram_notifier import send_telegram_notification
 
 # 2-minute in-memory cache for featured listings (homepage hit on every page load)
 _featured_cache: Dict[str, Any] = {}
@@ -412,6 +413,16 @@ def create_listing(
         to_status="pending",
     ))
     db.commit()
+
+    # Telegram: notify user their listing is under moderation
+    if current_user.telegram_chat_id:
+        car_name = f"{listing.brand} {listing.model} {listing.year}"
+        background_tasks.add_task(
+            send_telegram_notification,
+            current_user.id,
+            "listing_pending",
+            {"car_name": car_name, "listing_id": str(listing.id)},
+        )
 
     # If this is a verified dealer listing, notify their subscribers asynchronously
     if listing.is_dealer_listing:

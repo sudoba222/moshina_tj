@@ -367,11 +367,23 @@ def ban_user(
     db.refresh(user)
     if user.email:
         background_tasks.add_task(send_account_banned, user.email, payload.reason)
+    if user.telegram_chat_id:
+        background_tasks.add_task(
+            send_telegram_notification,
+            user.id,
+            "account_banned",
+            {"reason": payload.reason or ""},
+        )
     return ApiResponse(success=True, data=UserResponse.model_validate(user), message="User banned")
 
 
 @router.put("/users/{user_id}/unban", response_model=ApiResponse[UserResponse])
-def unban_user(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+def unban_user(
+    user_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
     user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -380,6 +392,13 @@ def unban_user(user_id: str, db: Session = Depends(get_db), current_user: User =
     log_audit(db, current_user.id, "unban_user", "user", user.id)
     db.commit()
     db.refresh(user)
+    if user.telegram_chat_id:
+        background_tasks.add_task(
+            send_telegram_notification,
+            user.id,
+            "account_unbanned",
+            {},
+        )
     return ApiResponse(success=True, data=UserResponse.model_validate(user), message="User unbanned")
 
 
@@ -1174,16 +1193,26 @@ def reject_listing(
     db.commit()
     db.refresh(listing)
 
+    car_name = f"{listing.brand} {listing.model} {listing.year}"
+    edit_url = f"https://tajcar.tj/post?edit={listing.id}"
+
     # Email notification
     if listing.user and listing.user.email:
-        car_name = f"{listing.brand} {listing.model} {listing.year}"
-        edit_url = f"https://tajcar.tj/post?edit={listing.id}"
         background_tasks.add_task(
             send_listing_rejected,
             listing.user.email,
             car_name,
             payload.reason,
             edit_url,
+        )
+
+    # Telegram notification
+    if listing.user and listing.user.telegram_chat_id:
+        background_tasks.add_task(
+            send_telegram_notification,
+            listing.user_id,
+            "listing_rejected",
+            {"car_name": car_name, "listing_id": str(listing.id), "reason": payload.reason or ""},
         )
 
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing rejected")
@@ -1230,13 +1259,20 @@ def verify_dealer(
     log_audit(db, current_user.id, "verify_dealer", "dealer", dealer.id)
     db.commit()
     db.refresh(dealer)
+    profile_url = f"https://tajcar.tj/dealers/{dealer_id}"
     if dealer.user and dealer.user.email:
-        profile_url = f"https://tajcar.tj/dealers/{dealer_id}"
         background_tasks.add_task(
             send_dealer_verified,
             dealer.user.email,
             dealer.business_name,
             profile_url,
+        )
+    if dealer.user and dealer.user.telegram_chat_id:
+        background_tasks.add_task(
+            send_telegram_notification,
+            dealer.user.id,
+            "dealer_verified",
+            {"business_name": dealer.business_name, "dealer_id": str(dealer.id)},
         )
     return ApiResponse(success=True, data=DealerResponse.model_validate(dealer), message="Dealer verified")
 

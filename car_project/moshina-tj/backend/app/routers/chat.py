@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.auth import _decode_token, get_current_user
 from app.database import SessionLocal, get_db
 from app.email_service import send_email_otp, send_new_message_notification
+from app.services.telegram_notifier import send_telegram_notification
 from app.models import Conversation, ConversationType, Listing, ListingImage, Message, Notification, NotificationType, User, UserRole
 from app.schemas import ApiResponse
 from app.websockets import manager
@@ -503,6 +504,16 @@ def send_message(
             background_tasks.add_task(manager.send_to_user, recipient_id_str, ws_payload)
         else:
             background_tasks.add_task(_notify_offline_recipient, recipient_email, sender_name)
+            background_tasks.add_task(
+                send_telegram_notification,
+                _uuid.UUID(recipient_id_str),
+                "new_message",
+                {
+                    "sender_name": sender_name or "",
+                    "preview": msg_content,
+                    "conversation_id": str(msg_conv_id),
+                },
+            )
             # Also create a DB notification for the offline recipient
             db2 = SessionLocal()
             try:

@@ -257,13 +257,50 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
         db.close()
 
 
-async def send_welcome_message(chat_id: str, name: str | None) -> None:
-    """Called by verify-otp after successful login to send a welcome confirmation."""
-    greeting = f"Добро пожаловать{', ' + name if name else ''}!"
+async def send_welcome_message(chat_id: str, name: str | None, language: str = "ru") -> None:
+    """Called by verify-otp after successful login to send a rich welcome message."""
+    is_tj = language == "tj"
+
+    if is_tj:
+        greeting = f"Хуш омадед{', ' + name if name else ''}!"
+        text = (
+            f"<b>{greeting}</b>\n\n"
+            f"Шумо бомуваффақият ба TajCar.tj пайваст шудед.\n\n"
+            f"Тавассути ин бот шумо огоҳиҳо мегиред:\n"
+            f"• Вазъияти эълонҳои шумо\n"
+            f"• Паёмҳои нав аз харидорон\n"
+            f"• Навсозиҳои муҳими аккаунт\n\n"
+            f"<b>Фармонҳои дастрас:</b>\n"
+            f"/start — Саҳифаи асосӣ\n"
+            f"/mylistings — Эълонҳои ман\n"
+            f"/status — Вазъияти аккаунт\n"
+            f"/help — Кӯмак\n\n"
+            f"Аккаунти шумо фаъол аст ✓"
+        )
+        button_label = "Кушодани TajCar.tj"
+    else:
+        greeting = f"Добро пожаловать{', ' + name if name else ''}!"
+        text = (
+            f"<b>{greeting}</b>\n\n"
+            f"Вы успешно подключили Telegram к TajCar.tj.\n\n"
+            f"Через этот бот вы будете получать уведомления о:\n"
+            f"• Статусе ваших объявлений\n"
+            f"• Новых сообщениях от покупателей\n"
+            f"• Важных обновлениях аккаунта\n\n"
+            f"<b>Доступные команды:</b>\n"
+            f"/start — Главная\n"
+            f"/mylistings — Мои объявления\n"
+            f"/status — Статус аккаунта\n"
+            f"/help — Помощь\n\n"
+            f"Ваш аккаунт активен ✓"
+        )
+        button_label = "Открыть TajCar.tj"
+
     await _send_message(
         chat_id,
-        f"{greeting}\n\nВы успешно вошли в MOSHINA.TJ.\nПерейдите на сайт, чтобы просмотреть объявления.",
-        url_button=("Открыть TajCar.tj", SITE_URL),
+        text,
+        parse_mode="HTML",
+        url_button=(button_label, SITE_URL),
     )
 
 

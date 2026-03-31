@@ -84,6 +84,12 @@ class ListingStatus(str, enum.Enum):
     draft = "draft"          # Saved but not yet submitted
 
 
+class AvailabilityStatus(str, enum.Enum):
+    in_stock = "in_stock"   # Car is physically in Tajikistan
+    on_order = "on_order"   # Car will be ordered/imported
+    abroad = "abroad"       # Car is currently in another country
+
+
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
@@ -200,6 +206,12 @@ class Listing(Base):
     contact_method = Column(String(50), nullable=True)  # "phone_and_chat", "phone_only"
     whatsapp_number = Column(String(50), nullable=True)
 
+    availability = Column(
+        Enum(AvailabilityStatus, name="availabilitystatus"),
+        nullable=False,
+        default=AvailabilityStatus.in_stock,
+        server_default="in_stock",
+    )
     installment_available = Column(Boolean, nullable=False, default=False, server_default="false")
     is_dealer_listing = Column(Boolean, nullable=False, default=False, server_default="false")
     is_deleted = Column(Boolean, nullable=False, default=False, server_default="false")
