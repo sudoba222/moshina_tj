@@ -387,9 +387,9 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
   async function handleRegister(e: FormEvent) {
     e.preventDefault(); setError('')
     if (!name.trim() || !email.trim() || !password.trim()) {
-      setError(lang === 'ru' ? 'Заполните все поля' : 'Ҳама майдонҳоро пур кунед'); return
+      setError(t('register.errorFillAllFields', lang)); return
     }
-    if (password.length < 8) { setError(lang === 'ru' ? 'Пароль минимум 8 символов' : 'Рамз бояд ҳадди ақал 8 аломат бошад'); return }
+    if (password.length < 8) { setError(t('register.errorPasswordLength8', lang)); return }
     try {
       setLoading(true)
       const res = await authApi.registerEmail(email, name, password)
@@ -398,14 +398,14 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
       setDigits(dc ? dc.split('').slice(0, 6) : ['', '', '', '', '', ''])
       setStep('otp'); startCountdown()
     } catch (err) {
-      setError(extractApiError(err, lang === 'ru' ? 'Ошибка при регистрации' : 'Хато ҳангоми бақайдгирӣ'))
+      setError(extractApiError(err, t('register.errorRegistration', lang)))
     } finally { setLoading(false) }
   }
 
   async function handleVerify() {
     setError('')
     const code = digits.join('')
-    if (code.length < 6) { setError(lang === 'ru' ? 'Введите все 6 цифр' : 'Ҳамаи 6 рақамро ворид кунед'); return }
+    if (code.length < 6) { setError(t('register.errorEnterAllDigits', lang)); return }
     try {
       setLoading(true)
       const res = await authApi.verifyEmailOtp(email, code)
@@ -413,7 +413,7 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
       login(data.token.access_token, data.user)
       onSuccess(data.user)
     } catch (err) {
-      setError(extractApiError(err, lang === 'ru' ? 'Неверный код' : 'Рамз нодуруст аст'))
+      setError(extractApiError(err, t('register.errorWrongCode', lang)))
     } finally { setLoading(false) }
   }
 
@@ -425,7 +425,7 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
       const dc = res.data.data?.dev_code ?? null
       setDevCode(dc); if (dc) setDigits(dc.split('').slice(0, 6))
       startCountdown()
-    } catch { setError(lang === 'ru' ? 'Ошибка отправки' : 'Хато') } finally { setLoading(false) }
+    } catch { setError(t('register.errorSend', lang)) } finally { setLoading(false) }
   }
 
   const countdownStr = `${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}`
@@ -434,10 +434,10 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
     <form onSubmit={handleRegister} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-          {lang === 'ru' ? 'Имя' : 'Ном'}
+          {t('register.nameLabel', lang)}
         </label>
         <input type="text" autoComplete="name" value={name}
-          placeholder={lang === 'ru' ? 'Ваше имя' : 'Номи шумо'}
+          placeholder={t('register.namePlaceholder', lang)}
           onChange={(e) => setName(e.target.value)}
           onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
           style={baseInput} />
@@ -454,7 +454,7 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
       </div>
       <div>
         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-          {lang === 'ru' ? 'Пароль' : 'Рамз'}
+          {t('register.passwordLabel', lang)}
         </label>
         <input type="password" autoComplete="new-password" value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -464,7 +464,7 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
       {error && <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600 }}>{error}</p>}
       <button type="submit" disabled={loading} style={submitBtn(loading)}>
         {loading && <Spinner />}
-        {lang === 'ru' ? 'Зарегистрироваться' : 'Ба қайд гиред'}
+        {t('register.emailRegisterBtn', lang)}
       </button>
     </form>
   )
@@ -474,7 +474,7 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
       {devCode !== null && process.env.NODE_ENV === 'development' && <DevBanner lang={lang} />}
       <BackButton lang={lang} onClick={() => { setStep('form'); setError('') }} />
       <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', marginBottom: '8px', textAlign: 'center' }}>
-        {lang === 'ru' ? 'Подтвердите email' : 'Email-ро тасдиқ кунед'}
+        {t('register.confirmEmail', lang)}
       </h2>
       <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '28px' }}>
         {lang === 'ru' ? `Код отправлен на ${email}` : `Рамз ба ${email} фиристода шуд`}
