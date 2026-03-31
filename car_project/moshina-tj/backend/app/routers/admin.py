@@ -1140,7 +1140,7 @@ def reject_listing(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
 ):
-    listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     if listing.user_id == current_user.id:

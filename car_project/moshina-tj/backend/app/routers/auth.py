@@ -390,11 +390,12 @@ def verify_otp(request: Request, response: Response, payload: VerifyOtpPayload, 
     """
     now = datetime.now(timezone.utc)
 
-    # Find the most recent unused, non-expired OTP for this phone (any code)
+    # Find the most recent unused, non-expired phone_auth OTP for this phone
     otp = (
         db.query(OtpCode)
         .filter(
             OtpCode.phone == payload.phone,
+            OtpCode.purpose == "phone_auth",
             OtpCode.is_used == False,
             OtpCode.expires_at > now,
         )
@@ -712,7 +713,7 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
         db.add(OtpCode(phone=identifier, purpose="password_reset", code=code, expires_at=expires_at))
         db.commit()
-        message_text = f"Ваш код сброса пароля MOSHINA.TJ: {code}. Действителен 10 минут."
+        message_text = f"Ваш код сброса пароля TajCar.tj: {code}. Действителен 10 минут."
         _send_sms(identifier, message_text)
         # Never expose raw OTP codes in the response body — log server-side only
         if not settings.twilio_account_sid and settings.environment != "production":
@@ -767,13 +768,12 @@ def forgot_password_telegram(
         db.add(OtpCode(email=identifier, purpose="password_reset", code=code, expires_at=expires_at))
     else:
         db.add(OtpCode(phone=identifier, purpose="password_reset", code=code, expires_at=expires_at))
-    db.commit()
 
-    # Send OTP via Telegram Bot API (sync httpx)
+    # Send OTP via Telegram Bot API (sync httpx) — commit only after successful send
     bot_token = settings.telegram_bot_token
     if bot_token:
         tg_text = (
-            f"🔐 Ваш код сброса пароля MOSHINA.TJ: *{code}*\n\n"
+            f"Ваш код сброса пароля TajCar.tj: *{code}*\n\n"
             f"Действителен 10 минут.\nНикому не сообщайте этот код."
         )
         try:
@@ -789,6 +789,7 @@ def forgot_password_telegram(
                 resp.raise_for_status()
         except Exception:
             logger.exception("Failed to send Telegram reset code to %s", user.telegram_chat_id)
+            db.rollback()
             return ApiResponse(
                 success=False,
                 data={"available": False},
@@ -798,6 +799,8 @@ def forgot_password_telegram(
         # Dev mode: log the code so it is visible in server output
         if settings.environment != "production":
             logger.debug("[DEV OTP] telegram chat_id=%s code=%s", user.telegram_chat_id, code)
+
+    db.commit()
 
     return ApiResponse(
         success=True,

@@ -127,12 +127,19 @@ async def add_security_headers(request: Request, call_next) -> Response:
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    # Build connect-src to include all configured allowed origins + WebSocket variants
+    _extra_connect = " ".join(
+        o.replace("https://", "wss://").replace("http://", "ws://")
+        for o in origins
+        if o not in ("'self'", "*")
+    )
+    _connect_src = "'self' " + " ".join(origins) + (" " + _extra_connect if _extra_connect else "")
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "img-src 'self' res.cloudinary.com data: blob:; "
+        f"img-src 'self' res.cloudinary.com data: blob:; "
         "script-src 'self' 'unsafe-inline'; "
         "style-src 'self' 'unsafe-inline'; "
-        "connect-src 'self'; "
+        f"connect-src {_connect_src}; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
         "form-action 'self'"

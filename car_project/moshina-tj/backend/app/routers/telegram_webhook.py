@@ -87,7 +87,7 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
 
     if not text.startswith("/start"):
         await _send_message(chat_id, (
-            "Привет! Я бот MOSHINA.TJ\n\n"
+            "Привет! Я бот TajCar.tj\n\n"
             f"Сайт: {SITE_URL}\n\n"
             "Откройте сайт → Регистрация → «Войти через Telegram», чтобы начать."
         ), url_button=("Открыть TajCar.tj", SITE_URL))
