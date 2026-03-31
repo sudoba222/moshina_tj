@@ -477,24 +477,24 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
         {t('register.confirmEmail', lang)}
       </h2>
       <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '28px' }}>
-        {lang === 'ru' ? `Код отправлен на ${email}` : `Рамз ба ${email} фиристода шуд`}
+        {t('register.codeSentToEmail', lang).replace('{email}', email)}
       </p>
       <OtpInput value={digits} onChange={setDigits} hasError={!!error} />
       {error && <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600, textAlign: 'center', marginTop: '12px' }}>{error}</p>}
       <button type="button" onClick={handleVerify} disabled={loading} style={{ ...submitBtn(loading), marginTop: '20px' }}>
         {loading && <Spinner />}
-        {lang === 'ru' ? 'Подтвердить' : 'Тасдиқ кунед'}
+        {t('register.confirm', lang)}
       </button>
       <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px' }}>
         {countdown > 0 ? (
           <span style={{ color: 'var(--text-muted)' }}>
-            {lang === 'ru' ? 'Повторно через' : 'Такроран баъд аз'}{' '}
+            {t('register.resendAfter', lang)}{' '}
             <span style={{ fontWeight: 700, color: 'var(--text)' }}>{countdownStr}</span>
           </span>
         ) : (
           <button type="button" disabled={loading} onClick={handleResend}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: '13px', fontFamily: 'var(--font)' }}>
-            {lang === 'ru' ? 'Отправить снова' : 'Дубора фиристед'}
+            {t('register.resendAgain', lang)}
           </button>
         )}
       </div>
