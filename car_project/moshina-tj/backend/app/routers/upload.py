@@ -34,7 +34,8 @@ async def upload_image(
             detail=f"Unsupported file type '{file.content_type}'. Allowed: JPEG, PNG, WebP",
         )
 
-    contents = await file.read()
+    # Read only up to max_size + 1 byte — avoids buffering huge files into RAM before rejection
+    contents = await file.read(_MAX_FILE_SIZE_BYTES + 1)
     if len(contents) > _MAX_FILE_SIZE_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,

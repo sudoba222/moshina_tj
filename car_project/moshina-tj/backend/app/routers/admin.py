@@ -298,7 +298,7 @@ def list_users(
 
 @router.get("/users/{user_id}", response_model=ApiResponse[dict])
 def get_user_detail(user_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -1559,7 +1559,7 @@ def skip_listing(
 
 
 @router.get("/moderator-activity", response_model=ApiResponse[list])
-def moderator_activity(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def moderator_activity(db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     """
     For admin/manager: shows each moderator's activity.
     Returns per-moderator stats: total sessions, posts moderated today, posts in last 30 min.
@@ -1594,8 +1594,9 @@ def moderator_activity(db: Session = Depends(get_db), _: User = Depends(require_
 
         result.append({
             "moderator_id": str(mod.id),
-            "moderator_name": mod.name or mod.phone,
-            "phone": mod.phone,
+            "moderator_name": mod.name or "—",
+            # phone only exposed to super-admin, not manager/moderator callers
+            "phone": mod.phone if current_user.role == UserRole.admin else None,
             "is_online": active_session is not None,
             "posts_today": posts_today,
             "posts_last_30min": posts_last_30min,

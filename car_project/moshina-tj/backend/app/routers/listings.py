@@ -127,16 +127,14 @@ def _notify_dealer_subscribers(
             # BackgroundTasks run in the same thread as the request handler, so
             # the event loop is already running — use run_coroutine_threadsafe.
             import asyncio as _asyncio
-            loop = _asyncio.get_event_loop()
-            if loop.is_running():
+            try:
+                loop = _asyncio.get_running_loop()
                 _asyncio.run_coroutine_threadsafe(
                     ws_manager.broadcast_to_users(subscriber_ids, ws_payload),
                     loop,
                 )
-            else:
-                loop.run_until_complete(
-                    ws_manager.broadcast_to_users(subscriber_ids, ws_payload)
-                )
+            except RuntimeError:
+                logger.warning("No running event loop for WS broadcast to dealer subscribers")
         except Exception:
             logger.exception("WS broadcast failed for listing_id=%s", listing_id)
 
@@ -195,7 +193,11 @@ def list_listings(
     query = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
-        .filter(Listing.status == ListingStatus.active, Listing.is_deleted == False)
+        .filter(
+            Listing.status == ListingStatus.active,
+            Listing.is_active == True,
+            Listing.is_deleted == False,
+        )
     )
 
     if type:
@@ -272,7 +274,11 @@ def featured_listings(db: Session = Depends(get_db)):
     listings = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
-        .filter(Listing.status == ListingStatus.active, Listing.is_deleted == False)
+        .filter(
+            Listing.status == ListingStatus.active,
+            Listing.is_active == True,
+            Listing.is_deleted == False,
+        )
         .order_by(Listing.views.desc())
         .limit(8)
         .all()

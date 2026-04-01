@@ -116,6 +116,12 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ---------------------------------------------------------------------------
+# CORS origins — defined here so the security headers middleware below can
+# reference it before the CORSMiddleware is added further down.
+# ---------------------------------------------------------------------------
+origins = [origin.strip() for origin in settings.allowed_origins.split(",")]
+
+# ---------------------------------------------------------------------------
 # Security headers middleware
 # ---------------------------------------------------------------------------
 
@@ -152,7 +158,6 @@ async def add_security_headers(request: Request, call_next) -> Response:
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
-origins = [origin.strip() for origin in settings.allowed_origins.split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
