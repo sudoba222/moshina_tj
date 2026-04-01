@@ -49,8 +49,9 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
 
 
 def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
+    # Allow both admin and moderator roles to perform "super admin" tasks like deleting/editing users
+    if current_user.role not in {UserRole.admin, UserRole.moderator}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin or Moderator access required")
     return current_user
 
 
@@ -289,9 +290,9 @@ def list_users(
     pages = math.ceil(total / limit) if total > 0 else 1
     users = query.order_by(User.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
 
-    # Only admin role sees full PII (phone, email, ban details);
-    # moderators and managers receive the public profile only.
-    if current_user.role == UserRole.admin:
+    # Both admin and moderator roles see full PII (phone, email, ban details);
+    # other staff roles (manager, support) receive the public profile only.
+    if current_user.role in {UserRole.admin, UserRole.moderator}:
         serialized = [UserResponseAdmin.model_validate(u) for u in users]
     else:
         serialized = [UserPublicResponse.model_validate(u) for u in users]
@@ -1616,8 +1617,8 @@ def moderator_activity(db: Session = Depends(get_db), current_user: User = Depen
         result.append({
             "moderator_id": str(mod.id),
             "moderator_name": mod.name or "—",
-            # phone only exposed to super-admin, not manager/moderator callers
-            "phone": mod.phone if current_user.role == UserRole.admin else None,
+            # Phone exposed to admin and moderator roles
+            "phone": mod.phone if current_user.role in {UserRole.admin, UserRole.moderator} else None,
             "is_online": active_session is not None,
             "posts_today": posts_today,
             "posts_last_30min": posts_last_30min,
@@ -1733,7 +1734,12 @@ def moderator_logs(
     return ApiResponse(
         success=True,
         data={
-            "moderator": {"id": str(moderator.id), "name": moderator.name, "phone": moderator.phone, "role": moderator.role.value},
+            "moderator": {
+                "id": str(moderator.id),
+                "name": moderator.name,
+                "phone": moderator.phone if current_user.role in {UserRole.admin, UserRole.moderator} else None,
+                "role": moderator.role.value
+            },
             "items": items,
             "total": total,
             "page": page,
