@@ -44,11 +44,19 @@ def _set_auth_cookie(response: Response, token: str, remember_me: bool = False) 
         max_age=max_age,
         path="/",
         secure=is_prod,
+        # Share the cookie across all subdomains (tajcar.tj + api.tajcar.tj)
+        # so the Next.js middleware on tajcar.tj can read it for route protection.
+        domain=".tajcar.tj" if is_prod else None,
     )
 
 
 def _clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(key="token", path="/")
+    is_prod = settings.environment == "production"
+    response.delete_cookie(
+        key="token",
+        path="/",
+        domain=".tajcar.tj" if is_prod else None,
+    )
 
 
 class ChangePasswordPayload(BaseModel):

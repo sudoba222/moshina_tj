@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// Staff-only paths — protected server-side with role checks.
+// /dashboard and /post are NOT here: the cookie lives on api.tajcar.tj and
+// may not be readable by the Vercel middleware on tajcar.tj before the
+// backend domain fix propagates. Those routes handle auth client-side via
+// AuthContext (which calls /auth/me with credentials on every page load).
 const PROTECTED_PATHS = [
-  '/dashboard',
   '/admin',
   '/moderator',
   '/manager',
   '/support',
-  '/post',
 ]
 
 // Paths that require a specific staff role (beyond just being authenticated)
@@ -81,12 +84,9 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
     '/admin/:path*',
     '/moderator/:path*',
     '/manager/:path*',
     '/support/:path*',
-    '/post/:path*',
-    '/post',
   ],
 }
