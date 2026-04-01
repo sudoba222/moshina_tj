@@ -11,6 +11,112 @@ import { searchApi, type SuggestionItem } from '@/lib/api'
 import { SORTED_BRANDS } from '@/lib/vehicleData'
 import type { UserRole } from '@/types'
 
+// Russian-language aliases for car brands common in Tajikistan market
+const BRAND_RU_ALIASES: Record<string, string> = {
+  'тойота': 'Toyota', 'тойта': 'Toyota', 'тоёта': 'Toyota',
+  'шевроле': 'Chevrolet', 'шевролет': 'Chevrolet',
+  'хендай': 'Hyundai', 'хюндай': 'Hyundai', 'хундай': 'Hyundai', 'хёндай': 'Hyundai',
+  'киа': 'Kia', 'кіа': 'Kia',
+  'мерседес': 'Mercedes-Benz', 'мерс': 'Mercedes-Benz', 'мерседес-бенц': 'Mercedes-Benz',
+  'бмв': 'BMW',
+  'ауди': 'Audi',
+  'фольксваген': 'Volkswagen', 'фолькс': 'Volkswagen', 'вольксваген': 'Volkswagen',
+  'лада': 'Lada', 'жигули': 'Lada',
+  'дэу': 'Daewoo', 'дэо': 'Daewoo', 'daewoo': 'Daewoo',
+  'ниссан': 'Nissan',
+  'мазда': 'Mazda',
+  'хонда': 'Honda',
+  'митсубиси': 'Mitsubishi', 'митсубishi': 'Mitsubishi', 'митцубиси': 'Mitsubishi',
+  'лексус': 'Lexus',
+  'субару': 'Subaru',
+  'шкода': 'Skoda',
+  'пежо': 'Peugeot', 'пежот': 'Peugeot',
+  'рено': 'Renault',
+  'опель': 'Opel',
+  'форд': 'Ford',
+  'хаммер': 'Hummer',
+  'джип': 'Jeep',
+  'ланд ровер': 'Land Rover', 'ленд ровер': 'Land Rover',
+  'порше': 'Porsche',
+  'вольво': 'Volvo',
+  'ситроен': 'Citroen',
+  'сузуки': 'Suzuki',
+  'мазерати': 'Maserati',
+  'феррари': 'Ferrari',
+  'ламборгини': 'Lamborghini',
+  'бентли': 'Bentley',
+  'роллс-ройс': 'Rolls-Royce', 'роллс ройс': 'Rolls-Royce',
+  'астон мартин': 'Aston Martin',
+  'бугатти': 'Bugatti',
+  'альфа ромео': 'Alfa Romeo', 'альфа-ромео': 'Alfa Romeo',
+  'фиат': 'Fiat',
+  'сеат': 'SEAT',
+  'сааб': 'Saab',
+  'смарт': 'Smart',
+  'мини': 'Mini',
+  'инфинити': 'Infiniti',
+  'акура': 'Acura',
+  'линкольн': 'Lincoln',
+  'кадиллак': 'Cadillac',
+  'крайслер': 'Chrysler',
+  'додж': 'Dodge',
+  'рам': 'Ram',
+  'бьюик': 'Buick',
+  'понтиак': 'Pontiac',
+  'чери': 'Chery', 'черри': 'Chery',
+  'geely': 'Geely', 'джили': 'Geely',
+  'haval': 'Haval', 'хавал': 'Haval', 'хавэл': 'Haval',
+  'чанган': 'Changan', 'чангань': 'Changan',
+  'бид': 'BYD', 'биид': 'BYD',
+  'эксид': 'Exeed', 'ексид': 'Exeed',
+  'джетур': 'Jetour', 'жетур': 'Jetour',
+  'танк': 'Tank',
+  'ора': 'Ora',
+  'вей': 'Wey',
+  'дипал': 'Deepal',
+  'ниу': 'Nio', 'нио': 'Nio',
+  'ли авто': 'Li Auto', 'ли ауто': 'Li Auto',
+  'ксенг': 'Xpeng', 'сяопэн': 'Xpeng',
+  'линк': 'Lynk & Co', 'линк и ко': 'Lynk & Co',
+  'айто': 'AITO', 'аито': 'AITO',
+  'баик': 'BAIC', 'бэйцзин': 'BAIC',
+  'дунфэн': 'Dongfeng', 'донгфенг': 'Dongfeng',
+  'вояж': 'Voyah', 'войяж': 'Voyah',
+  'хунци': 'Hongqi', 'хонгки': 'Hongqi',
+  'фотон': 'Foton',
+  'джак': 'JAC', 'жак': 'JAC',
+  'лифан': 'Lifan',
+  'мг': 'MG',
+  'гак': 'GAC', 'гэк': 'GAC',
+  'зикр': 'Zeekr', 'зикер': 'Zeekr',
+  'омода': 'Omoda',
+  'жако': 'Jaecoo', 'джако': 'Jaecoo',
+  'аватр': 'Avatr',
+  'роуви': 'Roewe', 'рэйв': 'Roewe',
+  'lada': 'Lada',
+  'газ': 'GAZ', 'волга': 'GAZ',
+  'уаз': 'UAZ',
+  'камаз': 'KamAZ',
+  'нексия': 'Chevrolet', 'малибу': 'Chevrolet', 'кобальт': 'Chevrolet',
+  'карина': 'Toyota', 'камри': 'Toyota', 'прадо': 'Toyota', 'крузер': 'Toyota',
+  'эланта': 'Hyundai', 'акцент': 'Hyundai', 'туксон': 'Hyundai', 'санта фе': 'Hyundai',
+  'рио': 'Kia', 'церато': 'Kia', 'спортаж': 'Kia', 'соренто': 'Kia',
+}
+
+function matchRussianBrands(q: string): SuggestionItem[] {
+  const lower = q.toLowerCase().trim()
+  if (!lower) return []
+  const matches = new Set<string>()
+  // Exact prefix match
+  for (const [ru, en] of Object.entries(BRAND_RU_ALIASES)) {
+    if (ru.startsWith(lower) || ru.includes(lower)) {
+      matches.add(en)
+    }
+  }
+  // Also fuzzy: match brand English names against partial Cyrillic input
+  return Array.from(matches).slice(0, 6).map((name): SuggestionItem => ({ term: name, type: 'brand', count: 0 }))
+}
+
 const NAV_LINKS = [
   { href: '/catalog',     key: 'nav.catalog' },
   { href: '/rent',        key: 'nav.rent' },
@@ -95,6 +201,16 @@ export default function Navbar() {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (q.trim().length < 2) { setSuggestions([]); setShowSugg(false); return }
     debounceRef.current = setTimeout(async () => {
+      const hasCyrillic = /[\u0400-\u04FF]/.test(q)
+      // If Cyrillic input, try local Russian alias matching first (instant)
+      if (hasCyrillic) {
+        const ruHits = matchRussianBrands(q)
+        if (ruHits.length > 0) {
+          setSuggestions(ruHits)
+          setShowSugg(true)
+          return
+        }
+      }
       try {
         const res = await searchApi.suggestions(q.trim())
         const items = res.data.data ?? []
@@ -104,7 +220,7 @@ export default function Navbar() {
           return
         }
       } catch { /* fall through to local */ }
-      // Local fallback: match brand names
+      // Local fallback: match brand names (Latin)
       const lower = q.toLowerCase()
       const localHits = SORTED_BRANDS
         .filter((b) => b.name.toLowerCase().includes(lower))
@@ -112,7 +228,7 @@ export default function Navbar() {
         .map((b): SuggestionItem => ({ term: b.name, type: 'brand', count: 0 }))
       setSuggestions(localHits)
       setShowSugg(localHits.length > 0)
-    }, 250)
+    }, 200)
   }, [])
 
   // Close drawer on route change
@@ -139,6 +255,7 @@ export default function Navbar() {
   const initial = user ? (user.name ?? user.phone ?? '?').charAt(0).toUpperCase() : ''
 
   return (
+    <>
     <header style={{ position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
 
       {/* ── Main bar ── */}
@@ -294,16 +411,18 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ── Mobile drawer backdrop ── */}
+    </header>
+
+      {/* ── Mobile drawer backdrop — OUTSIDE header to avoid backdrop-filter containment ── */}
       {mobileOpen && (
         <div className="md:hidden" onClick={() => setMobileOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 299, backdropFilter: 'blur(3px)' }} />
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9998, backdropFilter: 'blur(3px)' }} />
       )}
 
       {/* ── Mobile drawer panel ── */}
       {mobileOpen && (
         <div id="mobile-nav-drawer" role="dialog" aria-modal="true" className="md:hidden"
-          style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '300px', maxWidth: 'calc(100vw - 40px)', background: 'var(--nav-bg)', borderRight: '1px solid var(--border)', boxShadow: '4px 0 40px rgba(0,0,0,0.18)', zIndex: 300, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '300px', maxWidth: 'calc(100vw - 40px)', background: 'var(--nav-bg)', borderRight: '1px solid var(--border)', boxShadow: '4px 0 40px rgba(0,0,0,0.18)', zIndex: 9999, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
           {/* Drawer header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 16px', borderBottom: '1px solid var(--border)' }}>
@@ -330,7 +449,7 @@ export default function Navbar() {
               </button>
             </form>
             {showSugg && suggestions.length > 0 && (
-              <div style={{ position: 'absolute', left: '16px', right: '16px', top: 'calc(100% - 1px)', background: 'var(--card)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden', zIndex: 400 }}>
+              <div style={{ position: 'absolute', left: '16px', right: '16px', top: 'calc(100% - 1px)', background: 'var(--card)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden', zIndex: 10000 }}>
                 {suggestions.map((s, i) => (
                   <button key={i} type="button"
                     onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s); setMobileOpen(false) }}
@@ -399,6 +518,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-    </header>
+    </>
   )
 }

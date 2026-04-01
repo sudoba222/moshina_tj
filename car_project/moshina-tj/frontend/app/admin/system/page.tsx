@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { adminApi } from '@/lib/api'
+import { adminApi, vehicleApi } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { AdminStats, AuditLog } from '@/types'
@@ -43,6 +43,20 @@ export default function AdminSystemPage() {
     loadLogs(p)
   }
 
+  const [nhtsa, setNhtsa] = useState<{ loading: boolean; result: string }>({ loading: false, result: '' })
+  async function handleNhtsaImport(makesOnly: boolean) {
+    setNhtsa({ loading: true, result: '' })
+    try {
+      const res = await vehicleApi.importNhtsa(makesOnly)
+      const d = res.data.data
+      setNhtsa({ loading: false, result: `+${d.added_makes} makes, +${d.added_models} models` })
+      showToast(lang === 'ru' ? 'Импорт завершён' : 'Импорт анҷом ёфт', 'success')
+    } catch {
+      setNhtsa({ loading: false, result: '' })
+      showToast(lang === 'ru' ? 'Ошибка импорта' : 'Хатои импорт', 'error')
+    }
+  }
+
   const totalPages = Math.ceil(auditTotal / 20)
 
   return (
@@ -50,6 +64,41 @@ export default function AdminSystemPage() {
       <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', margin: '0 0 20px 0' }}>
         {t('admin.system', lang)}
       </h1>
+
+      {/* NHTSA vehicle database import */}
+      <div style={{ background: 'var(--card)', borderRadius: '14px', padding: '20px', border: '1px solid var(--border)', marginBottom: '28px' }}>
+        <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)', marginBottom: '6px' }}>
+          {lang === 'ru' ? 'База автомобилей (NHTSA)' : 'Пойгоҳи мошинаҳо (NHTSA)'}
+        </div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.5 }}>
+          {lang === 'ru'
+            ? 'Импортирует марки и модели из бесплатной базы NHTSA (США, 10 000+ авто) + китайские/СНГ марки. Первый запуск занимает ~2–5 мин.'
+            : 'Марка ва моделҳоро аз пойгоҳи ройгони NHTSA (ИМА, 10 000+ мошин) + марқаҳои Хитой/СНГ ворид мекунад. Бори аввал ~2–5 дақиқа.'}
+        </div>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            onClick={() => handleNhtsaImport(true)}
+            disabled={nhtsa.loading}
+            style={{ height: '36px', padding: '0 16px', background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: nhtsa.loading ? 'not-allowed' : 'pointer' }}
+          >
+            {lang === 'ru' ? 'Только марки' : 'Танҳо марқаҳо'}
+          </button>
+          <button
+            onClick={() => handleNhtsaImport(false)}
+            disabled={nhtsa.loading}
+            style={{ height: '36px', padding: '0 16px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: nhtsa.loading ? 'not-allowed' : 'pointer' }}
+          >
+            {nhtsa.loading
+              ? (lang === 'ru' ? 'Импорт…' : 'Импорт…')
+              : (lang === 'ru' ? 'Полный импорт (марки + модели)' : 'Импорти пурра (марқа + моделҳо)')}
+          </button>
+          {nhtsa.result && (
+            <span style={{ fontSize: '13px', color: 'var(--color-success)', fontWeight: 600 }}>
+              {nhtsa.result}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Platform config cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '32px' }}>

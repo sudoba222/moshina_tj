@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { IconUser, IconPhone, IconEye, IconEyeOff, IconAlertTriangle } from './icons'
-import { SECTION_HEADING_STYLE, formatPrice, formatShortDate } from './utils'
+import { IconUser, IconPhone, IconMail, IconEye, IconEyeOff, IconAlertTriangle } from './icons'
+import { SECTION_HEADING_STYLE, formatPrice, formatDate } from './utils'
 import { adminApi } from '@/lib/api'
 import { t } from '@/lib/i18n'
 import type { Lang, Listing, User } from '@/types'
@@ -198,10 +198,23 @@ export default function AuthorContext({ lang, listing }: AuthorContextProps) {
                   </button>
                 </div>
 
-                {/* Registration date */}
+                {/* Email */}
+                {authorUser?.email && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px',
+                  }}>
+                    <IconMail />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {authorUser.email}
+                    </span>
+                  </div>
+                )}
+
+                {/* Registration date + time */}
                 {authorUser?.created_at && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    {t('moderator.regDate', lang)}: {formatShortDate(authorUser.created_at)}
+                    {t('moderator.regDate', lang)}: {formatDate(authorUser.created_at)}
                   </div>
                 )}
 

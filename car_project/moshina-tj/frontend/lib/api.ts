@@ -658,4 +658,19 @@ export const statsApi = {
   get: () => api.get<ApiResponse<MarketplaceStats>>('/stats'),
 }
 
+// ─── Vehicle makes / models (NHTSA proxy) ────────────────────────────────────
+export const vehicleApi = {
+  getMakes: () =>
+    api.get<ApiResponse<string[]>>('/catalog/vehicle/makes'),
+  getModels: (make: string) =>
+    api.get<ApiResponse<string[]>>('/catalog/vehicle/models', { params: { make } }),
+  /** Admin only: import NHTSA data into the DB */
+  importNhtsa: (makesOnly = false) =>
+    api.post<ApiResponse<{ added_makes: number; added_models: number }>>(
+      '/catalog/vehicle/admin/import',
+      null,
+      { params: { makes_only: makesOnly } }
+    ),
+}
+
 export default api

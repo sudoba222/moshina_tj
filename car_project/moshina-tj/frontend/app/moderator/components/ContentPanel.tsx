@@ -45,6 +45,7 @@ interface ContentPanelProps {
   photoIndex: number
   onPhotoNavigate: (index: number) => void
   savedFlash: boolean
+  onSaved?: () => void
 }
 
 export default function ContentPanel({
@@ -53,6 +54,7 @@ export default function ContentPanel({
   photoIndex,
   onPhotoNavigate,
   savedFlash,
+  onSaved,
 }: ContentPanelProps) {
   // Editable field state — initialized from listing, synced when listing id changes
   const [editBrand, setEditBrand]               = useState(listing.brand)
@@ -123,8 +125,9 @@ export default function ContentPanel({
     debounceRef.current = setTimeout(async () => {
       try {
         await adminApi.moderatorEditListing(listing.id, patch)
+        onSaved?.()
       } catch {
-        // silent — savedFlash only fires on success from parent
+        // silent
       }
     }, 800)
   }

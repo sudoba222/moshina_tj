@@ -91,41 +91,134 @@ export const VEHICLE_BRANDS: VehicleBrand[] = [
     name: 'Opel',
     models: ['Astra', 'Vectra', 'Zafira', 'Corsa', 'Insignia', 'Mokka', 'Grandland', 'Crossland', 'Antara', 'Meriva', 'Omega'],
   },
+  // ── Chinese brands ──────────────────────────────────────────────────────────
   {
     name: 'Geely',
-    models: ['Coolray', 'Atlas', 'Atlas Pro', 'Emgrand', 'Tugella', 'Monjaro', 'Azkarra', 'Okavango', 'Boyue', 'GX3', 'LC', 'MK'],
+    models: ['Coolray', 'Atlas', 'Atlas Pro', 'Emgrand', 'Tugella', 'Monjaro', 'Azkarra', 'Okavango', 'Boyue', 'GX3', 'GX6', 'Icon', 'Preface', 'Xingyue', 'Xingyue L', 'Jiyu 6 Pro', 'LC', 'MK'],
   },
   {
     name: 'Chery',
-    models: ['Tiggo 4', 'Tiggo 7', 'Tiggo 7 Pro', 'Tiggo 8', 'Tiggo 8 Pro', 'Arrizo 5', 'Arrizo 6', 'Arrizo 8', 'QQ', 'Amulet'],
+    models: ['Tiggo 4', 'Tiggo 4 Pro', 'Tiggo 7', 'Tiggo 7 Pro', 'Tiggo 7 Pro Max', 'Tiggo 8', 'Tiggo 8 Pro', 'Tiggo 8 Pro Max', 'Tiggo 9', 'Arrizo 5', 'Arrizo 5 Pro', 'Arrizo 6', 'Arrizo 8', 'QQ', 'Amulet'],
+  },
+  {
+    name: 'Exeed',
+    models: ['TXL', 'VX', 'RX', 'LX', 'TX', 'LX Plus'],
+  },
+  {
+    name: 'Jetour',
+    models: ['X70', 'X70 Plus', 'X90 Plus', 'X95', 'T2', 'Dashing'],
   },
   {
     name: 'Haval',
-    models: ['F7', 'F7x', 'H6', 'H9', 'Jolion', 'Dargo', 'Big Dog'],
+    models: ['F7', 'F7x', 'H6', 'H6 GT', 'H9', 'Jolion', 'Dargo', 'Big Dog', 'Raptor'],
+  },
+  {
+    name: 'Tank',
+    models: ['300', '500', '700'],
+  },
+  {
+    name: 'Ora',
+    models: ['Good Cat', 'Ballet Cat', 'Lightning Cat', 'Funky Cat'],
+  },
+  {
+    name: 'Wey',
+    models: ['Coffee 01', 'Coffee 02', 'Mocha', 'Latte'],
   },
   {
     name: 'Changan',
-    models: ['CS35 Plus', 'CS55 Plus', 'CS75 Plus', 'CS85', 'UNI-T', 'UNI-K', 'UNI-V', 'Alsvin', 'Eado', 'Oshan X7'],
+    models: ['CS15', 'CS35 Plus', 'CS55 Plus', 'CS75 Plus', 'CS85', 'UNI-T', 'UNI-K', 'UNI-V', 'UNI-Z', 'Alsvin', 'Eado Plus', 'Oshan X5', 'Oshan X7', 'Lamore', 'Hunter'],
+  },
+  {
+    name: 'Deepal',
+    models: ['S7', 'L07', 'G318'],
+  },
+  {
+    name: 'Avatr',
+    models: ['11', '12'],
   },
   {
     name: 'BYD',
-    models: ['Han', 'Tang', 'Song Plus', 'Yuan Plus', 'Atto 3', 'Seal', 'Dolphin', 'Seagull', 'F3'],
+    models: ['Han', 'Han EV', 'Tang', 'Tang EV', 'Song', 'Song Plus', 'Song Pro', 'Yuan', 'Yuan Plus', 'Atto 3', 'Seal', 'Seal U', 'Dolphin', 'Seagull', 'Sea Lion 6', 'F3', 'F0', 'E2', 'E5'],
   },
   {
     name: 'GAC',
-    models: ['GS4', 'GS5', 'GS8', 'GN8', 'Trumpchi M8', 'Aion S', 'Aion V'],
+    models: ['GS3', 'GS4', 'GS5', 'GS8', 'GN8', 'M8', 'Aion S', 'Aion V', 'Aion LX', 'Aion Y', 'Trumpchi GM8'],
   },
   {
     name: 'Great Wall',
-    models: ['Poer', 'Cannon', 'Hover H5', 'Hover H6', 'Tank 300', 'Tank 500'],
+    models: ['Poer', 'Cannon', 'Hover H5', 'Hover H6', 'Hover H9', 'M4'],
+  },
+  {
+    name: 'MG',
+    models: ['3', '5', '6', 'ZS', 'HS', 'RX5', 'RX8', 'EHS', 'Marvel R', 'Cyberster', 'One', 'GT'],
+  },
+  {
+    name: 'Roewe',
+    models: ['RX5', 'RX8', 'i5', 'i6', '550', '750'],
+  },
+  {
+    name: 'BAIC',
+    models: ['X3', 'X5', 'X7', 'BJ40', 'BJ60', 'BJ80', 'BJ212', 'Senova D50', 'Senova D70', 'EU5', 'EC3'],
+  },
+  {
+    name: 'Dongfeng',
+    models: ['AX4', 'AX7', 'Fengshen A60', 'Fengshen E70', 'S30', 'H30', 'Glory', 'Box'],
+  },
+  {
+    name: 'Voyah',
+    models: ['Free', 'Dream', 'Courage'],
+  },
+  {
+    name: 'FAW',
+    models: ['Bestune T77', 'Bestune T99', 'Bestune B70', 'Bestune NAT', 'Oley', 'Xenia'],
+  },
+  {
+    name: 'Hongqi',
+    models: ['H5', 'H6', 'H9', 'HS5', 'HS7', 'E-HS9', 'EH7'],
+  },
+  {
+    name: 'Nio',
+    models: ['ET5', 'ET7', 'EC6', 'ES6', 'ES7', 'ES8', 'EL6', 'EL7', 'EL8'],
+  },
+  {
+    name: 'Li Auto',
+    models: ['L6', 'L7', 'L8', 'L9', 'Li ONE', 'Mega'],
+  },
+  {
+    name: 'Xpeng',
+    models: ['P5', 'P7', 'G3', 'G6', 'G9', 'X9'],
+  },
+  {
+    name: 'Lynk & Co',
+    models: ['01', '02', '03', '05', '06', '09'],
+  },
+  {
+    name: 'AITO',
+    models: ['M5', 'M7', 'M9'],
   },
   {
     name: 'Lifan',
-    models: ['X60', 'X70', 'X80', '620', '720', 'Solano', 'Murman'],
+    models: ['X60', 'X70', 'X80', '620', '720', '820', 'Solano', 'Murman', 'Myway'],
   },
   {
     name: 'JAC',
-    models: ['S3', 'S4', 'S7', 'T8', 'JS4', 'T6', 'Sei 2', 'Sei 3'],
+    models: ['S3', 'S4', 'S7', 'T6', 'T8', 'JS4', 'JS6', 'Sei 2', 'Sei 3', 'E10X'],
+  },
+  {
+    name: 'Foton',
+    models: ['Tunland', 'View C2', 'Sauvana', 'Aumark', 'Auman'],
+  },
+  {
+    name: 'DFSK',
+    models: ['Glory 500', 'Glory 580', 'Glory 580 Pro', 'EC35', 'C71'],
+  },
+  {
+    name: 'Brilliance',
+    models: ['V5', 'V6', 'H230', 'H320', 'H530'],
+  },
+  {
+    name: 'Zotye',
+    models: ['T600', 'T700', 'T800', 'Z300', 'Z500'],
   },
   {
     name: 'Porsche',
@@ -209,15 +302,92 @@ export const VEHICLE_BRANDS: VehicleBrand[] = [
   },
   {
     name: 'Zeekr',
-    models: ['001', '009', 'X'],
+    models: ['001', '007', '009', 'X'],
   },
   {
     name: 'Omoda',
-    models: ['C5', 'S5'],
+    models: ['C5', 'C9', 'S5'],
   },
   {
     name: 'Jaecoo',
     models: ['J7', 'J8'],
+  },
+  // ── Other brands ────────────────────────────────────────────────────────────
+  {
+    name: 'Mini',
+    models: ['Cooper', 'Cooper S', 'Countryman', 'Clubman', 'Paceman', 'Roadster', 'Convertible'],
+  },
+  {
+    name: 'Smart',
+    models: ['Fortwo', 'Forfour', '#1', '#3'],
+  },
+  {
+    name: 'Hummer',
+    models: ['H1', 'H2', 'H3', 'EV'],
+  },
+  {
+    name: 'Bentley',
+    models: ['Bentayga', 'Continental GT', 'Flying Spur', 'Mulsanne'],
+  },
+  {
+    name: 'Rolls-Royce',
+    models: ['Phantom', 'Ghost', 'Wraith', 'Dawn', 'Cullinan', 'Spectre'],
+  },
+  {
+    name: 'Ferrari',
+    models: ['Roma', 'Portofino', 'SF90', 'F8 Tributo', '296 GTB', '812 Superfast', 'Purosangue'],
+  },
+  {
+    name: 'Lamborghini',
+    models: ['Urus', 'Huracan', 'Aventador', 'Revuelto'],
+  },
+  {
+    name: 'Maserati',
+    models: ['Ghibli', 'Quattroporte', 'Levante', 'GranTurismo', 'Grecale'],
+  },
+  {
+    name: 'McLaren',
+    models: ['720S', '765LT', 'GT', 'Artura', '570S'],
+  },
+  {
+    name: 'Aston Martin',
+    models: ['DB11', 'DB12', 'Vantage', 'DBS', 'DBX'],
+  },
+  {
+    name: 'Polestar',
+    models: ['2', '3', '4'],
+  },
+  {
+    name: 'Lucid',
+    models: ['Air', 'Gravity'],
+  },
+  {
+    name: 'Rivian',
+    models: ['R1T', 'R1S'],
+  },
+  {
+    name: 'Ram',
+    models: ['1500', '2500', '3500', 'ProMaster'],
+  },
+  {
+    name: 'Saab',
+    models: ['9-3', '9-5', '9-7X'],
+  },
+  {
+    name: 'Pontiac',
+    models: ['Grand Prix', 'Firebird', 'Trans Am', 'GTO', 'Vibe'],
+  },
+  {
+    name: 'Citroen',
+    models: ['C3', 'C4', 'C5', 'C5 X', 'Berlingo', 'Jumper', 'SpaceTourer', 'Picasso'],
+  },
+  {
+    name: 'Dacia',
+    models: ['Duster', 'Logan', 'Sandero', 'Jogger', 'Spring'],
+  },
+  {
+    name: 'Lancia',
+    models: ['Ypsilon', 'Delta', 'Thesis'],
   },
   // Trucks / Commercial
   {

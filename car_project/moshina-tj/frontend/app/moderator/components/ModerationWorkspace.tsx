@@ -492,6 +492,11 @@ export default function ModerationWorkspace({
               photoIndex={photoIndex}
               onPhotoNavigate={setPhotoIndex}
               savedFlash={savedFlash}
+              onSaved={() => {
+                setSavedFlash(true)
+                if (savedFlashRef.current) clearTimeout(savedFlashRef.current)
+                savedFlashRef.current = setTimeout(() => setSavedFlash(false), 2000)
+              }}
             />
           )}
         </div>

@@ -267,14 +267,21 @@ def list_users(
     if role is not None:
         query = query.filter(User.role == role)
     if search:
-        # Try numeric search by user_number
+        import uuid as _uuid
+        stripped = search.strip()
+        # UUID → search by exact user ID
         try:
-            num = int(search.strip())
-            query = query.filter(User.user_number == num)
+            uid_val = _uuid.UUID(stripped)
+            query = query.filter(User.id == uid_val)
         except ValueError:
-            query = query.filter(
-                User.phone.ilike(f"%{search}%") | User.name.ilike(f"%{search}%")
-            )
+            # Numeric → search by user_number
+            try:
+                num = int(stripped)
+                query = query.filter(User.user_number == num)
+            except ValueError:
+                query = query.filter(
+                    User.phone.ilike(f"%{stripped}%") | User.name.ilike(f"%{stripped}%") | User.email.ilike(f"%{stripped}%")
+                )
     if is_banned is not None:
         query = query.filter(User.is_banned == is_banned)
 
@@ -604,15 +611,22 @@ def admin_listings(
             raise HTTPException(status_code=400, detail=f"Invalid status value: {status}")
 
     if search:
-        ilike_search = f"%{search}%"
-        query = query.filter(
-            or_(
-                Listing.brand.ilike(ilike_search),
-                Listing.model.ilike(ilike_search),
-                Listing.city.ilike(ilike_search),
-                Listing.description.ilike(ilike_search),
+        import uuid as _uuid
+        stripped_search = search.strip()
+        # UUID → search by exact listing ID
+        try:
+            lid_val = _uuid.UUID(stripped_search)
+            query = query.filter(Listing.id == lid_val)
+        except ValueError:
+            ilike_search = f"%{stripped_search}%"
+            query = query.filter(
+                or_(
+                    Listing.brand.ilike(ilike_search),
+                    Listing.model.ilike(ilike_search),
+                    Listing.city.ilike(ilike_search),
+                    Listing.description.ilike(ilike_search),
+                )
             )
-        )
     if user_id:
         try:
             uid = _uuid.UUID(user_id)
@@ -1465,16 +1479,16 @@ def start_session(
     db.commit()
     db.refresh(session)
     return ApiResponse(success=True, data={
-        "session_id": str(session.id),
+        "id": str(session.id),
+        "moderator_id": str(session.moderator_id),
         "started_at": session.started_at.isoformat(),
+        "ended_at": None,
+        "is_active": True,
+        "approved_count": 0,
+        "rejected_count": 0,
+        "skipped_count": 0,
         "timer_minutes": session.timer_minutes,
-        "filters": {
-            "date_from": session.filter_date_from.isoformat() if session.filter_date_from else None,
-            "date_to": session.filter_date_to.isoformat() if session.filter_date_to else None,
-            "type": session.filter_type,
-            "city": session.filter_city,
-            "brand": session.filter_brand,
-        }
+        "limit": 0,
     }, message="Session started")
 
 
@@ -1501,13 +1515,17 @@ def end_session(
     session.auto_ended = auto_ended
     db.commit()
     db.refresh(session)
-    total = session.posts_approved + session.posts_rejected + session.posts_skipped
     return ApiResponse(success=True, data={
-        "session_id": str(session.id),
-        "posts_approved": session.posts_approved,
-        "posts_rejected": session.posts_rejected,
-        "posts_skipped": session.posts_skipped,
-        "total": total,
+        "id": str(session.id),
+        "moderator_id": str(session.moderator_id),
+        "started_at": session.started_at.isoformat(),
+        "ended_at": session.ended_at.isoformat() if session.ended_at else None,
+        "is_active": False,
+        "approved_count": session.posts_approved,
+        "rejected_count": session.posts_rejected,
+        "skipped_count": session.posts_skipped,
+        "timer_minutes": session.timer_minutes,
+        "limit": 0,
     }, message="Session ended")
 
 
@@ -1521,14 +1539,17 @@ def get_active_session(db: Session = Depends(get_db), current_user: User = Depen
     ).first()
     if not session:
         return ApiResponse(success=True, data=None, message="No active session")
-    total = session.posts_approved + session.posts_rejected + session.posts_skipped
     return ApiResponse(success=True, data={
-        "session_id": str(session.id),
+        "id": str(session.id),
+        "moderator_id": str(session.moderator_id),
         "started_at": session.started_at.isoformat(),
-        "posts_approved": session.posts_approved,
-        "posts_rejected": session.posts_rejected,
-        "posts_skipped": session.posts_skipped,
-        "total": total,
+        "ended_at": None,
+        "is_active": True,
+        "approved_count": session.posts_approved,
+        "rejected_count": session.posts_rejected,
+        "skipped_count": session.posts_skipped,
+        "timer_minutes": session.timer_minutes,
+        "limit": 0,
     }, message="Active session found")
 
 

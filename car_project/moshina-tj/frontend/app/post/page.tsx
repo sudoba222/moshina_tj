@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, uploadApi, authApi } from '@/lib/api'
+import { listingsApi, uploadApi, authApi, vehicleApi } from '@/lib/api'
 import api from '@/lib/api'
 import { SORTED_BRANDS } from '@/lib/vehicleData'
 import { useAuth } from '@/lib/AuthContext'
@@ -198,9 +198,10 @@ function PostPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
 
-  // Local brands/models from static data
-  const selectedBrandData = SORTED_BRANDS.find((b) => b.name === form.brand) ?? null
-  const localModels = selectedBrandData?.models ?? []
+  // Dynamic brands/models from API (fallback: static data)
+  const [brandsList, setBrandsList] = useState<string[]>(() => SORTED_BRANDS.map((b) => b.name))
+  const [modelsList, setModelsList] = useState<string[]>([])
+  const [modelsLoading, setModelsLoading] = useState(false)
 
   const [customBrand, setCustomBrand] = useState('')
   const [customModel, setCustomModel] = useState('')
@@ -210,10 +211,46 @@ function PostPage() {
     authApi.me().catch(() => { logout(); router.replace('/auth/login') })
   }, [router, logout])
 
-  // Reset model when brand changes
+  // Load all makes from API on mount — merge with static list so nothing disappears
+  useEffect(() => {
+    vehicleApi.getMakes()
+      .then((res) => {
+        const api = res.data.data ?? []
+        if (api.length) {
+          // Union of API results + static list, deduplicated, "Другое" always last
+          const combined = [...new Set([
+            ...api.filter((n: string) => n !== 'Другое'),
+            ...SORTED_BRANDS.map((b) => b.name).filter((n) => n !== 'Другое'),
+          ])].sort((a, b) => a.localeCompare(b))
+          combined.push('Другое')
+          setBrandsList(combined)
+        }
+      })
+      .catch(() => { /* keep static fallback */ })
+  }, [])
+
+  // Load models when brand changes
   useEffect(() => {
     setForm((prev) => ({ ...prev, model: '' }))
     setCustomModel('')
+    setModelsList([])
+    if (!form.brand || form.brand === 'Другое') return
+    setModelsLoading(true)
+    vehicleApi.getModels(form.brand)
+      .then((res) => {
+        if (res.data.data?.length) {
+          setModelsList(res.data.data)
+        } else {
+          // fallback: static list
+          const local = SORTED_BRANDS.find((b) => b.name === form.brand)?.models ?? []
+          setModelsList(local.length ? local : ['Другое'])
+        }
+      })
+      .catch(() => {
+        const local = SORTED_BRANDS.find((b) => b.name === form.brand)?.models ?? []
+        setModelsList(local.length ? local : ['Другое'])
+      })
+      .finally(() => setModelsLoading(false))
   }, [form.brand])
 
   // Load draft (new mode only)
@@ -517,6 +554,23 @@ function PostPage() {
                 {t('postForm.brandModelYear', lang)}
               </SectionTitle>
 
+              {/* Hint: if brand/model not in list */}
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: '8px',
+                background: 'var(--accent-dim)', border: '1px solid var(--accent)',
+                borderRadius: '8px', padding: '9px 12px', marginBottom: '2px',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }} aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span style={{ fontSize: '12px', color: 'var(--accent)', lineHeight: 1.5 }}>
+                  {lang === 'ru'
+                    ? <>Если вашей марки или модели нет в списке — выберите <strong>«Другое»</strong> и введите название на <strong>английском</strong> (например: <em>Geely Coolray</em>, <em>Changan CS55</em>).</>
+                    : <>Агар марка ё модели шумо дар рӯйхат набошад — <strong>«Дигар»</strong>-ро интихоб кунед ва номро бо <strong>забони англисӣ</strong> нависед (масалан: <em>Geely Coolray</em>, <em>Changan CS55</em>).</>
+                  }
+                </span>
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {/* Brand */}
                 <div>
@@ -528,8 +582,8 @@ function PostPage() {
                     style={inp}
                   >
                     <option value="">{t('postForm.brandPlaceholder', lang)}</option>
-                    {SORTED_BRANDS.map((b) => (
-                      <option key={b.name} value={b.name}>{b.name}</option>
+                    {brandsList.map((name) => (
+                      <option key={name} value={name}>{name}</option>
                     ))}
                   </select>
                   {form.brand === 'Другое' && (
@@ -538,7 +592,7 @@ function PostPage() {
                       required
                       value={customBrand}
                       onChange={(e) => setCustomBrand(e.target.value)}
-                      placeholder={lang === 'ru' ? 'Введите название марки' : 'Номи маркаро ворид кунед'}
+                      placeholder={lang === 'ru' ? 'Название марки на английском, напр. Geely' : 'Номи марка бо англисӣ, масалан Geely'}
                       style={{ ...inp, marginTop: '8px' }}
                       autoFocus
                     />
@@ -548,7 +602,13 @@ function PostPage() {
                 {/* Model */}
                 <div>
                   <label style={lbl}>{lang === 'ru' ? 'Модель *' : 'Модел *'}</label>
-                  {localModels.length > 0 ? (
+                  {modelsLoading ? (
+                    <div style={{ ...inp, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+                      {lang === 'ru' ? 'Загрузка моделей…' : 'Моделҳо бор мешаванд…'}
+                    </div>
+                  ) : modelsList.length > 0 ? (
                     <>
                       <select
                         required={form.model !== 'Другое'}
@@ -558,7 +618,7 @@ function PostPage() {
                         disabled={!form.brand}
                       >
                         <option value="">{lang === 'ru' ? '— Выберите модель —' : '— Моделро интихоб кунед —'}</option>
-                        {localModels.map((m) => (
+                        {modelsList.filter((m) => m !== 'Другое').map((m) => (
                           <option key={m} value={m}>{m}</option>
                         ))}
                         <option value="Другое">{lang === 'ru' ? 'Другое (ввести вручную)' : 'Дигар (дастӣ ворид кунед)'}</option>
@@ -569,7 +629,7 @@ function PostPage() {
                           required
                           value={customModel}
                           onChange={(e) => setCustomModel(e.target.value)}
-                          placeholder={lang === 'ru' ? 'Введите название модели' : 'Номи моделро ворид кунед'}
+                          placeholder={lang === 'ru' ? 'Название модели на английском, напр. Coolray' : 'Номи модел бо англисӣ, масалан Coolray'}
                           style={{ ...inp, marginTop: '8px' }}
                           autoFocus
                         />

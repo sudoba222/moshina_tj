@@ -12,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.limiter import limiter
 from app.routers import admin, ai, auth, catalog, dealers, listings, search, upload, users
+from app.routers.vehicles import router as vehicles_router
 from app.routers.stats import router as stats_router
 from app.routers.chat import router as chat_router, ws_router as chat_ws_router
 from app.routers.notifications import router as notifications_router
@@ -178,6 +179,7 @@ app.include_router(users.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(catalog.router, prefix="/api/v1")
+app.include_router(vehicles_router, prefix="/api/v1")
 app.include_router(stats_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
