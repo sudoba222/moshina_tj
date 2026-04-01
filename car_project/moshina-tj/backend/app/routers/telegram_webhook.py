@@ -14,6 +14,7 @@ Phone verification flow:
   4. Match → generate and send OTP
   5. Mismatch → reject with clear error
 """
+import asyncio
 import hashlib
 import hmac
 import json
@@ -108,8 +109,8 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
     return {"ok": "true"}
 
 
-async def _handle_start(chat_id: str, token_str: str, telegram_name: str | None) -> None:
-    """Validate the deep-link token and ask the user to share their phone."""
+def _handle_start_sync(chat_id: str, token_str: str, telegram_name: str | None) -> bool:
+    """Synchronous DB work for _handle_start. Returns True if token is valid."""
     db: Session = SessionLocal()
     try:
         now = datetime.now(timezone.utc)
@@ -124,23 +125,32 @@ async def _handle_start(chat_id: str, token_str: str, telegram_name: str | None)
         )
 
         if not tg_token:
-            await _send_message(chat_id, (
-                "Ссылка недействительна или истекла.\n"
-                f"Вернитесь на сайт и запросите новую ссылку: {SITE_URL}"
-            ), url_button=("Открыть TajCar.tj", SITE_URL))
-            return
+            return False
 
         # Save chat_id and name on token — marks it as "waiting for contact"
         tg_token.telegram_chat_id = chat_id
         tg_token.telegram_name = telegram_name
         db.commit()
+        return True
+    finally:
+        db.close()
 
+
+async def _handle_start(chat_id: str, token_str: str, telegram_name: str | None) -> None:
+    """Validate the deep-link token and ask the user to share their phone."""
+    try:
+        token_valid = await asyncio.to_thread(_handle_start_sync, chat_id, token_str, telegram_name)
     except Exception:
         logger.exception("Error in _handle_start")
         await _send_message(chat_id, "Произошла ошибка. Попробуйте позже.")
         return
-    finally:
-        db.close()
+
+    if not token_valid:
+        await _send_message(chat_id, (
+            "Ссылка недействительна или истекла.\n"
+            f"Вернитесь на сайт и запросите новую ссылку: {SITE_URL}"
+        ), url_button=("Открыть TajCar.tj", SITE_URL))
+        return
 
     # Ask user to share their phone number
     await _send_contact_request(
@@ -149,20 +159,19 @@ async def _handle_start(chat_id: str, token_str: str, telegram_name: str | None)
     )
 
 
-async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
-    """Verify the shared phone matches the token's phone, then issue OTP."""
-    raw_phone: str = contact.get("phone_number", "")
-    if not raw_phone:
-        await _send_message(chat_id, "Не удалось получить номер. Попробуйте ещё раз.")
-        return
+def _handle_contact_sync(chat_id: str, shared_phone: str) -> dict[str, Any]:
+    """Synchronous DB work for _handle_contact.
 
-    shared_phone = _normalize_phone(raw_phone)
-
+    Returns a result dict with a 'status' key:
+      'no_token'      — session expired
+      'phone_mismatch'— shared phone doesn't match token phone
+      'already_linked'— Telegram already linked to a different number
+      'otp_sent'      — OTP generated; 'code' key contains the OTP string
+    """
     db: Session = SessionLocal()
     try:
         now = datetime.now(timezone.utc)
 
-        # Find the pending token for this chat (set in _handle_start, not yet used)
         tg_token = (
             db.query(TelegramToken)
             .filter(
@@ -175,23 +184,14 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
         )
 
         if not tg_token:
-            await _send_message(chat_id, (
-                "Сессия истекла. Вернитесь на сайт и начните заново."
-            ), url_button=("Открыть TajCar.tj", SITE_URL))
-            return
+            return {"status": "no_token"}
 
         token_phone = _normalize_phone(tg_token.phone)
 
         if shared_phone != token_phone:
-            # Phone mismatch — invalidate token and reject
             tg_token.is_used = True
             db.commit()
-            await _send_message(chat_id, (
-                "Номер телефона не совпадает с тем, что вы ввели на сайте.\n\n"
-                "Введите на сайте тот же номер, что зарегистрирован в Telegram, "
-                "или используйте другой способ входа."
-            ), url_button=("Открыть TajCar.tj", SITE_URL))
-            return
+            return {"status": "phone_mismatch"}
 
         # Check if this Telegram account is already linked to a DIFFERENT phone
         existing_owner = (
@@ -205,18 +205,13 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
         if existing_owner:
             tg_token.is_used = True
             db.commit()
-            await _send_message(chat_id, (
-                "Этот Telegram-аккаунт уже привязан к другому номеру.\n\n"
-                "Войдите через тот номер или обратитесь в поддержку."
-            ), url_button=("Открыть TajCar.tj", SITE_URL))
-            return
+            return {"status": "already_linked"}
 
-        # ✅ Phone verified — generate OTP
+        # Phone verified — generate OTP
         code = str(secrets.randbelow(900000) + 100000)
         expires_at = now + timedelta(minutes=10)
 
-        # Invalidate old unused phone_auth OTPs for this phone only;
-        # do NOT touch password_reset OTPs.
+        # Invalidate old unused phone_auth OTPs for this phone only
         db.query(OtpCode).filter(
             OtpCode.phone == tg_token.phone,
             OtpCode.purpose == "phone_auth",
@@ -237,24 +232,63 @@ async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
             user.telegram_chat_id = chat_id
 
         db.commit()
+        return {"status": "otp_sent", "code": code}
+    finally:
+        db.close()
 
-        spaced = " ".join(code)
-        await _send_message(
-            chat_id,
-            f"Номер подтверждён\n\n"
-            f"Ваш код MOSHINA\\.TJ:\n\n`{code}`\n\n_{spaced}_\n\n"
-            f"Нажмите на код, чтобы скопировать\\.\n"
-            f"Введите его на сайте — код действует 10 минут\\.\n"
-            f"Никому не передавайте этот код\\.",
-            parse_mode="MarkdownV2",
-            url_button=("Открыть TajCar.tj", f"{SITE_URL}/auth/register"),
-        )
 
+async def _handle_contact(chat_id: str, contact: dict[str, Any]) -> None:
+    """Verify the shared phone matches the token's phone, then issue OTP."""
+    raw_phone: str = contact.get("phone_number", "")
+    if not raw_phone:
+        await _send_message(chat_id, "Не удалось получить номер. Попробуйте ещё раз.")
+        return
+
+    shared_phone = _normalize_phone(raw_phone)
+
+    try:
+        result = await asyncio.to_thread(_handle_contact_sync, chat_id, shared_phone)
     except Exception:
         logger.exception("Error in _handle_contact")
         await _send_message(chat_id, "Произошла ошибка. Попробуйте позже.")
-    finally:
-        db.close()
+        return
+
+    status_val = result.get("status")
+
+    if status_val == "no_token":
+        await _send_message(chat_id, (
+            "Сессия истекла. Вернитесь на сайт и начните заново."
+        ), url_button=("Открыть TajCar.tj", SITE_URL))
+        return
+
+    if status_val == "phone_mismatch":
+        await _send_message(chat_id, (
+            "Номер телефона не совпадает с тем, что вы ввели на сайте.\n\n"
+            "Введите на сайте тот же номер, что зарегистрирован в Telegram, "
+            "или используйте другой способ входа."
+        ), url_button=("Открыть TajCar.tj", SITE_URL))
+        return
+
+    if status_val == "already_linked":
+        await _send_message(chat_id, (
+            "Этот Telegram-аккаунт уже привязан к другому номеру.\n\n"
+            "Войдите через тот номер или обратитесь в поддержку."
+        ), url_button=("Открыть TajCar.tj", SITE_URL))
+        return
+
+    # status_val == "otp_sent"
+    code = result["code"]
+    spaced = " ".join(code)
+    await _send_message(
+        chat_id,
+        f"Номер подтверждён\n\n"
+        f"Ваш код MOSHINA\\.TJ:\n\n`{code}`\n\n_{spaced}_\n\n"
+        f"Нажмите на код, чтобы скопировать\\.\n"
+        f"Введите его на сайте — код действует 10 минут\\.\n"
+        f"Никому не передавайте этот код\\.",
+        parse_mode="MarkdownV2",
+        url_button=("Открыть TajCar.tj", f"{SITE_URL}/auth/register"),
+    )
 
 
 async def send_welcome_message(chat_id: str, name: str | None, language: str = "ru") -> None:

@@ -150,7 +150,7 @@ def _get_listing_or_404(listing_id: str, db: Session) -> Listing:
     listing = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
-        .filter(Listing.id == listing_id)
+        .filter(Listing.id == listing_id, Listing.is_deleted == False)
         .first()
     )
     if not listing:

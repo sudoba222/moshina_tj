@@ -143,10 +143,10 @@ function LoginPageInner() {
     try {
       setLoading(true)
       const res = loginMode === 'email'
-        ? await authApi.loginEmail(emailIdentifier.trim(), password)
-        : await authApi.login(identifier.trim(), password)
+        ? await authApi.loginEmail(emailIdentifier.trim(), password, rememberMe)
+        : await authApi.login(identifier.trim(), password, rememberMe)
       const data = res.data.data!
-      login(data.token.access_token, data.user, rememberMe)
+      login(data.token.access_token, data.user)
       const raw = searchParams.get('redirect') ?? '/'
       // Only allow same-origin relative paths — reject absolute URLs and protocol-relative URLs
       const redirectTo = raw.startsWith('/') && !raw.startsWith('//') && !raw.includes(':') ? raw : '/'

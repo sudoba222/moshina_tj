@@ -159,8 +159,8 @@ export const listingsApi = {
 
 export const authApi = {
   // ── Phone (OTP) ────────────────────────────────────────────────────────────
-  login: (phone: string, password: string) =>
-    api.post<ApiResponse<AuthData>>('/auth/login', { phone, password }),
+  login: (phone: string, password: string, rememberMe?: boolean) =>
+    api.post<ApiResponse<AuthData>>('/auth/login', { phone, password, remember_me: rememberMe ?? false }),
   register: (phone: string, name: string, password: string) =>
     api.post<ApiResponse<AuthData>>('/auth/register', { phone, name, password }),
   sendOtp: (phone: string) =>
@@ -171,8 +171,8 @@ export const authApi = {
   // ── Email ──────────────────────────────────────────────────────────────────
   registerEmail: (email: string, name: string, password: string) =>
     api.post<ApiResponse<{ dev_code?: string }>>('/auth/register-email', { email, name, password }),
-  loginEmail: (email: string, password: string) =>
-    api.post<ApiResponse<AuthData>>('/auth/login-email', { email, password }),
+  loginEmail: (email: string, password: string, rememberMe?: boolean) =>
+    api.post<ApiResponse<AuthData>>('/auth/login-email', { email, password, remember_me: rememberMe ?? false }),
   verifyEmailOtp: (email: string, code: string) =>
     api.post<ApiResponse<AuthData>>('/auth/verify-email-otp', { email, code }),
   resendEmailOtp: (email: string) =>
@@ -189,8 +189,8 @@ export const authApi = {
   // ── Profile ────────────────────────────────────────────────────────────────
   me: (token?: string) =>
     token
-      ? api.get<ApiResponse<User>>('/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-      : api.get<ApiResponse<User>>('/auth/me'),
+      ? api.get<ApiResponse<AuthData>>('/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      : api.get<ApiResponse<AuthData>>('/auth/me'),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put<ApiResponse<null>>('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
   updateProfile: (data: { name?: string; phone?: string; email?: string; whatsapp_number?: string | null }, token?: string) =>

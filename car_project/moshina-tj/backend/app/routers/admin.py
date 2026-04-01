@@ -4,7 +4,9 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import DATE as SADate
@@ -24,11 +26,14 @@ from app.schemas import (
     ImageResponse,
     ListingListResponse,
     ListingResponse,
+    UserPublicResponse,
     UserResponse,
+    UserResponseAdmin,
     UserUpdateRole,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+limiter = Limiter(key_func=get_remote_address)
 
 # ---------------------------------------------------------------------------
 # Access dependencies
@@ -247,14 +252,16 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_admin))
 # ---------------------------------------------------------------------------
 
 @router.get("/users", response_model=ApiResponse[dict])
+@limiter.limit("30/minute")
 def list_users(
+    request: Request,
     page: int = Query(default=1, ge=1),
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=50),
     role: Optional[UserRole] = None,
     search: Optional[str] = None,
     is_banned: Optional[bool] = None,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ):
     query = db.query(User).filter(User.is_deleted == False)
     if role is not None:
@@ -275,9 +282,16 @@ def list_users(
     pages = math.ceil(total / limit) if total > 0 else 1
     users = query.order_by(User.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
 
+    # Only admin role sees full PII (phone, email, ban details);
+    # moderators and managers receive the public profile only.
+    if current_user.role == UserRole.admin:
+        serialized = [UserResponseAdmin.model_validate(u) for u in users]
+    else:
+        serialized = [UserPublicResponse.model_validate(u) for u in users]
+
     return ApiResponse(
         success=True,
-        data={"items": [UserResponse.model_validate(u) for u in users], "total": total, "page": page, "pages": pages},
+        data={"items": serialized, "total": total, "page": page, "pages": pages},
         message="Users fetched",
     )
 

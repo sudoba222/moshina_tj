@@ -20,7 +20,7 @@ function AuthCallbackInner() {
 
     authApi.me(token)
       .then((res) => {
-        const user = res.data.data
+        const { user } = res.data.data
         login(token, user)
         router.replace('/')
       })

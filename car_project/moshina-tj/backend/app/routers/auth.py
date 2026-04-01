@@ -23,10 +23,11 @@ from app.schemas import ApiResponse, AuthResponse, Token, UserCreate, UserRespon
 
 logger = logging.getLogger(__name__)
 
-_COOKIE_MAX_AGE = 7 * 24 * 60 * 60  # 7 days in seconds
+_COOKIE_MAX_AGE_DEFAULT = 7 * 24 * 60 * 60    # 7 days in seconds
+_COOKIE_MAX_AGE_REMEMBER = 30 * 24 * 60 * 60  # 30 days in seconds
 
 
-def _set_auth_cookie(response: Response, token: str) -> None:
+def _set_auth_cookie(response: Response, token: str, remember_me: bool = False) -> None:
     """Set the JWT as an HttpOnly cookie so XSS cannot steal it.
 
     In production the frontend (Vercel) and backend (Render) are on different
@@ -34,12 +35,13 @@ def _set_auth_cookie(response: Response, token: str) -> None:
     to send the cookie on cross-origin XHR requests.
     """
     is_prod = settings.environment == "production"
+    max_age = _COOKIE_MAX_AGE_REMEMBER if remember_me else _COOKIE_MAX_AGE_DEFAULT
     response.set_cookie(
         key="token",
         value=token,
         httponly=True,
         samesite="none" if is_prod else "lax",
-        max_age=_COOKIE_MAX_AGE,
+        max_age=max_age,
         path="/",
         secure=is_prod,
     )
@@ -176,6 +178,7 @@ class EmailRegisterPayload(BaseModel):
 class EmailLoginPayload(BaseModel):
     email: EmailStr
     password: str
+    remember_me: bool = False
 
 
 class VerifyEmailOtpPayload(BaseModel):
@@ -269,7 +272,7 @@ def login(request: Request, response: Response, payload: UserCreate, db: Session
         )
 
     token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
-    _set_auth_cookie(response, token.access_token)
+    _set_auth_cookie(response, token.access_token, remember_me=payload.remember_me)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
@@ -279,12 +282,20 @@ def login(request: Request, response: Response, payload: UserCreate, db: Session
 
 @router.get(
     "/me",
-    response_model=ApiResponse[UserResponse],
+    response_model=ApiResponse[AuthResponse],
 )
-def me(current_user: User = Depends(get_current_user)):
+def me(response: Response, current_user: User = Depends(get_current_user)):
+    # Issue a fresh token so the frontend can restore the in-memory token on page refresh
+    token = Token(
+        access_token=create_access_token(
+            {"sub": str(current_user.id), "role": current_user.role.value},
+            token_version=current_user.token_version,
+        )
+    )
+    _set_auth_cookie(response, token.access_token)
     return ApiResponse(
         success=True,
-        data=UserResponse.model_validate(current_user),
+        data=AuthResponse(token=token, user=UserResponse.model_validate(current_user)),
         message="Current user fetched",
     )
 
@@ -346,9 +357,25 @@ def change_password(
 def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(get_db)):
     """Generate and send a 6-digit OTP to the given phone number.
 
-    Rate-limited to 5 per hour per IP.
+    Rate-limited to 5 per hour per IP and 3 per 30 minutes per phone.
     In dev mode (no Twilio env vars), the code is returned in the response for testing.
     """
+    # Per-phone rate limit: max 3 OTP requests per 30 minutes
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
+    recent_count = (
+        db.query(OtpCode)
+        .filter(
+            OtpCode.phone == payload.phone,
+            OtpCode.purpose == "phone_auth",
+            OtpCode.created_at >= cutoff,
+        )
+        .count()
+    )
+    if recent_count >= 3:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Слишком много запросов. Попробуйте через 30 минут.",
+        )
 
     # Invalidate any existing unused phone_auth OTPs for this phone before issuing a new one
     # (filter by purpose to avoid accidentally cancelling password_reset codes)
@@ -643,7 +670,7 @@ def login_email(request: Request, response: Response, payload: EmailLoginPayload
         )
 
     token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
-    _set_auth_cookie(response, token.access_token)
+    _set_auth_cookie(response, token.access_token, remember_me=payload.remember_me)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),

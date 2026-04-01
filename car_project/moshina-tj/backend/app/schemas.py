@@ -3,9 +3,9 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, Generic, Optional, TypeVar
+from typing import Any, Dict, Generic, Literal, Optional, TypeVar
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models import AvailabilityStatus, BodyType, Currency, FuelType, ListingStatus, ListingType, TransmissionType, UserRole
 
@@ -30,6 +30,7 @@ class UserCreate(BaseModel):
     phone: str
     name: Optional[str] = None
     password: str
+    remember_me: bool = False
 
     @field_validator("phone")
     @classmethod
@@ -74,6 +75,12 @@ class UserResponse(BaseModel):
     is_banned: bool = False
     ban_reason: Optional[str] = None
     created_at: datetime
+
+
+class UserResponseAdmin(UserResponse):
+    """Admin-only user response — exposes all sensitive fields (phone, email, ban info).
+    Only returned to admin role users; moderators and managers receive UserPublicResponse."""
+    pass
 
 
 class UserUpdate(BaseModel):
@@ -173,14 +180,21 @@ class ListingCreate(BaseModel):
     # Contact Info
     contact_name: Optional[str] = None
     contact_email: Optional[EmailStr] = None
-    contact_phone: Optional[str] = None
-    contact_method: Optional[str] = "phone_and_chat"
-    whatsapp_number: Optional[str] = None
+    contact_phone: Optional[str] = Field(default=None, max_length=50)
+    contact_method: Literal["phone_and_chat", "phone_only", "chat_only"] = "phone_and_chat"
+    whatsapp_number: Optional[str] = Field(default=None, max_length=50)
 
     availability: AvailabilityStatus = AvailabilityStatus.in_stock
     installment_available: bool = False
     image_urls: list[str] = []
     rental_rules: Optional[RentalRules] = None
+
+    @field_validator("contact_phone", mode="before")
+    @classmethod
+    def strip_contact_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+        return v or None
 
     @field_validator("year")
     @classmethod
@@ -311,14 +325,21 @@ class ListingUpdate(BaseModel):
 
     contact_name: Optional[str] = None
     contact_email: Optional[EmailStr] = None
-    contact_phone: Optional[str] = None
-    contact_method: Optional[str] = None
-    whatsapp_number: Optional[str] = None
+    contact_phone: Optional[str] = Field(default=None, max_length=50)
+    contact_method: Optional[Literal["phone_and_chat", "phone_only", "chat_only"]] = None
+    whatsapp_number: Optional[str] = Field(default=None, max_length=50)
 
     availability: Optional[AvailabilityStatus] = None
     installment_available: Optional[bool] = None
     rental_rules: Optional[RentalRules] = None
     image_urls: Optional[list[str]] = None
+
+    @field_validator("contact_phone", mode="before")
+    @classmethod
+    def strip_contact_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+        return v or None
 
     @field_validator("image_urls")
     @classmethod

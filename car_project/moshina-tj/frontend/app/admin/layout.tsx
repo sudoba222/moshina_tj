@@ -227,15 +227,16 @@ function AdminSidebarNav({
 
 function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const { lang } = useLang()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [stats, setStats] = useState<AdminStats | null>(null)
   const pathname = usePathname()
 
-  // Auth guard — skip for login route
+  // Auth guard — skip for login route; wait for auth to resolve before redirecting
   useEffect(() => {
     if (pathname.startsWith('/admin/login')) return
+    if (loading) return
     if (!user) {
       router.replace('/admin/login')
       return
@@ -243,7 +244,7 @@ function AdminShell({ children }: { children: ReactNode }) {
     if (!ALLOWED_ROLES.includes(user.role as UserRole)) {
       router.replace('/')
     }
-  }, [user, router, pathname])
+  }, [user, loading, router, pathname])
 
   // Fetch stats for sidebar badge (silently)
   useEffect(() => {
@@ -257,8 +258,8 @@ function AdminShell({ children }: { children: ReactNode }) {
     return <>{children}</>
   }
 
-  // While auth is resolving, render nothing to avoid flicker
-  if (!user || !ALLOWED_ROLES.includes(user.role as UserRole)) {
+  // While auth is resolving, render nothing to avoid flicker or premature redirect
+  if (loading || !user || !ALLOWED_ROLES.includes(user.role as UserRole)) {
     return null
   }
 

@@ -46,7 +46,7 @@ function GoogleSetupInner() {
       await authApi.updateProfile({ name: trimmed }, token)
       // Fetch the updated user
       const res = await authApi.me(token)
-      login(token, res.data.data)
+      login(token, res.data.data.user)
       router.replace('/')
     } catch {
       setError(lang === 'tj' ? 'Хатогӣ рух дод. Дубора кӯшиш кунед.' : 'Произошла ошибка. Попробуйте ещё раз.')
