@@ -177,6 +177,7 @@ def subscription_feed(
             .filter(
                 Listing.user_id.in_(user_ids),
                 Listing.status == ListingStatus.active,
+                Listing.is_active == True,
                 Listing.is_deleted == False,
             )
             .order_by(Listing.created_at.desc())

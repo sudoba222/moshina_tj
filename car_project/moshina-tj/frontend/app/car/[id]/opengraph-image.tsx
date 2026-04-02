@@ -29,8 +29,9 @@ async function fetchListing(id: string): Promise<ListingData | null> {
   }
 }
 
-export default async function Image({ params }: { params: { id: string } }) {
-  const listing = await fetchListing(params.id)
+export default async function Image({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const listing = await fetchListing(id)
 
   const title = listing
     ? `${listing.brand} ${listing.model} ${listing.year}`

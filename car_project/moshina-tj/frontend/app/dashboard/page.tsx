@@ -103,7 +103,7 @@ export default function DashboardPage() {
 
   async function saveProfile() {
     setProfileError(''); setProfileSuccess(false)
-    if (!name.trim()) { setProfileError(lang === 'ru' ? 'Введите имя' : 'Ном ворид кунед'); return }
+    if (!name.trim()) { setProfileError(t('dashboard.enterName', lang)); return }
     setProfileSaving(true)
     try {
       const res = await authApi.updateProfile({
@@ -114,7 +114,7 @@ export default function DashboardPage() {
       setProfileSuccess(true)
       setEditMode(false)
     } catch {
-      setProfileError(lang === 'ru' ? 'Ошибка при сохранении' : 'Хато ҳангоми нигоҳ доштан')
+      setProfileError(t('common.errorSave', lang))
     } finally {
       setProfileSaving(false)
     }
@@ -123,15 +123,15 @@ export default function DashboardPage() {
   async function changePassword() {
     setPwdError(''); setPwdSuccess(false)
     if (!currentPwd || !newPwd || !confirmPwd) {
-      setPwdError(lang === 'ru' ? 'Заполните все поля' : 'Ҳама майдонҳоро пур кунед')
+      setPwdError(t('dashboard.fillAllFields', lang))
       return
     }
     if (newPwd !== confirmPwd) {
-      setPwdError(lang === 'ru' ? 'Пароли не совпадают' : 'Рамзҳо мувофиқат намекунанд')
+      setPwdError(t('dashboard.passMismatch', lang))
       return
     }
     if (newPwd.length < 6) {
-      setPwdError(lang === 'ru' ? 'Минимум 6 символов' : 'Ҳадди ақал 6 аломат')
+      setPwdError(t('dashboard.minPassword', lang))
       return
     }
     setPwdLoading(true)
@@ -141,14 +141,14 @@ export default function DashboardPage() {
       setCurrentPwd(''); setNewPwd(''); setConfirmPwd('')
     } catch (err) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setPwdError(msg ?? (lang === 'ru' ? 'Ошибка' : 'Хато'))
+      setPwdError(msg ?? t('common.error', lang))
     } finally {
       setPwdLoading(false)
     }
   }
 
   async function deleteListing(id: string) {
-    if (!window.confirm(lang === 'ru' ? 'Удалить объявление?' : 'Эълонро ҳазф кунем?')) return
+    if (!window.confirm(t('dashboard.confirmDelete', lang))) return
     try {
       await listingsApi.remove(id)
       setListings((prev) => prev.filter((l) => l.id !== id))
@@ -321,7 +321,7 @@ export default function DashboardPage() {
                     />
                   </div>
                   {profileError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{profileError}</p>}
-                  {profileSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{lang === 'ru' ? 'Сохранено' : 'Нигоҳ дошта шуд'}</p>}
+                  {profileSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{t('dashboard.savedSuccess', lang)}</p>}
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button onClick={saveProfile} disabled={profileSaving}
                       style={{ flex: 1, background: profileSaving ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: profileSaving ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
@@ -398,7 +398,7 @@ export default function DashboardPage() {
                 <div style={{ display: 'flex', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                   {(['all', 'active', 'inactive'] as const).map((f) => {
                     const label = f === 'all'
-                      ? (lang === 'ru' ? 'Все' : 'Ҳама')
+                      ? t('dashboard.filterAll', lang)
                       : t(`dashboard.${f}` as Parameters<typeof t>[0], lang)
                     // count pending in "all" tab
                     const pendingCount = listings.filter((l) => l.status === 'pending').length
@@ -431,7 +431,7 @@ export default function DashboardPage() {
                     <line x1="5.5" y1="1" x2="5.5" y2="10" />
                     <line x1="1" y1="5.5" x2="10" y2="5.5" />
                   </svg>
-                  {lang === 'ru' ? 'Новое объявление' : 'Эълони нав'}
+                  {t('dashboard.newListing', lang)}
                 </Link>
               </div>
 
@@ -469,7 +469,7 @@ export default function DashboardPage() {
                       disabled={listingsLoading}
                       style={{ marginTop: '8px', padding: '11px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', fontWeight: 700, fontSize: '14px', color: 'var(--text)', cursor: listingsLoading ? 'not-allowed' : 'pointer' }}
                     >
-                      {listingsLoading ? t('common.loading', lang) : lang === 'ru' ? 'Загрузить ещё' : 'Бештар бор кунед'}
+                      {listingsLoading ? t('common.loading', lang) : t('dashboard.loadMore', lang)}
                     </button>
                   )}
                 </div>
@@ -531,7 +531,7 @@ export default function DashboardPage() {
                       <input id="conf-pwd" type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} style={inputStyle} />
                     </div>
                     {pwdError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{pwdError}</p>}
-                    {pwdSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{lang === 'ru' ? 'Пароль изменён' : 'Рамз иваз шуд'}</p>}
+                    {pwdSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{t('dashboard.passChanged', lang)}</p>}
                     <button
                       onClick={changePassword}
                       disabled={pwdLoading}
@@ -548,7 +548,7 @@ export default function DashboardPage() {
                     {t('dashboard.language', lang)}
                   </h2>
                   <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                    {lang === 'ru' ? 'Используйте переключатель языка в шапке сайта.' : 'Аз ивазкунаки забон дар сарлавҳа истифода баред.'}
+                    {t('dashboard.langHint', lang)}
                   </p>
                 </div>
 
@@ -558,7 +558,7 @@ export default function DashboardPage() {
                     {t('dashboard.notifications', lang)}
                   </h2>
                   <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                    {lang === 'ru' ? 'Настройки уведомлений будут доступны в следующей версии.' : 'Танзимоти огоҳиҳо дар нашри оянда дастрас мешавад.'}
+                    {t('dashboard.notifHint', lang)}
                   </p>
                 </div>
               </div>
@@ -757,7 +757,7 @@ function DashboardListingRow({
         )}
         <button
           onClick={onDelete}
-          aria-label={lang === 'ru' ? 'Удалить' : 'Ҳазф'}
+          aria-label={t('dashboard.deleteLabel', lang)}
           style={{
             padding: '6px 10px',
             background: 'none',

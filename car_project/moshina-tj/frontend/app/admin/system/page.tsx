@@ -50,10 +50,10 @@ export default function AdminSystemPage() {
       const res = await vehicleApi.importNhtsa(makesOnly)
       const d = res.data.data
       setNhtsa({ loading: false, result: `+${d.added_makes} makes, +${d.added_models} models` })
-      showToast(lang === 'ru' ? 'Импорт завершён' : 'Импорт анҷом ёфт', 'success')
+      showToast(t('admin.importSuccess', lang), 'success')
     } catch {
       setNhtsa({ loading: false, result: '' })
-      showToast(lang === 'ru' ? 'Ошибка импорта' : 'Хатои импорт', 'error')
+      showToast(t('admin.importError', lang), 'error')
     }
   }
 

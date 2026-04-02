@@ -54,9 +54,10 @@ _DYM_EDIT_RATIO_MAX = 0.5
 # ---------------------------------------------------------------------------
 
 def _active_base(db: Session):
-    """Return a base query restricted to active, non-deleted listings."""
+    """Return a base query restricted to active, non-deleted, non-deactivated listings."""
     return db.query(Listing).filter(
         Listing.status == ListingStatus.active,
+        Listing.is_active == True,
         Listing.is_deleted == False,
     )
 
@@ -251,12 +252,12 @@ def search_suggestions(
     # ---- Brand candidates (trigram + prefix) ----
     brand_trgm = (
         db.query(Listing.brand.label("term"), brand_ws.label("score"))
-        .filter(Listing.status == ListingStatus.active, brand_ws > _SUGGESTION_THRESHOLD)
+        .filter(Listing.status == ListingStatus.active, Listing.is_active == True, brand_ws > _SUGGESTION_THRESHOLD)
         .distinct()
     )
     brand_prefix = (
         db.query(Listing.brand.label("term"), literal(1.0).label("score"))
-        .filter(Listing.status == ListingStatus.active, Listing.brand.ilike(prefix_pattern))
+        .filter(Listing.status == ListingStatus.active, Listing.is_active == True, Listing.brand.ilike(prefix_pattern))
         .distinct()
     )
     brand_combined = union(brand_trgm, brand_prefix).subquery()
@@ -276,12 +277,12 @@ def search_suggestions(
     # ---- Model candidates (trigram + prefix) ----
     model_trgm = (
         db.query(Listing.model.label("term"), model_ws.label("score"))
-        .filter(Listing.status == ListingStatus.active, model_ws > _SUGGESTION_THRESHOLD)
+        .filter(Listing.status == ListingStatus.active, Listing.is_active == True, model_ws > _SUGGESTION_THRESHOLD)
         .distinct()
     )
     model_prefix = (
         db.query(Listing.model.label("term"), literal(1.0).label("score"))
-        .filter(Listing.status == ListingStatus.active, Listing.model.ilike(prefix_pattern))
+        .filter(Listing.status == ListingStatus.active, Listing.is_active == True, Listing.model.ilike(prefix_pattern))
         .distinct()
     )
     model_combined = union(model_trgm, model_prefix).subquery()
@@ -301,12 +302,12 @@ def search_suggestions(
     # ---- City candidates (trigram + prefix) ----
     city_trgm = (
         db.query(Listing.city.label("term"), city_ws.label("score"))
-        .filter(Listing.status == ListingStatus.active, city_ws > _SUGGESTION_THRESHOLD)
+        .filter(Listing.status == ListingStatus.active, Listing.is_active == True, city_ws > _SUGGESTION_THRESHOLD)
         .distinct()
     )
     city_prefix = (
         db.query(Listing.city.label("term"), literal(1.0).label("score"))
-        .filter(Listing.status == ListingStatus.active, Listing.city.ilike(prefix_pattern))
+        .filter(Listing.status == ListingStatus.active, Listing.is_active == True, Listing.city.ilike(prefix_pattern))
         .distinct()
     )
     city_combined = union(city_trgm, city_prefix).subquery()
@@ -323,17 +324,30 @@ def search_suggestions(
         .all()
     )
 
-    # ---- Build result with counts ----
+    # ---- Build result with counts (batched to avoid N+1) ----
     suggestions: list[SuggestionItem] = []
     seen: set[tuple[str, str]] = set()
 
-    def _count_listings(field, value: str) -> int:
-        return (
-            db.query(func.count(Listing.id))
-            .filter(Listing.status == ListingStatus.active, field == value)
-            .scalar()
-            or 0
+    # Collect unique terms per type so we can COUNT in a single GROUP BY query each.
+    brand_terms = [r.term for r in brand_rows if r.term]
+    model_terms = [r.term for r in model_rows if r.term]
+    city_terms  = [r.term for r in city_rows  if r.term]
+
+    def _batch_counts(field, terms: list[str]) -> dict[str, int]:
+        """Return {term: count} for each term in a single GROUP BY query."""
+        if not terms:
+            return {}
+        rows = (
+            db.query(field, func.count(Listing.id))
+            .filter(Listing.status == ListingStatus.active, field.in_(terms))
+            .group_by(field)
+            .all()
         )
+        return {term: cnt for term, cnt in rows}
+
+    brand_counts = _batch_counts(Listing.brand, brand_terms)
+    model_counts = _batch_counts(Listing.model, model_terms)
+    city_counts  = _batch_counts(Listing.city,  city_terms)
 
     for row in brand_rows:
         if not row.term:
@@ -345,7 +359,7 @@ def search_suggestions(
                 SuggestionItem(
                     term=row.term,
                     type="brand",
-                    count=_count_listings(Listing.brand, row.term),
+                    count=brand_counts.get(row.term, 0),
                 )
             )
 
@@ -359,7 +373,7 @@ def search_suggestions(
                 SuggestionItem(
                     term=row.term,
                     type="model",
-                    count=_count_listings(Listing.model, row.term),
+                    count=model_counts.get(row.term, 0),
                 )
             )
 
@@ -373,7 +387,7 @@ def search_suggestions(
                 SuggestionItem(
                     term=row.term,
                     type="city",
-                    count=_count_listings(Listing.city, row.term),
+                    count=city_counts.get(row.term, 0),
                 )
             )
 
@@ -423,6 +437,7 @@ def did_you_mean(
         )
         .filter(
             Listing.status == ListingStatus.active,
+            Listing.is_active == True,
             brand_edit <= max_edit_distance,
             brand_sim > _DYM_SIMILARITY_MIN,
         )
@@ -439,6 +454,7 @@ def did_you_mean(
         )
         .filter(
             Listing.status == ListingStatus.active,
+            Listing.is_active == True,
             model_edit <= max_edit_distance,
             model_sim > _DYM_SIMILARITY_MIN,
         )
@@ -507,7 +523,7 @@ def popular_searches(request: Request, db: Session = Depends(get_db)):
         # Fallback: top brands by listing count
         rows = (
             db.query(Listing.brand, func.count(Listing.id).label("cnt"))
-            .filter(Listing.status == ListingStatus.active)
+            .filter(Listing.status == ListingStatus.active, Listing.is_active == True)
             .group_by(Listing.brand)
             .order_by(desc("cnt"))
             .limit(10)
@@ -542,6 +558,7 @@ def trending(request: Request, db: Session = Depends(get_db)):
         db.query(Listing.brand, func.count(Listing.id).label("cnt"))
         .filter(
             Listing.status == ListingStatus.active,
+            Listing.is_active == True,
             Listing.created_at >= cutoff,
         )
         .group_by(Listing.brand)
@@ -554,6 +571,7 @@ def trending(request: Request, db: Session = Depends(get_db)):
         db.query(Listing.city, func.count(Listing.id).label("cnt"))
         .filter(
             Listing.status == ListingStatus.active,
+            Listing.is_active == True,
             Listing.created_at >= cutoff,
         )
         .group_by(Listing.city)

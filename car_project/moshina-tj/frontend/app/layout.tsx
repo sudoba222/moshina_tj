@@ -208,7 +208,7 @@ const organizationSchema = {
   alternateName: ['ТаджКар', 'Bозори мошин Тоҷикистон'],
   description: 'Главный авторынок Таджикистана | Бозори мошини Тоҷикистон',
   url: SITE_URL,
-  logo: `${SITE_URL}/icon-512.png`,
+  logo: `${SITE_URL}/logo-icon.png`,
   sameAs: ['https://t.me/tajcar_tj'],
   areaServed: [
     { '@type': 'Country', name: 'Tajikistan', '@id': 'https://www.wikidata.org/wiki/Q863' },

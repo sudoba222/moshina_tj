@@ -29,7 +29,7 @@ def get_stats(db: Session = Depends(get_db)) -> ApiResponse[MarketplaceStats]:
     """
     listings_count: int = (
         db.query(func.count(Listing.id))
-        .filter(Listing.status == ListingStatus.active)
+        .filter(Listing.status == ListingStatus.active, Listing.is_active == True)
         .scalar()
         or 0
     )
@@ -43,7 +43,7 @@ def get_stats(db: Session = Depends(get_db)) -> ApiResponse[MarketplaceStats]:
 
     cities_count: int = (
         db.query(func.count(distinct(Listing.city)))
-        .filter(Listing.status == ListingStatus.active)
+        .filter(Listing.status == ListingStatus.active, Listing.is_active == True)
         .scalar()
         or 0
     )

@@ -14,6 +14,7 @@ interface ListingMeta {
   mileage: number | null
   city: string
   description: string | null
+  status: string
   images: Array<{ url: string; is_primary: boolean }>
 }
 
@@ -44,6 +45,15 @@ export async function generateMetadata(
     return {
       title: 'Объявление не найдено',
       description: 'Это объявление было удалено или не существует.',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  if (listing.status !== 'active') {
+    return {
+      title: `${listing.brand} ${listing.model} ${listing.year}`,
+      description: 'Это объявление на данный момент недоступно.',
+      robots: { index: false, follow: false },
     }
   }
 

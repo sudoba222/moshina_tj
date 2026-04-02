@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
@@ -357,7 +357,7 @@ export default function InstallmentPage() {
                     }}
                   >
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.label}</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: row.accent ? '#e67e22' : 'var(--text)' }}>{row.value}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: row.accent ? 'var(--color-warning)' : 'var(--text)' }}>{row.value}</span>
                   </div>
                 ))}
               </div>
@@ -383,16 +383,15 @@ export default function InstallmentPage() {
                     {previewRows.map((row, idx) => {
                       const isLastRow = idx === previewRows.length - 1 && amortization.length > 4
                       return (
-                        <>
+                        <React.Fragment key={row.month}>
                           {isLastRow && (
-                            <tr key="ellipsis">
+                            <tr>
                               <td colSpan={5} style={{ padding: '6px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
                                 · · ·
                               </td>
                             </tr>
                           )}
                           <tr
-                            key={row.month}
                             style={{
                               borderBottom: idx < previewRows.length - 1 ? '1px solid var(--border)' : 'none',
                               background: idx % 2 !== 0 ? 'var(--surface)' : 'transparent',
@@ -404,7 +403,7 @@ export default function InstallmentPage() {
                             <td style={{ padding: '10px 12px', color: 'var(--text)' }}>{fmt(row.interest)}</td>
                             <td style={{ padding: '10px 12px', color: 'var(--text)' }}>{fmt(row.balance)}</td>
                           </tr>
-                        </>
+                        </React.Fragment>
                       )
                     })}
                   </tbody>

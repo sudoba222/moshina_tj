@@ -49,9 +49,8 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
 
 
 def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
-    # Allow both admin and moderator roles to perform "super admin" tasks like deleting/editing users
-    if current_user.role not in {UserRole.admin, UserRole.moderator}:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin or Moderator access required")
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
 
 

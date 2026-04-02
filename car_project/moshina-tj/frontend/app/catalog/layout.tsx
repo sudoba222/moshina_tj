@@ -36,6 +36,13 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'ru_TJ',
     siteName: 'TAJCAR.TJ',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Каталог автомобилей Таджикистана — TAJCAR.TJ' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Каталог автомобилей Таджикистана — Купить авто | TAJCAR.TJ',
+    description: 'Тысячи объявлений с фильтрами по марке, цене и городу. Найдите свой автомобиль в Таджикистане.',
+    images: ['/opengraph-image'],
   },
   alternates: {
     canonical: `${SITE_URL}/catalog`,

@@ -256,6 +256,7 @@ function PhoneTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
           placeholder="000 000 0000"
           hasError={!!error}
           searchPlaceholder={t('auth.searchCountry', lang as import('@/types').Lang)}
+          notFoundText={t('auth.countryNotFound', lang as import('@/types').Lang)}
         />
       </div>
       <div>
@@ -566,7 +567,7 @@ export default function RegisterPage() {
     <>
       {showWelcome && registeredUser && (
         <WelcomeModal
-          userName={registeredUser.name ?? (lang === 'ru' ? 'Пользователь' : 'Корбар')}
+          userName={registeredUser.name ?? t('users.anonymousUser', lang)}
           lang={lang}
           onContinue={handleWelcomeContinue}
           onSkip={handleWelcomeSkip}
@@ -585,13 +586,13 @@ export default function RegisterPage() {
 
       <div className="slide-up" style={{ width: '100%', maxWidth: '400px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(24px,5vw,40px)', overflow: 'hidden' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)', marginBottom: '20px', textAlign: 'center' }}>
-          {lang === 'ru' ? 'Регистрация' : 'Бақайдгирӣ'}
+          {t('authForm.registerTitle', lang)}
         </h1>
 
         {/* Tabs */}
         <div style={{ display: 'flex', background: 'var(--surface)', borderRadius: '10px', padding: '4px', marginBottom: '24px', gap: '4px' }}>
           <button onClick={() => setTab('phone')} style={tabBtn(tab === 'phone')}>
-            {lang === 'ru' ? 'Телефон' : 'Телефон'}
+            {t('auth.loginByPhone', lang)}
           </button>
           <button onClick={() => setTab('email')} style={tabBtn(tab === 'email')}>
             Email
@@ -634,9 +635,9 @@ export default function RegisterPage() {
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--text-muted)' }}>
-          {lang === 'ru' ? 'Уже есть аккаунт?' : 'Аккаунт дорӣ?'}{' '}
+          {t('register.haveAccount', lang)}{' '}
           <Link href="/auth/login" style={{ color: 'var(--accent)', fontWeight: 600 }}>
-            {lang === 'ru' ? 'Войти' : 'Даромад'}
+            {t('register.loginLink', lang)}
           </Link>
         </p>
       </div>

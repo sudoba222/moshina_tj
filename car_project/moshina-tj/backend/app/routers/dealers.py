@@ -47,10 +47,11 @@ def get_dealer(dealer_id: str, db: Session = Depends(get_db)):
 
     listings = (
         db.query(Listing)
-        .options(joinedload(Listing.images))
+        .options(joinedload(Listing.images), joinedload(Listing.user))
         .filter(
             Listing.user_id == dealer.user_id,
             Listing.status == ListingStatus.active,
+            Listing.is_active == True,
             Listing.is_deleted == False,
         )
         .order_by(Listing.created_at.desc())

@@ -36,7 +36,7 @@ def my_listings(
     """Return all listings belonging to the current user across all statuses."""
     query = (
         db.query(Listing)
-        .options(joinedload(Listing.images))
+        .options(joinedload(Listing.images), joinedload(Listing.user))
         .filter(Listing.user_id == current_user.id, Listing.is_deleted == False)
     )
     if status_filter and status_filter != "all":
@@ -77,7 +77,7 @@ def get_my_favorites(
     """Return paginated list of listings the current user has favorited."""
     query = (
         db.query(Listing)
-        .options(joinedload(Listing.images))
+        .options(joinedload(Listing.images), joinedload(Listing.user))
         .join(Favorite, Favorite.listing_id == Listing.id)
         .filter(
             Favorite.user_id == current_user.id,
@@ -129,6 +129,7 @@ def get_user_profile(
         .filter(
             Listing.user_id == user_id,
             Listing.status == ListingStatus.active,
+            Listing.is_active == True,
             Listing.is_deleted == False,
         )
         .count()
@@ -166,10 +167,11 @@ def get_user_listings(
     """All active listings posted by a given user, paginated."""
     query = (
         db.query(Listing)
-        .options(joinedload(Listing.images))
+        .options(joinedload(Listing.images), joinedload(Listing.user))
         .filter(
             Listing.user_id == user_id,
             Listing.status == ListingStatus.active,
+            Listing.is_active == True,
             Listing.is_deleted == False,
         )
     )

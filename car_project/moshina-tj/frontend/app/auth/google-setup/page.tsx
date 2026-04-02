@@ -131,7 +131,7 @@ function GoogleSetupInner() {
           </div>
 
           {error && (
-            <p style={{ fontSize: '13px', color: 'var(--danger, #e53e3e)', fontFamily: 'var(--font)', textAlign: 'center' }}>
+            <p style={{ fontSize: '13px', color: 'var(--color-error)', fontFamily: 'var(--font)', textAlign: 'center' }}>
               {error}
             </p>
           )}

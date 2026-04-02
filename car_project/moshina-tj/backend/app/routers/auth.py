@@ -890,6 +890,13 @@ def reset_password(request: Request, payload: ResetPasswordPayload, db: Session 
     if not otp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired code")
 
+    # Validate user before consuming the OTP, so we never waste a reset code
+    # on a non-existent or suspended account.
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+    if user.is_banned:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
+
     # Per-identifier brute-force protection: lock after 5 failed attempts
     if otp.attempts >= 5:
         otp.is_used = True
@@ -903,11 +910,6 @@ def reset_password(request: Request, payload: ResetPasswordPayload, db: Session 
         otp.attempts += 1
         db.commit()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired code")
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
-    if user.is_banned:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
 
     otp.is_used = True
     user.password_hash = hash_password(payload.new_password)
@@ -1203,6 +1205,7 @@ def google_oauth_redirect() -> Any:
         max_age=600,  # 10 minutes — enough time to complete the OAuth dance
         path="/",
         secure=is_prod,
+        domain=".tajcar.tj" if is_prod else None,
     )
     return response
 
@@ -1324,9 +1327,17 @@ async def google_oauth_callback(
 
     def _oauth_redirect(url: str) -> _RedirectResponse:
         """Build a redirect that sets the JWT as an HttpOnly cookie and clears the state cookie."""
-        resp = _RedirectResponse(url)
+        # Append token to the URL so the frontend can use it for initial login
+        sep = "&" if "?" in url else "?"
+        final_url = f"{url}{sep}token={jwt_token}"
+        resp = _RedirectResponse(final_url)
         _set_auth_cookie(resp, jwt_token)
-        resp.delete_cookie("oauth_state", path="/")
+        # Clear the state cookie using the same domain settings it was created with
+        resp.delete_cookie(
+            "oauth_state",
+            path="/",
+            domain=".tajcar.tj" if is_prod else None,
+        )
         return resp
 
     # New users (or users with no name) → name setup page

@@ -26,158 +26,138 @@ const CITIES = [
   { value: 'Турсунзода', i18n: 'options.cityTursunzoda' },
 ]
 
-// ─── Brand data with inline SVG paths ─────────────────────────────────────────
+// ─── Brand data with real logo URLs ──────────────────────────────────────────
 const BRANDS: { name: string; color: string; icon: React.ReactNode }[] = [
   {
     name: 'Toyota',
     color: '#EB0A1E',
     icon: (
-      // Toyota three-oval logo (simplified)
-      <svg viewBox="0 0 40 28" width="40" height="28" fill="currentColor">
-        <ellipse cx="20" cy="14" rx="19" ry="7.5" fill="none" stroke="currentColor" strokeWidth="2.2"/>
-        <ellipse cx="20" cy="14" rx="8.5" ry="13" fill="none" stroke="currentColor" strokeWidth="2.2"/>
-        <ellipse cx="20" cy="4.5" rx="11" ry="4" fill="none" stroke="currentColor" strokeWidth="2.2"/>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Toyota_carlogo.svg"
+        alt="Toyota"
+        style={{ width: '42px', height: '30px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'BMW',
     color: '#1C69D4',
     icon: (
-      // BMW roundel
-      <svg viewBox="0 0 32 32" width="32" height="32">
-        <circle cx="16" cy="16" r="15" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <circle cx="16" cy="16" r="9.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-        <path d="M16 6.5 A9.5 9.5 0 0 0 6.5 16 L16 16 Z" fill="currentColor" fillOpacity="0.7"/>
-        <path d="M16 16 L25.5 16 A9.5 9.5 0 0 0 16 25.5 Z" fill="currentColor" fillOpacity="0.7"/>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/4/44/BMW.svg"
+        alt="BMW"
+        style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'Mercedes',
     color: '#333',
     icon: (
-      // Three-pointed star
-      <svg viewBox="0 0 32 32" width="32" height="32">
-        <circle cx="16" cy="16" r="15" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <polygon points="16,3 19.5,13.5 30,14.2 21.5,20.5 24,31 16,25 8,31 10.5,20.5 2,14.2 12.5,13.5"
-          fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-        <line x1="16" y1="3" x2="16" y2="16" stroke="currentColor" strokeWidth="1.8"/>
-        <line x1="16" y1="16" x2="5" y2="22.5" stroke="currentColor" strokeWidth="1.8"/>
-        <line x1="16" y1="16" x2="27" y2="22.5" stroke="currentColor" strokeWidth="1.8"/>
-        <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Benz_Logo_2010.svg"
+        alt="Mercedes"
+        style={{ width: '36px', height: '36px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'Chevrolet',
     color: '#D4AA00',
     icon: (
-      // Bowtie
-      <svg viewBox="0 0 44 20" width="44" height="20">
-        <path d="M2 2 L20 2 L15 18 L2 18 Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-        <path d="M24 2 L42 2 L42 18 L29 18 Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-        <path d="M15 10 L29 10" stroke="currentColor" strokeWidth="2"/>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/0/07/Chevrolet_logo.svg"
+        alt="Chevrolet"
+        style={{ width: '48px', height: '18px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'Hyundai',
     color: '#002C5F',
     icon: (
-      // Stylized H
-      <svg viewBox="0 0 32 32" width="32" height="32">
-        <ellipse cx="16" cy="16" rx="15" ry="11" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <text x="16" y="21" textAnchor="middle" fontSize="16" fontWeight="800"
-          fontFamily="Arial,sans-serif" fill="currentColor" letterSpacing="-0.5">H</text>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/4/44/Hyundai_Motor_Company_logo.svg"
+        alt="Hyundai"
+        style={{ width: '40px', height: '24px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'Kia',
     color: '#05141F',
     icon: (
-      // KIA in rounded rectangle
-      <svg viewBox="0 0 44 24" width="44" height="24">
-        <rect x="1" y="1" width="42" height="22" rx="5" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <text x="22" y="17" textAnchor="middle" fontSize="13" fontWeight="900"
-          fontFamily="Arial,sans-serif" fill="currentColor" letterSpacing="1">KIA</text>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/4/47/Kia_logo_2021.svg"
+        alt="Kia"
+        style={{ width: '44px', height: '22px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'Lexus',
     color: '#1A1A1A',
     icon: (
-      // L in oval
-      <svg viewBox="0 0 40 28" width="40" height="28">
-        <ellipse cx="20" cy="14" rx="19" ry="13" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <text x="20" y="20" textAnchor="middle" fontSize="18" fontWeight="700"
-          fontFamily="Georgia,serif" fill="currentColor" fontStyle="italic">L</text>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/d/d1/Lexus_logo.svg"
+        alt="Lexus"
+        style={{ width: '42px', height: '28px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'Honda',
     color: '#CC0000',
     icon: (
-      // H in wings shape
-      <svg viewBox="0 0 44 24" width="44" height="24">
-        <path d="M4 12 Q6 4 14 6 L20 12 L24 12 L30 6 Q38 4 40 12 Q38 20 30 18 L24 12 L20 12 L14 18 Q6 20 4 12 Z"
-          fill="none" stroke="currentColor" strokeWidth="1.8"/>
-        <text x="22" y="17" textAnchor="middle" fontSize="14" fontWeight="800"
-          fontFamily="Arial,sans-serif" fill="currentColor">H</text>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/3/38/Honda.svg"
+        alt="Honda"
+        style={{ width: '36px', height: '32px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'Nissan',
     color: '#C3002F',
     icon: (
-      // Circle with horizontal bar
-      <svg viewBox="0 0 40 28" width="40" height="28">
-        <ellipse cx="20" cy="14" rx="19" ry="13" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <line x1="2" y1="14" x2="38" y2="14" stroke="currentColor" strokeWidth="2"/>
-        <text x="20" y="11.5" textAnchor="middle" fontSize="7.5" fontWeight="700"
-          fontFamily="Arial,sans-serif" fill="currentColor" letterSpacing="0.5">NISSAN</text>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Nissan_logo.svg"
+        alt="Nissan"
+        style={{ width: '40px', height: '34px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'Audi',
     color: '#BB0A30',
     icon: (
-      // Four rings
-      <svg viewBox="0 0 56 16" width="56" height="16">
-        <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <circle cx="22" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <circle cx="36" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <circle cx="50" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="2"/>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/9/92/Audi_logo_detail.svg"
+        alt="Audi"
+        style={{ width: '56px', height: '20px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'Volkswagen',
     color: '#001E50',
     icon: (
-      // VW in circle
-      <svg viewBox="0 0 32 32" width="32" height="32">
-        <circle cx="16" cy="16" r="15" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <text x="16" y="21.5" textAnchor="middle" fontSize="13" fontWeight="900"
-          fontFamily="Arial,sans-serif" fill="currentColor" letterSpacing="-0.5">VW</text>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/6/6d/Volkswagen_logo_2019.svg"
+        alt="Volkswagen"
+        style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+      />
     ),
   },
   {
     name: 'BYD',
     color: '#1565C0',
     icon: (
-      // BYD text
-      <svg viewBox="0 0 44 24" width="44" height="24">
-        <rect x="1" y="1" width="42" height="22" rx="5" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <text x="22" y="17" textAnchor="middle" fontSize="13" fontWeight="900"
-          fontFamily="Arial,sans-serif" fill="currentColor" letterSpacing="0.5">BYD</text>
-      </svg>
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/3/3d/BYD_logo.svg"
+        alt="BYD"
+        style={{ width: '44px', height: '24px', objectFit: 'contain' }}
+      />
     ),
   },
 ]
@@ -397,24 +377,21 @@ export default function OnboardingWizard({ onComplete }: Props) {
                       }}
                     >
                       {/* Flag icon */}
-                      <svg width="40" height="28" viewBox="0 0 40 28" style={{ borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
-                        {l === 'ru' ? (
-                          <>
-                            <rect width="40" height="9.33" y="0" fill="#fff"/>
-                            <rect width="40" height="9.33" y="9.33" fill="#0039A6"/>
-                            <rect width="40" height="9.33" y="18.67" fill="#D52B1E"/>
-                          </>
-                        ) : (
-                          <>
-                            <rect width="40" height="9.33" y="0" fill="#CC0001"/>
-                            <rect width="40" height="9.33" y="9.33" fill="#FFFFFF"/>
-                            <rect width="40" height="9.33" y="18.67" fill="#007A3D"/>
-                            <circle cx="14" cy="14" r="4.5" fill="none" stroke="#CC0001" strokeWidth="1.2"/>
-                          </>
-                        )}
-                        {/* Flag border */}
-                        <rect width="40" height="28" fill="none" stroke="rgba(0,0,0,0.12)" strokeWidth="1"/>
-                      </svg>
+                      <img
+                        src={l === 'ru'
+                          ? "https://upload.wikimedia.org/wikipedia/en/f/f3/Flag_of_Russia.svg"
+                          : "https://upload.wikimedia.org/wikipedia/commons/d/d0/Flag_of_Tajikistan.svg"
+                        }
+                        alt={l === 'ru' ? 'Russian' : 'Tajik'}
+                        style={{
+                          width: '40px',
+                          height: '28px',
+                          borderRadius: '4px',
+                          objectFit: 'cover',
+                          border: '1px solid rgba(0,0,0,0.12)',
+                          flexShrink: 0,
+                        }}
+                      />
                       <span style={{ fontSize: '14px', fontWeight: 700 }}>{label}</span>
                     </button>
                   )

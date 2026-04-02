@@ -67,7 +67,7 @@ export default function Footer() {
 
           {/* Catalog */}
           <div>
-            <ColTitle>{lang === 'ru' ? 'Каталог' : 'Каталог'}</ColTitle>
+            <ColTitle>{t('footer.colCatalog', lang)}</ColTitle>
             <FootLink href="/catalog">{t('footer.catalog', lang)}</FootLink>
             <FootLink href="/rent">{t('footer.rent', lang)}</FootLink>
             <FootLink href="/dealers">{t('footer.dealers', lang)}</FootLink>
@@ -76,7 +76,7 @@ export default function Footer() {
 
           {/* Company */}
           <div>
-            <ColTitle>{lang === 'ru' ? 'Компания' : 'Ширкат'}</ColTitle>
+            <ColTitle>{t('footer.colCompany', lang)}</ColTitle>
             <FootLink href="/about">{t('footer.about', lang)}</FootLink>
             <FootLink href="/terms">{t('footer.terms', lang)}</FootLink>
             <FootLink href="/privacy">{t('footer.privacy', lang)}</FootLink>
@@ -84,11 +84,9 @@ export default function Footer() {
 
           {/* Post CTA */}
           <div>
-            <ColTitle>{lang === 'ru' ? 'Продавцам' : 'Фурӯшандагон'}</ColTitle>
+            <ColTitle>{t('footer.colSellers', lang)}</ColTitle>
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6, marginBottom: '16px' }}>
-              {lang === 'ru'
-                ? 'Разместите объявление и найдите покупателя быстро.'
-                : 'Эълон гузоред ва харидорро зуд пайдо кунед.'}
+              {t('footer.sellerPitch', lang)}
             </p>
             <Link href="/post"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', height: '40px', padding: '0 18px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', borderRadius: '9px', textDecoration: 'none', transition: 'opacity 0.13s' }}
@@ -105,10 +103,10 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto" style={{ padding: '0 clamp(16px,4vw,32px)' }}>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: '40px', padding: '18px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)' }}>
-            © {year} TAJCAR.TJ — {lang === 'ru' ? 'Все права защищены' : 'Ҳамаи ҳуқуқҳо муҳофизат шудаанд'}
+            © {year} TAJCAR.TJ — {t('footer.allRights', lang)}
           </p>
           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)' }}>
-            {lang === 'ru' ? 'Сделано в Таджикистане' : 'Дар Тоҷикистон сохта шудааст'}
+            {t('footer.madeIn', lang)}
           </p>
         </div>
       </div>

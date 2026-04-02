@@ -213,6 +213,7 @@ function LoginPageInner() {
                 placeholder="000 000 0000"
                 hasError={!!error}
                 searchPlaceholder={t('auth.searchCountry', lang)}
+                notFoundText={t('auth.countryNotFound', lang)}
               />
             ) : (
               <input

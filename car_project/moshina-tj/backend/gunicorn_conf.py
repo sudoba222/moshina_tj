@@ -8,7 +8,7 @@ bind = f"0.0.0.0:{os.getenv('PORT', '8000')}"
 workers = int(os.getenv("WEB_CONCURRENCY", max(2, multiprocessing.cpu_count())))
 worker_class = "uvicorn.workers.UvicornWorker"
 worker_connections = 1000
-timeout = 120
+timeout = 300
 keepalive = 5
 
 # Logging

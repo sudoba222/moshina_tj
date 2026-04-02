@@ -931,12 +931,12 @@ export default function CarDetailClient() {
                     </span>
                   )}
                   {listing.availability === 'on_order' && (
-                    <span style={{ background: 'rgba(234,179,8,0.15)', color: 'rgb(161,120,0)', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px' }}>
+                    <span style={{ background: 'var(--color-warning-dim)', color: 'var(--color-warning)', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px' }}>
                       {t('post.availability_on_order', lang)}
                     </span>
                   )}
                   {listing.availability === 'abroad' && (
-                    <span style={{ background: 'rgba(99,102,241,0.12)', color: 'rgb(79,70,229)', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px' }}>
+                    <span style={{ background: 'var(--color-info-dim)', color: 'var(--color-info)', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px' }}>
                       {t('post.availability_abroad', lang)}
                     </span>
                   )}

@@ -11,9 +11,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#c83808',
     orientation: 'portrait',
     icons: [
-      { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/logo-icon.png', sizes: '192x192', type: 'image/png' },
+      { src: '/logo-icon.png', sizes: '512x512', type: 'image/png' },
+      { src: '/logo-icon.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     categories: ['auto', 'shopping', 'lifestyle'],
     lang: 'ru',

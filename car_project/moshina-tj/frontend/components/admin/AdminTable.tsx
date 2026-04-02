@@ -1,4 +1,6 @@
 'use client'
+import { useLang } from '@/lib/LanguageContext'
+import { t } from '@/lib/i18n'
 
 export interface AdminTableColumn<T> {
   key: string
@@ -57,8 +59,8 @@ export default function AdminTable<T extends { id: string }>({
   columns,
   rows,
   loading = false,
-  loadingText = 'Загрузка...',
-  emptyText = 'Нет данных',
+  loadingText,
+  emptyText,
   total,
   page,
   pageSize = 20,
@@ -67,6 +69,9 @@ export default function AdminTable<T extends { id: string }>({
   onRowClick,
   caption,
 }: AdminTableProps<T>) {
+  const { lang } = useLang()
+  const resolvedLoadingText = loadingText ?? t('common.loading', lang)
+  const resolvedEmptyText = emptyText ?? t('common.noData', lang)
   const hasPagination = page !== undefined && (onPrevPage || onNextPage)
   const totalPages = total && pageSize ? Math.ceil(total / pageSize) : undefined
 
@@ -74,7 +79,7 @@ export default function AdminTable<T extends { id: string }>({
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
         <LoadingSpinner />
-        <div style={{ marginTop: '10px' }}>{loadingText}</div>
+        <div style={{ marginTop: '10px' }}>{resolvedLoadingText}</div>
       </div>
     )
   }
@@ -119,7 +124,7 @@ export default function AdminTable<T extends { id: string }>({
                   colSpan={columns.length}
                   style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-muted)', padding: '40px 20px' }}
                 >
-                  {emptyText}
+                  {resolvedEmptyText}
                 </td>
               </tr>
             ) : (

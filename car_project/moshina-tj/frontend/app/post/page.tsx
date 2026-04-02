@@ -316,7 +316,7 @@ function PostPage() {
         }
         setExistingUrls(l.images.map((i) => i.url))
       })
-      .catch(() => setError(lang === 'ru' ? 'Не удалось загрузить объявление' : 'Эълонро бор кардан мумкин набуд'))
+      .catch(() => setError(t('post.errorLoad', lang)))
       .finally(() => setLoadingEdit(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId])
@@ -356,8 +356,8 @@ function PostPage() {
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status
       setAiError(status === 503
-        ? (lang === 'ru' ? 'AI недоступен' : 'AI дастрас нест')
-        : (lang === 'ru' ? 'Не удалось улучшить описание' : 'Тавсифро беҳтар кардан мумкин набуд'))
+        ? t('post.aiUnavailable', lang)
+        : t('post.aiError', lang))
     } finally {
       setAiLoading(false)
     }
@@ -369,7 +369,7 @@ function PostPage() {
     const finalBrand = form.brand === 'Другое' ? customBrand.trim() : form.brand.trim()
     const finalModel = form.model === 'Другое' ? customModel.trim() : form.model.trim()
     if (!finalBrand || !finalModel || !form.price || !form.city) {
-      setError(lang === 'ru' ? 'Заполните обязательные поля: марка, модель, цена, город' : 'Майдонҳои ҳатмӣ: марка, модел, нарх, шаҳр')
+      setError(t('post.fillRequired', lang))
       return
     }
     try {
@@ -430,7 +430,7 @@ function PostPage() {
       setTimeout(() => router.push(isEdit ? '/dashboard' : '/catalog'), 2000)
     } catch (err) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setError(msg ?? (lang === 'ru' ? 'Произошла ошибка' : 'Хато рух дод'))
+      setError(msg ?? t('post.genericError', lang))
     } finally {
       setUploading(false)
       setSubmitting(false)
@@ -464,10 +464,10 @@ function PostPage() {
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
           </div>
           <p style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)', marginBottom: '10px' }}>
-            {isEdit ? (lang === 'ru' ? 'Сохранено!' : 'Нигоҳ дошта шуд!') : (lang === 'ru' ? 'Объявление отправлено!' : 'Эълон фиристода шуд!')}
+            {isEdit ? t('post.savedSuccess', lang) : t('post.postedSuccess', lang)}
           </p>
           <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-            {lang === 'ru' ? 'Ваше объявление проходит модерацию и появится в каталоге в течение нескольких часов.' : 'Эълони шумо баррасӣ мешавад ва дар муддати чанд соат дар каталог намоиш дода мешавад.'}
+            {t('post.postedSuccessSub', lang)}
           </p>
         </div>
       </main>
@@ -483,9 +483,7 @@ function PostPage() {
         <div style={{ maxWidth: '680px', margin: '0 auto', padding: 'clamp(24px,4vw,48px) clamp(14px,4vw,24px) 80px' }}>
 
           <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 800, color: 'var(--text)', marginBottom: '24px' }}>
-            {isEdit
-              ? (lang === 'ru' ? 'Редактировать объявление' : 'Таҳрири эълон')
-              : (lang === 'ru' ? 'Подать объявление' : 'Додани эълон')}
+            {isEdit ? t('post.editTitle', lang) : t('post.postTitle', lang)}
           </h1>
 
           <form onSubmit={handleSubmit}>
@@ -592,7 +590,7 @@ function PostPage() {
                       required
                       value={customBrand}
                       onChange={(e) => setCustomBrand(e.target.value)}
-                      placeholder={lang === 'ru' ? 'Название марки на английском, напр. Geely' : 'Номи марка бо англисӣ, масалан Geely'}
+                      placeholder={t('post.brandPlaceholder', lang)}
                       style={{ ...inp, marginTop: '8px' }}
                       autoFocus
                     />
@@ -601,12 +599,12 @@ function PostPage() {
 
                 {/* Model */}
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Модель *' : 'Модел *'}</label>
+                  <label style={lbl}>{t('post.modelLabel', lang)}</label>
                   {modelsLoading ? (
                     <div style={{ ...inp, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                       <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
-                      {lang === 'ru' ? 'Загрузка моделей…' : 'Моделҳо бор мешаванд…'}
+                      {t('post.loadingModels', lang)}
                     </div>
                   ) : modelsList.length > 0 ? (
                     <>
@@ -617,11 +615,11 @@ function PostPage() {
                         style={inp}
                         disabled={!form.brand}
                       >
-                        <option value="">{lang === 'ru' ? '— Выберите модель —' : '— Моделро интихоб кунед —'}</option>
+                        <option value="">{t('post.selectModel', lang)}</option>
                         {modelsList.filter((m) => m !== 'Другое').map((m) => (
                           <option key={m} value={m}>{m}</option>
                         ))}
-                        <option value="Другое">{lang === 'ru' ? 'Другое (ввести вручную)' : 'Дигар (дастӣ ворид кунед)'}</option>
+                        <option value="Другое">{t('post.otherModel', lang)}</option>
                       </select>
                       {form.model === 'Другое' && (
                         <input
@@ -629,7 +627,7 @@ function PostPage() {
                           required
                           value={customModel}
                           onChange={(e) => setCustomModel(e.target.value)}
-                          placeholder={lang === 'ru' ? 'Название модели на английском, напр. Coolray' : 'Номи модел бо англисӣ, масалан Coolray'}
+                          placeholder={t('post.modelPlaceholder', lang)}
                           style={{ ...inp, marginTop: '8px' }}
                           autoFocus
                         />
@@ -644,8 +642,8 @@ function PostPage() {
                       disabled={!form.brand}
                       placeholder={
                         !form.brand
-                          ? (lang === 'ru' ? 'Сначала выберите марку' : 'Аввал маркаро интихоб кунед')
-                          : (lang === 'ru' ? 'Введите модель' : 'Моделро ворид кунед')
+                          ? t('post.selectModelFirst', lang)
+                          : t('post.enterModel', lang)
                       }
                       style={{ ...inp, opacity: !form.brand ? 0.5 : 1 }}
                     />
@@ -654,7 +652,7 @@ function PostPage() {
 
                 {/* Year */}
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Год выпуска *' : 'Соли истеҳсол *'}</label>
+                  <label style={lbl}>{t('post.yearLabel', lang)}</label>
                   <input
                     type="number" min={1960} max={2100} required
                     value={form.year}
@@ -669,12 +667,12 @@ function PostPage() {
             <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                {lang === 'ru' ? 'Цена и город' : 'Нарх ва шаҳр'}
+                {t('post.priceCity', lang)}
               </SectionTitle>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {/* Price */}
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Цена *' : 'Нарх *'}</label>
+                  <label style={lbl}>{t('post.priceLabel', lang)}</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input type="number" required min={1} value={form.price}
                       onChange={(e) => setField('price', e.target.value)}
@@ -692,13 +690,13 @@ function PostPage() {
                   <input type="checkbox" checked={form.is_negotiable}
                     onChange={(e) => setField('is_negotiable', e.target.checked)}
                     style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', flexShrink: 0 }} />
-                  {lang === 'ru' ? 'Торг уместен' : 'Муомила мумкин аст'}
+                  {t('post.negotiable', lang)}
                 </label>
                 {/* City */}
                 <div>
-                  <label style={lbl}>{lang === 'ru' ? 'Город *' : 'Шаҳр *'}</label>
+                  <label style={lbl}>{t('post.cityLabel', lang)}</label>
                   <select required value={form.city} onChange={(e) => setField('city', e.target.value)} style={inp}>
-                    <option value="">{lang === 'ru' ? '— Выберите город —' : '— Шаҳрро интихоб кунед —'}</option>
+                    <option value="">{t('post.selectCity', lang)}</option>
                     {CITIES_OPTIONS.map((c) => <option key={c.value} value={c.value}>{t(c.labelKey, lang)}</option>)}
                   </select>
                 </div>
@@ -823,7 +821,7 @@ function PostPage() {
             <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                {lang === 'ru' ? `Фотографии (${totalImages}/8)` : `Аксҳо (${totalImages}/8)`}
+                {`${t('post.photosCount', lang)} (${totalImages}/8)`}
               </SectionTitle>
 
               <input ref={fileInputRef} id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" multiple
@@ -841,10 +839,10 @@ function PostPage() {
                     <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
                   </svg>
                   <span style={{ fontSize: '15px', fontWeight: 700 }}>
-                    {lang === 'ru' ? 'Добавить фото' : 'Акс илова кунед'}
+                    {t('post.add_photos', lang)}
                   </span>
                   <span style={{ fontSize: '12px' }}>
-                    {lang === 'ru' ? `Осталось ${8 - totalImages} из 8` : `${8 - totalImages} аз 8 боқист`}
+                    {t('post.photosRemaining', lang).replace('{n}', String(8 - totalImages))}
                   </span>
                 </label>
               )}
@@ -856,7 +854,7 @@ function PostPage() {
                       <Image src={src} alt="" fill sizes="120px" style={{ objectFit: 'cover' }} />
                       {i === 0 && <div style={{ position: 'absolute', bottom: 4, left: 4, background: 'var(--accent)', color: 'var(--color-white)', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>1</div>}
                       <button type="button" onClick={() => setExistingUrls((p) => p.filter((_, idx) => idx !== i))}
-                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="1" y1="1" x2="8" y2="8"/><line x1="8" y1="1" x2="1" y2="8"/></svg>
                       </button>
                     </div>
@@ -865,7 +863,7 @@ function PostPage() {
                     <div key={`new-${i}`} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
                       <Image src={src} alt="" fill sizes="120px" style={{ objectFit: 'cover' }} />
                       <button type="button" onClick={() => removeNew(i)}
-                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="1" y1="1" x2="8" y2="8"/><line x1="8" y1="1" x2="1" y2="8"/></svg>
                       </button>
                     </div>

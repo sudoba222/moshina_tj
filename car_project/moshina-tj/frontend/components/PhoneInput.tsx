@@ -66,6 +66,7 @@ interface PhoneInputProps {
   disabled?: boolean
   hasError?: boolean
   searchPlaceholder?: string
+  notFoundText?: string
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ export default function PhoneInput({
   disabled = false,
   hasError = false,
   searchPlaceholder = 'Поиск страны...',
+  notFoundText = 'Не найдено',
 }: PhoneInputProps) {
   const { country: initialCountry, localNumber: initialLocal } = splitFullPhone(value)
   const [selectedCountry, setSelectedCountry] = useState<Country>(initialCountry)
@@ -347,7 +349,7 @@ export default function PhoneInput({
                   textAlign: 'center',
                 }}
               >
-                Не найдено
+                {notFoundText}
               </li>
             ) : (
               filteredCountries.map((country) => {

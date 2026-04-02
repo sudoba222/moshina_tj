@@ -7,7 +7,7 @@ export default function Loading() {
         alignItems: 'center',
         justifyContent: 'center',
       }}
-      aria-label="Загрузка"
+      aria-label="Загрузка / Бор шудан"
       role="status"
     >
       <div

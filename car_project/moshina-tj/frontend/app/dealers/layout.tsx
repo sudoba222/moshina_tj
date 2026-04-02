@@ -18,6 +18,13 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'ru_TJ',
     siteName: 'TAJCAR.TJ',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Автодилеры Таджикистана — TAJCAR.TJ' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Автодилеры Таджикистана | TAJCAR.TJ',
+    description: 'Официальные автодилеры Таджикистана. Проверенные дилерские центры.',
+    images: ['/opengraph-image'],
   },
   alternates: {
     canonical: `${SITE_URL}/dealers`,

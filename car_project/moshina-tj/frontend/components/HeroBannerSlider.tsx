@@ -161,7 +161,7 @@ export default function HeroBannerSlider({ banners, lang }: Props) {
         .hero-slide-title {
           font-size: clamp(16px, 3vw, 26px);
           font-weight: 800;
-          color: #fff;
+          color: var(--color-white);
           letter-spacing: -0.02em;
           line-height: 1.2;
           margin: 0 0 4px;
@@ -182,7 +182,7 @@ export default function HeroBannerSlider({ banners, lang }: Props) {
           border-radius: 50%;
           background: rgba(0,0,0,0.45);
           border: none;
-          color: #fff;
+          color: var(--color-white);
           cursor: pointer;
           display: flex;
           align-items: center;

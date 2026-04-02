@@ -18,6 +18,13 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'ru_TJ',
     siteName: 'TAJCAR.TJ',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Авто в рассрочку в Таджикистане — TAJCAR.TJ' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Авто в рассрочку в Таджикистане | TAJCAR.TJ',
+    description: 'Купите автомобиль в рассрочку в Таджикистане. Выгодные условия.',
+    images: ['/opengraph-image'],
   },
   alternates: {
     canonical: `${SITE_URL}/installment`,
