@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
 import { adminApi } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
+import { useAuth } from '@/lib/AuthContext'
 import { t } from '@/lib/i18n'
 import type { User, UserRole } from '@/types'
 import {
@@ -23,6 +24,8 @@ function UsersPageInner() {
   const searchParams = useSearchParams()
   const { lang } = useLang()
   const { showToast } = useToast()
+  const { user: currentUser } = useAuth()
+  const isSuperAdmin = currentUser?.role === 'admin'
 
   const page = Number(searchParams.get('page') ?? '1')
   const search = searchParams.get('search') ?? ''
@@ -52,6 +55,14 @@ function UsersPageInner() {
   const [createUserForm, setCreateUserForm] = useState({ phone: '', name: '', password: '', role: 'user' as UserRole })
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState('')
+
+  // Login history modal
+  const [historyUserId, setHistoryUserId] = useState<string | null>(null)
+  const [historyItems, setHistoryItems] = useState<Array<{ id: string; method: string | null; ip: string | null; created_at: string }>>([])
+  const [historyPage, setHistoryPage] = useState(1)
+  const [historyTotal, setHistoryTotal] = useState(0)
+  const [historyPages, setHistoryPages] = useState(1)
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   const loadUsers = useCallback(async (p: number, r: string, s: string) => {
     setLoading(true)
@@ -127,6 +138,20 @@ function UsersPageInner() {
     setActionLoading(false)
   }
 
+  async function loadLoginHistory(userId: string, p = 1) {
+    setHistoryLoading(true)
+    try {
+      const res = await adminApi.getLoginHistory(userId, p)
+      setHistoryItems(res.data.data.items)
+      setHistoryTotal(res.data.data.total)
+      setHistoryPages(res.data.data.pages)
+      setHistoryPage(p)
+    } catch (e) {
+      showToast(extractApiError(e, t('common.genericError', lang)), 'error')
+    }
+    setHistoryLoading(false)
+  }
+
   async function handleEditUser() {
     if (!editUserData) return
     setActionError('')
@@ -151,13 +176,15 @@ function UsersPageInner() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-[10px] mb-4">
         <h1 className="text-[20px] font-bold m-0" style={{ color: 'var(--text)' }}>{t('admin.users', lang)}</h1>
-        <button
-          onClick={() => { setCreateUserOpen(true); setActionError('') }}
-          className="flex items-center gap-[6px] px-4 py-2 rounded-lg text-[13px] font-bold cursor-pointer border-0"
-          style={{ background: 'var(--accent)', color: 'var(--color-white)' }}
-        >
-          <IconPlus /> {t('adminForm.addUser', lang)}
-        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={() => { setCreateUserOpen(true); setActionError('') }}
+            className="flex items-center gap-[6px] px-4 py-2 rounded-lg text-[13px] font-bold cursor-pointer border-0"
+            style={{ background: 'var(--accent)', color: 'var(--color-white)' }}
+          >
+            <IconPlus /> {t('adminForm.addUser', lang)}
+          </button>
+        )}
       </div>
 
       {/* Search */}
@@ -243,27 +270,40 @@ function UsersPageInner() {
                             <IconBan /> {t('admin.ban', lang)}
                           </button>
                         )}
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => { setChangeRoleUserId(u.id); setNewRole(u.role) }}
+                            className="px-[10px] py-1 rounded-[6px] text-[12px] cursor-pointer border"
+                            style={{ background: 'var(--tag-bg)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
+                          >
+                            {t('admin.changeRole', lang)}
+                          </button>
+                        )}
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => { setEditUserData({ id: u.id, name: u.name ?? '', phone: u.phone, email: u.email ?? '' }); setActionError('') }}
+                            className="px-[10px] py-1 rounded-[6px] text-[12px] cursor-pointer border"
+                            style={{ background: 'var(--tag-bg)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
+                          >
+                            {t('adminForm.editAction', lang)}
+                          </button>
+                        )}
                         <button
-                          onClick={() => { setChangeRoleUserId(u.id); setNewRole(u.role) }}
+                          onClick={() => { setHistoryUserId(u.id); loadLoginHistory(u.id, 1) }}
                           className="px-[10px] py-1 rounded-[6px] text-[12px] cursor-pointer border"
                           style={{ background: 'var(--tag-bg)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
                         >
-                          {t('admin.changeRole', lang)}
+                          {t('admin.loginHistoryBtn', lang)}
                         </button>
-                        <button
-                          onClick={() => { setEditUserData({ id: u.id, name: u.name ?? '', phone: u.phone, email: u.email ?? '' }); setActionError('') }}
-                          className="px-[10px] py-1 rounded-[6px] text-[12px] cursor-pointer border"
-                          style={{ background: 'var(--tag-bg)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
-                        >
-                          {t('adminForm.editAction', lang)}
-                        </button>
-                        <button
-                          onClick={() => setDeleteUserId(u.id)}
-                          className="flex items-center px-2 py-1 rounded-[6px] text-[12px] cursor-pointer border-0"
-                          style={{ background: 'var(--color-error-dim)', color: 'var(--color-error)' }}
-                        >
-                          <IconX />
-                        </button>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => setDeleteUserId(u.id)}
+                            className="flex items-center px-2 py-1 rounded-[6px] text-[12px] cursor-pointer border-0"
+                            style={{ background: 'var(--color-error-dim)', color: 'var(--color-error)' }}
+                          >
+                            <IconX />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -393,6 +433,57 @@ function UsersPageInner() {
             <ModalActions>
               <BtnSecondary onClick={() => setDeleteUserId(null)}>{t('dashboard.cancel', lang)}</BtnSecondary>
               <BtnDanger onClick={handleDeleteUser}>{t('admin.deleteBtn2', lang)}</BtnDanger>
+            </ModalActions>
+          </ModalCard>
+        </ModalBackdrop>
+      )}
+
+      {/* Login history modal */}
+      {historyUserId && (
+        <ModalBackdrop onClose={() => { setHistoryUserId(null); setHistoryItems([]) }}>
+          <ModalCard maxWidth="560px">
+            <ModalTitle>{t('admin.loginHistory', lang)}</ModalTitle>
+            {historyLoading ? (
+              <p className="text-[13px] text-center py-4" style={{ color: 'var(--text-muted)' }}>...</p>
+            ) : historyItems.length === 0 ? (
+              <p className="text-[13px] text-center py-4" style={{ color: 'var(--text-muted)' }}>
+                {t('admin.noLoginHistory', lang)}
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr>
+                      {[t('admin.loginMethod', lang), t('admin.loginIp', lang), t('admin.auditTime', lang)].map((h) => (
+                        <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyItems.map((item) => (
+                      <tr key={item.id}>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', color: 'var(--text)' }}>
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                            {item.method ?? '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                          {item.ip ?? '—'}
+                        </td>
+                        <td className="whitespace-nowrap" style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                          {formatDate(item.created_at)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {historyPages > 1 && (
+              <Pagination page={historyPage} total={historyTotal} pageSize={50} onPage={(p) => loadLoginHistory(historyUserId, p)} />
+            )}
+            <ModalActions>
+              <BtnSecondary onClick={() => { setHistoryUserId(null); setHistoryItems([]) }}>{t('dashboard.cancel', lang)}</BtnSecondary>
             </ModalActions>
           </ModalCard>
         </ModalBackdrop>

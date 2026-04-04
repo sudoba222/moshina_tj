@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 export const metadata: Metadata = {
   title: 'Условия использования | TAJCAR.TJ',
   description: 'Условия использования платформы TAJCAR.TJ — авторынка Таджикистана.',
+  alternates: { canonical: '/terms' },
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

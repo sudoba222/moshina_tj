@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, uploadApi, authApi, vehicleApi } from '@/lib/api'
+import { listingsApi, uploadApi, authApi } from '@/lib/api'
 import api from '@/lib/api'
 import { SORTED_BRANDS } from '@/lib/vehicleData'
 import { useAuth } from '@/lib/AuthContext'
@@ -198,10 +198,8 @@ function PostPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
 
-  // Dynamic brands/models from API (fallback: static data)
-  const [brandsList, setBrandsList] = useState<string[]>(() => SORTED_BRANDS.map((b) => b.name))
+  const brandsList = SORTED_BRANDS.map((b) => b.name)
   const [modelsList, setModelsList] = useState<string[]>([])
-  const [modelsLoading, setModelsLoading] = useState(false)
 
   const [customBrand, setCustomBrand] = useState('')
   const [customModel, setCustomModel] = useState('')
@@ -211,46 +209,16 @@ function PostPage() {
     authApi.me().catch(() => { logout(); router.replace('/auth/login') })
   }, [router, logout])
 
-  // Load all makes from API on mount — merge with static list so nothing disappears
-  useEffect(() => {
-    vehicleApi.getMakes()
-      .then((res) => {
-        const api = res.data.data ?? []
-        if (api.length) {
-          // Union of API results + static list, deduplicated, "Другое" always last
-          const combined = [...new Set([
-            ...api.filter((n: string) => n !== 'Другое'),
-            ...SORTED_BRANDS.map((b) => b.name).filter((n) => n !== 'Другое'),
-          ])].sort((a, b) => a.localeCompare(b))
-          combined.push('Другое')
-          setBrandsList(combined)
-        }
-      })
-      .catch(() => { /* keep static fallback */ })
-  }, [])
-
   // Load models when brand changes
   useEffect(() => {
     setForm((prev) => ({ ...prev, model: '' }))
     setCustomModel('')
-    setModelsList([])
-    if (!form.brand || form.brand === 'Другое') return
-    setModelsLoading(true)
-    vehicleApi.getModels(form.brand)
-      .then((res) => {
-        if (res.data.data?.length) {
-          setModelsList(res.data.data)
-        } else {
-          // fallback: static list
-          const local = SORTED_BRANDS.find((b) => b.name === form.brand)?.models ?? []
-          setModelsList(local.length ? local : ['Другое'])
-        }
-      })
-      .catch(() => {
-        const local = SORTED_BRANDS.find((b) => b.name === form.brand)?.models ?? []
-        setModelsList(local.length ? local : ['Другое'])
-      })
-      .finally(() => setModelsLoading(false))
+    if (!form.brand || form.brand === 'Другое') {
+      setModelsList([])
+      return
+    }
+    const local = SORTED_BRANDS.find((b) => b.name === form.brand)?.models ?? []
+    setModelsList(local.length ? local : ['Другое'])
   }, [form.brand])
 
   // Load draft (new mode only)
@@ -600,13 +568,7 @@ function PostPage() {
                 {/* Model */}
                 <div>
                   <label style={lbl}>{t('post.modelLabel', lang)}</label>
-                  {modelsLoading ? (
-                    <div style={{ ...inp, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
-                      {t('post.loadingModels', lang)}
-                    </div>
-                  ) : modelsList.length > 0 ? (
+                  {modelsList.length > 0 ? (
                     <>
                       <select
                         required={form.model !== 'Другое'}

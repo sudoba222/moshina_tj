@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { IconCheck, IconX, IconSkip } from './icons'
 import { t } from '@/lib/i18n'
 import type { Lang } from '@/types'
@@ -18,6 +18,7 @@ interface ActionPanelProps {
   onApprove: () => void
   onReject: (reasons: string[]) => void
   onSkip: () => void
+  onDelete: () => void
   onEndSession: () => void
 }
 
@@ -56,10 +57,12 @@ export default function ActionPanel({
   onApprove,
   onReject,
   onSkip,
+  onDelete,
   onEndSession,
 }: ActionPanelProps) {
   const [selectedReasons, setSelectedReasons] = useState<string[]>([])
   const [skipOpen, setSkipOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const reasons = getReasonLabels(lang)
 
@@ -72,6 +75,7 @@ export default function ActionPanel({
   function handleApprove() {
     setSelectedReasons([])
     setSkipOpen(false)
+    setDeleteOpen(false)
     onApprove()
   }
 
@@ -83,16 +87,61 @@ export default function ActionPanel({
     onReject(reasonLabels)
     setSelectedReasons([])
     setSkipOpen(false)
+    setDeleteOpen(false)
   }
 
   function handleSkip() {
     setSelectedReasons([])
     setSkipOpen(false)
+    setDeleteOpen(false)
     onSkip()
+  }
+
+  function handleDelete() {
+    setSelectedReasons([])
+    setSkipOpen(false)
+    setDeleteOpen(false)
+    onDelete()
   }
 
   const canApprove = hasListing && !isLoading
   const canReject = hasListing && !isLoading && selectedReasons.length > 0
+
+  // Keyboard shortcuts for R (reject) and S (skip) — live here so they
+  // have access to selectedReasons and skipOpen state.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+      switch (e.key) {
+        case 'r':
+        case 'R':
+          if (canReject) {
+            e.preventDefault()
+            handleReject()
+          }
+          break
+        case 's':
+        case 'S':
+          if (canApprove) {
+            e.preventDefault()
+            handleSkip()
+          }
+          break
+        case 'd':
+        case 'D':
+          if (canApprove) {
+            e.preventDefault()
+            setSkipOpen(false)
+            setDeleteOpen((v) => !v)
+          }
+          break
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canReject, canApprove, selectedReasons])
 
   return (
     <div
@@ -229,6 +278,7 @@ export default function ActionPanel({
           <div><kbd style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>A</kbd> — {t('moderator.approve', lang)}</div>
           <div><kbd style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>R</kbd> — {t('moderator.reject', lang)}</div>
           <div><kbd style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>S</kbd> — {t('moderator.skip', lang)}</div>
+          <div><kbd style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>D</kbd> — {t('moderator.delete', lang)}</div>
           <div><kbd style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>← →</kbd> — {t('moderator.shortcutNav', lang)}</div>
           <div><kbd style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>Esc</kbd> — {t('moderator.endSession', lang)}</div>
         </div>
@@ -323,6 +373,61 @@ export default function ActionPanel({
               }}
             >
               {t('moderator.confirmSkip', lang)}
+            </button>
+          </div>
+        )}
+
+        {/* DELETE + toggle */}
+        <button
+          onClick={() => { setSkipOpen(false); setDeleteOpen((v) => !v) }}
+          disabled={!canApprove}
+          style={{
+            width: '100%',
+            height: '36px',
+            background: deleteOpen ? 'var(--color-error-dim)' : 'var(--surface)',
+            color: deleteOpen ? 'var(--color-error)' : 'var(--text-muted)',
+            border: `1px solid ${deleteOpen ? 'var(--color-error)' : 'var(--border)'}`,
+            borderRadius: '8px',
+            fontSize: '12px',
+            cursor: canApprove ? 'pointer' : 'not-allowed',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+          }}
+        >
+          <IconX size={13} />
+          {t('moderator.delete', lang)}
+          <kbd style={{ fontSize: '10px', opacity: 0.7, fontFamily: 'monospace', marginLeft: '2px' }}>D</kbd>
+        </button>
+
+        {/* Delete confirmation inline panel */}
+        {deleteOpen && (
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--color-error)',
+            borderRadius: '10px',
+            padding: '10px',
+          }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textAlign: 'center' }}>
+              {t('moderator.deleteConfirmDesc', lang)}
+            </div>
+            <button
+              onClick={handleDelete}
+              disabled={!canApprove}
+              style={{
+                width: '100%',
+                height: '34px',
+                background: 'var(--color-error)',
+                color: 'var(--color-white)',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {t('moderator.confirmDelete', lang)}
             </button>
           </div>
         )}

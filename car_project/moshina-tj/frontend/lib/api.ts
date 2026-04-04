@@ -16,6 +16,18 @@ import type {
   PaginatedResponse,
 } from '@/types'
 
+export interface ListingLogEntry {
+  id: string
+  action: string
+  actor_id: string | null
+  actor_name: string | null
+  actor_role: string | null
+  from_status: string | null
+  to_status: string | null
+  reason: string | null
+  created_at: string
+}
+
 export interface StaffSearchItem {
   id: string
   brand: string
@@ -82,7 +94,7 @@ export interface ModeratorActivity {
   active_session_started_at: string | null
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
+export const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 
 // In-memory token store — avoids reading from js-cookie on every request
 let _inMemoryToken: string | null = null
@@ -100,19 +112,21 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (
-      typeof window !== 'undefined' &&
-      error?.response?.status === 401 &&
-      !window.location.pathname.startsWith('/auth/') &&
-      !window.location.pathname.startsWith('/admin/') &&
-      !window.location.pathname.startsWith('/moderator/') &&
-      !window.location.pathname.startsWith('/manager/') &&
-      !window.location.pathname.startsWith('/support/')
-    ) {
-      // Clear in-memory token so stale headers are not re-sent
+    if (typeof window !== 'undefined' && error?.response?.status === 401) {
+      const path = window.location.pathname
       setInMemoryToken(null)
       localStorage.removeItem('user')
-      window.location.href = '/auth/login'
+      // Staff panels redirect to their own login; everyone else to the public login
+      if (
+        path.startsWith('/admin/') ||
+        path.startsWith('/moderator/') ||
+        path.startsWith('/manager/') ||
+        path.startsWith('/support/')
+      ) {
+        window.location.href = '/admin/login'
+      } else if (!path.startsWith('/auth/')) {
+        window.location.href = '/auth/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -209,7 +223,7 @@ export const authApi = {
 
 export const dealersApi = {
   list: () =>
-    api.get<ApiResponse<Dealer[]>>('/dealers'),
+    api.get<ApiResponse<{ items: Dealer[]; total: number; page: number; pages: number }>>('/dealers'),
   get: (id: string) =>
     api.get<ApiResponse<{ dealer: Dealer; listings: Listing[] }>>(`/dealers/${id}`),
 }
@@ -288,6 +302,11 @@ export const adminApi = {
     api.post<ApiResponse<User>>('/admin/users', data),
   editUser: (userId: string, data: { name?: string; phone?: string; email?: string }) =>
     api.put<ApiResponse<User>>(`/admin/users/${userId}`, data),
+  getLoginHistory: (userId: string, page = 1) =>
+    api.get<ApiResponse<{ items: Array<{ id: string; method: string | null; ip: string | null; created_at: string }>; total: number; page: number; pages: number }>>(
+      `/admin/users/${userId}/login-history`,
+      { params: { page } }
+    ),
 
   // Listings
   getListings: (status?: string, page = 1, search?: string) =>
@@ -396,6 +415,12 @@ export const adminApi = {
     limit?: number
   }) =>
     api.get<ApiResponse<PaginatedResponse<StaffSearchItem>>>('/admin/staff/search', { params }),
+
+  getListingLogs: (listingId: string, page = 1, limit = 200) =>
+    api.get<ApiResponse<{ items: ListingLogEntry[]; total: number; page: number; pages: number }>>(
+      `/admin/listings/${listingId}/logs`,
+      { params: { page, limit } }
+    ),
 
   myActivity: (page = 1, limit = 50) =>
     api.get<ApiResponse<PaginatedResponse<ActivityLogEntry>>>('/admin/my-activity', { params: { page, limit } }),

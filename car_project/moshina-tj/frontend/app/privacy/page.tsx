@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 export const metadata: Metadata = {
   title: 'Политика конфиденциальности | TAJCAR.TJ',
   description: 'Политика конфиденциальности платформы TAJCAR.TJ.',
+  alternates: { canonical: '/privacy' },
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

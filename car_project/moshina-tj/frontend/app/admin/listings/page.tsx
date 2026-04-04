@@ -68,7 +68,7 @@ function ListingsPageInner() {
 
   async function handleApproveListing(id: string) {
     try {
-      await adminApi.approveListing(id)
+      await adminApi.activateListing(id)
       showToast(lang === 'ru' ? 'Объявление одобрено' : 'Эълон тасдиқ шуд', 'success')
       loadListings(page, status, search)
     } catch (e) {

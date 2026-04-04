@@ -19,7 +19,7 @@ function FooterLogo() {
 
 function ColTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '14px' }}>
+    <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '14px' }}>
       {children}
     </p>
   )
@@ -45,7 +45,7 @@ export default function Footer() {
 
       {/* ── Main grid ── */}
       <div className="max-w-7xl mx-auto" style={{ padding: 'clamp(40px,6vw,64px) clamp(16px,4vw,32px) 0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'clamp(28px,4vw,48px)' }}>
+        <div className="footer-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'clamp(28px,4vw,48px)' }}>
 
           {/* Brand column */}
           <div style={{ gridColumn: 'span 1' }}>

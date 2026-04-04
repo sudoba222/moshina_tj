@@ -12,7 +12,7 @@ import { ToastProvider } from './components/ToastContext'
 import {
   IconDashboard, IconUsers, IconListings, IconShield,
   IconBuilding, IconCar, IconImage, IconSettings,
-  IconArrowLeft, IconMenu, IconClose,
+  IconArrowLeft, IconMenu, IconClose, IconActivity,
 } from './components/icons'
 
 const ALLOWED_ROLES: UserRole[] = ['admin', 'moderator', 'manager', 'support']
@@ -61,6 +61,13 @@ const NAV_ITEMS: NavItem[] = [
     labelTj: 'Дилерҳо',
     icon: <IconBuilding />,
     roles: ['admin', 'manager'],
+  },
+  {
+    href: '/admin/activity',
+    labelRu: 'Активность',
+    labelTj: 'Фаъолият',
+    icon: <IconActivity />,
+    roles: ['admin', 'moderator', 'manager', 'support'],
   },
   {
     href: '/admin/banners',

@@ -272,12 +272,12 @@ export default function CarCard({
                 </span>
               )}
               {listing.availability === 'on_order' && (
-                <span style={{ background: 'rgba(234,179,8,0.85)', color: '#000', fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                <span style={{ background: 'var(--color-warning-alt)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.04em' }}>
                   {t('post.availability_on_order', lang)}
                 </span>
               )}
               {listing.availability === 'abroad' && (
-                <span style={{ background: 'rgba(99,102,241,0.85)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                <span style={{ background: 'var(--color-info)', color: 'var(--color-white)', fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.04em' }}>
                   {t('post.availability_abroad', lang)}
                 </span>
               )}
@@ -360,7 +360,7 @@ export default function CarCard({
         </div>
 
         {/* Card content */}
-        <div style={{ padding: '10px 12px 12px' }}>
+        <div style={{ padding: '12px 14px 14px' }}>
           {/* Brand + Model + Year on one line */}
           <p
             style={{
@@ -385,52 +385,43 @@ export default function CarCard({
           {/* Price — large, bold, accent */}
           <p
             style={{
-              fontSize: '20px',
+              fontSize: '19px',
               fontWeight: 900,
               color: 'var(--accent)',
               marginBottom: '8px',
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.15,
             }}
           >
             {formatPrice(Number(listing.price), listing.currency, lang)}
+            {listing.is_negotiable && (
+              <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '1px 5px', borderRadius: '4px', marginLeft: '6px', verticalAlign: 'middle' }}>
+                {t('common.negotiable', lang)}
+              </span>
+            )}
           </p>
 
           {/* Spec chips */}
           <div
             style={{
               display: 'flex',
-              flexWrap: 'nowrap',
+              flexWrap: 'wrap',
               gap: '4px',
               marginBottom: '8px',
-              overflow: 'hidden',
             }}
           >
             {listing.transmission && (
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  background: 'var(--tag-bg)',
-                  padding: '3px 8px',
-                  borderRadius: '10px',
-                }}
-              >
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--tag-bg)', padding: '3px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
                 {listing.transmission}
               </span>
             )}
+            {listing.fuel && (
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--tag-bg)', padding: '3px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
+                {listing.fuel}
+              </span>
+            )}
             {listing.mileage != null && (
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  background: 'var(--tag-bg)',
-                  padding: '3px 8px',
-                  borderRadius: '10px',
-                }}
-              >
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--tag-bg)', padding: '3px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
                 {formatMileage(listing.mileage)}
               </span>
             )}

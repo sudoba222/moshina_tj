@@ -193,9 +193,10 @@ export default function DashboardPage() {
   }
 
   const filteredListings = listings.filter((l) => {
+    if (l.status === 'pending') return false // shown in dedicated section above
     if (listingsFilter === 'all') return true
     if (listingsFilter === 'active') return l.status === 'active' && l.is_active
-    return !l.is_active || l.status === 'pending' || l.status === 'rejected'
+    return !l.is_active || l.status === 'rejected'
   })
 
   return (
@@ -393,6 +394,43 @@ export default function DashboardPage() {
           {/* ── My listings tab ── */}
           {tab === 'listings' && (
             <div className="animate-fade-in">
+
+              {/* ── Pending moderation section ── */}
+              {listings.filter((l) => l.status === 'pending').length > 0 && (
+                <div style={{
+                  background: 'var(--color-warning-dim)',
+                  border: '1px solid var(--color-warning-alt)',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  marginBottom: '20px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning-alt)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-warning-alt)' }}>
+                      {t('dashboard.pendingSection', lang)} ({listings.filter((l) => l.status === 'pending').length})
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                    {t('dashboard.pendingSectionDesc', lang)}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {listings.filter((l) => l.status === 'pending').map((listing) => (
+                      <DashboardListingRow
+                        key={listing.id}
+                        listing={listing}
+                        lang={lang}
+                        onToggle={() => toggleListingStatus(listing.id, listing.is_active)}
+                        onDelete={() => deleteListing(listing.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                 {/* Active/Inactive toggle */}
                 <div style={{ display: 'flex', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
@@ -400,8 +438,6 @@ export default function DashboardPage() {
                     const label = f === 'all'
                       ? t('dashboard.filterAll', lang)
                       : t(`dashboard.${f}` as Parameters<typeof t>[0], lang)
-                    // count pending in "all" tab
-                    const pendingCount = listings.filter((l) => l.status === 'pending').length
                     return (
                       <button
                         key={f}
@@ -410,15 +446,10 @@ export default function DashboardPage() {
                           padding: '7px 16px', fontSize: '13px', fontWeight: 700,
                           background: listingsFilter === f ? 'var(--accent)' : 'var(--surface)',
                           color: listingsFilter === f ? 'var(--color-white)' : 'var(--text-muted)',
-                          border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                          border: 'none', cursor: 'pointer',
                         }}
                       >
                         {label}
-                        {f === 'all' && pendingCount > 0 && (
-                          <span style={{ background: 'var(--color-warning-alt)', color: 'var(--color-white)', fontSize: '10px', fontWeight: 800, borderRadius: '10px', padding: '1px 5px', lineHeight: 1.4 }}>
-                            {pendingCount}
-                          </span>
-                        )}
                       </button>
                     )
                   })}

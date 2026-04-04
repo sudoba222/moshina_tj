@@ -172,11 +172,7 @@ export const metadata: Metadata = {
     images: ['/opengraph-image'],
   },
   alternates: {
-    canonical: SITE_URL,
-    languages: {
-      ru: SITE_URL,
-      tg: SITE_URL,
-    },
+    canonical: '/',
   },
   verification: {
     google: 'row6KBizdW8jJmvkL5Ec-f_miqcHf6RAl7HgZFX4USU',

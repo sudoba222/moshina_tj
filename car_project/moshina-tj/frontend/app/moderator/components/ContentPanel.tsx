@@ -234,20 +234,18 @@ export default function ContentPanel({
         />
       </div>
 
-      {/* Media + Specs row */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        {/* Gallery */}
-        <div style={{ width: '260px', flexShrink: 0 }}>
-          <MediaGallery
-            images={listing.images ?? []}
-            activeIndex={photoIndex}
-            onNavigate={onPhotoNavigate}
-          />
-        </div>
+      {/* Gallery — full width so all photos are visible in the grid */}
+      <div style={{ marginBottom: '16px' }}>
+        <MediaGallery
+          images={listing.images ?? []}
+          activeIndex={photoIndex}
+          onNavigate={onPhotoNavigate}
+        />
+      </div>
 
-        {/* Specs form */}
-        <div style={{ flex: 1, minWidth: '200px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      {/* Specs form */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div>
               <label style={LABEL_STYLE}>{t('options.price', lang)}</label>
               <input
@@ -352,7 +350,6 @@ export default function ContentPanel({
               />
             </div>
           </div>
-        </div>
       </div>
 
       {/* Description with stop-word highlighting */}

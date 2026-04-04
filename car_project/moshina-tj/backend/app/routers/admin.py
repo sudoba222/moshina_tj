@@ -193,10 +193,10 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_admin))
         cast(User.created_at, SADate) == today,
     ).count()
 
-    total_listings = db.query(Listing).filter(Listing.is_deleted != True).count()
-    active_listings = db.query(Listing).filter(Listing.status == ListingStatus.active, Listing.is_deleted != True).count()
-    pending_listings = db.query(Listing).filter(Listing.status == ListingStatus.pending, Listing.is_deleted != True).count()
-    rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.rejected, Listing.is_deleted != True).count()
+    total_listings = db.query(Listing).filter(Listing.is_deleted == False).count()
+    active_listings = db.query(Listing).filter(Listing.status == ListingStatus.active, Listing.is_deleted == False).count()
+    pending_listings = db.query(Listing).filter(Listing.status == ListingStatus.pending, Listing.is_deleted == False).count()
+    rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.rejected, Listing.is_deleted == False).count()
 
     total_dealers = db.query(Dealer).count()
     verified_dealers = db.query(Dealer).filter(Dealer.verified == True).count()
@@ -342,6 +342,48 @@ def get_user_detail(user_id: str, db: Session = Depends(get_db), _: User = Depen
             },
         },
         message="User detail fetched",
+    )
+
+
+@router.get("/users/{user_id}/login-history", response_model=ApiResponse[dict])
+def get_user_login_history(
+    user_id: str,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Paginated login history for a single user. Uses AuditLog action='login'."""
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    query = (
+        db.query(AuditLog)
+        .filter(AuditLog.target_id == user_id, AuditLog.action == "login")
+        .order_by(AuditLog.created_at.desc())
+    )
+    total = query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    logs = query.offset((page - 1) * limit).limit(limit).all()
+
+    return ApiResponse(
+        success=True,
+        data={
+            "items": [
+                {
+                    "id": str(log.id),
+                    "method": log.details.get("method") if log.details else None,
+                    "ip": log.details.get("ip") if log.details else None,
+                    "created_at": log.created_at.isoformat(),
+                }
+                for log in logs
+            ],
+            "total": total,
+            "page": page,
+            "pages": pages,
+        },
+        message="Login history fetched",
     )
 
 
@@ -984,6 +1026,8 @@ def admin_delete_listing(
     listing.is_deleted = True
     listing.is_active = False
     listing.status = ListingStatus.rejected
+    listing.locked_by = None
+    listing.locked_at = None
     db.add(ListingLog(
         listing_id=listing.id,
         actor_id=current_user.id,
@@ -1078,6 +1122,7 @@ def pending_listings(
         .options(joinedload(Listing.user), joinedload(Listing.images))
         .filter(
             Listing.status == ListingStatus.pending,
+            Listing.is_deleted == False,
             or_(
                 Listing.locked_by == None,
                 Listing.locked_by == current_user.id,
@@ -1103,9 +1148,26 @@ def pending_listings(
     items = query.order_by(Listing.created_at.asc()).offset((page - 1) * limit).limit(limit).all()
 
     if claim and items:
-        items[0].locked_by = current_user.id
-        items[0].locked_at = now
-        db.commit()
+        # Atomically claim the first listing using SELECT FOR UPDATE SKIP LOCKED
+        # to prevent two moderators from simultaneously claiming the same item.
+        first_id = items[0].id
+        to_claim = (
+            db.query(Listing)
+            .with_for_update(skip_locked=True)
+            .filter(
+                Listing.id == first_id,
+                or_(
+                    Listing.locked_by == None,
+                    Listing.locked_by == current_user.id,
+                    Listing.locked_at < lock_cutoff,
+                ),
+            )
+            .first()
+        )
+        if to_claim:
+            to_claim.locked_by = current_user.id
+            to_claim.locked_at = now
+            db.commit()
 
     return ApiResponse(
         success=True,
@@ -1121,13 +1183,11 @@ def approve_listing(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
 ):
-    listing = db.query(Listing).options(joinedload(Listing.user), joinedload(Listing.images)).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.user), joinedload(Listing.images)).filter(Listing.id == listing_id, Listing.is_deleted == False).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
-    if listing.user_id == current_user.id:
-        raise HTTPException(status_code=403, detail="You cannot moderate your own listing")
     if listing.status == ListingStatus.active:
-        raise HTTPException(status_code=400, detail="Listing is already active")
+        return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing is already active")
     old_status = listing.status.value if listing.status else None
     listing.status = ListingStatus.active
     listing.is_active = True
@@ -1187,13 +1247,11 @@ def reject_listing(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
 ):
-    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id, Listing.is_deleted == False).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
-    if listing.user_id == current_user.id:
-        raise HTTPException(status_code=403, detail="You cannot moderate your own listing")
     if listing.status == ListingStatus.rejected:
-        raise HTTPException(status_code=400, detail="Listing is already rejected")
+        return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing is already rejected")
     old_status = listing.status.value if listing.status else None
     listing.status = ListingStatus.rejected
     listing.is_active = False

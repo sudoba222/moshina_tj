@@ -18,11 +18,18 @@ function AuthCallbackInner() {
       return
     }
 
+    const ROLE_REDIRECT: Record<string, string> = {
+      admin: '/admin',
+      moderator: '/moderator',
+      manager: '/manager',
+      support: '/support',
+    }
+
     authApi.me(token)
       .then((res) => {
         const { user } = res.data.data
         login(token, user)
-        router.replace('/')
+        router.replace(ROLE_REDIRECT[user.role] ?? '/')
       })
       .catch(() => {
         router.replace('/auth/login?error=oauth_failed')

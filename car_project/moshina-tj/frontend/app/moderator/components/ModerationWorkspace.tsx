@@ -117,9 +117,12 @@ export default function ModerationWorkspace({
     try {
       const res = await adminApi.getPendingListings(1, 5, true)
       const items = res.data.data.items
-      setBuffer(items)
+      setBuffer((prev) => {
+        const existingIds = new Set(prev.map((i) => i.id))
+        return [...prev, ...items.filter((i) => !existingIds.has(i.id))]
+      })
     } catch {
-      setBuffer([])
+      // Keep existing buffer on failure
     }
   }, [])
 
@@ -238,6 +241,21 @@ export default function ModerationWorkspace({
     }
   }
 
+  async function handleDelete() {
+    if (!current || actionInFlightRef.current) return
+    actionInFlightRef.current = true
+    const id = current.id
+    advanceToNext()
+    showToast(t('mod.toastDeleted', lang), 'reject')
+    try {
+      await adminApi.deleteListing(id)
+    } catch {
+      showToast(t('mod.toastActionFailed', lang), 'error')
+    } finally {
+      actionInFlightRef.current = false
+    }
+  }
+
   async function handleEndSession() {
     if (timerRef.current) clearInterval(timerRef.current)
     try {
@@ -269,15 +287,6 @@ export default function ModerationWorkspace({
         case 'A':
           e.preventDefault()
           handleApprove()
-          break
-        case 'r':
-        case 'R':
-          // R triggers reject — ActionPanel handles enabling only when reasons selected
-          break
-        case 's':
-        case 'S':
-          e.preventDefault()
-          handleSkip()
           break
         case 'ArrowLeft':
           if (imgCount > 1) {
@@ -405,6 +414,7 @@ export default function ModerationWorkspace({
           onApprove={handleApprove}
           onReject={handleReject}
           onSkip={handleSkip}
+          onDelete={handleDelete}
           onEndSession={handleEndSession}
         />
 

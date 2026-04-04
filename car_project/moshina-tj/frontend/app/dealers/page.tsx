@@ -35,7 +35,7 @@ export default function DealersPage() {
 
   useEffect(() => {
     dealersApi.list()
-      .then((res) => setDealers(res.data.data))
+      .then((res) => setDealers(res.data.data.items ?? []))
       .catch(() => setDealers([]))
       .finally(() => setLoading(false))
   }, [])

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
@@ -33,6 +33,17 @@ const QUICK_BRANDS = [
   'Toyota', 'Chevrolet', 'BMW', 'Mercedes', 'Hyundai',
   'Kia', 'Honda', 'Daewoo', 'Audi', 'Lexus', 'Nissan',
 ]
+
+const BODY_TYPE_ICONS: Record<string, React.ReactNode> = {
+  '': <svg width="18" height="14" viewBox="0 0 24 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="1" y="6" width="22" height="9" rx="2"/><path d="M5 6l3-5h8l3 5"/><circle cx="6.5" cy="15" r="2"/><circle cx="17.5" cy="15" r="2"/></svg>,
+  sedan: <svg width="20" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 11h24M4 11L7 5h14l3 6"/><path d="M9 5l2-4h6l2 4"/><circle cx="7.5" cy="13.5" r="2.5"/><circle cx="20.5" cy="13.5" r="2.5"/></svg>,
+  suv: <svg width="22" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 10h24M4 10L6 4h16l2 6"/><path d="M6 4V2h16v2"/><circle cx="7.5" cy="13" r="2.5"/><circle cx="20.5" cy="13" r="2.5"/></svg>,
+  hatchback: <svg width="20" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 11h24M5 11L8 5h12l3 6"/><path d="M11 5l1-4h4l3 4"/><circle cx="7.5" cy="13.5" r="2.5"/><circle cx="20.5" cy="13.5" r="2.5"/></svg>,
+  minivan: <svg width="22" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 10h24M3 10V5h18l3 5"/><path d="M3 5V3h14v2"/><circle cx="7" cy="13" r="2.5"/><circle cx="21" cy="13" r="2.5"/></svg>,
+  pickup: <svg width="22" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 10h24M3 10V5h10l2 5"/><path d="M3 5V3h8v2"/><path d="M15 10V6h9v4"/><circle cx="7" cy="13" r="2.5"/><circle cx="21" cy="13" r="2.5"/></svg>,
+  wagon: <svg width="22" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 10h24M4 10L6 5h16l2 5"/><path d="M6 5V3h16v2"/><circle cx="7.5" cy="13" r="2.5"/><circle cx="20.5" cy="13" r="2.5"/></svg>,
+  coupe: <svg width="20" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 11h24M5 11l3-6h10l5 6"/><path d="M10 5l3-4h4"/><circle cx="8" cy="13.5" r="2.5"/><circle cx="21" cy="13.5" r="2.5"/></svg>,
+}
 
 const BODY_TYPES: { labelKey: string; value: string }[] = [
   { labelKey: 'filters.bodyTypeAll', value: '' },
@@ -341,9 +352,9 @@ export default function HomePage() {
                   aria-pressed={isActive}
                   style={{
                     flexShrink: 0,
-                    padding: '8px 16px',
+                    padding: '6px 14px',
                     borderRadius: '20px',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     whiteSpace: 'nowrap',
                     cursor: 'pointer',
@@ -352,8 +363,12 @@ export default function HomePage() {
                     color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
                     transition: 'background 0.15s, border-color 0.15s, color 0.15s',
                     minHeight: '44px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
                   }}
                 >
+                  {BODY_TYPE_ICONS[value]}
                   {t(labelKey, lang)}
                 </button>
               )

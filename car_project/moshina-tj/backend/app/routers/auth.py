@@ -18,7 +18,7 @@ from app.auth import (
 )
 from app.database import get_db
 from app.email_service import send_email_otp, send_welcome_email, send_password_changed
-from app.models import OtpCode, TelegramToken, User
+from app.models import OtpCode, TelegramToken, User, log_audit
 from app.schemas import ApiResponse, AuthResponse, Token, UserCreate, UserResponse
 
 logger = logging.getLogger(__name__)
@@ -279,6 +279,9 @@ def login(request: Request, response: Response, payload: UserCreate, db: Session
             detail="Account is suspended",
         )
 
+    user.last_login_at = datetime.now(timezone.utc)
+    log_audit(db, user.id, "login", "user", user.id, {"method": "phone", "ip": request.client.host if request.client else None})
+    db.commit()
     token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token, remember_me=payload.remember_me)
     return ApiResponse(
@@ -523,6 +526,10 @@ def verify_otp(request: Request, response: Response, payload: VerifyOtpPayload, 
         from app.routers.telegram_webhook import send_welcome_message
         background_tasks.add_task(send_welcome_message, chat_id_for_bot, user.name)
 
+    method = "telegram_otp" if tg_chat_id else "phone_otp"
+    user.last_login_at = datetime.now(timezone.utc)
+    log_audit(db, user.id, "login", "user", user.id, {"method": method, "ip": request.client.host if request.client else None})
+    db.commit()
     token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token)
     return ApiResponse(
@@ -585,7 +592,13 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
     code = _generate_and_store_email_otp(payload.email, db)
     db.commit()
 
-    send_email_otp(payload.email, code, purpose="verify")
+    send_success = send_email_otp(payload.email, code, purpose="verify")
+    if not send_success and settings.environment == "production":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email. Please try again later.",
+        )
+
     dev_code = None
     if not settings.resend_api_key and settings.environment != "production":
         logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
@@ -644,6 +657,8 @@ def verify_email_otp(request: Request, response: Response, payload: VerifyEmailO
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
 
     user.email_verified = True
+    user.last_login_at = datetime.now(timezone.utc)
+    log_audit(db, user.id, "login", "user", user.id, {"method": "email_otp", "ip": request.client.host if request.client else None})
     db.commit()
 
     # Send welcome email (fire-and-forget — don't block the response)
@@ -677,6 +692,9 @@ def login_email(request: Request, response: Response, payload: EmailLoginPayload
             detail="Email not verified. Please check your inbox for the verification code.",
         )
 
+    user.last_login_at = datetime.now(timezone.utc)
+    log_audit(db, user.id, "login", "user", user.id, {"method": "email_password", "ip": request.client.host if request.client else None})
+    db.commit()
     token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token, remember_me=payload.remember_me)
     return ApiResponse(
@@ -697,7 +715,13 @@ def resend_email_otp(request: Request, payload: ResendEmailOtpPayload, db: Sessi
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is already verified")
 
     code = _generate_and_store_email_otp(payload.email, db)
-    send_email_otp(payload.email, code, purpose="verify")
+    send_success = send_email_otp(payload.email, code, purpose="verify")
+    if not send_success and settings.environment == "production":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email.",
+        )
+
     dev_code = None
     if not settings.resend_api_key and settings.environment != "production":
         logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
@@ -1020,12 +1044,13 @@ def google_auth(
     google_sub: str = id_info["sub"]
     email: Optional[str] = id_info.get("email")
     name: Optional[str] = id_info.get("name")
+    google_email_verified: bool = bool(id_info.get("email_verified", False))
 
     # 1. Look up by google_id
     user = db.query(User).filter(User.google_id == google_sub, User.is_deleted == False).first()
 
-    # 2. Fall back to email match (link accounts)
-    if not user and email:
+    # 2. Fall back to email match — only if Google confirmed the email is verified
+    if not user and email and google_email_verified:
         user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
         if user:
             user.google_id = google_sub
@@ -1038,13 +1063,15 @@ def google_auth(
             email=email,
             google_id=google_sub,
             password_hash=hash_password(secrets.token_hex(32)),
-            email_verified=bool(email),
+            email_verified=google_email_verified and bool(email),
         )
         db.add(user)
 
     if user.is_banned:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
 
+    user.last_login_at = datetime.now(timezone.utc)
+    log_audit(db, user.id, "login", "user", user.id, {"method": "google", "ip": request.client.host if request.client else None})
     db.commit()
     db.refresh(user)
 
@@ -1151,6 +1178,8 @@ def apple_auth(
     if user.is_banned:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
 
+    user.last_login_at = datetime.now(timezone.utc)
+    log_audit(db, user.id, "login", "user", user.id, {"method": "apple", "ip": request.client.host if request.client else None})
     db.commit()
     db.refresh(user)
 
@@ -1167,21 +1196,18 @@ def apple_auth(
 
 @router.get("/google/redirect")
 def google_oauth_redirect() -> Any:
-    """Redirect the user to Google's OAuth consent page.
-
-    A CSRF `state` token is generated here, stored in an HttpOnly cookie,
-    and sent to Google. The callback validates the returned state against
-    the cookie before exchanging the authorization code.
-    """
+    """Redirect the user to Google's OAuth consent page."""
     import urllib.parse
     from fastapi.responses import RedirectResponse as _RedirectResponse
 
     client_id = settings.google_client_id or None
     client_secret = settings.google_client_secret or None
     if not client_id or not client_secret:
+        msg = "Google OAuth is not configured on this server (missing Client ID or Secret in .env)"
+        logger.error(msg)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Google OAuth is not configured on this server (missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET)",
+            detail=msg,
         )
     redirect_uri = settings.google_redirect_uri
     state = secrets.token_urlsafe(32)
@@ -1256,14 +1282,15 @@ async def google_oauth_callback(
                 },
             )
             token_data = token_resp.json()
-    except Exception:
+    except Exception as exc:
         logger.exception("Google token exchange failed")
-        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed&detail={_up.quote(str(exc))}")
 
     access_token = token_data.get("access_token")
     if not access_token:
-        logger.error("Google token exchange returned no access_token: %s", token_data.get("error", "unknown"))
-        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
+        error_detail = token_data.get("error_description") or token_data.get("error") or "no access token"
+        logger.error("Google token exchange returned no access_token: %s", error_detail)
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed&detail={_up.quote(error_detail)}")
 
     # Fetch user info from Google
     try:
@@ -1273,9 +1300,9 @@ async def google_oauth_callback(
                 headers={"Authorization": f"Bearer {access_token}"},
             )
             userinfo = userinfo_resp.json()
-    except Exception:
+    except Exception as exc:
         logger.exception("Google userinfo fetch failed")
-        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed")
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed&detail={_up.quote(str(exc))}")
 
     google_sub: str = userinfo.get("id", "")
     email: Optional[str] = userinfo.get("email")

@@ -2,7 +2,7 @@
 import { useState, FormEvent, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { authApi } from '@/lib/api'
+import { authApi, BASE_URL } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
@@ -99,7 +99,7 @@ function LoginPageInner() {
     support: '/support',
   }
 
-  const [loginMode, setLoginMode] = useState<'phone' | 'email'>('phone')
+  const [loginMode, setLoginMode] = useState<'phone' | 'email' | 'otp'>('phone')
   const [identifier, setIdentifier] = useState('+992')
   const [emailIdentifier, setEmailIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -107,6 +107,11 @@ function LoginPageInner() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // OTP login state
+  const [otpStep, setOtpStep] = useState<'phone' | 'verify'>('phone')
+  const [otpCode, setOtpCode] = useState('')
+  const [otpCooldown, setOtpCooldown] = useState(0)
 
   useEffect(() => {
     const err = searchParams.get('error')
@@ -123,6 +128,13 @@ function LoginPageInner() {
     }
   }, [searchParams, lang])
 
+  // Countdown timer for OTP resend cooldown
+  useEffect(() => {
+    if (otpCooldown <= 0) return
+    const id = setInterval(() => setOtpCooldown((c) => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(id)
+  }, [otpCooldown])
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
@@ -133,7 +145,7 @@ function LoginPageInner() {
         setError(t('authForm.fillAllFields', lang))
         return
       }
-    } else {
+    } else if (loginMode === 'email') {
       if (!emailIdentifier.trim() || !password) {
         setError(t('authForm.fillAllFields', lang))
         return
@@ -149,6 +161,48 @@ function LoginPageInner() {
       login(data.token.access_token, data.user)
       const raw = searchParams.get('redirect') ?? '/'
       // Only allow same-origin relative paths — reject absolute URLs and protocol-relative URLs
+      const redirectTo = raw.startsWith('/') && !raw.startsWith('//') && !raw.includes(':') ? raw : '/'
+      const destination = ROLE_REDIRECT[data.user?.role] ?? redirectTo
+      router.push(destination)
+    } catch (err) {
+      setError(extractApiError(err, t('authForm.invalidCredentials', lang)))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSendOtp() {
+    setError('')
+    const localDigits = identifier.replace(/^\+\d{1,4}/, '')
+    if (!localDigits.trim()) {
+      setError(t('authForm.fillAllFields', lang))
+      return
+    }
+    try {
+      setLoading(true)
+      await authApi.sendOtp(identifier.trim())
+      setOtpStep('verify')
+      setOtpCode('')
+      setOtpCooldown(60)
+    } catch (err) {
+      setError(extractApiError(err, t('authForm.invalidCredentials', lang)))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleVerifyOtp() {
+    setError('')
+    if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
+      setError(t('register.errorEnterAllDigits', lang))
+      return
+    }
+    try {
+      setLoading(true)
+      const res = await authApi.verifyOtp(identifier.trim(), otpCode)
+      const data = res.data.data!
+      login(data.token.access_token, data.user)
+      const raw = searchParams.get('redirect') ?? '/'
       const redirectTo = raw.startsWith('/') && !raw.startsWith('//') && !raw.includes(':') ? raw : '/'
       const destination = ROLE_REDIRECT[data.user?.role] ?? redirectTo
       router.push(destination)
@@ -175,15 +229,19 @@ function LoginPageInner() {
           {t('authForm.loginTitle', lang)}
         </h1>
 
-        <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form
+          onSubmit={loginMode === 'otp' ? (e) => { e.preventDefault(); otpStep === 'phone' ? handleSendOtp() : handleVerifyOtp() } : handleSubmit}
+          noValidate
+          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+        >
 
-          {/* Phone / Email toggle */}
+          {/* Phone / Email / OTP toggle */}
           <div style={{ display: 'flex', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '3px', gap: '3px' }}>
-            {(['phone', 'email'] as const).map((mode) => (
+            {(['phone', 'email', 'otp'] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
-                onClick={() => { setLoginMode(mode); setError('') }}
+                onClick={() => { setLoginMode(mode); setError(''); setOtpStep('phone'); setOtpCode('') }}
                 style={{
                   flex: 1,
                   padding: '8px',
@@ -199,23 +257,14 @@ function LoginPageInner() {
                   transition: 'all 0.15s',
                 }}
               >
-                {mode === 'phone' ? t('auth.loginByPhone', lang) : t('auth.loginByEmail', lang)}
+                {mode === 'phone' ? t('auth.loginByPhone', lang) : mode === 'email' ? t('auth.loginByEmail', lang) : t('auth.loginByOtp', lang)}
               </button>
             ))}
           </div>
 
           {/* Identifier */}
           <div>
-            {loginMode === 'phone' ? (
-              <PhoneInput
-                value={identifier}
-                onChange={setIdentifier}
-                placeholder="000 000 0000"
-                hasError={!!error}
-                searchPlaceholder={t('auth.searchCountry', lang)}
-                notFoundText={t('auth.countryNotFound', lang)}
-              />
-            ) : (
+            {loginMode === 'email' ? (
               <input
                 type="email"
                 autoComplete="email"
@@ -225,66 +274,117 @@ function LoginPageInner() {
                 style={{ ...baseInput, borderColor: error ? 'var(--color-error)' : 'var(--border)' }}
                 onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
               />
+            ) : (
+              /* phone mode AND otp mode both use phone input */
+              loginMode !== 'otp' || otpStep === 'phone' ? (
+                <PhoneInput
+                  value={identifier}
+                  onChange={setIdentifier}
+                  placeholder="000 000 0000"
+                  hasError={!!error}
+                  searchPlaceholder={t('auth.searchCountry', lang)}
+                  notFoundText={t('auth.countryNotFound', lang)}
+                />
+              ) : (
+                /* OTP verify step: show phone as read-only label */
+                <div style={{ fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center', padding: '4px 0' }}>
+                  {t('auth.otpSentTo', lang).replace('{phone}', identifier)}
+                </div>
+              )
             )}
           </div>
 
-          {/* Password */}
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-              {t('authForm.passwordLabel', lang)}
-            </label>
-            <div style={{ position: 'relative' }}>
+          {/* OTP code input (only in otp + verify step) */}
+          {loginMode === 'otp' && otpStep === 'verify' && (
+            <div>
               <input
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{ ...baseInput, borderColor: error ? 'var(--color-error)' : 'var(--border)', paddingRight: '44px' }}
-                onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder={t('auth.otpCodePlaceholder', lang)}
+                style={{ ...baseInput, borderColor: error ? 'var(--color-error)' : 'var(--border)', textAlign: 'center', letterSpacing: '6px', fontSize: '22px' }}
+                autoFocus
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? t('authForm.hidePassword', lang) : t('authForm.showPassword', lang)}
-                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 0 }}
-              >
-                <EyeIcon open={showPassword} />
-              </button>
-            </div>
-          </div>
-
-          {/* Remember me + Forgot password row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <label htmlFor="remember-me" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: '18px', height: '18px', borderRadius: '5px', flexShrink: 0,
-                border: `2px solid ${rememberMe ? 'var(--accent)' : 'var(--border)'}`,
-                background: rememberMe ? 'var(--accent)' : 'var(--bg)',
-                transition: 'all 0.15s',
-              }}>
-                {rememberMe && (
-                  <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
-                    <path d="M1 4L4 7.5L10 1" stroke="var(--color-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+              <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                {otpCooldown > 0 ? (
+                  t('auth.otpResendAfter', lang).replace('{sec}', String(otpCooldown))
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font)', padding: 0 }}
+                  >
+                    {t('auth.otpResend', lang)}
+                  </button>
                 )}
-              </span>
-              <input
-                type="checkbox"
-                id="remember-me"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
-                aria-label={t('authForm.rememberMe', lang)}
-              />
-              <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                {t('authForm.rememberMe', lang)}
-              </span>
-            </label>
-            <Link href="/auth/forgot-password" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {t('authForm.forgotPassword', lang)}
-            </Link>
-          </div>
+              </div>
+            </div>
+          )}
+
+          {/* Password (hidden in OTP mode) */}
+          {loginMode !== 'otp' && (
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
+                {t('authForm.passwordLabel', lang)}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ ...baseInput, borderColor: error ? 'var(--color-error)' : 'var(--border)', paddingRight: '44px' }}
+                  onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? t('authForm.hidePassword', lang) : t('authForm.showPassword', lang)}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 0 }}
+                >
+                  <EyeIcon open={showPassword} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Remember me + Forgot password row (hidden in OTP mode) */}
+          {loginMode !== 'otp' && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <label htmlFor="remember-me" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: '18px', height: '18px', borderRadius: '5px', flexShrink: 0,
+                  border: `2px solid ${rememberMe ? 'var(--accent)' : 'var(--border)'}`,
+                  background: rememberMe ? 'var(--accent)' : 'var(--bg)',
+                  transition: 'all 0.15s',
+                }}>
+                  {rememberMe && (
+                    <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                      <path d="M1 4L4 7.5L10 1" stroke="var(--color-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </span>
+                <input
+                  type="checkbox"
+                  id="remember-me"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                  aria-label={t('authForm.rememberMe', lang)}
+                />
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                  {t('authForm.rememberMe', lang)}
+                </span>
+              </label>
+              <Link href="/auth/forgot-password" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {t('authForm.forgotPassword', lang)}
+              </Link>
+            </div>
+          )}
 
           {/* Error */}
           {error && (
@@ -296,7 +396,10 @@ function LoginPageInner() {
           {/* Submit */}
           <button type="submit" disabled={loading} style={btnStyle(loading)}>
             {loading && <Spinner />}
-            {t('authForm.loginBtn', lang)}
+            {loginMode === 'otp'
+              ? otpStep === 'phone' ? t('auth.otpSendBtn', lang) : t('auth.otpVerifyBtn', lang)
+              : t('authForm.loginBtn', lang)
+            }
           </button>
 
         </form>
@@ -305,7 +408,7 @@ function LoginPageInner() {
         <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <OrDivider label={t('auth.orContinueWith', lang)} />
           <a
-            href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/auth/google/redirect`}
+            href={`${BASE_URL}/auth/google/redirect`}
             style={{
               display: 'flex',
               alignItems: 'center',

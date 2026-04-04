@@ -1090,15 +1090,9 @@ export default function CarDetailClient() {
                   </svg>
                 </Link>
               </div>
-              {/* Mobile: horizontal scroll; Desktop: grid */}
-              <div
-                className="scrollbar-hide sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4"
-                style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}
-              >
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {sellerListings.map((sl, i) => (
-                  <div key={sl.id} style={{ flexShrink: 0, width: 'min(260px, 70vw)' }} className="sm:w-auto">
-                    <CarCard listing={sl} lang={lang} className={`delay-${Math.min(i + 1, 8) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`} />
-                  </div>
+                  <CarCard key={sl.id} listing={sl} lang={lang} className={`delay-${Math.min(i + 1, 8) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`} />
                 ))}
               </div>
             </section>
@@ -1110,15 +1104,9 @@ export default function CarDetailClient() {
               <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '20px' }}>
                 {t('carDetail.related', lang)}
               </h2>
-              {/* Mobile: horizontal scroll; Desktop: grid */}
-              <div
-                className="scrollbar-hide sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4"
-                style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}
-              >
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                 {related.map((rel, i) => (
-                  <div key={rel.id} style={{ flexShrink: 0, width: 'min(260px, 70vw)' }} className="sm:w-auto">
-                    <CarCard listing={rel} lang={lang} className={`delay-${Math.min(i + 1, 8) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`} />
-                  </div>
+                  <CarCard key={rel.id} listing={rel} lang={lang} className={`delay-${Math.min(i + 1, 8) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`} />
                 ))}
               </div>
             </section>

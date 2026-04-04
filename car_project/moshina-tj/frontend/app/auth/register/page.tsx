@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { authApi } from '@/lib/api'
+import { authApi, BASE_URL } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
@@ -609,7 +609,7 @@ export default function RegisterPage() {
           <OrDivider label={t('auth.orContinueWith', lang)} />
           <div style={{ marginTop: '12px' }}>
             <a
-              href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/auth/google/redirect`}
+              href={`${BASE_URL}/auth/google/redirect`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
