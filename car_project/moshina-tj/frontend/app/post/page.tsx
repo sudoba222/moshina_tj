@@ -278,18 +278,23 @@ function PostPage() {
       .then((res) => {
         const l = res.data.data
         setForm({
-          category_slug: '',
+          category_slug: l.category_slug ?? '',
+          subcategory_slug: l.subcategory_slug ?? '',
           brand: l.brand, model: l.model, year: String(l.year),
           price: String(l.price), currency: l.currency,
-          is_negotiable: false,
+          is_negotiable: l.is_negotiable || false,
           mileage: l.mileage != null ? String(l.mileage) : '',
           fuel: l.fuel ?? '', transmission: l.transmission ?? '',
           body_type: l.body_type ?? '',
-          drive_type: '', engine_volume: '',
-          condition: '', is_customs_cleared: true,
+          drive_type: l.drive_type ?? '',
+          engine_volume: l.engine_volume ?? '',
+          condition: l.condition ?? '',
+          is_customs_cleared: l.is_customs_cleared,
           color: l.color ?? '', city: l.city, type: l.type,
           description: l.description ?? '',
-          contact_name: '', contact_phone: '', whatsapp_number: '',
+          contact_name: l.contact_name ?? '',
+          contact_phone: l.contact_phone ?? '',
+          whatsapp_number: l.whatsapp_number ?? '',
           availability: (l.availability as 'in_stock' | 'on_order' | 'abroad') ?? 'in_stock',
           installment_available: l.installment_available,
         })
@@ -566,7 +571,6 @@ function PostPage() {
                   </div>
                 )}
               </div>
-            </div>
 
             {/* ── Марка, модель, год ── */}
             <div style={card}>

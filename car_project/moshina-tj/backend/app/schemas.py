@@ -406,6 +406,9 @@ class ListingResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
     category_id: Optional[uuid.UUID] = None
+    subcategory_id: Optional[uuid.UUID] = None
+    category_slug: Optional[str] = None
+    subcategory_slug: Optional[str] = None
     type: ListingType
     brand: str
     model: str

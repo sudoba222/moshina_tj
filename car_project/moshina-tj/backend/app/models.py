@@ -254,6 +254,15 @@ class Listing(Base):
     user = relationship("User", back_populates="listings", foreign_keys=[user_id])
     category = relationship("Category", foreign_keys=[category_id])
     subcategory = relationship("Category", foreign_keys=[subcategory_id])
+
+    @property
+    def category_slug(self) -> Optional[str]:
+        return self.category.slug if self.category else None
+
+    @property
+    def subcategory_slug(self) -> Optional[str]:
+        return self.subcategory.slug if self.subcategory else None
+
     images = relationship(
         "ListingImage",
         back_populates="listing",

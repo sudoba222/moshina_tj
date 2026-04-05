@@ -45,6 +45,9 @@ export interface Listing {
   id: string
   user_id: string
   category_id?: string | null
+  subcategory_id?: string | null
+  category_slug?: string | null
+  subcategory_slug?: string | null
   type: ListingType
   brand: string
   model: string
