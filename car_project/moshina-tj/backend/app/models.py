@@ -168,6 +168,12 @@ class Listing(Base):
         nullable=True,
         index=True,
     )
+    subcategory_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     type = Column(Enum(ListingType, name="listingtype"), nullable=False)
     brand = Column(String(100), nullable=False, index=True)
     model = Column(String(100), nullable=False, index=True)
@@ -247,6 +253,7 @@ class Listing(Base):
     # Relationships
     user = relationship("User", back_populates="listings", foreign_keys=[user_id])
     category = relationship("Category", foreign_keys=[category_id])
+    subcategory = relationship("Category", foreign_keys=[subcategory_id])
     images = relationship(
         "ListingImage",
         back_populates="listing",

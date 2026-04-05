@@ -7,6 +7,7 @@ import Footer from '@/components/Footer'
 import { listingsApi, uploadApi, authApi } from '@/lib/api'
 import api from '@/lib/api'
 import { SORTED_BRANDS } from '@/lib/vehicleData'
+import { PARTS_SUBCATEGORIES } from '@/lib/partsData'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
@@ -22,7 +23,7 @@ const VEHICLE_CATEGORIES = [
   { id: 'bus',         labelRu: 'Автобусы',        labelTj: 'Автобус' },
   { id: 'motorcycle',  labelRu: 'Мотоциклы',       labelTj: 'Мотосикл' },
   { id: 'special',     labelRu: 'Спецтехника',     labelTj: 'Техникаи махсус' },
-  { id: 'parts',       labelRu: 'Запчасти',        labelTj: 'Эҳтиёткорӣ' },
+  { id: 'parts',       labelRu: 'Автозапчасти',    labelTj: 'Қисмҳои эҳтиётӣ' },
   { id: 'commercial',  labelRu: 'Коммерческий',    labelTj: 'Тиҷоратӣ' },
   { id: 'electric',    labelRu: 'Электромобили',   labelTj: 'Автомобили барқӣ' },
   { id: 'other',       labelRu: 'Другое',          labelTj: 'Дигар' },
@@ -54,25 +55,47 @@ const TRANSMISSIONS: { value: TransmissionType; ru: string; tj: string }[] = [
   { value: 'Вариатор', ru: 'Вариатор',  tj: 'Вариатор' },
 ]
 
-const BODY_TYPES: { value: BodyType; ru: string; tj: string }[] = [
-  { value: 'sedan',       ru: 'Седан',       tj: 'Седан' },
-  { value: 'suv',         ru: 'Внедорожник', tj: 'SUV' },
-  { value: 'hatchback',   ru: 'Хэтчбек',     tj: 'Хэтчбек' },
-  { value: 'minivan',     ru: 'Минивэн',     tj: 'Минивэн' },
-  { value: 'pickup',      ru: 'Пикап',       tj: 'Пикап' },
-  { value: 'coupe',       ru: 'Купе',        tj: 'Купе' },
-  { value: 'wagon',       ru: 'Универсал',   tj: 'Универсал' },
-  { value: 'crossover',   ru: 'Кроссовер',   tj: 'Кроссовер' },
-  { value: 'convertible', ru: 'Кабриолет',   tj: 'Кабриолет' },
-  { value: 'van',         ru: 'Фургон',      tj: 'Фургон' },
-  { value: 'bus',         ru: 'Автобус',     tj: 'Автобус' },
-  { value: 'other',       ru: 'Другое',      tj: 'Дигар' },
+const BODY_TYPES: { value: BodyType; ru: string; tj: string; icon: React.ReactNode }[] = [
+  {
+    value: 'sedan', ru: 'Седан', tj: 'Седан',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 15h20M4 15V11l3-4h8l4 4v4M7 7l-1 4M15 7l1 4M5 18a2 2 0 100-4 2 2 0 000 4zM19 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
+  },
+  {
+    value: 'suv', ru: 'Внедорожник', tj: 'SUV',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 16h20M3 16v-5l2-5h11l3 5v5M7 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4zM2 12h4M18 12h4"/></svg>
+  },
+  {
+    value: 'hatchback', ru: 'Хэтчбек', tj: 'Хэтчбек',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 15h18M3 15v-4l3-4h7l4 4v4M6 18a2 2 0 100-4 2 2 0 000 4zM16 18a2 2 0 100-4 2 2 0 000 4zM21 11l-2 4"/></svg>
+  },
+  {
+    value: 'minivan', ru: 'Минивэн', tj: 'Минивэн',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 16h20M2 16V9l3-3h12l3 3v7M6 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4zM7 6v4M14 6v4"/></svg>
+  },
+  {
+    value: 'pickup', ru: 'Пикап', tj: 'Пикап',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 15h13V9l-3-3H5L2 9v6zM15 15h7v-4h-7v4zM5 18a2 2 0 100-4 2 2 0 000 4zM18 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
+  },
+  {
+    value: 'wagon', ru: 'Универсал', tj: 'Универсал',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 15h20M2 15V9l3-3h14l3 3v6M5 18a2 2 0 100-4 2 2 0 000 4zM18 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
+  },
+  {
+    value: 'coupe', ru: 'Купе', tj: 'Купе',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 15h18M4 15v-3l4-5h6l5 5v3M6 18a2 2 0 100-4 2 2 0 000 4zM16 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
+  },
+  { value: 'crossover',   ru: 'Кроссовер',   tj: 'Кроссовер', icon: null },
+  { value: 'convertible', ru: 'Кабриолет',   tj: 'Кабриолет', icon: null },
+  { value: 'van',         ru: 'Фургон',      tj: 'Фургон',    icon: null },
+  { value: 'bus',         ru: 'Автобус',     tj: 'Автобус',   icon: null },
+  { value: 'other',       ru: 'Другое',      tj: 'Дигар',     icon: null },
 ]
 
 const DRAFT_KEY = 'post_draft_v2'
 
 interface FormState {
   category_slug: string
+  subcategory_slug: string
   brand: string
   model: string
   year: string
@@ -111,6 +134,7 @@ interface RentalRulesForm {
 
 const initialForm: FormState = {
   category_slug: '',
+  subcategory_slug: '',
   brand: '', model: '', year: String(new Date().getFullYear()),
   price: '', currency: 'USD', is_negotiable: false,
   mileage: '', fuel: '', transmission: '',
@@ -365,6 +389,8 @@ function PostPage() {
 
       const payload = {
         type: form.type,
+        category_slug: form.category_slug || undefined,
+        subcategory_slug: form.subcategory_slug || undefined,
         brand: finalBrand, model: finalModel, year: Number(form.year),
         price: Number(form.price), currency: form.currency,
         is_negotiable: form.is_negotiable,
@@ -510,6 +536,35 @@ function PostPage() {
                     </button>
                   )
                 })}
+              </div>
+                {/* Subcategories for Parts */}
+                {form.category_slug === 'parts' && (
+                  <div style={{ marginTop: '20px', padding: '16px', background: 'var(--surface)', borderRadius: '14px', border: '1px dashed var(--border)' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '12px' }}>
+                      {lang === 'ru' ? 'Выберите подкатегорию' : 'Зеркатегорияро интихоб кунед'}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {PARTS_SUBCATEGORIES.map((sub) => {
+                        const subSelected = form.subcategory_slug === sub.id
+                        return (
+                          <button key={sub.id} type="button"
+                            onClick={() => setField('subcategory_slug', subSelected ? '' : sub.id)}
+                            style={{
+                              padding: '8px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 600,
+                              cursor: 'pointer', border: '1.5px solid',
+                              borderColor: subSelected ? 'var(--accent)' : 'var(--border)',
+                              background: subSelected ? 'var(--accent)' : 'var(--card)',
+                              color: subSelected ? 'var(--color-white)' : 'var(--text)',
+                              transition: 'all 0.13s',
+                            }}
+                          >
+                            {lang === 'ru' ? sub.labelRu : sub.labelTj}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -720,11 +775,27 @@ function PostPage() {
                 {/* Body type */}
                 <div>
                   <label style={lbl}>{t('postForm.bodyLabel', lang)}</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {BODY_TYPES.map((bt) => (
-                      <Chip key={bt.value} label={lang === 'ru' ? bt.ru : bt.tj} selected={form.body_type === bt.value}
-                        onClick={() => setField('body_type', form.body_type === bt.value ? '' : bt.value)} />
-                    ))}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                    {BODY_TYPES.map((bt) => {
+                      const selected = form.body_type === bt.value
+                      return (
+                        <button key={bt.value} type="button"
+                          onClick={() => setField('body_type', selected ? '' : bt.value)}
+                          style={{
+                            padding: '12px 8px', borderRadius: '12px', fontWeight: 600, fontSize: '12px',
+                            cursor: 'pointer', textAlign: 'center', border: '1.5px solid',
+                            borderColor: selected ? 'var(--accent)' : 'var(--border)',
+                            background: selected ? 'var(--accent)' : 'var(--surface)',
+                            color: selected ? 'var(--color-white)' : 'var(--text)',
+                            transition: 'all 0.13s', minHeight: '64px',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                          }}
+                        >
+                          {bt.icon && <span style={{ opacity: selected ? 1 : 0.7 }}>{bt.icon}</span>}
+                          <span>{lang === 'ru' ? bt.ru : bt.tj}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 {/* Condition + Drive + Engine */}

@@ -21,7 +21,14 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode(), hashed.encode())
+    try:
+        # If hashed is string (from DB), encode to bytes
+        hashed_bytes = hashed.encode() if isinstance(hashed, str) else hashed
+        return bcrypt.checkpw(plain.encode(), hashed_bytes)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Password verification error: {e}")
+        return False
 
 
 # ---------------------------------------------------------------------------

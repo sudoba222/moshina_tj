@@ -353,9 +353,24 @@ def create_listing(
                 detail=f"Listing limit reached ({limit}). Remove or wait for existing listings to be processed.",
             )
 
+    # Resolve category/subcategory slugs to IDs if provided
+    category_id = payload.category_id
+    subcategory_id = None
+
+    if payload.category_slug:
+        cat = db.query(Category).filter(Category.slug == payload.category_slug).first()
+        if cat:
+            category_id = cat.id
+    
+    if payload.subcategory_slug:
+        sub = db.query(Category).filter(Category.slug == payload.subcategory_slug).first()
+        if sub:
+            subcategory_id = sub.id
+
     listing = Listing(
         user_id=current_user.id,
-        category_id=payload.category_id,
+        category_id=category_id,
+        subcategory_id=subcategory_id,
         type=payload.type,
         brand=payload.brand,
         model=payload.model,
@@ -502,8 +517,21 @@ def update_listing(
                         img.is_primary = (index == 0)
                         break
 
+    # Resolve slugs to IDs if provided in update
+    if "category_slug" in update_data:
+        cat_slug = update_data.pop("category_slug")
+        cat = db.query(Category).filter(Category.slug == cat_slug).first()
+        if cat:
+            update_data["category_id"] = cat.id
+    
+    if "subcategory_slug" in update_data:
+        sub_slug = update_data.pop("subcategory_slug")
+        sub = db.query(Category).filter(Category.slug == sub_slug).first()
+        if sub:
+            update_data["subcategory_id"] = sub.id
+
     _USER_SETTABLE_LISTING_FIELDS = frozenset({
-        "category_id", "type", "brand", "model", "year", "price", "currency",
+        "category_id", "subcategory_id", "type", "brand", "model", "year", "price", "currency",
         "is_negotiable", "prepayment_amount", "mileage", "fuel", "transmission",
         "body_type", "drive_type", "engine_volume", "has_turbine", "condition",
         "is_customs_cleared", "taxi_license", "color", "city", "description",

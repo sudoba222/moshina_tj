@@ -150,6 +150,8 @@ class ImageResponse(BaseModel):
 
 class ListingCreate(BaseModel):
     category_id: Optional[uuid.UUID] = None
+    category_slug: Optional[str] = None
+    subcategory_slug: Optional[str] = None
     type: ListingType
     brand: str
     model: str
@@ -297,6 +299,8 @@ class ListingCreate(BaseModel):
 class ListingUpdate(BaseModel):
     """All fields optional — only provided fields will be updated."""
     category_id: Optional[uuid.UUID] = None
+    category_slug: Optional[str] = None
+    subcategory_slug: Optional[str] = None
     type: Optional[ListingType] = None
     brand: Optional[str] = None
     model: Optional[str] = None
