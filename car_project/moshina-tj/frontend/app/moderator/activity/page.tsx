@@ -69,7 +69,7 @@ export default function MyActivityPage() {
             {t('staff.myActivity', lang)}
           </h1>
           <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
-            {total} {lang === 'ru' ? 'записей' : 'сабт'}
+            {total} {t('activity.found', lang)}
           </div>
         </div>
 
@@ -122,7 +122,7 @@ export default function MyActivityPage() {
                     </Link>
                   ) : (
                     <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                      {lang === 'ru' ? '(удалено)' : '(нест)'}
+                      {t('activity.noResults', lang)}
                     </span>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>

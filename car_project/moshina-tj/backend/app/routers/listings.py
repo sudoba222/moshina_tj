@@ -168,7 +168,9 @@ def _assert_owner_or_admin(listing: Listing, current_user: User) -> None:
 
 
 @router.get("", response_model=ApiResponse[ListingListResponse])
+@limiter.limit("120/minute")
 def list_listings(
+    request: Request,
     db: Session = Depends(get_db),
     type: Optional[ListingType] = None,
     city: Optional[str] = None,
@@ -265,7 +267,8 @@ def list_listings(
 
 
 @router.get("/featured", response_model=ApiResponse[list[ListingResponse]])
-def featured_listings(db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+def featured_listings(request: Request, db: Session = Depends(get_db)):
     now = time.monotonic()
     cached = _featured_cache.get("data")
     if cached and now - _featured_cache.get("ts", 0) < _FEATURED_CACHE_TTL:
@@ -477,7 +480,9 @@ def create_listing(
 
 
 @router.put("/{listing_id}", response_model=ApiResponse[ListingResponse])
+@limiter.limit("30/minute")
 def update_listing(
+    request: Request,
     listing_id: str,
     payload: ListingUpdate,
     db: Session = Depends(get_db),
@@ -672,7 +677,9 @@ class FavoriteToggleResponse(BaseModel):
 
 
 @router.post("/{listing_id}/favorite", response_model=ApiResponse[FavoriteToggleResponse])
+@limiter.limit("60/minute")
 def toggle_favorite(
+    request: Request,
     listing_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

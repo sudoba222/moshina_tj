@@ -28,14 +28,21 @@ _COOKIE_MAX_AGE_REMEMBER = 30 * 24 * 60 * 60  # 30 days in seconds
 
 
 def _set_auth_cookie(response: Response, token: str, remember_me: bool = False) -> None:
-    """Set the JWT as an HttpOnly cookie so XSS cannot steal it.
-
-    In production the frontend (Vercel) and backend (Render) are on different
-    domains, so SameSite must be 'none' (with Secure=True) to allow the browser
-    to send the cookie on cross-origin XHR requests.
-    """
+    """Set the JWT as an HttpOnly cookie so XSS cannot steal it."""
     is_prod = settings.environment == "production"
     max_age = _COOKIE_MAX_AGE_REMEMBER if remember_me else _COOKIE_MAX_AGE_DEFAULT
+    
+    # In production, we usually want to share the cookie across subdomains.
+    # But if we are on a platform like Vercel/Coolify with dynamic domains,
+    # hardcoding '.tajcar.tj' might break other environments.
+    domain = None
+    if is_prod:
+        # If the frontend is on a different domain than the backend, 
+        # we MUST use samesite='none' and secure=True.
+        # domain='.tajcar.tj' is only for production tajcar.tj
+        if "tajcar.tj" in settings.frontend_url:
+            domain = ".tajcar.tj"
+
     response.set_cookie(
         key="token",
         value=token,
@@ -44,9 +51,7 @@ def _set_auth_cookie(response: Response, token: str, remember_me: bool = False) 
         max_age=max_age,
         path="/",
         secure=is_prod,
-        # Share the cookie across all subdomains (tajcar.tj + api.tajcar.tj)
-        # so the Next.js middleware on tajcar.tj can read it for route protection.
-        domain=".tajcar.tj" if is_prod else None,
+        domain=domain,
     )
 
 
@@ -130,6 +135,13 @@ class VerifyOtpPayload(BaseModel):
             raise ValueError("Name must be at most 100 characters")
         return v
 
+    @field_validator("password")
+    @classmethod
+    def password_max_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 128:
+            raise ValueError("Password must be at most 128 characters")
+        return v
+
 
 class ForgotPasswordPayload(BaseModel):
     identifier: str  # phone or email
@@ -155,6 +167,8 @@ class ResetPasswordPayload(BaseModel):
     def password_min_length(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
+        if len(v) > 128:
+            raise ValueError("Password must be at most 128 characters")
         return v
 
 
@@ -268,10 +282,15 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
 @limiter.limit("5/15minutes")
 def login(request: Request, response: Response, payload: UserCreate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
-    if not user or not verify_password(payload.password, user.password_hash):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid phone number or password",
+            detail="User with this phone number not found",
+        )
+    if not verify_password(payload.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password",
         )
     if user.is_banned:
         raise HTTPException(
@@ -325,7 +344,9 @@ def logout(
 
 
 @router.put("/profile", response_model=ApiResponse[UserResponse])
+@limiter.limit("20/minute")
 def update_profile(
+    request: Request,
     payload: UpdateProfilePayload,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -345,7 +366,9 @@ def update_profile(
 
 
 @router.put("/change-password", response_model=ApiResponse[None])
+@limiter.limit("5/hour")
 def change_password(
+    request: Request,
     payload: ChangePasswordPayload,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -687,8 +710,12 @@ def login_email(request: Request, response: Response, payload: EmailLoginPayload
     """Login with email + password."""
     user = db.query(User).filter(User.email == payload.email, User.is_deleted == False).first()
 
-    if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account with this email not found")
+    
+    if not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
+
     if user.is_banned:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
     if not user.email_verified:
@@ -1377,11 +1404,15 @@ async def google_oauth_callback(
     is_prod = settings.environment == "production"
 
     def _oauth_redirect(url: str) -> _RedirectResponse:
-        """Build a redirect that sets the JWT as an HttpOnly cookie."""
-        # Append token to the URL so the frontend can use it for initial login
-        sep = "&" if "?" in url else "?"
-        final_url = f"{url}{sep}token={jwt_token}"
-        resp = _RedirectResponse(final_url)
+        """Build a redirect that sets the JWT as an HttpOnly cookie only.
+
+        The token is intentionally NOT appended to the URL — doing so would
+        expose the JWT in server access logs, browser history, and the
+        Referer header sent to third-party resources on the destination page.
+        The frontend must rely on the HttpOnly cookie or call GET /auth/me
+        to obtain a fresh token after the redirect lands.
+        """
+        resp = _RedirectResponse(url)
         _set_auth_cookie(resp, jwt_token)
         return resp
 

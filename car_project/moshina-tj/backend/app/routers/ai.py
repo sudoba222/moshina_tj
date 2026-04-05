@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import Literal, Optional
 
 import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.auth import get_current_user
 from app.config import settings
@@ -22,15 +22,37 @@ class RefineDescriptionRequest(BaseModel):
     model: str
     year: int
     price: float
-    currency: str          # "USD" or "TJS"
+    currency: Literal["USD", "TJS"]
     mileage: Optional[int] = None
     fuel: Optional[str] = None
     transmission: Optional[str] = None
     color: Optional[str] = None
     city: str
-    type: str              # "sale" or "rent"
+    type: Literal["sale", "rent"]
     description: Optional[str] = None   # existing description to refine
-    language: str = "ru"  # "ru" or "tj"
+    language: Literal["ru", "tj"] = "ru"
+
+    @field_validator("brand", "model", "city")
+    @classmethod
+    def short_string(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) > 100:
+            raise ValueError("Field must be at most 100 characters")
+        return v
+
+    @field_validator("fuel", "transmission", "color")
+    @classmethod
+    def optional_short_string(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 100:
+            raise ValueError("Field must be at most 100 characters")
+        return v
+
+    @field_validator("description")
+    @classmethod
+    def description_max(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 2000:
+            raise ValueError("Description must be at most 2000 characters")
+        return v
 
 
 # ---------------------------------------------------------------------------

@@ -115,7 +115,7 @@ export default function AdminDashboardPage() {
             {t('admin.dashboard', lang)}
           </h1>
           <p className="text-[13px] mt-0.5 mb-0" style={{ color: 'var(--text-muted)' }}>
-            {lang === 'ru' ? 'Обзор платформы в реальном времени' : 'Баррасии платформа дар вақти воқеӣ'}
+            {t('admin.sectionOverview', lang)}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -137,7 +137,7 @@ export default function AdminDashboardPage() {
             className="flex items-center gap-[6px] px-[14px] py-2 rounded-lg text-[12px] font-semibold no-underline border"
             style={{ background: 'var(--surface)', color: 'var(--text)', borderColor: 'var(--border)' }}
           >
-            {lang === 'ru' ? 'Дилеры' : 'Дилерҳо'}
+            {t('admin.sectionDealers', lang)}
           </Link>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function AdminDashboardPage() {
                 className="ml-auto px-3 py-1 rounded-[6px] text-[12px] font-bold no-underline"
                 style={{ background: 'var(--color-warning-text)', color: 'var(--color-white)' }}
               >
-                {lang === 'ru' ? 'Перейти' : 'Гузаштан'}
+                {t('admin.goToModerator', lang)}
               </Link>
             </div>
           )}
@@ -181,7 +181,7 @@ export default function AdminDashboardPage() {
               {[
                 { label: t('admin.totalListings', lang), value: stats.total_listings, color: 'var(--text)' },
                 { label: t('admin.totalStaff', lang),    value: stats.total_staff ?? 0,    color: 'var(--text)' },
-                { label: lang === 'ru' ? 'Отклонено' : 'Рад шуд', value: stats.rejected_listings ?? 0, color: 'var(--color-error)' },
+                { label: t('admin.rejectBtn', lang), value: stats.rejected_listings ?? 0, color: 'var(--color-error)' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="rounded-[10px] px-4 py-[14px] border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
                   <div className="text-[11px] font-bold uppercase tracking-[0.06em] mb-1" style={{ color: 'var(--text-muted)' }}>{label}</div>
@@ -196,15 +196,15 @@ export default function AdminDashboardPage() {
             <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
               <div className="rounded-[14px] border px-5 py-[18px]" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
                 <div className="text-[13px] font-bold mb-4" style={{ color: 'var(--text)' }}>
-                  {lang === 'ru' ? 'Объявления по статусу' : 'Эълонҳо аз рӯи вазъ'}
+                  {t('admin.analytics', lang)}
                 </div>
                 <DonutChart
                   size={90}
                   data={[
-                    { label: lang === 'ru' ? 'Активные' : 'Фаъол',    value: stats.active_listings,   color: 'var(--color-success)' },
-                    { label: lang === 'ru' ? 'На проверке' : 'Тафтиш', value: stats.pending_listings,  color: 'var(--color-warning)' },
-                    { label: lang === 'ru' ? 'Отклонены' : 'Рад',      value: stats.rejected_listings ?? 0, color: 'var(--color-error)' },
-                    { label: lang === 'ru' ? 'Прочие' : 'Дигар',       value: Math.max(0, stats.total_listings - stats.active_listings - stats.pending_listings - (stats.rejected_listings ?? 0)), color: 'var(--border-strong)' },
+                    { label: t('admin.activeListings', lang),           value: stats.active_listings,   color: 'var(--color-success)' },
+                    { label: t('admin.pending', lang),                  value: stats.pending_listings,  color: 'var(--color-warning)' },
+                    { label: t('admin.rejectBtn', lang),                value: stats.rejected_listings ?? 0, color: 'var(--color-error)' },
+                    { label: t('admin.all', lang),                      value: Math.max(0, stats.total_listings - stats.active_listings - stats.pending_listings - (stats.rejected_listings ?? 0)), color: 'var(--border-strong)' },
                   ].filter((d) => d.value > 0)}
                 />
               </div>
@@ -274,7 +274,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between px-4 py-[14px] border-b" style={{ borderColor: 'var(--border)' }}>
                 <span className="font-bold text-[14px]" style={{ color: 'var(--text)' }}>{t('admin.recentActivity', lang)}</span>
                 <Link href="/admin/system" className="text-[12px] flex items-center gap-1 no-underline" style={{ color: 'var(--accent)' }}>
-                  {lang === 'ru' ? 'Полный журнал' : 'Журнали пурра'} <IconExternalLink />
+                  {t('admin.auditLog', lang)} <IconExternalLink />
                 </Link>
               </div>
               <div className="overflow-x-auto">

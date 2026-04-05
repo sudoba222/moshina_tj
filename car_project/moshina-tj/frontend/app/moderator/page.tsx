@@ -91,7 +91,7 @@ function SummaryScreen({
 
         {total > 0 && (
           <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
-            {t('moderator.avgTime', lang)}: {formatElapsed(Math.round(elapsed / total))} / {lang === 'ru' ? 'объявление' : 'эълон'}
+            {t('moderator.avgTime', lang)}: {formatElapsed(Math.round(elapsed / total))} / {t('admin.tabListings', lang)}
           </div>
         )}
 

@@ -4,6 +4,14 @@ export const runtime = 'edge'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
+// Brand colours — kept as constants since edge runtime has no CSS variables
+const C_ACCENT  = '#c83808'   // TAJCAR brand red
+const C_BG      = '#0f172a'   // dark navy background
+const C_WHITE   = '#ffffff'
+const C_MUTED   = '#94a3b8'
+const C_SUBTLE  = '#475569'
+const C_BORDER  = '#1e293b'
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 interface ListingData {
@@ -49,7 +57,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     (
       <div
         style={{
-          background: '#0f172a',
+          background: C_BG,
           width: '100%',
           height: '100%',
           display: 'flex',
@@ -58,7 +66,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         }}
       >
         {/* Top accent bar */}
-        <div style={{ height: '6px', background: '#3b82f6', width: '100%', display: 'flex' }} />
+        <div style={{ height: '6px', background: C_ACCENT, width: '100%', display: 'flex' }} />
 
         <div
           style={{
@@ -71,7 +79,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           }}
         >
           {/* Site name */}
-          <div style={{ fontSize: 22, color: '#3b82f6', fontWeight: 600, letterSpacing: '0.08em' }}>
+          <div style={{ fontSize: 22, color: C_ACCENT, fontWeight: 700, letterSpacing: '0.08em' }}>
             TAJCAR.TJ
           </div>
 
@@ -80,7 +88,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             style={{
               fontSize: 68,
               fontWeight: 700,
-              color: '#ffffff',
+              color: C_WHITE,
               letterSpacing: '-0.03em',
               lineHeight: 1.1,
             }}
@@ -91,13 +99,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           {/* Price + city row */}
           <div style={{ display: 'flex', gap: '32px', alignItems: 'center', marginTop: '8px' }}>
             {price && (
-              <div
-                style={{
-                  fontSize: 42,
-                  fontWeight: 700,
-                  color: '#3b82f6',
-                }}
-              >
+              <div style={{ fontSize: 42, fontWeight: 700, color: C_ACCENT }}>
                 {price}
               </div>
             )}
@@ -105,7 +107,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               <div
                 style={{
                   fontSize: 28,
-                  color: '#94a3b8',
+                  color: C_MUTED,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
@@ -121,14 +123,14 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         <div
           style={{
             padding: '20px 80px',
-            borderTop: '1px solid #1e293b',
+            borderTop: `1px solid ${C_BORDER}`,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <div style={{ fontSize: 20, color: '#475569' }}>Авто рынок Таджикистана</div>
-          <div style={{ fontSize: 20, color: '#475569' }}>tajcar.tj</div>
+          <div style={{ fontSize: 20, color: C_SUBTLE }}>Авторынок Таджикистана</div>
+          <div style={{ fontSize: 20, color: C_SUBTLE }}>tajcar.tj</div>
         </div>
       </div>
     ),

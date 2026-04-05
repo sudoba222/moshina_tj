@@ -1,10 +1,11 @@
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.limiter import limiter
 from app.models import Dealer, Listing, ListingStatus, User
 from app.schemas import (
     ApiResponse,
@@ -69,7 +70,9 @@ def get_dealer(dealer_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ApiResponse[DealerResponse], status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/hour")
 def create_dealer(
+    request: Request,
     payload: DealerCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

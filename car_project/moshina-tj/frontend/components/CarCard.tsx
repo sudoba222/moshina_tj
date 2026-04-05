@@ -7,6 +7,7 @@ import { t } from '@/lib/i18n'
 import { favoritesApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import StaffStatusRibbon from '@/components/StaffStatusRibbon'
+import CarBrandLogo from '@/components/CarBrandLogo'
 import type { Listing, Lang } from '@/types'
 
 interface CarCardProps {
@@ -362,25 +363,30 @@ export default function CarCard({
         {/* Card content */}
         <div style={{ padding: '12px 14px 14px' }}>
           {/* Brand + Model + Year on one line */}
-          <p
-            style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              color: 'var(--text-secondary)',
-              marginBottom: '4px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              letterSpacing: '0.01em',
-            }}
-          >
-            {listing.brand} {listing.model}
-            {listing.year ? (
-              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
-                {' '}&middot;{' '}{listing.year}
-              </span>
-            ) : null}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '4px', minWidth: 0 }}>
+            <CarBrandLogo brand={listing.brand} size={22} />
+            <p
+              style={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                letterSpacing: '0.01em',
+                margin: 0,
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              {listing.brand} {listing.model}
+              {listing.year ? (
+                <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
+                  {' '}&middot;{' '}{listing.year}
+                </span>
+              ) : null}
+            </p>
+          </div>
 
           {/* Price — large, bold, accent */}
           <p

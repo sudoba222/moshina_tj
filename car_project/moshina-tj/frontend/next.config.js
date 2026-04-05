@@ -20,6 +20,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'cdn.jsdelivr.net' },  // car brand logos CDN
     ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400, // 24 h

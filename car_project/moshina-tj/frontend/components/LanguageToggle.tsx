@@ -1,5 +1,6 @@
 'use client'
 import { useLang } from '@/lib/LanguageContext'
+import { t } from '@/lib/i18n'
 
 export default function LanguageToggle() {
   const { lang, setLang } = useLang()
@@ -7,7 +8,7 @@ export default function LanguageToggle() {
   return (
     <button
       onClick={() => setLang(lang === 'ru' ? 'tj' : 'ru')}
-      aria-label={lang === 'ru' ? 'Switch to Tajik' : 'Русский тилга ўтиш'}
+      aria-label={lang === 'ru' ? t('dashboard.switchToTajik', lang) : t('dashboard.switchToRussian', lang)}
       style={{
         background: 'none',
         border: '1px solid var(--border)',

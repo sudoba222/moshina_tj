@@ -8,12 +8,13 @@
 import math
 import uuid as _uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
 from app.database import SessionLocal
+from app.limiter import limiter
 from app.models import Dealer, DealerSubscription, Listing, ListingStatus, User
 from app.schemas import ApiResponse, DealerResponse, ListingListResponse, ListingResponse
 
@@ -52,7 +53,9 @@ def _get_dealer_or_404(dealer_id: str, db: Session) -> Dealer:
     "/dealers/{dealer_id}/subscribe",
     response_model=ApiResponse[SubscriptionToggleOut],
 )
+@limiter.limit("30/minute")
 def toggle_subscribe(
+    request: Request,
     dealer_id: str,
     current_user: User = Depends(get_current_user),
 ):

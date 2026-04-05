@@ -233,7 +233,7 @@ class Listing(Base):
     rejection_reason = Column(Text, nullable=True)
     moderator_note = Column(Text, nullable=True)
     moderated_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    views = Column(Integer, nullable=False, default=0, server_default="0")
+    views = Column(Integer, nullable=False, default=0, server_default="0", index=True)
     created_at = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
@@ -396,7 +396,7 @@ class AuditLog(Base):
     actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     action = Column(String(100), nullable=False, index=True)
     target_type = Column(String(50), nullable=True)   # "user", "listing", "dealer"
-    target_id = Column(UUID(as_uuid=True), nullable=True)
+    target_id = Column(UUID(as_uuid=True), nullable=True, index=True)
     details = Column(JSON, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
@@ -414,7 +414,7 @@ class SearchLog(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), index=True)
 
 
 class OtpCode(Base):
@@ -457,8 +457,8 @@ class Favorite(Base):
     __tablename__ = "favorites"
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    listing_id = Column(UUID(as_uuid=True), ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    listing_id = Column(UUID(as_uuid=True), ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
     __table_args__ = (UniqueConstraint("user_id", "listing_id", name="uq_favorite_user_listing"),)

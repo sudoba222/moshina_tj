@@ -34,10 +34,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/search", tags=["search"])
 
 # ---------------------------------------------------------------------------
-# Module-level cache for /popular
+# Module-level caches
 # ---------------------------------------------------------------------------
 _popular_cache: Dict[str, Any] = {}   # keys: "ts" (float), "data" (list[str])
 _POPULAR_CACHE_TTL = 600              # 10 minutes in seconds
+
+_trending_cache: Dict[str, Any] = {}  # same shape
+_TRENDING_CACHE_TTL = 300             # 5 minutes — trending changes slowly
 
 # ---------------------------------------------------------------------------
 # Thresholds
@@ -550,8 +553,12 @@ def popular_searches(request: Request, db: Session = Depends(get_db)):
 def trending(request: Request, db: Session = Depends(get_db)):
     """
     Returns top 5 brands and top 5 cities with the most new active listings
-    created in the past 7 days.
+    created in the past 7 days. Cached for 5 minutes.
     """
+    now = time.monotonic()
+    if _trending_cache.get("ts") and (now - _trending_cache["ts"]) < _TRENDING_CACHE_TTL:
+        return ApiResponse(success=True, data=_trending_cache["data"], message="Trending fetched")
+
     cutoff = datetime.now(timezone.utc) - timedelta(days=7)
 
     brand_rows = (
@@ -584,6 +591,9 @@ def trending(request: Request, db: Session = Depends(get_db)):
         "brands": [{"term": r.brand, "count": r.cnt} for r in brand_rows],
         "cities": [{"term": r.city,  "count": r.cnt} for r in city_rows],
     }
+
+    _trending_cache["data"] = data
+    _trending_cache["ts"] = now
 
     return ApiResponse(success=True, data=data, message="Trending fetched")
 

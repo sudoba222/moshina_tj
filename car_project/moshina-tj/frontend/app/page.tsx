@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import AdBannerSection from '@/components/AdBanner'
+import CarBrandLogo from '@/components/CarBrandLogo'
 import { listingsApi, statsApi } from '@/lib/api'
 import type { MarketplaceStats } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
@@ -396,29 +397,36 @@ export default function HomePage() {
                 className="active:scale-95 transition-transform"
                 style={{
                   flexShrink: 0,
-                  height: '48px',
-                  minWidth: '44px',
-                  padding: '0 14px',
+                  height: '68px',
+                  minWidth: '64px',
+                  padding: '8px 10px 6px',
                   background: 'none',
                   border: 'none',
                   borderBottom: '2px solid transparent',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '5px',
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'color 0.15s, border-color 0.15s, transform 0.1s',
+                  transition: 'border-color 0.15s, transform 0.1s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--accent)'
                   e.currentTarget.style.borderBottomColor = 'var(--accent)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--text-secondary)'
                   e.currentTarget.style.borderBottomColor = 'transparent'
                 }}
               >
-                {brand}
+                <CarBrandLogo brand={brand} size={30} />
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  color: 'var(--text-secondary)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {brand}
+                </span>
               </button>
             ))}
           </div>
