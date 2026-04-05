@@ -145,7 +145,10 @@ def get_current_user_optional(
             .first()
         )
         if user and user.is_banned:
-            return None
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is suspended",
+            )
         if user and payload.get("ver", 0) != user.token_version:
             return None
         return user

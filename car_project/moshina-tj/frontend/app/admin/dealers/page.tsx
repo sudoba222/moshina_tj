@@ -75,15 +75,15 @@ function EditMaxAdsModal({
 
         <ModalActions>
           <BtnSecondary onClick={onClose}>
-            {lang === 'ru' ? 'Отмена' : 'Бекор'}
+            {t('adminForm.cancel', lang)}
           </BtnSecondary>
           <BtnPrimary
             onClick={handleSave}
             disabled={saving || !value || parseInt(value, 10) < 1}
           >
             {saving
-              ? lang === 'ru' ? 'Сохранение...' : 'Нигоҳ доштан...'
-              : lang === 'ru' ? 'Сохранить' : 'Нигоҳ доштан'}
+              ? t('adminForm.saving', lang)
+              : t('adminForm.save', lang)}
           </BtnPrimary>
         </ModalActions>
       </ModalCard>
@@ -152,7 +152,7 @@ function DealersPageInner() {
     setActionLoading(dealerId)
     try {
       await adminApi.verifyDealer(dealerId)
-      showToast(lang === 'ru' ? 'Дилер верифицирован' : 'Дилер тасдиқ шуд', 'success')
+      showToast(t('admin.verified', lang), 'success')
       loadDealers(page, filter)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -164,7 +164,7 @@ function DealersPageInner() {
     setActionLoading(dealerId)
     try {
       await adminApi.unverifyDealer(dealerId)
-      showToast(lang === 'ru' ? 'Верификация снята' : 'Тасдиқ бардошта шуд', 'success')
+      showToast(t('admin.notVerified', lang), 'success')
       loadDealers(page, filter)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -179,7 +179,7 @@ function DealersPageInner() {
     setEditError(null)
     try {
       await adminApi.updateDealer(editTarget.id, { max_ads_allowed: maxAds })
-      showToast(lang === 'ru' ? 'Лимит обновлён' : 'Маҳдудият навсозӣ шуд', 'success')
+      showToast(t('adminForm.dataSaved', lang), 'success')
       setEditTarget(null)
       loadDealers(page, filter)
     } catch (e) {

@@ -56,6 +56,25 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
+    def _warn_dev_mode_on_non_localhost(self) -> "Settings":
+        """Warn loudly if environment is 'development' on a non-localhost server.
+
+        This prevents OTP codes from leaking in API responses on staging servers
+        that forgot to set ENVIRONMENT=production or ENVIRONMENT=staging.
+        """
+        if self.environment == "development":
+            host = self.frontend_url.lower()
+            if "localhost" not in host and "127.0.0.1" not in host:
+                _config_logger.critical(
+                    "SECURITY WARNING: ENVIRONMENT is set to 'development' but "
+                    "FRONTEND_URL (%s) does not look like localhost. "
+                    "OTP codes will be returned in plaintext API responses. "
+                    "Set ENVIRONMENT=production or ENVIRONMENT=staging in your .env file.",
+                    self.frontend_url,
+                )
+        return self
+
+    @model_validator(mode="after")
     def _warn_empty_staff_phones(self) -> "Settings":
         if self.environment != "development":
             for field in ("admin_phone", "moderator_phone", "manager_phone", "support_phone"):

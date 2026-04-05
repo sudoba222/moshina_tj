@@ -279,7 +279,9 @@ function RentalRulesCard({ rules, lang }: { rules: RentalRules; lang: 'ru' | 'tj
     },
     rules.deposit != null && {
       label: t('rentalRules.deposit', lang),
-      value: `${rules.deposit} ${rules.deposit_currency ?? 'USD'}`,
+      value: rules.deposit_currency === 'USD' 
+        ? `$${rules.deposit}`
+        : `${rules.deposit} ${rules.deposit_currency ?? 'TJS'}`,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           <rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" />

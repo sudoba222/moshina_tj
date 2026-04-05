@@ -162,6 +162,26 @@ class EditUserPayload(BaseModel):
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
 
+    @field_validator("name")
+    @classmethod
+    def name_max_length(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if len(v) > 100:
+                raise ValueError("Name must be at most 100 characters")
+        return v or None
+
+    @field_validator("phone")
+    @classmethod
+    def phone_must_be_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if not v.startswith("+"):
+                raise ValueError("Phone number must start with '+'")
+            if len(v) < 7 or len(v) > 20:
+                raise ValueError("Phone number must be between 7 and 20 characters")
+        return v
+
 
 class AdminEditListingPayload(BaseModel):
     brand: Optional[str] = None
@@ -309,17 +329,25 @@ def get_user_detail(user_id: str, db: Session = Depends(get_db), _: User = Depen
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Single GROUP BY query instead of 4 separate COUNT queries
+    _status_rows = (
+        db.query(Listing.status, func.count(Listing.id).label("cnt"))
+        .filter(Listing.user_id == user_id)
+        .group_by(Listing.status)
+        .all()
+    )
+    _status_map = {row.status: row.cnt for row in _status_rows}
     listing_counts = {
-        "active": db.query(Listing).filter(Listing.user_id == user_id, Listing.status == ListingStatus.active).count(),
-        "pending": db.query(Listing).filter(Listing.user_id == user_id, Listing.status == ListingStatus.pending).count(),
-        "rejected": db.query(Listing).filter(Listing.user_id == user_id, Listing.status == ListingStatus.rejected).count(),
-        "total": db.query(Listing).filter(Listing.user_id == user_id).count(),
+        "active": _status_map.get(ListingStatus.active, 0),
+        "pending": _status_map.get(ListingStatus.pending, 0),
+        "rejected": _status_map.get(ListingStatus.rejected, 0),
+        "total": sum(_status_map.values()),
     }
 
     # Last 10 listings for CRM preview
     recent_listings = (
         db.query(Listing)
-        .options(joinedload(Listing.images))
+        .options(joinedload(Listing.images), joinedload(Listing.user))
         .filter(Listing.user_id == user_id)
         .order_by(Listing.created_at.desc())
         .limit(10)
@@ -932,7 +960,7 @@ def staff_search_listings(
 
 @router.put("/listings/{listing_id}/activate", response_model=ApiResponse[ListingResponse])
 def activate_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
-    listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     old_status = listing.status.value if listing.status else None
@@ -955,7 +983,7 @@ def activate_listing(listing_id: str, db: Session = Depends(get_db), current_use
 
 @router.put("/listings/{listing_id}/deactivate", response_model=ApiResponse[ListingResponse])
 def deactivate_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
-    listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     old_status = listing.status.value if listing.status else None
@@ -982,7 +1010,7 @@ def admin_edit_listing(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     fields = payload.model_dump(exclude_none=True)
@@ -1018,7 +1046,7 @@ def admin_delete_listing(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).filter(Listing.id == listing_id, Listing.is_deleted == False).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     log_audit(db, current_user.id, "delete_listing", "listing", listing.id, {"brand": listing.brand, "model": listing.model})
@@ -1186,6 +1214,8 @@ def approve_listing(
     listing = db.query(Listing).options(joinedload(Listing.user), joinedload(Listing.images)).filter(Listing.id == listing_id, Listing.is_deleted == False).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    if listing.user_id == current_user.id:
+        raise HTTPException(status_code=403, detail="Moderators cannot approve their own listings")
     if listing.status == ListingStatus.active:
         return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing is already active")
     old_status = listing.status.value if listing.status else None
@@ -1250,6 +1280,8 @@ def reject_listing(
     listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id, Listing.is_deleted == False).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    if listing.user_id == current_user.id:
+        raise HTTPException(status_code=403, detail="Moderators cannot reject their own listings")
     if listing.status == ListingStatus.rejected:
         return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing is already rejected")
     old_status = listing.status.value if listing.status else None
@@ -1425,7 +1457,7 @@ def moderator_edit_listing(
     current_user: User = Depends(require_moderator),
 ):
     """Allows a moderator to fix listing fields inline before approving."""
-    listing = db.query(Listing).options(joinedload(Listing.images)).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     if payload.brand is not None:
@@ -1650,7 +1682,7 @@ def moderator_activity(db: Session = Depends(get_db), current_user: User = Depen
     thirty_min_ago = now - timedelta(minutes=30)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    moderators = db.query(User).filter(User.role == UserRole.moderator).all()
+    moderators = db.query(User).filter(User.role == UserRole.moderator, User.is_deleted == False).all()
     result = []
     for mod in moderators:
         sessions_today = db.query(ModerationSession).filter(

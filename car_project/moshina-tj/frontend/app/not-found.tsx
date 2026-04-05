@@ -25,6 +25,7 @@ function CarIcon() {
 
 export const metadata = {
   title: '404 — Страница не найдена / Саҳифа ёфт нашуд | TAJCAR.TJ',
+  robots: { index: false, follow: false },
 }
 
 export default async function NotFound() {

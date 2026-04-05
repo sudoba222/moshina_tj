@@ -19,7 +19,6 @@ import hashlib
 import hmac
 import json
 import logging
-import os
 import secrets
 import time
 from datetime import datetime, timedelta, timezone
@@ -38,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
-SITE_URL = os.getenv("NEXT_PUBLIC_SITE_URL", "https://tajcar.tj")
+SITE_URL = settings.frontend_url  # configured via FRONTEND_URL env var — never trust unvalidated env vars
 
 
 def _normalize_phone(phone: str) -> str:

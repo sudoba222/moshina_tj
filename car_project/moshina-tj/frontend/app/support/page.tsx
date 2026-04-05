@@ -48,12 +48,12 @@ function avatarColor(id: string): string {
   return `hsl(${hue},55%,45%)`
 }
 
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string, lang: import('@/types').Lang = 'ru'): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (diff < 60) return 'сейчас'
-  if (diff < 3600) return `${Math.floor(diff / 60)}м`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}ч`
-  return `${Math.floor(diff / 86400)}д`
+  if (diff < 60) return t('common.justNow', lang)
+  if (diff < 3600) return `${Math.floor(diff / 60)}${lang === 'tj' ? 'д' : 'м'}`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}${lang === 'tj' ? 'с' : 'ч'}`
+  return `${Math.floor(diff / 86400)}${lang === 'tj' ? 'р' : 'д'}`
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -443,7 +443,7 @@ export default function SupportPage() {
                               </span>
                               {tk.last_message && (
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
-                                  {relativeTime(tk.last_message.created_at)}
+                                  {relativeTime(tk.last_message.created_at, lang)}
                                 </span>
                               )}
                               {tk.unread_count > 0 && (

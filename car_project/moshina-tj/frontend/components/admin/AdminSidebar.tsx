@@ -137,7 +137,7 @@ function IconClose() {
 // ── Nav section type ──────────────────────────────────────────────────────────
 interface NavSection {
   sectionLabel: string
-  items: { id: Tab; labelKey: string; labelFallback?: Record<string, string>; icon: React.ReactNode }[]
+  items: { id: Tab; labelKey: string; icon: React.ReactNode }[]
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -146,40 +146,40 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
 
   const sections: NavSection[] = [
     {
-      sectionLabel: lang === 'ru' ? 'Обзор' : 'Баррасӣ',
+      sectionLabel: t('admin.sectionOverview', lang),
       items: [
         { id: 'dashboard', labelKey: 'admin.dashboard', icon: <IconDashboard /> },
       ],
     },
     {
-      sectionLabel: lang === 'ru' ? 'Пользователи' : 'Корбарон',
+      sectionLabel: t('admin.sectionUsers', lang),
       items: [
         { id: 'users', labelKey: 'admin.users', icon: <IconUsers /> },
       ],
     },
     {
-      sectionLabel: lang === 'ru' ? 'Инвентарь' : 'Инвентар',
+      sectionLabel: t('admin.sectionInventory', lang),
       items: [
         { id: 'listings',   labelKey: 'admin.listings',   icon: <IconListings /> },
         { id: 'moderation', labelKey: 'admin.moderation', icon: <IconShield /> },
       ],
     },
     {
-      sectionLabel: lang === 'ru' ? 'Дилеры' : 'Дилерҳо',
+      sectionLabel: t('admin.sectionDealers', lang),
       items: [
         { id: 'dealers', labelKey: 'admin.tabDealers', icon: <IconBuilding /> },
       ],
     },
     {
-      sectionLabel: lang === 'ru' ? 'Каталог' : 'Каталог',
+      sectionLabel: t('admin.sectionCatalog', lang),
       items: [
-        { id: 'brands',     labelKey: '',  labelFallback: { ru: 'Марки и модели', tj: 'Марка ва модел' },      icon: <IconCar /> },
-        { id: 'categories', labelKey: '',  labelFallback: { ru: 'Категории',      tj: 'Категорияҳо' },         icon: <IconTag /> },
-        { id: 'banners',    labelKey: '',  labelFallback: { ru: 'Баннеры',        tj: 'Баннерҳо' },            icon: <IconImage /> },
+        { id: 'brands',     labelKey: 'admin.tabBrandsModels', icon: <IconCar /> },
+        { id: 'categories', labelKey: 'admin.tabCategories',   icon: <IconTag /> },
+        { id: 'banners',    labelKey: 'admin.tabBanners',      icon: <IconImage /> },
       ],
     },
     {
-      sectionLabel: lang === 'ru' ? 'Система' : 'Система',
+      sectionLabel: t('admin.sectionSystem', lang),
       items: [
         { id: 'system', labelKey: 'admin.system', icon: <IconSettings /> },
       ],
@@ -187,7 +187,6 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
   ]
 
   function getLabel(item: NavSection['items'][0]): string {
-    if (item.labelFallback) return item.labelFallback[lang] ?? item.labelFallback['ru']
     return t(item.labelKey as Parameters<typeof t>[0], lang)
   }
 
@@ -212,7 +211,7 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
           <Link
             href="/dashboard"
-            aria-label={lang === 'ru' ? 'Назад в профиль' : 'Профилга қайтиш'}
+            aria-label={t('admin.navBack', lang)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -282,7 +281,7 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
       </div>
 
       {/* ── Navigation ── */}
-      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }} aria-label={lang === 'ru' ? 'Навигация' : 'Навигатсия'}>
+      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }} aria-label={t('admin.navLabel', lang)}>
         {sections.map((section) => (
           <div key={section.sectionLabel} style={{ marginBottom: '4px' }}>
             {/* Section label */}
@@ -370,7 +369,7 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
                         minWidth: '18px',
                         textAlign: 'center',
                       }}
-                      aria-label={`${stats.pending_listings} ${lang === 'ru' ? 'ожидают' : 'интизор'}`}
+                      aria-label={`${stats.pending_listings} ${t('admin.pendingWait', lang)}`}
                     >
                       {stats.pending_listings}
                     </span>
@@ -420,7 +419,7 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
           </div>
           <button
             onClick={() => setMobileOpen(true)}
-            aria-label={lang === 'ru' ? 'Открыть меню' : 'Менюро боз кунед'}
+            aria-label={t('admin.navOpen', lang)}
             aria-expanded={mobileOpen}
             style={{
               display: 'flex',
@@ -473,7 +472,7 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
             {/* Close button */}
             <button
               onClick={() => setMobileOpen(false)}
-              aria-label={lang === 'ru' ? 'Закрыть меню' : 'Менюро бандед'}
+              aria-label={t('admin.navClose', lang)}
               style={{
                 position: 'absolute',
                 top: '12px',

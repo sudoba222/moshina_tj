@@ -49,7 +49,7 @@ function GoogleSetupInner() {
       login(token, res.data.data.user)
       router.replace('/')
     } catch {
-      setError(lang === 'tj' ? 'Хатогӣ рух дод. Дубора кӯшиш кунед.' : 'Произошла ошибка. Попробуйте ещё раз.')
+      setError(t('authForm.authError', lang))
       setLoading(false)
     }
   }

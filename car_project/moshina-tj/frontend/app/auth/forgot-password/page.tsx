@@ -237,7 +237,7 @@ export default function ForgotPasswordPage() {
     setOtpError('')
     const code = digits.join('')
     if (code.length < 6) {
-      setOtpError(lang === 'ru' ? 'Введите все 6 цифр' : 'Ҳамаи 6 рақамро ворид кунед')
+      setOtpError(t('forgotPassword.errorEnterAllDigits', lang as Lang))
       return
     }
     confirmedCode.current = code
@@ -248,11 +248,11 @@ export default function ForgotPasswordPage() {
   async function handleResetPassword() {
     setStep3Error('')
     if (!newPassword) {
-      setStep3Error(lang === 'ru' ? 'Введите новый пароль' : 'Рамзи навро ворид кунед')
+      setStep3Error(t('forgotPassword.errorEnterNewPassword', lang as Lang))
       return
     }
     if (newPassword.length < 8) {
-      setStep3Error(lang === 'ru' ? 'Пароль не менее 8 символов' : 'Рамз камаш 8 аломат бошад')
+      setStep3Error(t('forgotPassword.errorPasswordLength8', lang as Lang))
       return
     }
     if (newPassword !== confirmPassword) {
@@ -412,13 +412,13 @@ export default function ForgotPasswordPage() {
 
             <button type="button" onClick={handleConfirmOtp} disabled={otpLoading} style={{ ...btnStyle(otpLoading), marginTop: '20px' }}>
               {otpLoading && <Spinner />}
-              {lang === 'ru' ? 'Подтвердить' : 'Тасдиқ кунед'}
+              {t('register.confirm', lang as Lang)}
             </button>
 
             <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px' }}>
               {countdown > 0 ? (
                 <span style={{ color: 'var(--text-muted)' }}>
-                  {lang === 'ru' ? 'Повторно через' : 'Такроран баъд аз'}{' '}
+                  {t('register.resendAfter', lang as Lang)}{' '}
                   <span style={{ fontWeight: 700, color: 'var(--text)' }}>{countdownStr}</span>
                 </span>
               ) : (

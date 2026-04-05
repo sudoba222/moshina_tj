@@ -107,6 +107,9 @@ function LoginPageInner() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [emailUnverified, setEmailUnverified] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendSent, setResendSent] = useState(false)
 
   // OTP login state
   const [otpStep, setOtpStep] = useState<'phone' | 'verify'>('phone')
@@ -119,12 +122,14 @@ function LoginPageInner() {
     if (err === 'google_cancelled') {
       setError(t('authForm.googleCancelled', lang))
     } else if (err === 'google_failed') {
-      const msg = detail ? `Google: ${detail}` : t('authForm.googleError', lang)
+      const msg = detail && detail !== 'state_invalid'
+        ? `Google: ${detail}`
+        : t('authForm.googleError', lang)
       setError(msg)
     } else if (err === 'banned') {
       setError(t('authForm.accountBanned', lang))
-    } else if (err === 'oauth_failed') {
-      setError(t('authForm.authError', lang))
+    } else if (err === 'oauth_failed' || err === 'oauth_state_mismatch') {
+      setError(t('authForm.googleError', lang))
     }
   }, [searchParams, lang])
 
@@ -152,6 +157,8 @@ function LoginPageInner() {
       }
     }
 
+    setEmailUnverified(false)
+    setResendSent(false)
     try {
       setLoading(true)
       const res = loginMode === 'email'
@@ -165,9 +172,30 @@ function LoginPageInner() {
       const destination = ROLE_REDIRECT[data.user?.role] ?? redirectTo
       router.push(destination)
     } catch (err) {
-      setError(extractApiError(err, t('authForm.invalidCredentials', lang)))
+      const msg = extractApiError(err, t('authForm.invalidCredentials', lang))
+      // Detect "email not verified" — show resend option instead of plain error
+      if (loginMode === 'email' && msg.toLowerCase().includes('not verified')) {
+        setEmailUnverified(true)
+        setError(t('authForm.emailNotVerified', lang))
+      } else {
+        setError(msg)
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleResendVerification() {
+    if (!emailIdentifier.trim()) return
+    setResendLoading(true)
+    setResendSent(false)
+    try {
+      await authApi.resendEmailOtp(emailIdentifier.trim())
+      setResendSent(true)
+    } catch {
+      // silently ignore — user can try again
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -388,9 +416,35 @@ function LoginPageInner() {
 
           {/* Error */}
           {error && (
-            <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600, margin: 0 }}>
-              {error}
-            </p>
+            <div>
+              <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600, margin: 0 }}>
+                {error}
+              </p>
+              {/* Email not verified — offer to resend code */}
+              {emailUnverified && (
+                <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 8px' }}>
+                    {t('authForm.resendCodePrompt', lang)}
+                  </p>
+                  {resendSent ? (
+                    <p style={{ fontSize: '12px', color: 'var(--color-success)', fontWeight: 600, margin: 0 }}>
+                      {t('authForm.resendCodeSent', lang)}
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resendLoading}
+                      style={{ background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 700, cursor: resendLoading ? 'not-allowed' : 'pointer', opacity: resendLoading ? 0.6 : 1, fontFamily: 'var(--font)' }}
+                    >
+                      {resendLoading
+                        ? t('authForm.resendCodeLoading', lang)
+                        : t('authForm.resendCodeBtn', lang)}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Submit */}

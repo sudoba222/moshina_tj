@@ -253,7 +253,7 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     db.refresh(user)
 
     token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
-    _set_auth_cookie(response, token.access_token)
+    _set_auth_cookie(response, token.access_token, remember_me=payload.remember_me)
     return ApiResponse(
         success=True,
         data=AuthResponse(token=token, user=UserResponse.model_validate(user)),
@@ -407,7 +407,7 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
     _send_sms(payload.phone, message)
 
     dev_code = None
-    if not settings.twilio_account_sid and settings.environment != "production":
+    if not settings.twilio_account_sid and settings.environment == "development":
         logger.debug("[DEV OTP] phone=%s code=%s", payload.phone, code)
         dev_code = code
 
@@ -465,8 +465,10 @@ def verify_otp(request: Request, response: Response, payload: VerifyOtpPayload, 
             detail="Invalid or expired OTP code",
         )
 
-    # Consume the OTP — must not be reusable
+    # Consume the OTP — commit immediately so it cannot be reused even if
+    # a subsequent check (e.g. is_banned) raises an HTTPException.
     otp.is_used = True
+    db.commit()
 
     # Include soft-deleted users so we don't hit a unique constraint on re-insert
     user = db.query(User).filter(User.phone == payload.phone).first()
@@ -569,7 +571,7 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
         code = _generate_and_store_email_otp(payload.email, db)
         send_email_otp(payload.email, code, purpose="verify")
         dev_code = None
-        if not settings.resend_api_key and settings.environment != "production":
+        if not settings.resend_api_key and settings.environment == "development":
             logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
             dev_code = code
         return ApiResponse(
@@ -600,7 +602,7 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
         )
 
     dev_code = None
-    if not settings.resend_api_key and settings.environment != "production":
+    if not settings.resend_api_key and settings.environment == "development":
         logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
         dev_code = code
 
@@ -648,7 +650,10 @@ def verify_email_otp(request: Request, response: Response, payload: VerifyEmailO
         db.commit()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
 
+    # Consume the OTP immediately so it cannot be replayed even if a
+    # subsequent check (e.g. is_banned, account not found) raises an exception.
     otp.is_used = True
+    db.commit()
 
     user = db.query(User).filter(User.email == payload.email, User.is_deleted == False).first()
     if not user:
@@ -723,7 +728,7 @@ def resend_email_otp(request: Request, payload: ResendEmailOtpPayload, db: Sessi
         )
 
     dev_code = None
-    if not settings.resend_api_key and settings.environment != "production":
+    if not settings.resend_api_key and settings.environment == "development":
         logger.debug("[DEV OTP] email=%s code=%s", payload.email, code)
         dev_code = code
 
@@ -760,7 +765,7 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         db.commit()
         send_email_otp(identifier, code, purpose="reset")
         dev_code = None
-        if not settings.resend_api_key and settings.environment != "production":
+        if not settings.resend_api_key and settings.environment == "development":
             logger.debug("[DEV OTP] email=%s code=%s", identifier, code)
             dev_code = code
         return ApiResponse(success=True, data={"dev_code": dev_code} if dev_code else {}, message="Code sent to your email")
@@ -780,7 +785,7 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         message_text = f"Ваш код сброса пароля TajCar.tj: {code}. Действителен 10 минут."
         _send_sms(identifier, message_text)
         dev_code = None
-        if not settings.twilio_account_sid and settings.environment != "production":
+        if not settings.twilio_account_sid and settings.environment == "development":
             logger.debug("[DEV OTP] phone=%s code=%s", identifier, code)
             dev_code = code
         return ApiResponse(success=True, data={"dev_code": dev_code} if dev_code else {}, message="Code sent to your phone")
@@ -862,7 +867,7 @@ def forgot_password_telegram(
             )
     else:
         # Dev mode: log the code so it is visible in server output
-        if settings.environment != "production":
+        if settings.environment == "development":
             logger.debug("[DEV OTP] telegram chat_id=%s code=%s", user.telegram_chat_id, code)
 
     db.commit()
@@ -1193,6 +1198,36 @@ def apple_auth(
 
 
 # ─── Google OAuth redirect flow ───────────────────────────────────────────────
+# State CSRF protection uses HMAC-signed tokens so no cookie is needed.
+# This survives reverse-proxy setups that strip Set-Cookie from 3xx responses.
+
+import hmac as _hmac
+import hashlib as _hashlib
+
+
+def _sign_oauth_state(raw: str) -> str:
+    """Return 'raw.HMAC' signed with SECRET_KEY."""
+    sig = _hmac.new(
+        settings.secret_key.encode(),
+        raw.encode(),
+        _hashlib.sha256,
+    ).hexdigest()
+    return f"{raw}.{sig}"
+
+
+def _verify_oauth_state(signed: str) -> bool:
+    """Return True if the signed state token is valid and not tampered with."""
+    parts = signed.split(".", 1)
+    if len(parts) != 2:
+        return False
+    raw, sig = parts
+    expected = _hmac.new(
+        settings.secret_key.encode(),
+        raw.encode(),
+        _hashlib.sha256,
+    ).hexdigest()
+    return _hmac.compare_digest(sig, expected)
+
 
 @router.get("/google/redirect")
 def google_oauth_redirect() -> Any:
@@ -1210,7 +1245,9 @@ def google_oauth_redirect() -> Any:
             detail=msg,
         )
     redirect_uri = settings.google_redirect_uri
-    state = secrets.token_urlsafe(32)
+    # Sign the random state with HMAC — no cookie needed, survives any proxy
+    raw_state = secrets.token_urlsafe(32)
+    signed_state = _sign_oauth_state(raw_state)
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -1218,22 +1255,10 @@ def google_oauth_redirect() -> Any:
         "scope": "openid email profile",
         "access_type": "online",
         "prompt": "select_account",
-        "state": state,
+        "state": signed_state,
     }
     url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
-    response = _RedirectResponse(url)
-    is_prod = settings.environment == "production"
-    response.set_cookie(
-        key="oauth_state",
-        value=state,
-        httponly=True,
-        samesite="none" if is_prod else "lax",
-        max_age=600,  # 10 minutes — enough time to complete the OAuth dance
-        path="/",
-        secure=is_prod,
-        domain=".tajcar.tj" if is_prod else None,
-    )
-    return response
+    return _RedirectResponse(url)
 
 
 @router.get("/google/callback")
@@ -1259,11 +1284,10 @@ async def google_oauth_callback(
     client_secret = settings.google_client_secret
     redirect_uri = settings.google_redirect_uri
 
-    # Validate CSRF state before doing anything else (P2-2)
-    expected_state = request.cookies.get("oauth_state", "")
-    if not state or not expected_state or not secrets.compare_digest(state, expected_state):
-        logger.warning("Google OAuth state mismatch — possible CSRF attempt")
-        return _RedirectResponse(f"{frontend_url}/auth/login?error=oauth_state_mismatch")
+    # Validate CSRF state via HMAC signature (no cookie dependency)
+    if not state or not _verify_oauth_state(state):
+        logger.warning("Google OAuth state validation failed — possible CSRF or tampering")
+        return _RedirectResponse(f"{frontend_url}/auth/login?error=google_failed&detail=state_invalid")
 
     if error or not code:
         return _RedirectResponse(f"{frontend_url}/auth/login?error=google_cancelled")
@@ -1353,18 +1377,12 @@ async def google_oauth_callback(
     is_prod = settings.environment == "production"
 
     def _oauth_redirect(url: str) -> _RedirectResponse:
-        """Build a redirect that sets the JWT as an HttpOnly cookie and clears the state cookie."""
+        """Build a redirect that sets the JWT as an HttpOnly cookie."""
         # Append token to the URL so the frontend can use it for initial login
         sep = "&" if "?" in url else "?"
         final_url = f"{url}{sep}token={jwt_token}"
         resp = _RedirectResponse(final_url)
         _set_auth_cookie(resp, jwt_token)
-        # Clear the state cookie using the same domain settings it was created with
-        resp.delete_cookie(
-            "oauth_state",
-            path="/",
-            domain=".tajcar.tj" if is_prod else None,
-        )
         return resp
 
     # New users (or users with no name) → name setup page

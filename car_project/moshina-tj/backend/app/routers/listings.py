@@ -20,7 +20,7 @@ from app.services.telegram_notifier import send_telegram_notification
 _featured_cache: Dict[str, Any] = {}
 _FEATURED_CACHE_TTL = 120  # seconds
 from app.database import SessionLocal, get_db
-from app.models import AvailabilityStatus, BodyType, Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingLog, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
+from app.models import AvailabilityStatus, BodyType, Category, Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingLog, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
 from app.schemas import (
     ApiResponse,
     ListingCreate,
@@ -359,13 +359,21 @@ def create_listing(
 
     if payload.category_slug:
         cat = db.query(Category).filter(Category.slug == payload.category_slug).first()
-        if cat:
-            category_id = cat.id
-    
+        if not cat:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Category slug '{payload.category_slug}' not found",
+            )
+        category_id = cat.id
+
     if payload.subcategory_slug:
         sub = db.query(Category).filter(Category.slug == payload.subcategory_slug).first()
-        if sub:
-            subcategory_id = sub.id
+        if not sub:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Subcategory slug '{payload.subcategory_slug}' not found",
+            )
+        subcategory_id = sub.id
 
     listing = Listing(
         user_id=current_user.id,
@@ -520,14 +528,24 @@ def update_listing(
     # Resolve slugs to IDs if provided in update
     if "category_slug" in update_data:
         cat_slug = update_data.pop("category_slug")
-        cat = db.query(Category).filter(Category.slug == cat_slug).first()
-        if cat:
+        if cat_slug is not None:
+            cat = db.query(Category).filter(Category.slug == cat_slug).first()
+            if not cat:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Category slug '{cat_slug}' not found",
+                )
             update_data["category_id"] = cat.id
-    
+
     if "subcategory_slug" in update_data:
         sub_slug = update_data.pop("subcategory_slug")
-        sub = db.query(Category).filter(Category.slug == sub_slug).first()
-        if sub:
+        if sub_slug is not None:
+            sub = db.query(Category).filter(Category.slug == sub_slug).first()
+            if not sub:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Subcategory slug '{sub_slug}' not found",
+                )
             update_data["subcategory_id"] = sub.id
 
     _USER_SETTABLE_LISTING_FIELDS = frozenset({

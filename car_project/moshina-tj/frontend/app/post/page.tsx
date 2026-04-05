@@ -546,7 +546,7 @@ function PostPage() {
                 {form.category_slug === 'parts' && (
                   <div style={{ marginTop: '20px', padding: '16px', background: 'var(--surface)', borderRadius: '14px', border: '1px dashed var(--border)' }}>
                     <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '12px' }}>
-                      {lang === 'ru' ? 'Выберите подкатегорию' : 'Зеркатегорияро интихоб кунед'}
+                      {t('postForm.selectSubcategory', lang)}
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {PARTS_SUBCATEGORIES.map((sub) => {

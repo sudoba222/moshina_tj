@@ -104,7 +104,7 @@ function CategoriesPageInner() {
     setActionError('')
     const parsed = parseFilterConfig(createForm.filter_config_raw)
     if (parsed === null) {
-      setCreateJsonError(lang === 'ru' ? 'Неверный JSON конфигурации' : 'JSON конфигуратсия нодуруст')
+      setCreateJsonError(t('admin.catalogJsonError', lang))
       return
     }
     setCreateJsonError('')
@@ -122,7 +122,7 @@ function CategoriesPageInner() {
       })
       setCreateOpen(false)
       setCreateForm(EMPTY_FORM)
-      showToast(lang === 'ru' ? 'Категория создана' : 'Категория сохта шуд', 'success')
+      showToast(t('admin.categoryCreated', lang), 'success')
       loadCategories()
     } catch (e) {
       setActionError(extractApiError(e, t('common.errorCreate', lang)))
@@ -135,7 +135,7 @@ function CategoriesPageInner() {
     setActionError('')
     const parsed = parseFilterConfig(editForm.filter_config_raw)
     if (parsed === null) {
-      setEditJsonError(lang === 'ru' ? 'Неверный JSON конфигурации' : 'JSON конфигуратсия нодуруст')
+      setEditJsonError(t('admin.catalogJsonError', lang))
       return
     }
     setEditJsonError('')
@@ -153,7 +153,7 @@ function CategoriesPageInner() {
         is_active: editData.is_active,
       })
       setEditData(null)
-      showToast(lang === 'ru' ? 'Данные сохранены' : 'Маълумот нигоҳ дошта шуд', 'success')
+      showToast(t('adminForm.dataSaved', lang), 'success')
       loadCategories()
     } catch (e) {
       setActionError(extractApiError(e, t('common.errorSave', lang)))
@@ -166,7 +166,7 @@ function CategoriesPageInner() {
     try {
       await catalogApi.adminDeleteCategory(deleteId)
       setDeleteId(null)
-      showToast(lang === 'ru' ? 'Категория удалена' : 'Категория ҳазф шуд', 'success')
+      showToast(t('admin.categoryDeleted', lang), 'success')
       loadCategories()
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -179,14 +179,14 @@ function CategoriesPageInner() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
-            {lang === 'ru' ? 'Категории' : 'Категорияхо'}
+            {t('admin.tabCategories', lang)}
           </h1>
           <div style={{ display: 'flex', gap: '12px', marginTop: '6px' }}>
             <Link href="/admin/catalog/brands" style={{ fontSize: '12px', color: 'var(--text-muted)', textDecoration: 'none' }}>
-              {lang === 'ru' ? 'Марки' : 'Маркахо'}
+              {t('admin.tabBrandsModels', lang)}
             </Link>
             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent)', borderBottom: '2px solid var(--accent)', paddingBottom: '2px' }}>
-              {lang === 'ru' ? 'Категории' : 'Категорияхо'}
+              {t('admin.tabCategories', lang)}
             </span>
           </div>
         </div>

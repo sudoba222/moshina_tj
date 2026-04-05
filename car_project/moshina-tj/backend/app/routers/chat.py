@@ -18,7 +18,7 @@ import uuid as _uuid
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session, joinedload
@@ -49,6 +49,16 @@ class ConversationCreateBody(BaseModel):
 
 class SendMessageBody(BaseModel):
     content: str
+
+    @field_validator("content")
+    @classmethod
+    def content_not_empty_and_max_length(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Message content cannot be empty")
+        if len(v) > 10_000:
+            raise ValueError("Message too long (max 10 000 chars)")
+        return v
 
 
 class ParticipantOut(BaseModel):
@@ -615,7 +625,8 @@ ws_router = APIRouter(tags=["chat-ws"])
 async def websocket_chat(websocket: WebSocket):
     """Real-time chat WebSocket.
 
-    Auth: pass JWT as ?token=<jwt> query param or in the `token` cookie.
+    Auth: JWT must be present in the `token` HttpOnly cookie.
+    Query param token is intentionally NOT supported (would expose JWT in server logs).
     On connection failure the socket is closed with code 1008 (Policy Violation).
 
     Incoming JSON format:

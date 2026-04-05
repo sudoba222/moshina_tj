@@ -336,7 +336,7 @@ export default function Navbar() {
                   >
                     <span style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 500 }}>{s.term}</span>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {s.type === 'brand' ? (lang === 'ru' ? 'Марка' : 'Марка') : s.type === 'city' ? (lang === 'ru' ? 'Город' : 'Шаҳр') : (lang === 'ru' ? 'Модель' : 'Модел')}
+                      {s.type === 'brand' ? t('search.brandLabel', lang) : s.type === 'city' ? t('search.cityLabel', lang) : t('search.modelLabel', lang)}
                     </span>
                   </button>
                 ))}
@@ -479,7 +479,7 @@ export default function Navbar() {
                   >
                     <span style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 500 }}>{s.term}</span>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                      {s.type === 'brand' ? (lang === 'ru' ? 'Марка' : 'Марка') : s.type === 'city' ? (lang === 'ru' ? 'Город' : 'Шаҳр') : (lang === 'ru' ? 'Модель' : 'Модел')}
+                      {s.type === 'brand' ? t('search.brandLabel', lang) : s.type === 'city' ? t('search.cityLabel', lang) : t('search.modelLabel', lang)}
                     </span>
                   </button>
                 ))}
