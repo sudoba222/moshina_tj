@@ -47,7 +47,7 @@ const BODY_TYPE_ICONS: Record<string, React.ReactNode> = {
 }
 
 const BODY_TYPES: { labelKey: string; value: string }[] = [
-  { labelKey: 'filters.bodyTypeAll', value: '' },
+  { labelKey: 'catalog.bodyTypeAll', value: '' },
   { labelKey: 'options.bodySedan',      value: 'sedan' },
   { labelKey: 'options.bodySuv',        value: 'suv' },
   { labelKey: 'options.bodyHatchback',  value: 'hatchback' },

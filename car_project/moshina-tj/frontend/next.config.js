@@ -59,7 +59,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://mc.yandex.ru",
+              "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://cdn.jsdelivr.net https://mc.yandex.ru",
               `connect-src 'self' https://mc.yandex.ru${isDev ? ' http://localhost:8000 ws://localhost:8000' : ''}${apiOrigin ? ` ${apiOrigin}` : ''}${wsOrigin ? ` ${wsOrigin}` : ''}`,
               "frame-ancestors 'none'",
             ].join('; '),

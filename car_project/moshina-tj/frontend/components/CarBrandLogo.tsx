@@ -55,7 +55,7 @@ export default function CarBrandLogo({ brand, size = 32, className }: CarBrandLo
         height: size,
         flexShrink: 0,
         borderRadius: '50%',
-        background: '#fff',
+        background: 'var(--color-white, #fff)',
         border: '1px solid var(--border)',
         overflow: 'hidden',
         padding: Math.round(size * 0.1),
