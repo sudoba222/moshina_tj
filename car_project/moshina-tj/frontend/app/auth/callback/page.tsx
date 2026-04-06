@@ -10,11 +10,10 @@ function AuthCallbackInner() {
   const { login } = useAuth()
 
   useEffect(() => {
-    const token = searchParams.get('token')
     const error = searchParams.get('error')
 
-    if (error || !token) {
-      router.replace('/auth/login?error=oauth_failed')
+    if (error) {
+      router.replace(`/auth/login?error=${error}`)
       return
     }
 
@@ -25,10 +24,13 @@ function AuthCallbackInner() {
       support: '/support',
     }
 
-    authApi.me(token)
+    // The backend sets an HttpOnly cookie during the OAuth redirect —
+    // there is no token in the URL (intentional: tokens in URLs leak via logs/Referer).
+    // Call /auth/me without a token; the cookie is sent automatically by the browser.
+    authApi.me()
       .then((res) => {
-        const { user } = res.data.data
-        login(token, user)
+        const { token: freshToken, user } = res.data.data!
+        login(freshToken.access_token, user)
         router.replace(ROLE_REDIRECT[user.role] ?? '/')
       })
       .catch(() => {
@@ -50,9 +52,6 @@ function AuthCallbackInner() {
         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </svg>
-      <p style={{ color: 'var(--text-muted)', fontSize: '14px', fontFamily: 'var(--font)' }}>
-        Входим...
-      </p>
     </div>
   )
 }

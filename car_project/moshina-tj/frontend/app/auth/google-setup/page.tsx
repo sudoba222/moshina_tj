@@ -21,16 +21,11 @@ function GoogleSetupInner() {
   const { login } = useAuth()
   const { lang } = useLang()
 
-  const token = searchParams.get('token') ?? ''
   const googleName = decodeURIComponent(searchParams.get('name') ?? '')
 
   const [name, setName] = useState(googleName)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (!token) router.replace('/auth/login?error=oauth_failed')
-  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -42,11 +37,12 @@ function GoogleSetupInner() {
     setLoading(true)
     setError('')
     try {
-      // Update name on the backend using the Google JWT
-      await authApi.updateProfile({ name: trimmed }, token)
-      // Fetch the updated user
-      const res = await authApi.me(token)
-      login(token, res.data.data.user)
+      // The backend set an HttpOnly cookie during the OAuth redirect.
+      // No URL token — use the cookie automatically via withCredentials.
+      await authApi.updateProfile({ name: trimmed })
+      const res = await authApi.me()
+      const { token: freshToken, user } = res.data.data!
+      login(freshToken.access_token, user)
       router.replace('/')
     } catch {
       setError(t('authForm.authError', lang))
