@@ -157,7 +157,7 @@ async def add_security_headers(request: Request, call_next) -> Response:
     _connect_src = "'self' " + " ".join(origins) + (" " + _extra_connect if _extra_connect else "")
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        f"img-src 'self' res.cloudinary.com data: blob:; "
+        "img-src 'self' res.cloudinary.com cdn.jsdelivr.net data: blob:; "
         "script-src 'self' 'unsafe-inline'; "
         "style-src 'self' 'unsafe-inline'; "
         f"connect-src {_connect_src}; "
