@@ -3,6 +3,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +11,19 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
+
+# ---------------------------------------------------------------------------
+# Sentry — error tracking (only active in production)
+# ---------------------------------------------------------------------------
+_SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if _SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=_SENTRY_DSN,
+        environment=os.getenv("ENVIRONMENT", "development"),
+        traces_sample_rate=0.2,   # capture 20% of requests for performance tracing
+        profiles_sample_rate=0.1,
+        send_default_pii=False,   # never send passwords, tokens, or raw request bodies
+    )
 from app.limiter import limiter
 from app.routers import admin, ai, auth, catalog, dealers, listings, search, upload, users
 from app.routers.vehicles import router as vehicles_router
