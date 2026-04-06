@@ -203,6 +203,22 @@ class EmailLoginPayload(BaseModel):
     remember_me: bool = False
 
 
+class LoginPayload(BaseModel):
+    phone: str
+    password: str  # no length validation — let bcrypt decide
+    remember_me: bool = False
+
+    @field_validator("phone")
+    @classmethod
+    def phone_valid(cls, v: str) -> str:
+        v = v.strip()
+        if not v.startswith("+"):
+            raise ValueError("Phone must start with '+'")
+        if len(v) < 7 or len(v) > 20:
+            raise ValueError("Phone length invalid")
+        return v
+
+
 class VerifyEmailOtpPayload(BaseModel):
     email: EmailStr
     code: str
@@ -280,7 +296,7 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     response_model=ApiResponse[AuthResponse],
 )
 @limiter.limit("5/15minutes")
-def login(request: Request, response: Response, payload: UserCreate, db: Session = Depends(get_db)):
+def login(request: Request, response: Response, payload: LoginPayload, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
     if not user:
         raise HTTPException(

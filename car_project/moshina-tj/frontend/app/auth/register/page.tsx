@@ -16,12 +16,13 @@ import type { UserPrefs } from '@/components/OnboardingWizard'
 function extractApiError(err: unknown, fallback: string): string {
   const data = (err as { response?: { data?: { detail?: unknown; message?: string; error?: string } } })?.response?.data
   if (!data) return fallback
-  if (typeof data.detail === 'string') return data.detail
+  const stripPrefix = (s: string) => s.replace(/^Value error,\s*/i, '')
+  if (typeof data.detail === 'string') return stripPrefix(data.detail)
   if (Array.isArray(data.detail) && data.detail.length > 0) {
     const first = data.detail[0] as { msg?: string }
-    return first.msg ?? fallback
+    return stripPrefix(first.msg ?? fallback)
   }
-  return data.message ?? data.error ?? fallback
+  return stripPrefix(data.message ?? data.error ?? fallback)
 }
 
 // ─── Spinner ──────────────────────────────────────────────────────────────────
