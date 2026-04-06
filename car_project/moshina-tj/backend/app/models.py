@@ -1,6 +1,6 @@
 import enum
 import uuid as _uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import (
@@ -532,6 +532,7 @@ def log_audit(db, actor_id, action: str, target_type: str = None, target_id=None
         target_type=target_type,
         target_id=target_id,
         details=details,
+        created_at=datetime.now(timezone.utc),  # explicit — DB column may lack DEFAULT
     )
     db.add(entry)
     # Don't commit here — caller commits with their main transaction
