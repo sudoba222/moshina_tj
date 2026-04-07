@@ -503,6 +503,14 @@ def delete_user(user_id: str, db: Session = Depends(get_db), current_user: User 
         raise HTTPException(status_code=404, detail="User not found")
     user.is_deleted = True
     user.deleted_at = datetime.now(timezone.utc)
+    # Anonymize unique fields so the same email/phone/google_id can be re-registered.
+    # The DB has UNIQUE constraints on these columns; soft-delete alone doesn't free them.
+    uid = str(user.id)
+    user.email = f"deleted_{uid}@deleted" if user.email else None
+    user.phone = f"deleted_{uid}"
+    user.google_id = None
+    user.apple_id = None
+    user.telegram_chat_id = None
     log_audit(db, current_user.id, "delete_user", "user", user.id, {"name": user.name, "phone": user.phone})
     db.commit()
     return ApiResponse(success=True, data=None, message="User deleted")
