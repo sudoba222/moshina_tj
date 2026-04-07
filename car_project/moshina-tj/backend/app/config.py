@@ -28,9 +28,9 @@ class Settings(BaseSettings):
     apple_client_id: str = ""
     apple_client_secret: str = ""
 
-    twilio_account_sid: str = ""
-    twilio_auth_token: str = ""
-    twilio_from_number: str = ""
+    infobip_api_key: str = ""
+    infobip_base_url: str = ""   # e.g. xxxxx.api.infobip.com (from Infobip dashboard)
+    infobip_sender: str = "TajCar"  # alphanumeric sender ID, max 11 chars
 
     frontend_url: str = "http://localhost:3000"
     google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"

@@ -85,11 +85,35 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
     # ── Text message ──────────────────────────────────────────────────────────
     text: str = message.get("text", "")
 
+    # ── Named commands ────────────────────────────────────────────────────────
+    if text.startswith("/help"):
+        await _send_message(
+            chat_id,
+            "TajCar.tj — бот для уведомлений и верификации\n\n"
+            "Доступные команды:\n"
+            "/start — Главная / верификация номера\n"
+            "/mylistings — Мои объявления\n"
+            "/status — Статус аккаунта\n"
+            "/help — Эта справка\n\n"
+            f"Сайт: {SITE_URL}",
+            url_button=("Открыть TajCar.tj", SITE_URL),
+        )
+        return {"ok": "true"}
+
+    if text.startswith("/mylistings"):
+        await _handle_mylistings(chat_id)
+        return {"ok": "true"}
+
+    if text.startswith("/status"):
+        await _handle_status(chat_id)
+        return {"ok": "true"}
+
     if not text.startswith("/start"):
         await _send_message(chat_id, (
             "Привет! Я бот TajCar.tj\n\n"
             f"Сайт: {SITE_URL}\n\n"
-            "Откройте сайт → Регистрация → «Войти через Telegram», чтобы начать."
+            "Откройте сайт → Регистрация → «Войти через Telegram», чтобы начать.\n\n"
+            "Введите /help для списка команд."
         ), url_button=("Открыть TajCar.tj", SITE_URL))
         return {"ok": "true"}
 
@@ -98,14 +122,113 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
 
     if not token_str:
         await _send_message(chat_id, (
-            "Привет! Я бот MOSHINA.TJ\n\n"
+            "Привет! Я бот TajCar.tj\n\n"
             f"Сайт: {SITE_URL}\n\n"
-            "Откройте сайт → Регистрация → «Войти через Telegram», чтобы начать."
+            "Откройте сайт → Регистрация → «Войти через Telegram», чтобы начать.\n\n"
+            "Введите /help для списка команд."
         ), url_button=("Открыть TajCar.tj", SITE_URL))
         return {"ok": "true"}
 
     await _handle_start(chat_id, token_str, telegram_name)
     return {"ok": "true"}
+
+
+async def _handle_mylistings(chat_id: str) -> None:
+    """Return the user's active listings."""
+    from app.models import Listing, ListingStatus
+
+    def _query() -> str:
+        db: Session = SessionLocal()
+        try:
+            user = db.query(User).filter(User.telegram_chat_id == chat_id, User.is_deleted == False).first()
+            if not user:
+                return "not_linked"
+            listings = (
+                db.query(Listing)
+                .filter(Listing.user_id == user.id, Listing.status == ListingStatus.active, Listing.is_deleted == False)
+                .order_by(Listing.created_at.desc())
+                .limit(10)
+                .all()
+            )
+            if not listings:
+                return "empty"
+            lines = ["Ваши активные объявления:\n"]
+            for i, lst in enumerate(listings, 1):
+                price = f"{lst.price:,.0f} $" if lst.price else "—"
+                lines.append(f"{i}. {lst.title or '—'} — {price}")
+                lines.append(f"   {SITE_URL}/car/{lst.id}")
+            return "\n".join(lines)
+        finally:
+            db.close()
+
+    try:
+        result = await asyncio.to_thread(_query)
+    except Exception:
+        logger.exception("Error in _handle_mylistings")
+        await _send_message(chat_id, "Произошла ошибка. Попробуйте позже.")
+        return
+
+    if result == "not_linked":
+        await _send_message(
+            chat_id,
+            "Ваш Telegram не привязан к аккаунту TajCar.tj.\n\n"
+            "Зарегистрируйтесь на сайте через Telegram.",
+            url_button=("Открыть TajCar.tj", SITE_URL),
+        )
+    elif result == "empty":
+        await _send_message(
+            chat_id,
+            "У вас пока нет активных объявлений.\n\nРазместите первое объявление на сайте!",
+            url_button=("Разместить объявление", f"{SITE_URL}/post"),
+        )
+    else:
+        await _send_message(chat_id, result, url_button=("Все объявления", f"{SITE_URL}/dashboard"))
+
+
+async def _handle_status(chat_id: str) -> None:
+    """Return the user's account status."""
+    def _query() -> dict:
+        db: Session = SessionLocal()
+        try:
+            user = db.query(User).filter(User.telegram_chat_id == chat_id, User.is_deleted == False).first()
+            if not user:
+                return {"status": "not_linked"}
+            return {
+                "status": "ok",
+                "name": user.full_name or user.username or "—",
+                "phone": user.phone or "—",
+                "role": user.role.value,
+                "is_banned": user.is_banned,
+                "is_verified": getattr(user, "is_verified", False),
+            }
+        finally:
+            db.close()
+
+    try:
+        info = await asyncio.to_thread(_query)
+    except Exception:
+        logger.exception("Error in _handle_status")
+        await _send_message(chat_id, "Произошла ошибка. Попробуйте позже.")
+        return
+
+    if info["status"] == "not_linked":
+        await _send_message(
+            chat_id,
+            "Ваш Telegram не привязан к аккаунту TajCar.tj.\n\n"
+            "Зарегистрируйтесь на сайте через Telegram.",
+            url_button=("Открыть TajCar.tj", SITE_URL),
+        )
+        return
+
+    banned_str = " (заблокирован)" if info["is_banned"] else ""
+    text = (
+        f"Статус аккаунта TajCar.tj\n\n"
+        f"Имя: {info['name']}\n"
+        f"Телефон: {info['phone']}\n"
+        f"Роль: {info['role']}{banned_str}\n\n"
+        f"Telegram привязан"
+    )
+    await _send_message(chat_id, text, url_button=("Открыть профиль", f"{SITE_URL}/dashboard"))
 
 
 def _handle_start_sync(chat_id: str, token_str: str, telegram_name: str | None) -> bool:

@@ -236,18 +236,31 @@ class ResendEmailOtpPayload(BaseModel):
 
 
 def _send_sms(phone: str, message: str) -> bool:
-    """Send SMS via Twilio if configured, else log the code (dev mode)."""
-    sid = settings.twilio_account_sid
-    token = settings.twilio_auth_token
-    from_num = settings.twilio_from_number
-    if sid and token and from_num:
+    """Send SMS via Infobip if configured, else log the code (dev mode)."""
+    api_key = settings.infobip_api_key
+    base_url = settings.infobip_base_url
+    sender = settings.infobip_sender or "TajCar"
+    if api_key and base_url:
         try:
-            from twilio.rest import Client
-            client = Client(sid, token)
-            client.messages.create(to=phone, from_=from_num, body=message)
+            import httpx
+            url = f"https://{base_url}/sms/2/text/advanced"
+            headers = {
+                "Authorization": f"App {api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+            payload = {
+                "messages": [{
+                    "from": sender,
+                    "destinations": [{"to": phone}],
+                    "text": message,
+                }]
+            }
+            resp = httpx.post(url, json=payload, headers=headers, timeout=10)
+            resp.raise_for_status()
             return True
         except Exception:
-            logger.exception("Twilio SMS failed to %s", phone)
+            logger.exception("Infobip SMS failed to %s", phone)
             return False
     else:
         # Dev mode: log the code so it is visible in server output
@@ -446,7 +459,7 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
     _send_sms(payload.phone, message)
 
     dev_code = None
-    if not settings.twilio_account_sid and settings.environment == "development":
+    if not settings.infobip_api_key and settings.environment == "development":
         logger.debug("[DEV OTP] phone=%s code=%s", payload.phone, code)
         dev_code = code
 
@@ -828,7 +841,7 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         message_text = f"Ваш код сброса пароля TajCar.tj: {code}. Действителен 10 минут."
         _send_sms(identifier, message_text)
         dev_code = None
-        if not settings.twilio_account_sid and settings.environment == "development":
+        if not settings.infobip_api_key and settings.environment == "development":
             logger.debug("[DEV OTP] phone=%s code=%s", identifier, code)
             dev_code = code
         return ApiResponse(success=True, data={"dev_code": dev_code} if dev_code else {}, message="Code sent to your phone")
