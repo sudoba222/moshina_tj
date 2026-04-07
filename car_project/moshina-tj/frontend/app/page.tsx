@@ -35,15 +35,32 @@ const QUICK_BRANDS = [
   'Kia', 'Honda', 'Daewoo', 'Audi', 'Lexus', 'Nissan',
 ]
 
+// Real icons from Material Design Icons (mdi) library via @mdi/js
+function MdiIcon({ d, size = 20 }: { d: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  )
+}
+
+const MDI_CAR         = "M5,11L6.5,6.5H17.5L19,11M17.5,16A1.5,1.5 0 0,1 16,14.5A1.5,1.5 0 0,1 17.5,13A1.5,1.5 0 0,1 19,14.5A1.5,1.5 0 0,1 17.5,16M6.5,16A1.5,1.5 0 0,1 5,14.5A1.5,1.5 0 0,1 6.5,13A1.5,1.5 0 0,1 8,14.5A1.5,1.5 0 0,1 6.5,16M18.92,6C18.72,5.42 18.16,5 17.5,5H6.5C5.84,5 5.28,5.42 5.08,6L3,12V20A1,1 0 0,0 4,21H5A1,1 0 0,0 6,20V19H18V20A1,1 0 0,0 19,21H20A1,1 0 0,0 21,20V12L18.92,6Z"
+const MDI_HATCHBACK   = "M16,6H6L1,12V15H3A3,3 0 0,0 6,18A3,3 0 0,0 9,15H15A3,3 0 0,0 18,18A3,3 0 0,0 21,15H23V12C23,10.89 22.11,10 21,10H19L16,6M6.5,7.5H10.5V10H4.5L6.5,7.5M12,7.5H15.5L17.46,10H12V7.5M6,13.5A1.5,1.5 0 0,1 7.5,15A1.5,1.5 0 0,1 6,16.5A1.5,1.5 0 0,1 4.5,15A1.5,1.5 0 0,1 6,13.5M18,13.5A1.5,1.5 0 0,1 19.5,15A1.5,1.5 0 0,1 18,16.5A1.5,1.5 0 0,1 16.5,15A1.5,1.5 0 0,1 18,13.5Z"
+const MDI_CAR_SIDE    = "M16,6L19,10H21C22.11,10 23,10.89 23,12V15H21A3,3 0 0,1 18,18A3,3 0 0,1 15,15H9A3,3 0 0,1 6,18A3,3 0 0,1 3,15H1V12C1,10.89 1.89,10 3,10L6,6H16M10.5,7.5H6.75L4.86,10H10.5V7.5M12,7.5V10H17.14L15.25,7.5H12M6,13.5A1.5,1.5 0 0,0 4.5,15A1.5,1.5 0 0,0 6,16.5A1.5,1.5 0 0,0 7.5,15A1.5,1.5 0 0,0 6,13.5M18,13.5A1.5,1.5 0 0,0 16.5,15A1.5,1.5 0 0,0 18,16.5A1.5,1.5 0 0,0 19.5,15A1.5,1.5 0 0,0 18,13.5Z"
+const MDI_VAN         = "M3,7C1.89,7 1,7.89 1,9V17H3A3,3 0 0,0 6,20A3,3 0 0,0 9,17H15A3,3 0 0,0 18,20A3,3 0 0,0 21,17H23V13C23,11.89 22.11,11 21,11L18,7H3M3,8.5H7V11H3V8.5M9,8.5H13V11H9V8.5M15,8.5H17.5L19.46,11H15V8.5M6,15.5A1.5,1.5 0 0,1 7.5,17A1.5,1.5 0 0,1 6,18.5A1.5,1.5 0 0,1 4.5,17A1.5,1.5 0 0,1 6,15.5M18,15.5A1.5,1.5 0 0,1 19.5,17A1.5,1.5 0 0,1 18,18.5A1.5,1.5 0 0,1 16.5,17A1.5,1.5 0 0,1 18,15.5Z"
+const MDI_PICKUP      = "M16,6H10.5V10H1V15H3A3,3 0 0,0 6,18A3,3 0 0,0 9,15H15A3,3 0 0,0 18,18A3,3 0 0,0 21,15H23V12C23,10.89 22.11,10 21,10H19L16,6M12,7.5H15.5L17.46,10H12V7.5M6,13.5A1.5,1.5 0 0,1 7.5,15A1.5,1.5 0 0,1 6,16.5A1.5,1.5 0 0,1 4.5,15A1.5,1.5 0 0,1 6,13.5M18,13.5A1.5,1.5 0 0,1 19.5,15A1.5,1.5 0 0,1 18,16.5A1.5,1.5 0 0,1 16.5,15A1.5,1.5 0 0,1 18,13.5Z"
+const MDI_ESTATE      = "M3,6H16L19,10H21C22.11,10 23,10.89 23,12V15H21A3,3 0 0,1 18,18A3,3 0 0,1 15,15H9A3,3 0 0,1 6,18A3,3 0 0,1 3,15H1V8C1,6.89 1.89,6 3,6M2.5,7.5V10H10.5V7.5H2.5M12,7.5V10H17.14L15.25,7.5H12M6,13.5A1.5,1.5 0 0,0 4.5,15A1.5,1.5 0 0,0 6,16.5A1.5,1.5 0 0,0 7.5,15A1.5,1.5 0 0,0 6,13.5M18,13.5A1.5,1.5 0 0,0 16.5,15A1.5,1.5 0 0,0 18,16.5A1.5,1.5 0 0,0 19.5,15A1.5,1.5 0 0,0 18,13.5Z"
+const MDI_SPORTS      = "M12,8.5H7L4,11H3C1.89,11 1,11.89 1,13V16H3.17C3.6,17.2 4.73,18 6,18C7.27,18 8.4,17.2 8.82,16H15.17C15.6,17.2 16.73,18 18,18C19.27,18 20.4,17.2 20.82,16H23V15C23,13.89 21.97,13.53 21,13L12,8.5M5.25,12L7.5,10H11.5L15.5,12H5.25M6,13.5A1.5,1.5 0 0,1 7.5,15A1.5,1.5 0 0,1 6,16.5A1.5,1.5 0 0,1 4.5,15A1.5,1.5 0 0,1 6,13.5M18,13.5A1.5,1.5 0 0,1 19.5,15A1.5,1.5 0 0,1 18,16.5A1.5,1.5 0 0,1 16.5,15A1.5,1.5 0 0,1 18,13.5Z"
+
 const BODY_TYPE_ICONS: Record<string, React.ReactNode> = {
-  '': <svg width="18" height="14" viewBox="0 0 24 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="1" y="6" width="22" height="9" rx="2"/><path d="M5 6l3-5h8l3 5"/><circle cx="6.5" cy="15" r="2"/><circle cx="17.5" cy="15" r="2"/></svg>,
-  sedan: <svg width="20" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 11h24M4 11L7 5h14l3 6"/><path d="M9 5l2-4h6l2 4"/><circle cx="7.5" cy="13.5" r="2.5"/><circle cx="20.5" cy="13.5" r="2.5"/></svg>,
-  suv: <svg width="22" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 10h24M4 10L6 4h16l2 6"/><path d="M6 4V2h16v2"/><circle cx="7.5" cy="13" r="2.5"/><circle cx="20.5" cy="13" r="2.5"/></svg>,
-  hatchback: <svg width="20" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 11h24M5 11L8 5h12l3 6"/><path d="M11 5l1-4h4l3 4"/><circle cx="7.5" cy="13.5" r="2.5"/><circle cx="20.5" cy="13.5" r="2.5"/></svg>,
-  minivan: <svg width="22" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 10h24M3 10V5h18l3 5"/><path d="M3 5V3h14v2"/><circle cx="7" cy="13" r="2.5"/><circle cx="21" cy="13" r="2.5"/></svg>,
-  pickup: <svg width="22" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 10h24M3 10V5h10l2 5"/><path d="M3 5V3h8v2"/><path d="M15 10V6h9v4"/><circle cx="7" cy="13" r="2.5"/><circle cx="21" cy="13" r="2.5"/></svg>,
-  wagon: <svg width="22" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 10h24M4 10L6 5h16l2 5"/><path d="M6 5V3h16v2"/><circle cx="7.5" cy="13" r="2.5"/><circle cx="20.5" cy="13" r="2.5"/></svg>,
-  coupe: <svg width="20" height="14" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 11h24M5 11l3-6h10l5 6"/><path d="M10 5l3-4h4"/><circle cx="8" cy="13.5" r="2.5"/><circle cx="21" cy="13.5" r="2.5"/></svg>,
+  '':         <MdiIcon d={MDI_CAR} />,
+  sedan:      <MdiIcon d={MDI_CAR} />,
+  suv:        <MdiIcon d={MDI_CAR_SIDE} />,
+  hatchback:  <MdiIcon d={MDI_HATCHBACK} />,
+  minivan:    <MdiIcon d={MDI_VAN} />,
+  pickup:     <MdiIcon d={MDI_PICKUP} />,
+  wagon:      <MdiIcon d={MDI_ESTATE} />,
+  coupe:      <MdiIcon d={MDI_SPORTS} />,
 }
 
 const BODY_TYPES: { labelKey: string; value: string }[] = [
