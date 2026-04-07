@@ -4,7 +4,7 @@
  * All URLs verified to return valid PNG images.
  */
 
-const CDN = 'https://cdn.jsdelivr.net/gh/filippofilip95/car-logos-dataset@master/logos/thumb'
+const CDN = 'https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/optimized'
 
 /** Maps normalised brand name → CDN logo URL */
 const BRAND_SLUG_MAP: Record<string, string> = {
@@ -96,6 +96,48 @@ const BRAND_SLUG_MAP: Record<string, string> = {
 
   // Korean budget (CIS market)
   daewoo:      'daewoo',
+
+  // Additional Chinese (popular in Tajikistan/CIS)
+  exeed:       'exeed',
+  omoda:       'omoda',
+  jaecoo:      'jaecoo',
+  tank:        'tank',
+  wey:         'wey',
+  voyah:       'voyah',
+  avatr:       'avatr',
+  xpeng:       'xpeng',
+  hongqi:      'hongqi',
+  baic:        'baic',
+  soueast:     'soueast',
+  zotye:       'zotye',
+  lifan:       'lifan',
+  dongfeng:    'dongfeng',
+
+  // Additional European
+  lamborghini: 'lamborghini',
+  ferrari:     'ferrari',
+  maserati:    'maserati',
+  bugatti:     'bugatti',
+  'aston martin': 'aston-martin',
+  astonmartin: 'aston-martin',
+  rivian:      'rivian',
+
+  // Additional Russian/CIS
+  moskvich:    'moskvich',
+  kamaz:       'kamaz',
+
+  // Spelling variants common in CIS
+  merсedes:    'mercedes-benz',  // cyrillic с variant
+  mersedes:    'mercedes-benz',
+  'mercedes benz': 'mercedes-benz',
+  toyotа:      'toyota',         // cyrillic а variant
+  хyundai:     'hyundai',
+  chevrolet:   'chevrolet',
+  шевроле:     'chevrolet',
+  тойота:      'toyota',
+  хонда:       'honda',
+  ниссан:      'nissan',
+  мазда:       'mazda',
 }
 
 /**

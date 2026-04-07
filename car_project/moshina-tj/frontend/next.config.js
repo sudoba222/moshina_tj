@@ -20,7 +20,8 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'https', hostname: 'cdn.jsdelivr.net' },  // car brand logos CDN
+      { protocol: 'https', hostname: 'cdn.jsdelivr.net' },         // car brand logos CDN (fallback)
+      { protocol: 'https', hostname: 'raw.githubusercontent.com' }, // car brand logos CDN
     ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400, // 24 h
@@ -59,7 +60,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://cdn.jsdelivr.net https://mc.yandex.ru",
+              "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://cdn.jsdelivr.net https://raw.githubusercontent.com https://mc.yandex.ru",
               `connect-src 'self' https://mc.yandex.ru${isDev ? ' http://localhost:8000 ws://localhost:8000' : ''}${apiOrigin ? ` ${apiOrigin}` : ''}${wsOrigin ? ` ${wsOrigin}` : ''}`,
               "frame-ancestors 'none'",
             ].join('; '),

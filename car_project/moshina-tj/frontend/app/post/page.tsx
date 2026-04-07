@@ -84,11 +84,26 @@ const BODY_TYPES: { value: BodyType; ru: string; tj: string; icon: React.ReactNo
     value: 'coupe', ru: 'Купе', tj: 'Купе',
     icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 15h18M4 15v-3l4-5h6l5 5v3M6 18a2 2 0 100-4 2 2 0 000 4zM16 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
   },
-  { value: 'crossover',   ru: 'Кроссовер',   tj: 'Кроссовер', icon: null },
-  { value: 'convertible', ru: 'Кабриолет',   tj: 'Кабриолет', icon: null },
-  { value: 'van',         ru: 'Фургон',      tj: 'Фургон',    icon: null },
-  { value: 'bus',         ru: 'Автобус',     tj: 'Автобус',   icon: null },
-  { value: 'other',       ru: 'Другое',      tj: 'Дигар',     icon: null },
+  {
+    value: 'crossover', ru: 'Кроссовер', tj: 'Кроссовер',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 16h20M3 16V11l2-4h12l3 4v5M6 19a2 2 0 100-4 2 2 0 000 4zM18 19a2 2 0 100-4 2 2 0 000 4zM1 13h4M19 13h4"/></svg>
+  },
+  {
+    value: 'convertible', ru: 'Кабриолет', tj: 'Кабриолет',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 15h20M4 15v-3h16v3M8 12l2-4h4l2 4M5 18a2 2 0 100-4 2 2 0 000 4zM19 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
+  },
+  {
+    value: 'van', ru: 'Фургон', tj: 'Фургон',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 16h20M2 8h13l4 5v3H2V8zM5 19a2 2 0 100-4 2 2 0 000 4zM18 19a2 2 0 100-4 2 2 0 000 4zM2 11h10M9 8v5"/></svg>
+  },
+  {
+    value: 'bus', ru: 'Автобус', tj: 'Автобус',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M2 10h20M7 4v6M17 4v6M7 17v2M17 17v2"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg>
+  },
+  {
+    value: 'other', ru: 'Другое', tj: 'Дигар',
+    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 15h18M4 15v-4l3-4h10l3 4v4M6 18a2 2 0 100-4 2 2 0 000 4zM18 18a2 2 0 100-4 2 2 0 000 4zM12 4v3"/></svg>
+  },
 ]
 
 const DRAFT_KEY = 'post_draft_v2'

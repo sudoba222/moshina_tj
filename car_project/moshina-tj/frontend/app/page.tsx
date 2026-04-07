@@ -31,8 +31,10 @@ const CITIES_LIST = [
 ]
 
 const QUICK_BRANDS = [
-  'Toyota', 'Chevrolet', 'BMW', 'Mercedes', 'Hyundai',
-  'Kia', 'Honda', 'Daewoo', 'Audi', 'Lexus', 'Nissan',
+  'Toyota', 'Chevrolet', 'Hyundai', 'Kia', 'Honda',
+  'BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Skoda',
+  'Lada', 'Daewoo', 'Nissan', 'Lexus', 'Haval',
+  'Chery', 'Geely', 'BYD', 'Mitsubishi', 'Mazda',
 ]
 
 // Real icons from Material Design Icons (mdi) library via @mdi/js
@@ -53,14 +55,19 @@ const MDI_ESTATE      = "M3,6H16L19,10H21C22.11,10 23,10.89 23,12V15H21A3,3 0 0,
 const MDI_SPORTS      = "M12,8.5H7L4,11H3C1.89,11 1,11.89 1,13V16H3.17C3.6,17.2 4.73,18 6,18C7.27,18 8.4,17.2 8.82,16H15.17C15.6,17.2 16.73,18 18,18C19.27,18 20.4,17.2 20.82,16H23V15C23,13.89 21.97,13.53 21,13L12,8.5M5.25,12L7.5,10H11.5L15.5,12H5.25M6,13.5A1.5,1.5 0 0,1 7.5,15A1.5,1.5 0 0,1 6,16.5A1.5,1.5 0 0,1 4.5,15A1.5,1.5 0 0,1 6,13.5M18,13.5A1.5,1.5 0 0,1 19.5,15A1.5,1.5 0 0,1 18,16.5A1.5,1.5 0 0,1 16.5,15A1.5,1.5 0 0,1 18,13.5Z"
 
 const BODY_TYPE_ICONS: Record<string, React.ReactNode> = {
-  '':         <MdiIcon d={MDI_CAR} />,
-  sedan:      <MdiIcon d={MDI_CAR} />,
-  suv:        <MdiIcon d={MDI_CAR_SIDE} />,
-  hatchback:  <MdiIcon d={MDI_HATCHBACK} />,
-  minivan:    <MdiIcon d={MDI_VAN} />,
-  pickup:     <MdiIcon d={MDI_PICKUP} />,
-  wagon:      <MdiIcon d={MDI_ESTATE} />,
-  coupe:      <MdiIcon d={MDI_SPORTS} />,
+  '':          <MdiIcon d={MDI_CAR} />,
+  sedan:       <MdiIcon d={MDI_CAR} />,
+  suv:         <MdiIcon d={MDI_CAR_SIDE} />,
+  hatchback:   <MdiIcon d={MDI_HATCHBACK} />,
+  minivan:     <MdiIcon d={MDI_VAN} />,
+  pickup:      <MdiIcon d={MDI_PICKUP} />,
+  wagon:       <MdiIcon d={MDI_ESTATE} />,
+  coupe:       <MdiIcon d={MDI_SPORTS} />,
+  crossover:   <MdiIcon d={MDI_CAR_SIDE} />,
+  convertible: <MdiIcon d={MDI_SPORTS} />,
+  van:         <MdiIcon d={MDI_VAN} />,
+  bus:         <MdiIcon d={MDI_CAR} />,
+  other:       <MdiIcon d={MDI_CAR} />,
 }
 
 const BODY_TYPES: { labelKey: string; value: string }[] = [
