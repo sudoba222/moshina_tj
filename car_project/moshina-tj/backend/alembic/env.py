@@ -23,7 +23,9 @@ config = context.config
 database_url = os.environ.get("DATABASE_URL")
 if not database_url:
     raise RuntimeError("DATABASE_URL environment variable is not set")
-config.set_main_option("sqlalchemy.url", database_url)
+# configparser uses % for interpolation — escape any % in the URL so it
+# doesn't choke on percent-encoded passwords (e.g. %2F, %3D).
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 # Configure Python logging from alembic.ini
 if config.config_file_name is not None:
@@ -34,9 +36,8 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode (no live DB connection required)."""
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -49,11 +50,8 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode (requires live DB connection)."""
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    from sqlalchemy import create_engine
+    connectable = create_engine(database_url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(
