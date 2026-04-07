@@ -218,8 +218,7 @@ export default function ActivityPage() {
         return
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = res.data.data as any
+      const data = res.data.data as unknown as { items?: StaffSearchItem[]; total?: number; page?: number; pages?: number }
       setItems(data.items ?? [])
       setTotal(data.total ?? 0)
       setPage(data.page ?? 1)
@@ -380,6 +379,7 @@ export default function ActivityPage() {
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           {item.primary_image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={item.primary_image_url}
                               alt=""

@@ -92,7 +92,6 @@ export default function PhoneInput({
     const { country, localNumber: local } = splitFullPhone(value)
     setSelectedCountry(country)
     setLocalNumber(local)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
   // Close dropdown on outside click

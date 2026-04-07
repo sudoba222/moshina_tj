@@ -164,7 +164,6 @@ export default function ModeratorPage() {
     }
 
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   // ── Session start callback (from dashboard) ──────────────────────────────────

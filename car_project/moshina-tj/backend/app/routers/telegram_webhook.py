@@ -155,7 +155,8 @@ async def _handle_mylistings(chat_id: str) -> None:
             lines = ["Ваши активные объявления:\n"]
             for i, lst in enumerate(listings, 1):
                 price = f"{lst.price:,.0f} $" if lst.price else "—"
-                lines.append(f"{i}. {lst.title or '—'} — {price}")
+                car_label = f"{lst.brand} {lst.model} {lst.year}" if lst.brand else "—"
+                lines.append(f"{i}. {car_label} — {price}")
                 lines.append(f"   {SITE_URL}/car/{lst.id}")
             return "\n".join(lines)
         finally:
@@ -195,11 +196,11 @@ async def _handle_status(chat_id: str) -> None:
                 return {"status": "not_linked"}
             return {
                 "status": "ok",
-                "name": user.full_name or user.username or "—",
+                "name": user.name or "—",
                 "phone": user.phone or "—",
                 "role": user.role.value,
                 "is_banned": user.is_banned,
-                "is_verified": getattr(user, "is_verified", False),
+                "is_verified": user.phone_verified or user.email_verified,
             }
         finally:
             db.close()
@@ -657,11 +658,7 @@ async def webapp_login(payload: WebAppLoginPayload, response: Response) -> dict:
             path="/",
         )
 
-        return {
-            "success": True,
-            "data": {"token": token},
-            "message": "Logged in via Telegram",
-        }
+        return {"success": True, "data": {"token": token}, "message": "Logged in via Telegram"}
 
     finally:
         db.close()

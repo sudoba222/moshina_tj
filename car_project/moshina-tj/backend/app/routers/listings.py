@@ -416,6 +416,7 @@ def create_listing(
         contact_method=payload.contact_method,
         whatsapp_number=payload.whatsapp_number,
 
+        availability=payload.availability,
         installment_available=payload.installment_available,
         is_dealer_listing=is_dealer,
         rental_rules=payload.rental_rules.model_dump(mode="json") if payload.rental_rules else None,
@@ -560,7 +561,7 @@ def update_listing(
         "is_customs_cleared", "taxi_license", "color", "city", "description",
         "youtube_link", "tiktok_link", "video_url", "contact_name", "contact_email",
         "contact_phone", "contact_method", "whatsapp_number", "installment_available",
-        "rental_rules",
+        "availability", "rental_rules",
     })
     for field, value in update_data.items():
         if field not in _USER_SETTABLE_LISTING_FIELDS:

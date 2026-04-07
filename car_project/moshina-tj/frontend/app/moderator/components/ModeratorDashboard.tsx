@@ -204,7 +204,7 @@ export default function ModeratorDashboard({ lang, onSessionStart }: ModeratorDa
                     cursor: 'pointer',
                   }}
                 >
-                  {m === null ? (lang === 'ru' ? 'Без лимита' : 'Бе лимит') : `${m} ${lang === 'ru' ? 'мин' : 'дақ'}`}
+                  {m === null ? t('moderator.timerNoLimit', lang) : `${m} ${t('moderator.timerMin', lang)}`}
                 </button>
               ))}
             </div>
@@ -245,7 +245,7 @@ export default function ModeratorDashboard({ lang, onSessionStart }: ModeratorDa
                 value={filterCity}
                 onChange={(e) => setFilterCity(e.target.value)}
                 style={inputStyle}
-                placeholder={lang === 'ru' ? 'Душанбе...' : 'Душанбе...'}
+                placeholder={t('moderator.filterCityPlaceholder', lang)}
                 aria-label="Filter city"
               />
             </div>

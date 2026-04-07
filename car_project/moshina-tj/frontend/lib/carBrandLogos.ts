@@ -132,7 +132,6 @@ const BRAND_SLUG_MAP: Record<string, string> = {
   'mercedes benz': 'mercedes-benz',
   toyotа:      'toyota',         // cyrillic а variant
   хyundai:     'hyundai',
-  chevrolet:   'chevrolet',
   шевроле:     'chevrolet',
   тойота:      'toyota',
   хонда:       'honda',

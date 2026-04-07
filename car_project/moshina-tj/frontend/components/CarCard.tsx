@@ -273,7 +273,7 @@ export default function CarCard({
                 </span>
               )}
               {listing.availability === 'on_order' && (
-                <span style={{ background: 'var(--color-warning-alt)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                <span style={{ background: 'var(--color-warning-alt)', color: 'var(--color-white)', fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.04em' }}>
                   {t('post.availability_on_order', lang)}
                 </span>
               )}

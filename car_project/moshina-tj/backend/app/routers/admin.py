@@ -534,6 +534,7 @@ def create_user(
         phone_verified=True,
     )
     db.add(user)
+    db.flush()  # populate user.id (server-default UUID) before writing the audit log
     log_audit(db, current_user.id, "create_user", "user", user.id, {"phone": payload.phone, "role": payload.role.value})
     db.commit()
     db.refresh(user)
@@ -770,6 +771,7 @@ def admin_listings(
                 name=item.user.name,
                 phone=item.user.phone,
                 email=item.user.email,
+                created_at=item.user.created_at,
             )
 
         result_items.append(AdminListingItem(

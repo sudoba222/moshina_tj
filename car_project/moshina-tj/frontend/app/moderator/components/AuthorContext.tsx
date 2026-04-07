@@ -111,7 +111,6 @@ export default function AuthorContext({ lang, listing }: AuthorContextProps) {
         setAuthorListings(items.filter((l) => l.id !== listing.id).slice(0, 5))
       })
       .catch(() => {})
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listing.id, listing.user_id])
 
   const trustLevel = getTrustLevel(listingCounts?.rejected ?? 0)

@@ -630,6 +630,9 @@ const strings = {
     weekTotal:          { ru: 'За неделю',                             tj: 'Дар ҳафта' },
     back:               { ru: 'Назад',                                 tj: 'Бозгашт' },
     descriptionLabel:   { ru: 'Описание',                              tj: 'Тавсиф' },
+    timerNoLimit:       { ru: 'Без лимита',                            tj: 'Бе лимит' },
+    timerMin:           { ru: 'мин',                                   tj: 'дақ' },
+    filterCityPlaceholder: { ru: 'Душанбе...',                         tj: 'Душанбе...' },
   },
   manager: {
     title:           { ru: 'Менеджер',                 tj: 'Менеҷер' },
@@ -1020,7 +1023,7 @@ const strings = {
     timeline:         { ru: 'Хронология',                        tj: 'Хронология' },
     owner:            { ru: 'Владелец',                          tj: 'Соҳиб' },
     views:            { ru: 'Просмотры',                         tj: 'Намоишҳо' },
-    by:               { ru: 'Сотрудник:',                        tj: 'Кормand:' },
+    by:               { ru: 'Сотрудник:',                        tj: 'Корманд:' },
   },
   // ── Admin page inline strings ────────────────────────────────────────────────
   adminForm: {

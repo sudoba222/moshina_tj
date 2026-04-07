@@ -435,7 +435,8 @@ def send_message(
         db.add(msg)
 
         # Touch conversation updated_at so conversations sort correctly
-        conv.updated_at = __import__("sqlalchemy").func.now()
+        from sqlalchemy import func as _sqla_func
+        conv.updated_at = _sqla_func.now()
 
         db.commit()
         db.refresh(msg)

@@ -86,7 +86,6 @@ export default function ModerationWorkspace({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSession.started_at])
 
   // ── Auto-end when countdown timer reaches 0 ─────────────────────────────────
@@ -147,7 +146,6 @@ export default function ModerationWorkspace({
       setIsLoading(false)
     }
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Advance to next listing (optimistic) ─────────────────────────────────────
