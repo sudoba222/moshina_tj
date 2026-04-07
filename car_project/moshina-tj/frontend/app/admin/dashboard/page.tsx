@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { adminApi } from '@/lib/api'
 import type { ModeratorActivity } from '@/lib/api'
@@ -7,7 +7,7 @@ import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { AdminStats, AuditLog } from '@/types'
 import StatCard from '@/components/admin/StatCard'
-import { MiniBarChart, DonutChart } from '@/components/admin/MiniChart'
+import { DonutChart } from '@/components/admin/MiniChart'
 import { thStyle, tdStyle } from '../components/shared'
 import { IconExternalLink } from '../components/icons'
 import { useToast } from '../components/ToastContext'
@@ -22,8 +22,8 @@ function DashboardSkeleton() {
   return (
     <div>
       <style>{`@keyframes dash-skel { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
-      <div className="grid gap-[14px] mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid gap-[14px] mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+        {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="rounded-[14px] p-5 h-[110px] border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
             <div style={{ ...s, width: '40px', height: '40px', borderRadius: '10px', marginBottom: '16px' }} />
             <div style={{ ...s, width: '60%', height: '20px', marginBottom: '8px' }} />
@@ -33,9 +33,9 @@ function DashboardSkeleton() {
       </div>
       <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         {[1, 2].map((i) => (
-          <div key={i} className="rounded-[14px] p-[18px] h-40 border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+          <div key={i} className="rounded-[14px] p-[18px] h-64 border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
             <div style={{ ...s, width: '40%', height: '14px', marginBottom: '20px' }} />
-            <div style={{ ...s, width: '100%', height: '100px', borderRadius: '8px' }} />
+            <div style={{ ...s, width: '100%', height: '160px', borderRadius: '8px' }} />
           </div>
         ))}
       </div>
@@ -43,8 +43,8 @@ function DashboardSkeleton() {
   )
 }
 
-// ── Stat icons ────────────────────────────────────────────────────────────────
-function IconStatUsers() {
+// ── SVG icons ─────────────────────────────────────────────────────────────────
+function IconUsers() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
@@ -52,7 +52,7 @@ function IconStatUsers() {
     </svg>
   )
 }
-function IconStatListings() {
+function IconListings() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -60,20 +60,328 @@ function IconStatListings() {
     </svg>
   )
 }
-function IconStatPending() {
+function IconClock() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
     </svg>
   )
 }
-function IconStatDealers() {
+function IconDealers() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="9" width="18" height="13" rx="1" />
       <path d="M8 9V5a1 1 0 011-1h6a1 1 0 011 1v4" />
       <line x1="12" y1="12" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" />
     </svg>
+  )
+}
+function IconXCircle() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  )
+}
+function IconUserPlus() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
+      <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+    </svg>
+  )
+}
+function IconShield() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  )
+}
+
+// ── Audit action badge ────────────────────────────────────────────────────────
+function AuditActionBadge({ action }: { action: string }) {
+  const lower = action.toLowerCase()
+  let bg = 'var(--tag-bg)'
+  let color = 'var(--text-muted)'
+
+  if (lower.includes('approve') || lower.includes('activate')) {
+    bg = 'var(--color-success-dim)'; color = 'var(--color-success)'
+  } else if (lower.includes('ban')) {
+    bg = 'var(--color-warning-dim)'; color = 'var(--color-warning)'
+  } else if (lower.includes('reject') || lower.includes('delete')) {
+    bg = 'var(--color-error-dim)'; color = 'var(--color-error)'
+  } else if (lower.includes('login') || lower.includes('register')) {
+    bg = 'var(--color-info-dim)'; color = 'var(--color-info)'
+  }
+
+  return (
+    <span
+      className="px-2 py-0.5 rounded-[6px] text-[11px] font-semibold font-mono whitespace-nowrap"
+      style={{ background: bg, color }}
+    >
+      {action}
+    </span>
+  )
+}
+
+// ── Role badge ────────────────────────────────────────────────────────────────
+function RoleBadge({ role }: { role: string }) {
+  const map: Record<string, { bg: string; color: string }> = {
+    admin:     { bg: 'var(--color-error-dim)',   color: 'var(--color-error)' },
+    moderator: { bg: 'var(--accent-dim)',         color: 'var(--accent)' },
+    manager:   { bg: 'var(--color-info-dim)',     color: 'var(--color-info)' },
+    support:   { bg: 'var(--color-warning-dim)', color: 'var(--color-warning)' },
+  }
+  const style = map[role.toLowerCase()] ?? { bg: 'var(--tag-bg)', color: 'var(--text-muted)' }
+  return (
+    <span
+      className="px-2 py-0.5 rounded-[100px] text-[11px] font-semibold uppercase tracking-[0.04em]"
+      style={{ background: style.bg, color: style.color }}
+    >
+      {role}
+    </span>
+  )
+}
+
+// ── Line chart with tooltip ───────────────────────────────────────────────────
+interface GrowthPoint { date: string; count: number }
+
+interface LineChartProps {
+  data: GrowthPoint[]
+  lineColor?: string
+  height?: number
+  label: string
+}
+
+function GrowthLineChart({ data, lineColor = 'var(--accent)', height = 160, label }: LineChartProps) {
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; date: string; count: number } | null>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
+
+  if (data.length < 2) {
+    return (
+      <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>—</span>
+      </div>
+    )
+  }
+
+  const W = 300
+  const padTop = 10
+  const padBottom = 28
+  const padLeft = 32
+  const padRight = 8
+  const chartW = W - padLeft - padRight
+  const chartH = height - padTop - padBottom
+
+  const maxVal = Math.max(...data.map((d) => d.count), 1)
+  const minVal = Math.min(...data.map((d) => d.count))
+  const range = maxVal - minVal || 1
+
+  const pts = data.map((d, i) => ({
+    x: padLeft + (i / (data.length - 1)) * chartW,
+    y: padTop + chartH - ((d.count - minVal) / range) * chartH,
+    date: d.date,
+    count: d.count,
+  }))
+
+  const polyline = pts.map((p) => `${p.x},${p.y}`).join(' ')
+  const area = [
+    `M ${pts[0].x} ${padTop + chartH}`,
+    ...pts.map((p) => `L ${p.x} ${p.y}`),
+    `L ${pts[pts.length - 1].x} ${padTop + chartH}`,
+    'Z',
+  ].join(' ')
+
+  // Y-axis tick values
+  const yTicks = [minVal, Math.round(minVal + range / 2), maxVal]
+
+  // X-axis labels: first, last, and a few evenly spaced
+  const xLabelIndices = new Set<number>([0, data.length - 1])
+  const step = Math.ceil(data.length / 5)
+  for (let i = step; i < data.length - 1; i += step) xLabelIndices.add(i)
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const mouseX = ((e.clientX - rect.left) / rect.width) * W
+    // Find closest point
+    let best = pts[0]
+    let bestDist = Math.abs(pts[0].x - mouseX)
+    for (const p of pts) {
+      const d = Math.abs(p.x - mouseX)
+      if (d < bestDist) { bestDist = d; best = p }
+    }
+    setTooltip({ x: best.x, y: best.y, date: best.date, count: best.count })
+  }
+
+  const formatDate = (iso: string) => {
+    try {
+      const d = new Date(iso)
+      return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}`
+    } catch {
+      return iso
+    }
+  }
+
+  const tooltipW = 90
+  const tooltipH = 38
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div
+        style={{
+          fontSize: '12px',
+          fontWeight: 700,
+          color: 'var(--text)',
+          marginBottom: '8px',
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <svg
+          ref={svgRef}
+          width="100%"
+          height={height}
+          viewBox={`0 0 ${W} ${height}`}
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label={label}
+          style={{ display: 'block', minWidth: '240px', cursor: 'crosshair' }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setTooltip(null)}
+        >
+          {/* Y axis ticks */}
+          {yTicks.map((tick) => {
+            const ty = padTop + chartH - ((tick - minVal) / range) * chartH
+            return (
+              <g key={tick}>
+                <line
+                  x1={padLeft - 4}
+                  y1={ty}
+                  x2={padLeft + chartW}
+                  y2={ty}
+                  stroke="var(--border)"
+                  strokeWidth="0.5"
+                  strokeDasharray="3 3"
+                />
+                <text
+                  x={padLeft - 6}
+                  y={ty + 4}
+                  textAnchor="end"
+                  fontSize="8"
+                  fill="var(--text-muted)"
+                  fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                >
+                  {tick}
+                </text>
+              </g>
+            )
+          })}
+
+          {/* Area fill */}
+          <path d={area} fill={lineColor} opacity="0.08" />
+
+          {/* Line */}
+          <polyline
+            points={polyline}
+            fill="none"
+            stroke={lineColor}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* X labels */}
+          {pts
+            .filter((_, i) => xLabelIndices.has(i))
+            .map((p, i) => (
+              <text
+                key={i}
+                x={p.x}
+                y={height - 4}
+                textAnchor={p.x < padLeft + 10 ? 'start' : p.x > W - 12 ? 'end' : 'middle'}
+                fontSize="8"
+                fill="var(--text-muted)"
+                fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+              >
+                {formatDate(p.date)}
+              </text>
+            ))}
+
+          {/* Tooltip */}
+          {tooltip && (() => {
+            const tx = Math.min(tooltip.x, W - tooltipW - 4)
+            const ty = Math.max(tooltip.y - tooltipH - 8, padTop)
+            return (
+              <g>
+                <circle cx={tooltip.x} cy={tooltip.y} r="3.5" fill={lineColor} />
+                <rect
+                  x={tx}
+                  y={ty}
+                  width={tooltipW}
+                  height={tooltipH}
+                  rx="5"
+                  fill="var(--card)"
+                  stroke="var(--border)"
+                  strokeWidth="1"
+                />
+                <text
+                  x={tx + tooltipW / 2}
+                  y={ty + 13}
+                  textAnchor="middle"
+                  fontSize="9"
+                  fill="var(--text-muted)"
+                  fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                >
+                  {formatDate(tooltip.date)}
+                </text>
+                <text
+                  x={tx + tooltipW / 2}
+                  y={ty + 28}
+                  textAnchor="middle"
+                  fontSize="11"
+                  fontWeight="700"
+                  fill="var(--text)"
+                  fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                >
+                  {tooltip.count.toLocaleString('ru-RU')}
+                </text>
+              </g>
+            )
+          })()}
+        </svg>
+      </div>
+    </div>
+  )
+}
+
+// ── Section card wrapper ───────────────────────────────────────────────────────
+function SectionCard({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className="rounded-[14px] border overflow-hidden"
+      style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+    >
+      <div
+        className="flex items-center justify-between px-4 py-[14px] border-b"
+        style={{ borderColor: 'var(--border)' }}
+      >
+        <span className="font-bold text-[14px]" style={{ color: 'var(--text)' }}>
+          {title}
+        </span>
+        {action}
+      </div>
+      {children}
+    </div>
   )
 }
 
@@ -98,7 +406,7 @@ export default function AdminDashboardPage() {
       setStats(sRes.data.data)
       setModeratorActivity(aRes.data.data ?? [])
       setAuditLogs(logsRes.data.data.items ?? [])
-    } catch (e) {
+    } catch {
       showToast(t('common.genericError', lang), 'error')
     }
     setLoading(false)
@@ -109,7 +417,7 @@ export default function AdminDashboardPage() {
   return (
     <div>
       {/* Page header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+      <div className="flex items-start justify-between flex-wrap gap-3 mb-6">
         <div>
           <h1 className="text-[22px] font-bold leading-tight m-0" style={{ color: 'var(--text)' }}>
             {t('admin.dashboard', lang)}
@@ -118,19 +426,30 @@ export default function AdminDashboardPage() {
             {t('admin.sectionOverview', lang)}
           </p>
         </div>
+        {/* Quick actions */}
         <div className="flex gap-2 flex-wrap">
           <Link
             href="/moderator"
             className="flex items-center gap-[6px] px-[14px] py-2 rounded-lg text-[12px] font-semibold no-underline"
             style={{ background: 'var(--accent)', color: 'var(--color-white)' }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+            <IconShield />
             {t('admin.moderation', lang)}
             {stats && stats.pending_listings > 0 && (
-              <span className="rounded-[100px] px-[5px] text-[10px] font-bold" style={{ background: 'rgba(255,255,255,0.25)' }}>
+              <span
+                className="rounded-[100px] px-[6px] py-[1px] text-[10px] font-bold"
+                style={{ background: 'rgba(255,255,255,0.25)' }}
+              >
                 {stats.pending_listings}
               </span>
             )}
+          </Link>
+          <Link
+            href="/admin/users"
+            className="flex items-center gap-[6px] px-[14px] py-2 rounded-lg text-[12px] font-semibold no-underline border"
+            style={{ background: 'var(--surface)', color: 'var(--text)', borderColor: 'var(--border)' }}
+          >
+            {t('admin.manageUsers', lang)}
           </Link>
           <Link
             href="/admin/dealers"
@@ -151,156 +470,359 @@ export default function AdminDashboardPage() {
             <div
               role="alert"
               className="flex items-center gap-[10px] px-4 py-3 rounded-[10px] border mb-5"
-              style={{ background: 'var(--color-warning-bg)', borderColor: 'var(--color-warning-border)' }}
+              style={{
+                background: 'var(--color-warning-dim)',
+                borderColor: 'var(--color-warning)',
+              }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning-text)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-              <span className="text-[13px] font-medium" style={{ color: 'var(--color-warning-text)' }}>
-                <strong>{stats.pending_listings}</strong> {t('admin.pendingAlert', lang)}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span className="text-[13px] font-medium" style={{ color: 'var(--color-warning)' }}>
+                <strong>{stats.pending_listings}</strong>{' '}
+                {t('admin.pendingAlert', lang)}
               </span>
               <Link
                 href="/moderator"
                 className="ml-auto px-3 py-1 rounded-[6px] text-[12px] font-bold no-underline"
-                style={{ background: 'var(--color-warning-text)', color: 'var(--color-white)' }}
+                style={{ background: 'var(--color-warning)', color: 'var(--color-white)' }}
               >
                 {t('admin.goToModerator', lang)}
               </Link>
             </div>
           )}
 
-          {/* 4 Stat cards */}
-          <div className="grid gap-[14px] mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-            <StatCard label={t('admin.totalUsers', lang)}    value={stats?.total_users ?? 0}    accentColor="var(--color-info)"    icon={<IconStatUsers />} />
-            <StatCard label={t('admin.activeListings', lang)} value={stats?.active_listings ?? 0} accentColor="var(--color-success)" icon={<IconStatListings />} />
-            <StatCard label={t('admin.pending', lang)}       value={stats?.pending_listings ?? 0} accentColor="var(--color-warning)" icon={<IconStatPending />} />
-            <StatCard label={t('admin.totalDealers', lang)}  value={stats?.total_dealers ?? 0}  accentColor="var(--accent)"        icon={<IconStatDealers />} />
+          {/* 6 KPI cards */}
+          <div
+            className="grid gap-[14px] mb-6"
+            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))' }}
+          >
+            <StatCard
+              label={t('admin.totalUsers', lang)}
+              value={stats?.total_users ?? 0}
+              accentColor="var(--color-info)"
+              icon={<IconUsers />}
+              trend={
+                stats?.new_users_today !== undefined
+                  ? { value: stats.new_users_today, label: `+${stats.new_users_today} ${t('admin.newUsersToday', lang)}` }
+                  : undefined
+              }
+            />
+            <StatCard
+              label={t('admin.activeListings', lang)}
+              value={stats?.active_listings ?? 0}
+              accentColor="var(--color-success)"
+              icon={<IconListings />}
+            />
+            <StatCard
+              label={t('admin.pending', lang)}
+              value={stats?.pending_listings ?? 0}
+              accentColor={stats && stats.pending_listings > 0 ? 'var(--color-error)' : 'var(--color-warning)'}
+              icon={<IconClock />}
+            />
+            <StatCard
+              label={t('admin.totalDealers', lang)}
+              value={stats?.total_dealers ?? 0}
+              accentColor="var(--accent)"
+              icon={<IconDealers />}
+              trend={
+                stats?.verified_dealers !== undefined
+                  ? { value: stats.verified_dealers, label: `${stats.verified_dealers} ${t('admin.verifiedDealers', lang)}` }
+                  : undefined
+              }
+            />
+            <StatCard
+              label={t('admin.rejectedListings', lang)}
+              value={stats?.rejected_listings ?? 0}
+              accentColor="var(--color-error)"
+              icon={<IconXCircle />}
+            />
+            <StatCard
+              label={t('admin.newUsersToday', lang)}
+              value={stats?.new_users_today ?? stats?.active_users_today ?? 0}
+              accentColor="var(--color-success)"
+              icon={<IconUserPlus />}
+            />
           </div>
 
-          {/* Secondary stats */}
           {stats && (
-            <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-              {[
-                { label: t('admin.totalListings', lang), value: stats.total_listings, color: 'var(--text)' },
-                { label: t('admin.totalStaff', lang),    value: stats.total_staff ?? 0,    color: 'var(--text)' },
-                { label: t('admin.rejectBtn', lang), value: stats.rejected_listings ?? 0, color: 'var(--color-error)' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="rounded-[10px] px-4 py-[14px] border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.06em] mb-1" style={{ color: 'var(--text-muted)' }}>{label}</div>
-                  <div className="text-[22px] font-extrabold" style={{ color }}>{value.toLocaleString('ru-RU')}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Charts */}
-          {stats && (
-            <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-              <div className="rounded-[14px] border px-5 py-[18px]" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-                <div className="text-[13px] font-bold mb-4" style={{ color: 'var(--text)' }}>
-                  {t('admin.analytics', lang)}
-                </div>
-                <DonutChart
-                  size={90}
-                  data={[
-                    { label: t('admin.activeListings', lang),           value: stats.active_listings,   color: 'var(--color-success)' },
-                    { label: t('admin.pending', lang),                  value: stats.pending_listings,  color: 'var(--color-warning)' },
-                    { label: t('admin.rejectBtn', lang),                value: stats.rejected_listings ?? 0, color: 'var(--color-error)' },
-                    { label: t('admin.all', lang),                      value: Math.max(0, stats.total_listings - stats.active_listings - stats.pending_listings - (stats.rejected_listings ?? 0)), color: 'var(--border-strong)' },
-                  ].filter((d) => d.value > 0)}
-                />
-              </div>
-
-              {moderatorActivity.length > 0 && (
-                <div className="rounded-[14px] border px-5 py-[18px]" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-                  <div className="text-[13px] font-bold mb-4" style={{ color: 'var(--text)' }}>
-                    {t('admin.moderatorPerf', lang)}
-                  </div>
-                  <MiniBarChart
-                    height={100}
-                    barColor="var(--accent)"
-                    data={moderatorActivity.map((m) => ({
-                      label: (m.moderator_name ?? m.phone ?? '?').split(' ')[0],
-                      value: m.posts_today,
-                    }))}
-                  />
+            <>
+              {/* Growth charts row */}
+              {((stats.user_growth && stats.user_growth.length >= 2) ||
+                (stats.listing_growth && stats.listing_growth.length >= 2)) && (
+                <div
+                  className="grid gap-4 mb-6"
+                  style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
+                >
+                  {stats.user_growth && stats.user_growth.length >= 2 && (
+                    <div
+                      className="rounded-[14px] border px-5 py-[18px]"
+                      style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+                    >
+                      <GrowthLineChart
+                        data={stats.user_growth}
+                        lineColor="var(--color-info)"
+                        height={160}
+                        label={t('admin.userGrowth', lang)}
+                      />
+                    </div>
+                  )}
+                  {stats.listing_growth && stats.listing_growth.length >= 2 && (
+                    <div
+                      className="rounded-[14px] border px-5 py-[18px]"
+                      style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+                    >
+                      <GrowthLineChart
+                        data={stats.listing_growth}
+                        lineColor="var(--color-success)"
+                        height={160}
+                        label={t('admin.listingGrowth', lang)}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+
+              {/* Donut + moderator bar chart row */}
+              <div
+                className="grid gap-4 mb-6"
+                style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
+              >
+                {/* Listings distribution donut */}
+                <div
+                  className="rounded-[14px] border px-5 py-[18px]"
+                  style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+                >
+                  <div className="text-[13px] font-bold mb-4" style={{ color: 'var(--text)' }}>
+                    {t('admin.analytics', lang)}
+                  </div>
+                  <DonutChart
+                    size={90}
+                    data={[
+                      {
+                        label: t('admin.activeListings', lang),
+                        value: stats.active_listings,
+                        color: 'var(--color-success)',
+                      },
+                      {
+                        label: t('admin.pending', lang),
+                        value: stats.pending_listings,
+                        color: 'var(--color-warning)',
+                      },
+                      {
+                        label: t('admin.rejectedListings', lang),
+                        value: stats.rejected_listings ?? 0,
+                        color: 'var(--color-error)',
+                      },
+                      {
+                        label: t('admin.all', lang),
+                        value: Math.max(
+                          0,
+                          stats.total_listings -
+                            stats.active_listings -
+                            stats.pending_listings -
+                            (stats.rejected_listings ?? 0)
+                        ),
+                        color: 'var(--border-strong)',
+                      },
+                    ].filter((d) => d.value > 0)}
+                  />
+                </div>
+
+                {/* Moderator mini chart */}
+                {moderatorActivity.length > 0 && (
+                  <div
+                    className="rounded-[14px] border px-5 py-[18px]"
+                    style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+                  >
+                    <div className="text-[13px] font-bold mb-3" style={{ color: 'var(--text)' }}>
+                      {t('admin.moderatorPerf', lang)}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {moderatorActivity.map((m) => {
+                        const maxToday = Math.max(...moderatorActivity.map((a) => a.posts_today), 1)
+                        const pct = (m.posts_today / maxToday) * 100
+                        return (
+                          <div key={m.moderator_id} className="flex items-center gap-3">
+                            <div
+                              className="w-2 h-2 rounded-full flex-shrink-0"
+                              style={{
+                                background: m.is_online
+                                  ? 'var(--color-online)'
+                                  : 'var(--border-strong)',
+                              }}
+                              aria-hidden="true"
+                            />
+                            <div
+                              className="text-[12px] truncate flex-shrink-0"
+                              style={{ color: 'var(--text)', width: '80px' }}
+                            >
+                              {(m.moderator_name ?? m.phone ?? '?').split(' ')[0]}
+                            </div>
+                            <div
+                              className="flex-1 rounded-[3px] overflow-hidden"
+                              style={{ height: '6px', background: 'var(--border)' }}
+                            >
+                              <div
+                                style={{
+                                  width: `${pct}%`,
+                                  height: '100%',
+                                  background: 'var(--accent)',
+                                  borderRadius: '3px',
+                                  transition: 'width 0.3s ease',
+                                }}
+                              />
+                            </div>
+                            <div
+                              className="text-[12px] font-bold flex-shrink-0"
+                              style={{ color: 'var(--text)', minWidth: '24px', textAlign: 'right' }}
+                            >
+                              {m.posts_today}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {/* Moderator performance table */}
           {moderatorActivity.length > 0 && (
-            <div className="rounded-[14px] border mb-5 overflow-hidden" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-              <div className="flex items-center justify-between px-4 py-[14px] border-b" style={{ borderColor: 'var(--border)' }}>
-                <span className="font-bold text-[14px]" style={{ color: 'var(--text)' }}>{t('admin.moderatorPerf', lang)}</span>
-                <Link href="/moderator" className="text-[12px] flex items-center gap-1 no-underline" style={{ color: 'var(--accent)' }}>
-                  {t('admin.goToModerator', lang)} <IconExternalLink />
-                </Link>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full" style={{ borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      {[t('admin.name', lang), t('admin.phone', lang), t('admin.role', lang), t('admin.listingsToday', lang), 'Online'].map((h) => (
-                        <th key={h} style={thStyle}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {moderatorActivity.map((m) => (
-                      <tr key={m.moderator_id}>
-                        <td style={tdStyle}>{m.moderator_name ?? '—'}</td>
-                        <td style={tdStyle}>{m.phone}</td>
-                        <td style={tdStyle}>
-                          <span className="px-2 py-0.5 rounded-[100px] text-[11px] font-semibold" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
-                            moderator
-                          </span>
-                        </td>
-                        <td style={tdStyle}>{m.posts_today}</td>
-                        <td style={tdStyle}>
-                          <span className="inline-block w-2 h-2 rounded-full mr-[6px]" style={{ background: m.is_online ? 'var(--color-online)' : 'var(--border-strong)' }} />
-                          {m.is_online ? 'Online' : 'Offline'}
-                        </td>
+            <div className="mb-5">
+              <SectionCard
+                title={t('admin.moderatorPerf', lang)}
+                action={
+                  <Link
+                    href="/moderator"
+                    className="text-[12px] flex items-center gap-1 no-underline"
+                    style={{ color: 'var(--accent)' }}
+                  >
+                    {t('admin.goToModerator', lang)} <IconExternalLink />
+                  </Link>
+                }
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        {[
+                          t('admin.name', lang),
+                          t('admin.phone', lang),
+                          t('admin.role', lang),
+                          t('admin.listingsToday', lang),
+                          'Online',
+                        ].map((h) => (
+                          <th key={h} style={thStyle}>
+                            {h}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {moderatorActivity.map((m) => (
+                        <tr key={m.moderator_id}>
+                          <td style={tdStyle}>
+                            <span style={{ fontWeight: 600 }}>{m.moderator_name ?? '—'}</span>
+                          </td>
+                          <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>
+                            {m.phone}
+                          </td>
+                          <td style={tdStyle}>
+                            <RoleBadge role="moderator" />
+                          </td>
+                          <td style={{ ...tdStyle, fontWeight: 700 }}>{m.posts_today}</td>
+                          <td style={tdStyle}>
+                            <span
+                              className="inline-block w-2 h-2 rounded-full mr-[6px]"
+                              style={{
+                                background: m.is_online
+                                  ? 'var(--color-online)'
+                                  : 'var(--border-strong)',
+                              }}
+                              aria-hidden="true"
+                            />
+                            <span style={{ color: m.is_online ? 'var(--color-online)' : 'var(--text-muted)' }}>
+                              {m.is_online ? 'Online' : 'Offline'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
             </div>
           )}
 
           {/* Recent audit log */}
           {auditLogs.length > 0 && (
-            <div className="rounded-[14px] border overflow-hidden" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-              <div className="flex items-center justify-between px-4 py-[14px] border-b" style={{ borderColor: 'var(--border)' }}>
-                <span className="font-bold text-[14px]" style={{ color: 'var(--text)' }}>{t('admin.recentActivity', lang)}</span>
-                <Link href="/admin/system" className="text-[12px] flex items-center gap-1 no-underline" style={{ color: 'var(--accent)' }}>
+            <SectionCard
+              title={t('admin.recentActivity', lang)}
+              action={
+                <Link
+                  href="/admin/system"
+                  className="text-[12px] flex items-center gap-1 no-underline"
+                  style={{ color: 'var(--accent)' }}
+                >
                   {t('admin.auditLog', lang)} <IconExternalLink />
                 </Link>
-              </div>
+              }
+            >
               <div className="overflow-x-auto">
                 <table className="w-full" style={{ borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      {[t('admin.auditActor', lang), t('admin.auditAction', lang), t('admin.auditTarget', lang), t('admin.auditTime', lang)].map((h) => (
-                        <th key={h} style={thStyle}>{h}</th>
+                      {[
+                        t('admin.auditActor', lang),
+                        t('admin.auditAction', lang),
+                        t('admin.auditTarget', lang),
+                        t('admin.auditTime', lang),
+                      ].map((h) => (
+                        <th key={h} style={thStyle}>
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {auditLogs.slice(0, 10).map((log) => (
                       <tr key={log.id}>
-                        <td style={tdStyle}>{log.actor_name ?? log.actor_id ?? '—'}</td>
-                        <td style={tdStyle}>
-                          <span className="px-2 py-0.5 rounded-[6px] text-[12px] font-mono" style={{ background: 'var(--tag-bg)' }}>{log.action}</span>
+                        <td style={{ ...tdStyle, fontWeight: 600 }}>
+                          {log.actor_name ?? log.actor_id ?? '—'}
                         </td>
-                        <td style={tdStyle}>{log.target_type ?? '—'} {log.target_id ? `#${log.target_id.slice(0, 6)}` : ''}</td>
-                        <td style={tdStyle}>{new Date(log.created_at).toLocaleString('ru-RU')}</td>
+                        <td style={tdStyle}>
+                          <AuditActionBadge action={log.action} />
+                        </td>
+                        <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>
+                          {log.target_type ?? '—'}
+                          {log.target_id ? (
+                            <span
+                              className="ml-1 font-mono text-[11px]"
+                              style={{ color: 'var(--text-muted)' }}
+                            >
+                              #{log.target_id.slice(0, 6)}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td style={{ ...tdStyle, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                          {new Date(log.created_at).toLocaleString('ru-RU', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </SectionCard>
           )}
         </>
       )}

@@ -176,6 +176,11 @@ export interface AdminStats {
   rejected_listings?: number
   total_staff?: number
   active_users_today?: number
+  /** Extended fields from the spec */
+  new_users_today?: number
+  verified_dealers?: number
+  user_growth?: Array<{ date: string; count: number }>
+  listing_growth?: Array<{ date: string; count: number }>
 }
 
 export interface AuditLog {

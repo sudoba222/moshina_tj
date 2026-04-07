@@ -540,6 +540,16 @@ const strings = {
     catalogJsonError: { ru: 'Неверный JSON конфигурации',   tj: 'JSON конфигуратсия нодуруст' },
     categoryCreated:  { ru: 'Категория создана',            tj: 'Категория сохта шуд' },
     categoryDeleted:  { ru: 'Категория удалена',            tj: 'Категория ҳазф шуд' },
+    // Dashboard growth charts
+    userGrowth:       { ru: 'Рост пользователей (30 дней)',  tj: 'Афзоиши корбарон (30 рӯз)' },
+    listingGrowth:    { ru: 'Рост объявлений (30 дней)',     tj: 'Афзоиши эълонҳо (30 рӯз)' },
+    newUsersToday:    { ru: 'Новых сегодня',                 tj: 'Имрӯз нав' },
+    verifiedDealers:  { ru: 'Верифицированных',              tj: 'Тасдиқшудагон' },
+    rejectedListings: { ru: 'Отклонённых',                   tj: 'Рад шуда' },
+    manageUsers:      { ru: 'Пользователи',                  tj: 'Корбарон' },
+    growthCharts:     { ru: 'Динамика роста',                tj: 'Динамикаи афзоиш' },
+    tooltipDate:      { ru: 'Дата',                          tj: 'Сана' },
+    tooltipCount:     { ru: 'Кол-во',                        tj: 'Миқдор' },
   },
   moderator: {
     title:              { ru: 'Модерация',                             tj: 'Назорат' },
