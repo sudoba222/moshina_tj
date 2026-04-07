@@ -1,5 +1,4 @@
 import enum
-import uuid as _uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -7,9 +6,9 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Column,
-    DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     JSON,
     Numeric,
@@ -128,7 +127,7 @@ class User(Base):
     is_banned = Column(Boolean, nullable=False, default=False, server_default="false")
     ban_reason = Column(Text, nullable=True)
     is_deleted = Column(Boolean, nullable=False, default=False, server_default="false")
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(TIMESTAMP(timezone=True), nullable=True)
     token_version = Column(Integer, nullable=False, default=0, server_default="0")
     last_login_at = Column(TIMESTAMP(timezone=True), nullable=True)
     created_at = Column(
@@ -392,8 +391,8 @@ class Dealer(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=_uuid.uuid4)
-    actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     action = Column(String(100), nullable=False, index=True)
     target_type = Column(String(50), nullable=True)   # "user", "listing", "dealer"
     target_id = Column(UUID(as_uuid=True), nullable=True, index=True)
@@ -406,13 +405,14 @@ class AuditLog(Base):
 class SearchLog(Base):
     __tablename__ = "search_logs"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=_uuid.uuid4)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     query = Column(String(500), nullable=False, index=True)
     results_count = Column(Integer, nullable=False, default=0)
     user_id = Column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), index=True)
 
@@ -427,10 +427,14 @@ class OtpCode(Base):
     email = Column(String(200), nullable=True, index=True)
     purpose = Column(String(20), nullable=False, default="phone_auth", server_default="phone_auth")
     code = Column(String(6), nullable=False)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=False)
     is_used = Column(Boolean, nullable=False, default=False, server_default="false")
     attempts = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_otp_codes_phone_purpose_is_used", "phone", "purpose", "is_used"),
+    )
 
 
 class TelegramToken(Base):
@@ -446,7 +450,7 @@ class TelegramToken(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     token = Column(String(64), unique=True, nullable=False, index=True)
     phone = Column(String(20), nullable=False, index=True)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=False)
     is_used = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     telegram_name = Column(String(200), nullable=True)     # first_name from Telegram
@@ -474,8 +478,8 @@ class Brand(Base):
     slug = Column(String(100), nullable=False, unique=True)
     logo_url = Column(String(500), nullable=True)
     country = Column(String(100), nullable=True)
-    is_popular = Column(Boolean, default=False, nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
+    is_popular = Column(Boolean, default=False, nullable=False, index=True)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     models = relationship("CarModel", back_populates="brand", lazy="select")
 
