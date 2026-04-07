@@ -587,7 +587,7 @@ export default function RegisterPage() {
 
       <div className="slide-up" style={{ width: '100%', maxWidth: '400px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(24px,5vw,40px)', overflow: 'hidden' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)', marginBottom: '20px', textAlign: 'center' }}>
-          {t('authForm.registerTitle', lang)}
+          {t('auth.registerTitle', lang)}
         </h1>
 
         {/* Tabs */}
