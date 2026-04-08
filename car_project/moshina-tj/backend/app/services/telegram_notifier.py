@@ -49,6 +49,7 @@ async def _send_telegram_message(
 
     Silently returns if bot token is not configured or on any transient error.
     Supports one button (inline_button) or multiple buttons (inline_buttons).
+    Always appends a "◀ Меню" callback button as the last row.
     """
     bot_token = settings.telegram_bot_token
     if not bot_token or not chat_id:
@@ -58,17 +59,25 @@ async def _send_telegram_message(
         "chat_id": chat_id,
         "text": text,
         "parse_mode": parse_mode,
+        "disable_web_page_preview": True,
     }
 
+    menu_btn = {"text": "◀ Меню", "callback_data": "main"}
+
     if inline_buttons:
-        payload["reply_markup"] = {
-            "inline_keyboard": [[{"text": label, "url": url}] for label, url in inline_buttons]
-        }
+        rows = [[{"text": label, "url": url}] for label, url in inline_buttons]
+        rows.append([menu_btn])
+        payload["reply_markup"] = {"inline_keyboard": rows}
     elif inline_button:
         label, url = inline_button
         payload["reply_markup"] = {
-            "inline_keyboard": [[{"text": label, "url": url}]]
+            "inline_keyboard": [
+                [{"text": label, "url": url}],
+                [menu_btn],
+            ]
         }
+    else:
+        payload["reply_markup"] = {"inline_keyboard": [[menu_btn]]}
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:

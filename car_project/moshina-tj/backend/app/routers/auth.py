@@ -243,28 +243,35 @@ def _send_sms(phone: str, message: str) -> bool:
     if api_key and base_url:
         try:
             import httpx
-            url = f"https://{base_url}/sms/2/text/advanced"
+            # Strip any accidental https:// or http:// prefix from base_url
+            base_url_clean = base_url.removeprefix("https://").removeprefix("http://").rstrip("/")
+            url = f"https://{base_url_clean}/sms/2/text/advanced"
             headers = {
                 "Authorization": f"App {api_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
             }
-            payload = {
+            body = {
                 "messages": [{
                     "from": sender,
                     "destinations": [{"to": phone}],
                     "text": message,
                 }]
             }
-            resp = httpx.post(url, json=payload, headers=headers, timeout=10)
-            resp.raise_for_status()
+            resp = httpx.post(url, json=body, headers=headers, timeout=10)
+            if not resp.is_success:
+                logger.error(
+                    "Infobip SMS failed to %s — status=%s body=%s",
+                    phone, resp.status_code, resp.text[:300],
+                )
+                return False
             return True
         except Exception:
             logger.exception("Infobip SMS failed to %s", phone)
             return False
     else:
-        # Dev mode: log the code so it is visible in server output
-        logger.warning("[DEV MODE] OTP for %s: %s", phone, message)
+        # Dev mode: log the code so it is visible in server logs
+        logger.warning("[DEV MODE] SMS OTP for %s — message: %s", phone, message)
         return True
 
 

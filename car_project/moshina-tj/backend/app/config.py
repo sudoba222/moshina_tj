@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_bot_username: str = ""
     telegram_webhook_secret: str = ""
+    support_telegram_chat_id: str = ""  # admin/support Telegram chat ID for support relay
     google_client_id: str = ""
     google_client_secret: str = ""
     apple_client_id: str = ""
