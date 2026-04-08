@@ -1,6 +1,7 @@
 # Claude Code — never commit these
 car_project/memory/
 car_project/CLAUDE.md
+wi_1/.claude/
 car_project/.idea/
 car_project/.DS_Store
 car_project/**/.DS_Store
