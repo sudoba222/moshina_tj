@@ -18,7 +18,7 @@ from app.auth import (
 )
 from app.database import get_db
 from app.email_service import send_email_otp, send_welcome_email, send_password_changed
-from app.models import OtpCode, TelegramToken, User, log_audit
+from app.models import OtpCode, TelegramToken, User, UserRole, log_audit
 from app.schemas import ApiResponse, AuthResponse, Token, UserCreate, UserResponse
 
 logger = logging.getLogger(__name__)
@@ -747,7 +747,9 @@ def login_email(request: Request, response: Response, payload: EmailLoginPayload
 
     if user.is_banned:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
-    if not user.email_verified:
+
+    _STAFF_ROLES = {UserRole.admin, UserRole.moderator, UserRole.manager, UserRole.support}
+    if not user.email_verified and user.role not in _STAFF_ROLES:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified. Please check your inbox for the verification code.",

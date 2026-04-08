@@ -110,8 +110,8 @@ class BulkApprovePayload(BaseModel):
     @field_validator("listing_ids")
     @classmethod
     def listing_ids_max(cls, v: list[str]) -> list[str]:
-        if len(v) > 100:
-            raise ValueError("Cannot bulk-process more than 100 listings at once")
+        if len(v) > 20:
+            raise ValueError("Cannot bulk-process more than 20 listings at once")
         return v
 
 
@@ -122,8 +122,8 @@ class BulkRejectPayload(BaseModel):
     @field_validator("listing_ids")
     @classmethod
     def listing_ids_max(cls, v: list[str]) -> list[str]:
-        if len(v) > 100:
-            raise ValueError("Cannot bulk-process more than 100 listings at once")
+        if len(v) > 20:
+            raise ValueError("Cannot bulk-process more than 20 listings at once")
         return v
 
 
@@ -1949,8 +1949,13 @@ def moderator_stats(db: Session = Depends(get_db), current_user: User = Depends(
         }
 
     all_s = db.query(ModerationSession).filter(ModerationSession.moderator_id == current_user.id).all()
-    today_s = [s for s in all_s if s.started_at >= today]
-    week_s  = [s for s in all_s if s.started_at >= week_ago]
+    # Strip timezone info before comparison — SQLAlchemy returns naive datetimes from PostgreSQL
+    # when the column lacks timezone info, but today/week_ago are timezone-aware. Normalise both
+    # sides to naive UTC to avoid a TypeError at runtime.
+    today_naive    = today.replace(tzinfo=None)
+    week_ago_naive = week_ago.replace(tzinfo=None)
+    today_s = [s for s in all_s if s.started_at.replace(tzinfo=None) >= today_naive]
+    week_s  = [s for s in all_s if s.started_at.replace(tzinfo=None) >= week_ago_naive]
 
     all_stats   = _sum(all_s)
     avg = round(all_stats["total"] / len(all_s), 1) if all_s else 0
@@ -1995,8 +2000,6 @@ def bulk_approve_listings(
     current_user: User = Depends(require_moderator),
 ):
     """Approve multiple pending listings at once (max 20)."""
-    if len(payload.listing_ids) > 20:
-        raise HTTPException(status_code=400, detail="Maximum 20 listings per bulk operation")
     from app.models import ModerationSession
     active_session = db.query(ModerationSession).filter(
         ModerationSession.moderator_id == current_user.id,
@@ -2035,8 +2038,6 @@ def bulk_reject_listings(
     current_user: User = Depends(require_moderator),
 ):
     """Reject multiple pending listings at once with the same reason (max 20)."""
-    if len(payload.listing_ids) > 20:
-        raise HTTPException(status_code=400, detail="Maximum 20 listings per bulk operation")
     from app.models import ModerationSession
     active_session = db.query(ModerationSession).filter(
         ModerationSession.moderator_id == current_user.id,

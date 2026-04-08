@@ -96,7 +96,14 @@ def _seed_staff_accounts() -> None:
                     name=acc["name"],
                     password_hash=hash_password(_DEFAULT_STAFF_PASSWORD),
                     role=acc["role"],
+                    phone_verified=True,
+                    email_verified=True,  # Staff accounts bypass OTP flows
                 ))
+            else:
+                # Backfill verified flags for accounts seeded before this fix
+                if not exists.phone_verified or not exists.email_verified:
+                    exists.phone_verified = True
+                    exists.email_verified = True
         db.commit()
     except Exception:  # noqa: BLE001 — don't crash the server if seeding fails
         db.rollback()
