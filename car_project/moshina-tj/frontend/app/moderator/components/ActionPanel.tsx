@@ -33,6 +33,17 @@ const REJECTION_REASON_KEYS = [
   'mod.reasonProhibited',
 ] as const
 
+// Canonical Russian labels stored in the DB — language-independent so rejection
+// reasons look the same regardless of which UI language the moderator uses.
+const REASON_CANONICAL: Record<string, string> = {
+  'mod.reasonBadPhotos':  'Плохие фото',
+  'mod.reasonLowPrice':   'Цена занижена',
+  'mod.reasonDuplicate':  'Дубликат',
+  'mod.reasonReseller':   'Перекуп',
+  'mod.reasonWrongInfo':  'Неверная информация',
+  'mod.reasonProhibited': 'Запрещённый контент',
+}
+
 // Displayed in both languages for clarity (moderators may speak either).
 function getReasonLabels(lang: Lang): { key: string; label: string }[] {
   const labels: Record<string, { ru: string; tj: string }> = {
@@ -81,9 +92,8 @@ export default function ActionPanel({
 
   function handleReject() {
     if (selectedReasons.length === 0) return
-    const reasonLabels = reasons
-      .filter((r) => selectedReasons.includes(r.key))
-      .map((r) => r.label)
+    // Always send canonical (ru) labels so DB values are language-independent
+    const reasonLabels = selectedReasons.map((key) => REASON_CANONICAL[key] ?? key)
     onReject(reasonLabels)
     setSelectedReasons([])
     setSkipOpen(false)

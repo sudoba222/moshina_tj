@@ -189,6 +189,7 @@ export default function ModerationWorkspace({
   // ── Actions ─────────────────────────────────────────────────────────────────
   async function handleApprove() {
     if (!current || actionInFlightRef.current) return
+    // Set flag immediately — before any state mutations — to prevent double-fire
     actionInFlightRef.current = true
     const id = current.id
     setSessionStats((prev) => ({ ...prev, approved: prev.approved + 1 }))
@@ -207,6 +208,7 @@ export default function ModerationWorkspace({
 
   async function handleReject(reasons: string[]) {
     if (!current || actionInFlightRef.current) return
+    // Set flag immediately — before any state mutations — to prevent double-fire
     actionInFlightRef.current = true
     const id = current.id
     setSessionStats((prev) => ({ ...prev, rejected: prev.rejected + 1 }))
@@ -224,6 +226,7 @@ export default function ModerationWorkspace({
 
   async function handleSkip() {
     if (!current || actionInFlightRef.current) return
+    // Set flag immediately — before any state mutations — to prevent double-fire
     actionInFlightRef.current = true
     const id = current.id
     setSessionStats((prev) => ({ ...prev, skipped: prev.skipped + 1 }))
@@ -241,6 +244,7 @@ export default function ModerationWorkspace({
 
   async function handleDelete() {
     if (!current || actionInFlightRef.current) return
+    // Set flag immediately — before any state mutations — to prevent double-fire
     actionInFlightRef.current = true
     const id = current.id
     advanceToNext()
@@ -357,7 +361,7 @@ export default function ModerationWorkspace({
           background: 'var(--accent-dim)', color: 'var(--accent)',
           padding: '2px 8px', borderRadius: '100px', fontSize: '12px', fontWeight: 600,
         }}>
-          {totalDone + 1} {t('moderator.queueCounter', lang)} {progressDenom}
+          {current ? `${totalDone + 1} ${t('moderator.queueCounter', lang)} ${progressDenom}` : `${totalDone} ${t('moderator.queueCounter', lang)} ${totalDone}`}
         </span>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
