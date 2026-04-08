@@ -715,7 +715,7 @@ export default function AdminDashboardPage() {
                           t('admin.phone', lang),
                           t('admin.role', lang),
                           t('admin.listingsToday', lang),
-                          'Online',
+                          t('admin.onlineStatus', lang),
                         ].map((h) => (
                           <th key={h} style={thStyle}>
                             {h}
@@ -747,7 +747,7 @@ export default function AdminDashboardPage() {
                               aria-hidden="true"
                             />
                             <span style={{ color: m.is_online ? 'var(--color-online)' : 'var(--text-muted)' }}>
-                              {m.is_online ? 'Online' : 'Offline'}
+                              {m.is_online ? t('admin.onlineNow', lang) : t('admin.offlineNow', lang)}
                             </span>
                           </td>
                         </tr>

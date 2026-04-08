@@ -799,6 +799,47 @@ def admin_listings(
     )
 
 
+@router.get("/listings/stats", response_model=ApiResponse[dict])
+def listing_stats(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """Listing analytics: top brands, cities, fuel types."""
+    from sqlalchemy import func as sqlfunc
+
+    top_brands = (
+        db.query(Listing.brand, sqlfunc.count(Listing.id).label("count"))
+        .filter(Listing.status == ListingStatus.active)
+        .group_by(Listing.brand)
+        .order_by(sqlfunc.count(Listing.id).desc())
+        .limit(10)
+        .all()
+    )
+    top_cities = (
+        db.query(Listing.city, sqlfunc.count(Listing.id).label("count"))
+        .filter(Listing.status == ListingStatus.active)
+        .group_by(Listing.city)
+        .order_by(sqlfunc.count(Listing.id).desc())
+        .limit(10)
+        .all()
+    )
+    by_fuel = (
+        db.query(Listing.fuel, sqlfunc.count(Listing.id).label("count"))
+        .filter(Listing.status == ListingStatus.active)
+        .group_by(Listing.fuel)
+        .all()
+    )
+    by_type = (
+        db.query(Listing.type, sqlfunc.count(Listing.id).label("count"))
+        .group_by(Listing.type)
+        .all()
+    )
+
+    return ApiResponse(success=True, data={
+        "top_brands": [{"brand": r.brand, "count": r.count} for r in top_brands],
+        "top_cities": [{"city": r.city, "count": r.count} for r in top_cities],
+        "by_fuel": [{"fuel": str(r.fuel.value) if r.fuel else None, "count": r.count} for r in by_fuel],
+        "by_type": [{"type": str(r.type.value) if r.type else None, "count": r.count} for r in by_type],
+    }, message="Listing stats fetched")
+
+
 @router.get("/listings/{listing_id}", response_model=ApiResponse[AdminListingDetail])
 def admin_listing_detail(
     listing_id: str,
@@ -1006,7 +1047,7 @@ def deactivate_listing(listing_id: str, db: Session = Depends(get_db), current_u
         actor_id=current_user.id,
         action="deactivated",
         from_status=old_status,
-        to_status=old_status,
+        to_status="deactivated",
     ))
     db.commit()
     db.refresh(listing)
@@ -1717,7 +1758,7 @@ def moderator_activity(db: Session = Depends(get_db), current_user: User = Depen
             "moderator_id": str(mod.id),
             "moderator_name": mod.name or "—",
             # Phone exposed to admin and moderator roles
-            "phone": mod.phone if current_user.role in {UserRole.admin, UserRole.moderator} else None,
+            "phone": mod.phone if current_user.role in {UserRole.admin, UserRole.moderator, UserRole.manager} else None,
             "is_online": active_session is not None,
             "posts_today": posts_today,
             "posts_last_30min": posts_last_30min,
@@ -1965,6 +2006,7 @@ def bulk_approve_listings(
     for lid in payload.listing_ids:
         listing = db.query(Listing).filter(Listing.id == lid, Listing.status == ListingStatus.pending).first()
         if listing:
+            old_status = listing.status.value if listing.status else None
             listing.status = ListingStatus.active
             listing.is_active = True
             listing.rejection_reason = None
@@ -1972,6 +2014,13 @@ def bulk_approve_listings(
             listing.locked_by = None
             listing.locked_at = None
             log_audit(db, current_user.id, "approve_listing", "listing", listing.id)
+            db.add(ListingLog(
+                listing_id=listing.id,
+                actor_id=current_user.id,
+                action="approved",
+                from_status=old_status,
+                to_status="active",
+            ))
             approved += 1
     if active_session:
         active_session.posts_approved += approved
@@ -1997,6 +2046,7 @@ def bulk_reject_listings(
     for lid in payload.listing_ids:
         listing = db.query(Listing).filter(Listing.id == lid, Listing.status == ListingStatus.pending).first()
         if listing:
+            old_status = listing.status.value if listing.status else None
             listing.status = ListingStatus.rejected
             listing.is_active = False
             listing.rejection_reason = payload.reason
@@ -2004,6 +2054,14 @@ def bulk_reject_listings(
             listing.locked_by = None
             listing.locked_at = None
             log_audit(db, current_user.id, "reject_listing", "listing", listing.id, {"reason": payload.reason})
+            db.add(ListingLog(
+                listing_id=listing.id,
+                actor_id=current_user.id,
+                action="rejected",
+                from_status=old_status,
+                to_status="rejected",
+                note=payload.reason,
+            ))
             rejected += 1
     if active_session:
         active_session.posts_rejected += rejected
@@ -2139,45 +2197,4 @@ def support_stats(db: Session = Depends(get_db), _: User = Depends(require_suppo
 
 
 # ---------------------------------------------------------------------------
-# Listing analytics (admin)
-# ---------------------------------------------------------------------------
-
-@router.get("/listings/stats", response_model=ApiResponse[dict])
-def listing_stats(db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    """Listing analytics: top brands, cities, fuel types."""
-    from sqlalchemy import func as sqlfunc
-
-    top_brands = (
-        db.query(Listing.brand, sqlfunc.count(Listing.id).label("count"))
-        .filter(Listing.status == ListingStatus.active)
-        .group_by(Listing.brand)
-        .order_by(sqlfunc.count(Listing.id).desc())
-        .limit(10)
-        .all()
-    )
-    top_cities = (
-        db.query(Listing.city, sqlfunc.count(Listing.id).label("count"))
-        .filter(Listing.status == ListingStatus.active)
-        .group_by(Listing.city)
-        .order_by(sqlfunc.count(Listing.id).desc())
-        .limit(10)
-        .all()
-    )
-    by_fuel = (
-        db.query(Listing.fuel, sqlfunc.count(Listing.id).label("count"))
-        .filter(Listing.status == ListingStatus.active)
-        .group_by(Listing.fuel)
-        .all()
-    )
-    by_type = (
-        db.query(Listing.type, sqlfunc.count(Listing.id).label("count"))
-        .group_by(Listing.type)
-        .all()
-    )
-
-    return ApiResponse(success=True, data={
-        "top_brands": [{"brand": r.brand, "count": r.count} for r in top_brands],
-        "top_cities": [{"city": r.city, "count": r.count} for r in top_cities],
-        "by_fuel": [{"fuel": str(r.fuel.value) if r.fuel else None, "count": r.count} for r in by_fuel],
-        "by_type": [{"type": str(r.type.value) if r.type else None, "count": r.count} for r in by_type],
-    }, message="Listing stats fetched")
+# Listing analytics endpoint moved to before /listings/{listing_id} to avoid route shadowing

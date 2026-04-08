@@ -53,30 +53,6 @@ USERS = [
         "password": "tajcar123",
         "role": UserRole.dealer,
     },
-    {
-        "phone": "+992900000003",
-        "name": "Admin Moshina",
-        "password": "tajcar123",
-        "role": UserRole.admin,
-    },
-    {
-        "phone": "+992900000004",
-        "name": "Moderator Moshina",
-        "password": "tajcar123",
-        "role": UserRole.moderator,
-    },
-    {
-        "phone": "+992900000005",
-        "name": "Manager Moshina",
-        "password": "tajcar123",
-        "role": UserRole.manager,
-    },
-    {
-        "phone": "+992900000006",
-        "name": "Support Moshina",
-        "password": "tajcar123",
-        "role": UserRole.support,
-    },
 ]
 
 DEALERS = [

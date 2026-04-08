@@ -221,9 +221,9 @@ export default function AuthorContext({ lang, listing }: AuthorContextProps) {
                 {listingCounts && (
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {[
-                      { label: 'active',   value: listingCounts.active,   color: 'var(--color-success)' },
-                      { label: 'pending',  value: listingCounts.pending,  color: 'var(--color-warning)' },
-                      { label: 'rejected', value: listingCounts.rejected, color: 'var(--color-error)' },
+                      { label: t('moderator.listingStatusActive', lang),   value: listingCounts.active,   color: 'var(--color-success)' },
+                      { label: t('moderator.listingStatusPending', lang),  value: listingCounts.pending,  color: 'var(--color-warning)' },
+                      { label: t('moderator.listingStatusRejected', lang), value: listingCounts.rejected, color: 'var(--color-error)' },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{
                         background: 'var(--card)',

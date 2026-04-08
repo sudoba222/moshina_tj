@@ -2,12 +2,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { IconCar } from './icons'
-import type { ListingImage } from '@/types'
+import { t } from '@/lib/i18n'
+import type { Lang, ListingImage } from '@/types'
 
 interface MediaGalleryProps {
   images: ListingImage[]
   activeIndex: number
   onNavigate: (index: number) => void
+  lang?: Lang
 }
 
 // ─── Lightbox ────────────────────────────────────────────────────────────────
@@ -220,11 +222,12 @@ function Lightbox({ images, startIndex, onClose }: {
 }
 
 // ─── Single grid cell ─────────────────────────────────────────────────────────
-function GridCell({ src, index, total, onClick }: {
+function GridCell({ src, index, total, onClick, lang }: {
   src: string
   index: number
   total: number
   onClick: () => void
+  lang?: Lang
 }) {
   const [loaded, setLoaded] = useState(false)
   const [errored, setErrored] = useState(false)
@@ -288,7 +291,7 @@ function GridCell({ src, index, total, onClick }: {
           padding: '2px 9px',
           borderRadius: '100px',
         }}>
-          {total} фото
+          {total} {t('moderator.photoCount', lang ?? 'ru')}
         </div>
       )}
     </button>
@@ -296,7 +299,7 @@ function GridCell({ src, index, total, onClick }: {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function MediaGallery({ images, activeIndex, onNavigate }: MediaGalleryProps) {
+export default function MediaGallery({ images, activeIndex, onNavigate, lang }: MediaGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const count = images.length
 
@@ -343,6 +346,7 @@ export default function MediaGallery({ images, activeIndex, onNavigate }: MediaG
             index={i}
             total={count}
             onClick={() => openLightbox(i)}
+            lang={lang}
           />
         ))}
       </div>

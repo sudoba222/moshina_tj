@@ -177,9 +177,9 @@ export default function ManagerPage() {
   ]
 
   const FILTER_OPTIONS: { value: 'all' | 'active' | 'inactive'; label: string }[] = [
-    { value: 'all',      label: lang === 'ru' ? 'Все'       : 'Ҳама' },
-    { value: 'active',   label: lang === 'ru' ? 'Активные'  : 'Фаъол' },
-    { value: 'inactive', label: lang === 'ru' ? 'Неактивные': 'Ғайрифаъол' },
+    { value: 'all',      label: t('manager.filterAll', lang) },
+    { value: 'active',   label: t('manager.filterActive', lang) },
+    { value: 'inactive', label: t('manager.filterInactive', lang) },
   ]
 
   return (
@@ -330,7 +330,7 @@ export default function ManagerPage() {
                   </button>
                 ))}
                 <span style={{ fontSize: '13px', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: '4px' }}>
-                  {listingsTotal.toLocaleString()} {lang === 'ru' ? 'всего' : 'ҳамагӣ'}
+                  {listingsTotal.toLocaleString()} {t('manager.listingsTotal', lang)}
                 </span>
               </div>
 
@@ -406,8 +406,8 @@ export default function ManagerPage() {
                               }}
                             >
                               {listing.is_active
-                                ? (lang === 'ru' ? 'Активно' : 'Фаъол')
-                                : (lang === 'ru' ? 'Неактивно' : 'Ғайрифаъол')}
+                                ? t('manager.listingActive', lang)
+                                : t('manager.listingInactive', lang)}
                             </span>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                               ID: {listing.id.slice(0, 8)}…
@@ -431,7 +431,7 @@ export default function ManagerPage() {
                               }}
                             >
                               <CheckIcon />
-                              {lang === 'ru' ? 'Активировать' : 'Фаъол кардан'}
+                              {t('manager.activate', lang)}
                             </button>
                           )}
                           {listing.is_active && (
@@ -448,7 +448,7 @@ export default function ManagerPage() {
                               }}
                             >
                               <XIcon />
-                              {lang === 'ru' ? 'Деактивировать' : 'Хомӯш кардан'}
+                              {t('manager.deactivate', lang)}
                             </button>
                           )}
                         </div>

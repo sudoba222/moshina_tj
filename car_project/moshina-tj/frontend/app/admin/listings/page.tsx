@@ -69,7 +69,7 @@ function ListingsPageInner() {
   async function handleApproveListing(id: string) {
     try {
       await adminApi.activateListing(id)
-      showToast(lang === 'ru' ? 'Объявление одобрено' : 'Эълон тасдиқ шуд', 'success')
+      showToast(t('admin.listingApproved', lang), 'success')
       loadListings(page, status, search)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -81,7 +81,7 @@ function ListingsPageInner() {
       await adminApi.rejectListing(id, rejectReason.trim() || 'Отклонено')
       setRejectListingId(null)
       setRejectReason('')
-      showToast(lang === 'ru' ? 'Объявление отклонено' : 'Эълон рад шуд', 'success')
+      showToast(t('admin.listingRejected', lang), 'success')
       loadListings(page, status, search)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -91,7 +91,7 @@ function ListingsPageInner() {
   async function handleDeactivateListing(id: string) {
     try {
       await adminApi.deactivateListing(id)
-      showToast(lang === 'ru' ? 'Объявление деактивировано' : 'Эълон хомӯш шуд', 'success')
+      showToast(t('admin.listingDeactivated', lang), 'success')
       loadListings(page, status, search)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -104,7 +104,7 @@ function ListingsPageInner() {
     try {
       await adminApi.editListing(editListingData.id, editListingForm)
       setEditListingData(null)
-      showToast(lang === 'ru' ? 'Данные сохранены' : 'Маълумот нигоҳ дошта шуд', 'success')
+      showToast(t('admin.listingDataSaved', lang), 'success')
       loadListings(page, status, search)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -117,7 +117,7 @@ function ListingsPageInner() {
     try {
       await adminApi.deleteListing(deleteListingId)
       setDeleteListingId(null)
-      showToast(lang === 'ru' ? 'Объявление удалено' : 'Эълон ҳазф шуд', 'success')
+      showToast(t('admin.listingDeleted', lang), 'success')
       loadListings(page, status, search)
     } catch (e) {
       showToast(extractApiError(e, t('common.genericError', lang)), 'error')
@@ -201,7 +201,7 @@ function ListingsPageInner() {
               ) : listings.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 px-4" style={{ ...tdStyle, color: 'var(--text-muted)' }}>
-                    {lang === 'ru' ? 'Нет объявлений' : 'Эълон нест'}
+                    {t('admin.noListingsFound', lang)}
                   </td>
                 </tr>
               ) : (
@@ -255,7 +255,7 @@ function ListingsPageInner() {
                           className="px-2 py-1 rounded-[6px] text-[11px] cursor-pointer border"
                           style={{ background: 'var(--tag-bg)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
                         >
-                          {lang === 'ru' ? 'Изм.' : 'Таҳ.'}
+                          {t('admin.editAction', lang)}
                         </button>
                         <button
                           onClick={() => openListingLogs(l.id)}
@@ -315,19 +315,19 @@ function ListingsPageInner() {
       {editListingData && (
         <ModalBackdrop onClose={() => setEditListingData(null)}>
           <ModalCard maxWidth="560px">
-            <ModalTitle>{lang === 'ru' ? 'Редактировать объявление' : 'Таҳрири эълон'}</ModalTitle>
+            <ModalTitle>{t('admin.editListingTitle', lang)}</ModalTitle>
             <div className="grid grid-cols-2 gap-[10px] mb-[10px]">
               {([
-                { label: lang === 'ru' ? 'Марка' : 'Марка', key: 'brand' },
-                { label: lang === 'ru' ? 'Модель' : 'Модел', key: 'model' },
-                { label: lang === 'ru' ? 'Год' : 'Сол', key: 'year' },
-                { label: lang === 'ru' ? 'Цена' : 'Нарх', key: 'price' },
-                { label: lang === 'ru' ? 'Валюта' : 'Асъор', key: 'currency' },
-                { label: lang === 'ru' ? 'Город' : 'Шаҳр', key: 'city' },
-                { label: lang === 'ru' ? 'Пробег' : 'Пробег', key: 'mileage' },
-                { label: lang === 'ru' ? 'Топливо' : 'Сӯзишворӣ', key: 'fuel' },
-                { label: lang === 'ru' ? 'КПП' : 'КПП', key: 'transmission' },
-                { label: lang === 'ru' ? 'Цвет' : 'Ранг', key: 'color' },
+                { label: t('admin.fieldBrand', lang), key: 'brand' },
+                { label: t('admin.fieldModel', lang), key: 'model' },
+                { label: t('admin.fieldYear', lang), key: 'year' },
+                { label: t('admin.fieldPrice', lang), key: 'price' },
+                { label: t('admin.fieldCurrency', lang), key: 'currency' },
+                { label: t('admin.fieldCity', lang), key: 'city' },
+                { label: t('admin.fieldMileage', lang), key: 'mileage' },
+                { label: t('admin.fieldFuel', lang), key: 'fuel' },
+                { label: t('admin.fieldTransmission', lang), key: 'transmission' },
+                { label: t('admin.fieldColor', lang), key: 'color' },
               ] as const).map(({ label, key }) => (
                 <div key={key}>
                   <label className="block text-[11px] font-semibold uppercase tracking-[0.05em] mb-[3px]" style={{ color: 'var(--text-muted)' }}>{label}</label>
@@ -376,9 +376,9 @@ function ListingsPageInner() {
       {deleteListingId && (
         <ModalBackdrop onClose={() => setDeleteListingId(null)}>
           <ModalCard>
-            <ModalTitle>{lang === 'ru' ? 'Удалить объявление?' : 'Эълонро ҳазф кунед?'}</ModalTitle>
+            <ModalTitle>{t('admin.deleteListingTitle', lang)}</ModalTitle>
             <p className="text-[13px] mb-[18px]" style={{ color: 'var(--text-muted)' }}>
-              {lang === 'ru' ? 'Объявление будет удалено безвозвратно.' : 'Эълон барои ҳамеша ҳазф мешавад.'}
+              {t('admin.deleteListingDesc', lang)}
             </p>
             <ModalActions>
               <BtnSecondary onClick={() => setDeleteListingId(null)}>{t('dashboard.cancel', lang)}</BtnSecondary>
@@ -398,7 +398,7 @@ function ListingsPageInner() {
                 onClick={() => { setLogsListingId(null); setLogsDetail(null) }}
                 className="flex items-center border rounded-lg cursor-pointer px-2 py-[6px]"
                 style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                aria-label={lang === 'ru' ? 'Закрыть' : 'Пӯшидан'}
+                aria-label={t('admin.closeDialog', lang)}
               >
                 <IconX />
               </button>

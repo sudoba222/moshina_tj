@@ -195,7 +195,7 @@ export default function ContentPanel({
             aria-label="View listing on site"
           >
             <IconExternalLink size={12} />
-            View
+            {t('moderator.viewListing', lang)}
           </Link>
         </div>
       </div>
@@ -240,6 +240,7 @@ export default function ContentPanel({
           images={listing.images ?? []}
           activeIndex={photoIndex}
           onNavigate={onPhotoNavigate}
+          lang={lang}
         />
       </div>
 
@@ -367,7 +368,7 @@ export default function ContentPanel({
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
             }}>
-              Stop words
+              {t('moderator.stopWordsWarning', lang)}
             </span>
           )}
         </div>
@@ -420,8 +421,8 @@ export default function ContentPanel({
       {similarListings.length > 0 && (
         <div style={{
           marginBottom: '16px',
-          background: 'var(--color-warning-bg)',
-          border: '1px solid var(--color-warning-border)',
+          background: 'var(--color-warning-dim)',
+          border: '1px solid var(--color-warning)',
           borderRadius: '10px',
           padding: '12px',
         }}
@@ -431,7 +432,7 @@ export default function ContentPanel({
           <div style={{
             fontSize: '12px',
             fontWeight: 700,
-            color: 'var(--color-warning-text)',
+            color: 'var(--color-warning)',
             marginBottom: '8px',
           }}>
             {t('moderator.duplicateWarning', lang)} — {similarListings.length} {t('mod.similarFound', lang)}
