@@ -55,55 +55,19 @@ const TRANSMISSIONS: { value: TransmissionType; ru: string; tj: string }[] = [
   { value: 'Вариатор', ru: 'Вариатор',  tj: 'Вариатор' },
 ]
 
-const BODY_TYPES: { value: BodyType; ru: string; tj: string; icon: React.ReactNode }[] = [
-  {
-    value: 'sedan', ru: 'Седан', tj: 'Седан',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 15h20M4 15V11l3-4h8l4 4v4M7 7l-1 4M15 7l1 4M5 18a2 2 0 100-4 2 2 0 000 4zM19 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
-  },
-  {
-    value: 'suv', ru: 'Внедорожник', tj: 'SUV',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 16h20M3 16v-5l2-5h11l3 5v5M7 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4zM2 12h4M18 12h4"/></svg>
-  },
-  {
-    value: 'hatchback', ru: 'Хэтчбек', tj: 'Хэтчбек',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 15h18M3 15v-4l3-4h7l4 4v4M6 18a2 2 0 100-4 2 2 0 000 4zM16 18a2 2 0 100-4 2 2 0 000 4zM21 11l-2 4"/></svg>
-  },
-  {
-    value: 'minivan', ru: 'Минивэн', tj: 'Минивэн',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 16h20M2 16V9l3-3h12l3 3v7M6 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4zM7 6v4M14 6v4"/></svg>
-  },
-  {
-    value: 'pickup', ru: 'Пикап', tj: 'Пикап',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 15h13V9l-3-3H5L2 9v6zM15 15h7v-4h-7v4zM5 18a2 2 0 100-4 2 2 0 000 4zM18 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
-  },
-  {
-    value: 'wagon', ru: 'Универсал', tj: 'Универсал',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 15h20M2 15V9l3-3h14l3 3v6M5 18a2 2 0 100-4 2 2 0 000 4zM18 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
-  },
-  {
-    value: 'coupe', ru: 'Купе', tj: 'Купе',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 15h18M4 15v-3l4-5h6l5 5v3M6 18a2 2 0 100-4 2 2 0 000 4zM16 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
-  },
-  {
-    value: 'crossover', ru: 'Кроссовер', tj: 'Кроссовер',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 16h20M3 16V11l2-4h12l3 4v5M6 19a2 2 0 100-4 2 2 0 000 4zM18 19a2 2 0 100-4 2 2 0 000 4zM1 13h4M19 13h4"/></svg>
-  },
-  {
-    value: 'convertible', ru: 'Кабриолет', tj: 'Кабриолет',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 15h20M4 15v-3h16v3M8 12l2-4h4l2 4M5 18a2 2 0 100-4 2 2 0 000 4zM19 18a2 2 0 100-4 2 2 0 000 4z"/></svg>
-  },
-  {
-    value: 'van', ru: 'Фургон', tj: 'Фургон',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 16h20M2 8h13l4 5v3H2V8zM5 19a2 2 0 100-4 2 2 0 000 4zM18 19a2 2 0 100-4 2 2 0 000 4zM2 11h10M9 8v5"/></svg>
-  },
-  {
-    value: 'bus', ru: 'Автобус', tj: 'Автобус',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M2 10h20M7 4v6M17 4v6M7 17v2M17 17v2"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg>
-  },
-  {
-    value: 'other', ru: 'Другое', tj: 'Дигар',
-    icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 15h18M4 15v-4l3-4h10l3 4v4M6 18a2 2 0 100-4 2 2 0 000 4zM18 18a2 2 0 100-4 2 2 0 000 4zM12 4v3"/></svg>
-  },
+const BODY_TYPES: { value: BodyType; ru: string; tj: string }[] = [
+  { value: 'sedan',      ru: 'Седан',       tj: 'Седан' },
+  { value: 'suv',        ru: 'Внедорожник', tj: 'SUV' },
+  { value: 'hatchback',  ru: 'Хэтчбек',    tj: 'Хэтчбек' },
+  { value: 'minivan',    ru: 'Минивэн',     tj: 'Минивэн' },
+  { value: 'pickup',     ru: 'Пикап',       tj: 'Пикап' },
+  { value: 'wagon',      ru: 'Универсал',   tj: 'Универсал' },
+  { value: 'coupe',      ru: 'Купе',        tj: 'Купе' },
+  { value: 'crossover',  ru: 'Кроссовер',   tj: 'Кроссовер' },
+  { value: 'convertible',ru: 'Кабриолет',   tj: 'Кабриолет' },
+  { value: 'van',        ru: 'Фургон',      tj: 'Фургон' },
+  { value: 'bus',        ru: 'Автобус',     tj: 'Автобус' },
+  { value: 'other',      ru: 'Другое',      tj: 'Дигар' },
 ]
 
 const DRAFT_KEY = 'post_draft_v2'
@@ -801,17 +765,15 @@ function PostPage() {
                         <button key={bt.value} type="button"
                           onClick={() => setField('body_type', selected ? '' : bt.value)}
                           style={{
-                            padding: '12px 8px', borderRadius: '12px', fontWeight: 600, fontSize: '12px',
+                            padding: '10px 8px', borderRadius: '12px', fontWeight: 600, fontSize: '12px',
                             cursor: 'pointer', textAlign: 'center', border: '1.5px solid',
                             borderColor: selected ? 'var(--accent)' : 'var(--border)',
                             background: selected ? 'var(--accent)' : 'var(--surface)',
                             color: selected ? 'var(--color-white)' : 'var(--text)',
-                            transition: 'all 0.13s', minHeight: '64px',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                            transition: 'all 0.13s',
                           }}
                         >
-                          {bt.icon && <span style={{ opacity: selected ? 1 : 0.7 }}>{bt.icon}</span>}
-                          <span>{lang === 'ru' ? bt.ru : bt.tj}</span>
+                          {lang === 'ru' ? bt.ru : bt.tj}
                         </button>
                       )
                     })}
