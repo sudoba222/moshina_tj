@@ -275,6 +275,8 @@ export const usersApi = {
     api.get<ApiResponse<UserPublicProfile>>(`/users/${userId}/profile`),
   getListings: (userId: string, page = 1) =>
     api.get<ApiResponse<PaginatedListings>>(`/users/${userId}/listings`, { params: { page } }),
+  myListings: (page = 1) =>
+    api.get<ApiResponse<PaginatedListings>>('/users/me/listings', { params: { page } }),
 }
 
 export const adminApi = {

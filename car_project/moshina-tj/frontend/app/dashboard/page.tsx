@@ -82,7 +82,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (tab !== 'listings' || !user) return
     setListingsLoading(true)
-    usersApi.getListings(user.id, listingsPage)
+    usersApi.myListings(listingsPage)
       .then((res) => {
         const data = res.data.data
         setListings((prev) => listingsPage === 1 ? data.items : [...prev, ...data.items])
