@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { t } from '@/lib/i18n'
 import { useLang } from '@/lib/LanguageContext'
+import { getCarBrandLogoUrl } from '@/lib/carBrandLogos'
 import type { Lang } from '@/types'
 
 export interface UserPrefs {
@@ -27,141 +28,22 @@ const CITIES = [
   { value: 'Турсунзода', i18n: 'options.cityTursunzoda' },
 ]
 
-// ─── Brand data with real logo URLs ──────────────────────────────────────────
-const BRANDS: { name: string; color: string; icon: React.ReactNode }[] = [
-  {
-    name: 'Toyota',
-    color: '#EB0A1E',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Toyota_carlogo.svg"
-        alt="Toyota"
-        style={{ width: '42px', height: '30px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'BMW',
-    color: '#1C69D4',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/4/44/BMW.svg"
-        alt="BMW"
-        style={{ width: '32px', height: '32px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'Mercedes',
-    color: '#333',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Benz_Logo_2010.svg"
-        alt="Mercedes"
-        style={{ width: '36px', height: '36px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'Chevrolet',
-    color: '#D4AA00',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/0/07/Chevrolet_logo.svg"
-        alt="Chevrolet"
-        style={{ width: '48px', height: '18px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'Hyundai',
-    color: '#002C5F',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/4/44/Hyundai_Motor_Company_logo.svg"
-        alt="Hyundai"
-        style={{ width: '40px', height: '24px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'Kia',
-    color: '#05141F',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/4/47/Kia_logo_2021.svg"
-        alt="Kia"
-        style={{ width: '44px', height: '22px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'Lexus',
-    color: '#1A1A1A',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/d/d1/Lexus_logo.svg"
-        alt="Lexus"
-        style={{ width: '42px', height: '28px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'Honda',
-    color: '#CC0000',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/3/38/Honda.svg"
-        alt="Honda"
-        style={{ width: '36px', height: '32px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'Nissan',
-    color: '#C3002F',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Nissan_logo.svg"
-        alt="Nissan"
-        style={{ width: '40px', height: '34px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'Audi',
-    color: '#BB0A30',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/9/92/Audi_logo_detail.svg"
-        alt="Audi"
-        style={{ width: '56px', height: '20px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'Volkswagen',
-    color: '#001E50',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/6/6d/Volkswagen_logo_2019.svg"
-        alt="Volkswagen"
-        style={{ width: '32px', height: '32px', objectFit: 'contain' }}
-      />
-    ),
-  },
-  {
-    name: 'BYD',
-    color: '#1565C0',
-    icon: (
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/3/3d/BYD_logo.svg"
-        alt="BYD"
-        style={{ width: '44px', height: '24px', objectFit: 'contain' }}
-      />
-    ),
-  },
+// ─── Brand list derived from carBrandLogos.ts
+//     These are the canonical display names — each must be lowercased before
+//     passing to getCarBrandLogoUrl(). Order: most-popular-in-CIS first.
+const BRAND_NAMES: string[] = [
+  'Toyota', 'Chevrolet', 'BMW', 'Mercedes', 'Hyundai', 'Kia',
+  'Audi', 'Volkswagen', 'Lexus', 'Honda', 'Nissan', 'Lada',
+  'BYD', 'Geely', 'Haval', 'Chery', 'Daewoo', 'Mitsubishi',
+  'Mazda', 'Subaru', 'Suzuki', 'Volvo', 'Skoda', 'Renault',
+  'Peugeot', 'Citroen', 'Fiat', 'Ford', 'Jeep', 'Tesla',
+  'Porsche', 'Land Rover', 'Jaguar', 'Mini', 'Infiniti',
+  'Genesis', 'GAC', 'Changan', 'Hongqi', 'MG',
+  'UAZ', 'GAZ', 'Lada',
 ]
+
+// De-duplicate (Lada appears twice above as a safeguard)
+const BRANDS: string[] = Array.from(new Set(BRAND_NAMES))
 
 // ─── Map pin icon ──────────────────────────────────────────────────────────────
 function PinIcon() {
@@ -191,6 +73,45 @@ function ProgressDots({ current, total }: { current: number; total: number }) {
   )
 }
 
+// ─── Brand logo — CDN image with initial-letter fallback ──────────────────────
+function BrandLogo({ name, selected }: { name: string; selected: boolean }) {
+  const [errored, setErrored] = useState(false)
+  const logoUrl = getCarBrandLogoUrl(name)
+
+  if (!logoUrl || errored) {
+    // Fallback: first letter of the brand in a styled circle
+    return (
+      <div style={{
+        width: '40px', height: '40px',
+        borderRadius: '50%',
+        background: selected ? 'var(--accent-dim)' : 'var(--surface)',
+        border: '1.5px solid var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '15px', fontWeight: 800,
+        color: selected ? 'var(--accent)' : 'var(--text-muted)',
+        flexShrink: 0,
+        transition: 'background 0.15s, color 0.15s',
+      }}>
+        {name.charAt(0).toUpperCase()}
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={logoUrl}
+      alt={name}
+      onError={() => setErrored(true)}
+      style={{
+        width: '44px', height: '32px',
+        objectFit: 'contain',
+        display: 'block',
+        flexShrink: 0,
+      }}
+    />
+  )
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 export default function OnboardingWizard({ onComplete }: Props) {
   const { lang, setLang } = useLang()
@@ -203,8 +124,8 @@ export default function OnboardingWizard({ onComplete }: Props) {
   const [animKey, setAnimKey] = useState(0)
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 60)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setVisible(true), 60)
+    return () => clearTimeout(timer)
   }, [])
 
   function goNext() {
@@ -259,6 +180,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
         @keyframes stepSlideInLeft  { from { opacity:0; transform: translateX(-32px); } to { opacity:1; transform: translateX(0); } }
         .brand-card:hover { transform: scale(1.04); }
         .city-btn:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
+        .lang-btn:hover { border-color: var(--accent) !important; }
       `}</style>
 
       <div style={{
@@ -312,7 +234,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 overflowY: 'auto',
                 paddingRight: '2px',
               }}>
-                {CITIES.map(({ value, i18n }) => {
+                {CITIES.map(({ value, i18n: i18nKey }) => {
                   const selected = selectedCity === value
                   return (
                     <button
@@ -337,7 +259,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                       <span style={{ color: selected ? 'var(--color-white)' : 'var(--accent)', flexShrink: 0 }}>
                         <PinIcon />
                       </span>
-                      {t(i18n, lang)}
+                      {t(i18nKey, lang)}
                     </button>
                   )
                 })}
@@ -359,14 +281,17 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 {(['ru', 'tj'] as const).map((l) => {
                   const selected = selectedLang === l
                   const label = l === 'ru' ? t('onboarding.langRu', lang) : t('onboarding.langTj', lang)
+                  // Short code shown as the visual identifier (no flags)
+                  const code = l === 'ru' ? 'РУ' : 'ТЈ'
                   return (
                     <button
                       key={l}
+                      className="lang-btn"
                       onClick={() => setSelectedLang(l)}
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        gap: '12px',
-                        padding: '24px 16px',
+                        gap: '10px',
+                        padding: '28px 16px',
                         border: `2px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
                         borderRadius: '16px',
                         background: selected ? 'var(--accent)' : 'var(--bg)',
@@ -377,22 +302,22 @@ export default function OnboardingWizard({ onComplete }: Props) {
                         boxShadow: selected ? '0 4px 16px rgba(220,38,38,0.2)' : 'none',
                       }}
                     >
-                      {/* Flag icon */}
-                      <img
-                        src={l === 'ru'
-                          ? "https://upload.wikimedia.org/wikipedia/en/f/f3/Flag_of_Russia.svg"
-                          : "https://upload.wikimedia.org/wikipedia/commons/d/d0/Flag_of_Tajikistan.svg"
-                        }
-                        alt={l === 'ru' ? 'Russian' : 'Tajik'}
-                        style={{
-                          width: '40px',
-                          height: '28px',
-                          borderRadius: '4px',
-                          objectFit: 'cover',
-                          border: '1px solid rgba(0,0,0,0.12)',
-                          flexShrink: 0,
-                        }}
-                      />
+                      {/* Language code badge — no flags, no emojis */}
+                      <span style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: '48px', height: '48px',
+                        borderRadius: '12px',
+                        background: selected ? 'rgba(255,255,255,0.18)' : 'var(--surface)',
+                        border: `1.5px solid ${selected ? 'rgba(255,255,255,0.25)' : 'var(--border)'}`,
+                        fontSize: '18px',
+                        fontWeight: 900,
+                        letterSpacing: '0.04em',
+                        color: selected ? 'var(--color-white)' : 'var(--accent)',
+                        flexShrink: 0,
+                        transition: 'all 0.15s ease',
+                      }}>
+                        {code}
+                      </span>
                       <span style={{ fontSize: '14px', fontWeight: 700 }}>{label}</span>
                     </button>
                   )
@@ -415,27 +340,31 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '8px',
-                maxHeight: '300px',
+                maxHeight: '320px',
                 overflowY: 'auto',
+                paddingRight: '2px',
+                // Smooth scroll on iOS
+                WebkitOverflowScrolling: 'touch',
               }}>
-                {BRANDS.map(({ name, color, icon }) => {
+                {BRANDS.map((name) => {
                   const selected = selectedBrands.includes(name)
                   return (
                     <button
                       key={name}
                       className="brand-card"
                       onClick={() => toggleBrand(name)}
+                      aria-pressed={selected}
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         gap: '8px', padding: '12px 8px',
-                        border: `2px solid ${selected ? color : 'var(--border)'}`,
+                        border: `2px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
                         borderRadius: '14px',
-                        background: selected ? `${color}14` : 'var(--bg)',
+                        background: selected ? 'var(--accent-dim)' : 'var(--bg)',
                         cursor: 'pointer',
                         fontFamily: 'var(--font)',
                         transition: 'all 0.18s ease',
                         position: 'relative',
-                        minHeight: '76px',
+                        minHeight: '84px',
                       }}
                     >
                       {/* Check badge */}
@@ -444,8 +373,9 @@ export default function OnboardingWizard({ onComplete }: Props) {
                           position: 'absolute', top: '6px', right: '6px',
                           width: '16px', height: '16px',
                           borderRadius: '50%',
-                          background: color,
+                          background: 'var(--accent)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0,
                         }}>
                           <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
                             <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -453,18 +383,17 @@ export default function OnboardingWizard({ onComplete }: Props) {
                         </span>
                       )}
 
-                      {/* Brand icon */}
-                      <span style={{ color: selected ? color : 'var(--text-muted)', transition: 'color 0.15s' }}>
-                        {icon}
-                      </span>
+                      {/* Brand logo (CDN) or initial-letter fallback */}
+                      <BrandLogo name={name} selected={selected} />
 
                       {/* Brand name */}
                       <span style={{
-                        fontSize: '11px', fontWeight: 700,
-                        color: selected ? color : 'var(--text-muted)',
+                        fontSize: '10px', fontWeight: 700,
+                        color: selected ? 'var(--accent)' : 'var(--text-muted)',
                         transition: 'color 0.15s',
                         textAlign: 'center',
                         lineHeight: 1.2,
+                        wordBreak: 'break-word',
                       }}>
                         {name}
                       </span>
