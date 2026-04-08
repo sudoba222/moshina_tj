@@ -24,6 +24,7 @@ from app.models import (
     BodyType,
     Brand,
     CarModel,
+    Category,
     Currency,
     Dealer,
     FuelType,
@@ -596,6 +597,27 @@ def seed():
             db.flush()
             user_map[u["phone"]] = user
             print(f"  Created {u['role']} user {u['phone']}")
+
+        print("Seeding categories...")
+        _CATEGORIES = [
+            ("car",        "Легковые",      "Мошинаҳои сабук"),
+            ("suv",        "Внедорожники",  "Внедорожник / SUV"),
+            ("minivan",    "Минивэны",       "Минивэн"),
+            ("pickup",     "Пикапы",         "Пикап"),
+            ("truck",      "Грузовики",      "Боркаш"),
+            ("bus",        "Автобусы",       "Автобус"),
+            ("motorcycle", "Мотоциклы",      "Мотосикл"),
+            ("special",    "Спецтехника",    "Техникаи махсус"),
+            ("parts",      "Автозапчасти",   "Қисмҳои эҳтиётӣ"),
+            ("commercial", "Коммерческий",   "Тиҷоратӣ"),
+            ("electric",   "Электромобили",  "Автомобили барқӣ"),
+            ("other",      "Другое",         "Дигар"),
+        ]
+        for i, (slug, name_ru, name_tj) in enumerate(_CATEGORIES):
+            if db.query(Category).filter(Category.slug == slug).first():
+                continue
+            db.add(Category(slug=slug, name_ru=name_ru, name_tj=name_tj, display_order=i, is_active=True))
+        db.flush()
 
         print("Seeding dealers...")
         for d in DEALERS:

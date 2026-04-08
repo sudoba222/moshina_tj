@@ -362,21 +362,15 @@ def create_listing(
 
     if payload.category_slug:
         cat = db.query(Category).filter(Category.slug == payload.category_slug).first()
-        if not cat:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Category slug '{payload.category_slug}' not found",
-            )
-        category_id = cat.id
+        if cat:
+            category_id = cat.id
+        # If slug not found in DB, silently ignore — category is optional
 
     if payload.subcategory_slug:
         sub = db.query(Category).filter(Category.slug == payload.subcategory_slug).first()
-        if not sub:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Subcategory slug '{payload.subcategory_slug}' not found",
-            )
-        subcategory_id = sub.id
+        if sub:
+            subcategory_id = sub.id
+        # If slug not found in DB, silently ignore
 
     listing = Listing(
         user_id=current_user.id,
@@ -536,23 +530,15 @@ def update_listing(
         cat_slug = update_data.pop("category_slug")
         if cat_slug is not None:
             cat = db.query(Category).filter(Category.slug == cat_slug).first()
-            if not cat:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Category slug '{cat_slug}' not found",
-                )
-            update_data["category_id"] = cat.id
+            if cat:
+                update_data["category_id"] = cat.id
 
     if "subcategory_slug" in update_data:
         sub_slug = update_data.pop("subcategory_slug")
         if sub_slug is not None:
             sub = db.query(Category).filter(Category.slug == sub_slug).first()
-            if not sub:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Subcategory slug '{sub_slug}' not found",
-                )
-            update_data["subcategory_id"] = sub.id
+            if sub:
+                update_data["subcategory_id"] = sub.id
 
     _USER_SETTABLE_LISTING_FIELDS = frozenset({
         "category_id", "subcategory_id", "type", "brand", "model", "year", "price", "currency",
