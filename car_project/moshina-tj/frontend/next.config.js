@@ -30,13 +30,7 @@ const nextConfig = {
   // ── HTTP Headers ──────────────────────────────────────────────────────────
   async headers() {
     return [
-      // Static assets: immutable cache (Next.js hashes the filenames)
-      {
-        source: '/_next/static/(.*)',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
+      // /_next/static — Vercel handles immutable caching automatically; no override needed.
       // Public static files (fonts, icons, og-image, etc.)
       {
         source: '/(.+\\.(?:ico|png|jpg|jpeg|webp|avif|svg|woff|woff2|ttf|otf|eot))',
