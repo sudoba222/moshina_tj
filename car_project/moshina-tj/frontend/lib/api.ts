@@ -5,6 +5,7 @@ import type {
   AuthData,
   ListingAnalytics,
   ManagerStats,
+  NewUserEntry,
   PaginatedListings,
   Listing,
   SessionHistoryItem,
@@ -285,6 +286,11 @@ export const adminApi = {
     api.get<ApiResponse<AdminStats>>('/admin/stats'),
 
   // Users
+  getNewUsers: (days = 1, page = 1) =>
+    api.get<ApiResponse<{ items: NewUserEntry[]; total: number; page: number; pages: number }>>(
+      '/admin/users/new',
+      { params: { days, page } }
+    ),
   getUsers: (page = 1, role?: string, search?: string, is_banned?: boolean) =>
     api.get<ApiResponse<{ items: User[]; total: number; page: number; pages: number }>>(
       '/admin/users',

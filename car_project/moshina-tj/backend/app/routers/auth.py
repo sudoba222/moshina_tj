@@ -285,7 +285,7 @@ limiter = Limiter(key_func=get_remote_address)
     status_code=status.HTTP_201_CREATED,
 )
 @limiter.limit("3/hour")
-def register(request: Request, response: Response, payload: UserCreate, db: Session = Depends(get_db)):
+def register(request: Request, response: Response, payload: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.phone == payload.phone).first()
     if existing:
         raise HTTPException(
@@ -301,6 +301,9 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    from app.services.telegram_notifier import notify_admin_new_user
+    background_tasks.add_task(notify_admin_new_user, user.name, user.phone, user.email, "phone")
 
     token = Token(access_token=create_access_token({"sub": str(user.id), "role": user.role.value}, token_version=user.token_version))
     _set_auth_cookie(response, token.access_token, remember_me=payload.remember_me)
@@ -581,6 +584,10 @@ def verify_otp(request: Request, response: Response, payload: VerifyOtpPayload, 
         db.commit()
         db.refresh(user)
 
+        from app.services.telegram_notifier import notify_admin_new_user
+        method_str = "telegram" if tg_chat_id else "otp"
+        background_tasks.add_task(notify_admin_new_user, user.name, user.phone, user.email, method_str)
+
     # Send welcome message to bot in the background (non-blocking)
     chat_id_for_bot = tg_chat_id or user.telegram_chat_id
     if chat_id_for_bot:
@@ -620,7 +627,7 @@ def _generate_and_store_email_otp(email: str, db: Session) -> str:
 
 @router.post("/register-email", response_model=ApiResponse[dict], status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/hour")
-def register_email(request: Request, payload: EmailRegisterPayload, db: Session = Depends(get_db)):
+def register_email(request: Request, payload: EmailRegisterPayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Register with email + password. Sends a 6-digit OTP to the email for verification."""
     existing = db.query(User).filter(User.email == payload.email, User.is_deleted == False).first()
     if existing:
@@ -652,6 +659,9 @@ def register_email(request: Request, payload: EmailRegisterPayload, db: Session 
 
     code = _generate_and_store_email_otp(payload.email, db)
     db.commit()
+
+    from app.services.telegram_notifier import notify_admin_new_user
+    background_tasks.add_task(notify_admin_new_user, payload.name, None, payload.email, "email")
 
     send_success = send_email_otp(payload.email, code, purpose="verify")
     if not send_success and settings.environment == "production":

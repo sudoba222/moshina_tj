@@ -123,6 +123,14 @@ export interface User {
   created_at: string
 }
 
+export interface NewUserEntry extends User {
+  phone_verified: boolean
+  email_verified: boolean
+  listing_count: number
+  active_listing_count: number
+  telegram_linked: boolean
+}
+
 export interface UserPublicProfile {
   id: string
   name?: string

@@ -1,6 +1,6 @@
 import math
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 
@@ -270,6 +270,65 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_admin))
 # ---------------------------------------------------------------------------
 # User management
 # ---------------------------------------------------------------------------
+
+@router.get("/users/new", response_model=ApiResponse[dict])
+def list_new_users(
+    days: int = Query(default=1, ge=1, le=90),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=50),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Return users registered in the last N days with their listing counts."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+    query = (
+        db.query(User)
+        .filter(User.is_deleted == False, User.created_at >= cutoff)
+        .order_by(User.created_at.desc())
+    )
+    total = query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    users = query.offset((page - 1) * limit).limit(limit).all()
+
+    # Fetch listing counts in one query
+    from sqlalchemy import func as _func
+    user_ids = [u.id for u in users]
+    if user_ids:
+        count_rows = (
+            db.query(Listing.user_id, _func.count(Listing.id).label("total"))
+            .filter(Listing.user_id.in_(user_ids), Listing.is_deleted == False)
+            .group_by(Listing.user_id)
+            .all()
+        )
+        listing_counts = {str(row.user_id): row.total for row in count_rows}
+        active_rows = (
+            db.query(Listing.user_id, _func.count(Listing.id).label("total"))
+            .filter(Listing.user_id.in_(user_ids), Listing.is_deleted == False, Listing.status == ListingStatus.active)
+            .group_by(Listing.user_id)
+            .all()
+        )
+        active_counts = {str(row.user_id): row.total for row in active_rows}
+    else:
+        listing_counts = {}
+        active_counts = {}
+
+    items = []
+    for u in users:
+        uid = str(u.id)
+        items.append({
+            **UserResponseAdmin.model_validate(u).model_dump(),
+            "listing_count": listing_counts.get(uid, 0),
+            "active_listing_count": active_counts.get(uid, 0),
+            "telegram_linked": bool(u.telegram_chat_id),
+        })
+
+    return ApiResponse(
+        success=True,
+        data={"items": items, "total": total, "page": page, "pages": pages},
+        message="New users fetched",
+    )
+
 
 @router.get("/users", response_model=ApiResponse[dict])
 @limiter.limit("30/minute")

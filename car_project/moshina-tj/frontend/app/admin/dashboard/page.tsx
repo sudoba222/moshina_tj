@@ -5,7 +5,7 @@ import { adminApi } from '@/lib/api'
 import type { ModeratorActivity } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
-import type { AdminStats, AuditLog } from '@/types'
+import type { AdminStats, AuditLog, NewUserEntry } from '@/types'
 import StatCard from '@/components/admin/StatCard'
 import { DonutChart } from '@/components/admin/MiniChart'
 import { thStyle, tdStyle } from '../components/shared'
@@ -385,6 +385,313 @@ function SectionCard({
   )
 }
 
+// ── New Users Slide-over Panel ────────────────────────────────────────────────
+const PERIOD_OPTIONS = [
+  { days: 1,  label: 'Сегодня' },
+  { days: 7,  label: '7 дней' },
+  { days: 30, label: '30 дней' },
+]
+
+function NewUsersPanel({ onClose }: { onClose: () => void }) {
+  const [days, setDays] = useState(1)
+  const [page, setPage] = useState(1)
+  const [users, setUsers] = useState<NewUserEntry[]>([])
+  const [total, setTotal] = useState(0)
+  const [pages, setPages] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const { showToast } = useToast()
+
+  const load = useCallback(async (d: number, p: number) => {
+    setLoading(true)
+    try {
+      const res = await adminApi.getNewUsers(d, p)
+      setUsers(res.data.data.items)
+      setTotal(res.data.data.total)
+      setPages(res.data.data.pages)
+    } catch {
+      showToast('Ошибка загрузки', 'error')
+    }
+    setLoading(false)
+  }, [showToast])
+
+  useEffect(() => { load(days, page) }, [days, page, load])
+
+  const changePeriod = (d: number) => { setDays(d); setPage(1) }
+
+  const formatDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+    } catch { return iso }
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 49 }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {/* Panel */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Новые пользователи"
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%',
+          maxWidth: '740px',
+          background: 'var(--bg)',
+          zIndex: 50,
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: 'var(--shadow-xl, -8px 0 40px rgba(0,0,0,0.18))',
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
+          style={{ borderColor: 'var(--border)', background: 'var(--card)' }}
+        >
+          <div>
+            <div className="font-bold text-[16px]" style={{ color: 'var(--text)' }}>
+              Новые пользователи
+            </div>
+            <div className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {total} {total === 1 ? 'пользователь' : total < 5 ? 'пользователя' : 'пользователей'} за выбранный период
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              padding: '6px 10px',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            Закрыть
+          </button>
+        </div>
+
+        {/* Period tabs */}
+        <div className="flex gap-2 px-5 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+          {PERIOD_OPTIONS.map((opt) => (
+            <button
+              key={opt.days}
+              onClick={() => changePeriod(opt.days)}
+              style={{
+                padding: '5px 14px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: '1px solid',
+                borderColor: days === opt.days ? 'var(--accent)' : 'var(--border)',
+                background: days === opt.days ? 'var(--accent)' : 'var(--surface)',
+                color: days === opt.days ? 'var(--color-white)' : 'var(--text-secondary)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <Link
+            href="/admin/users"
+            className="ml-auto flex items-center gap-1 text-[12px] no-underline"
+            style={{ color: 'var(--accent)' }}
+          >
+            Все пользователи <IconExternalLink />
+          </Link>
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center h-32">
+              <div style={{ width: 24, height: 24, border: '2px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-40 gap-2">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+              </svg>
+              <span className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                Нет новых пользователей за этот период
+              </span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Пользователь', 'Контакты', 'Объявления', 'Статус', 'Дата регистрации'].map((h) => (
+                      <th key={h} style={thStyle}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      {/* Name + role */}
+                      <td style={{ ...tdStyle, minWidth: '140px' }}>
+                        <div className="flex items-center gap-[10px]">
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: '50%',
+                              background: 'var(--accent)',
+                              opacity: 0.15,
+                              flexShrink: 0,
+                              position: 'relative',
+                            }}
+                          >
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 7 }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
+                                {(u.name || u.phone || '?').charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
+                              {u.name || '—'}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                              #{u.user_number ?? '—'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Contacts */}
+                      <td style={{ ...tdStyle, minWidth: '160px' }}>
+                        <div style={{ fontSize: 12 }}>
+                          {u.phone && !u.phone.startsWith('email_') && (
+                            <div style={{ color: 'var(--text-secondary)', marginBottom: 2 }}>
+                              {u.phone}
+                              {u.phone_verified && (
+                                <span style={{ marginLeft: 4, color: 'var(--color-success)', fontSize: 10 }}>✓</span>
+                              )}
+                            </div>
+                          )}
+                          {u.email && (
+                            <div style={{ color: 'var(--text-muted)' }}>
+                              {u.email}
+                              {u.email_verified && (
+                                <span style={{ marginLeft: 4, color: 'var(--color-success)', fontSize: 10 }}>✓</span>
+                              )}
+                            </div>
+                          )}
+                          {u.telegram_linked && (
+                            <div style={{ color: 'var(--color-info)', fontSize: 11, marginTop: 2 }}>
+                              Telegram
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Listings */}
+                      <td style={{ ...tdStyle, textAlign: 'center' }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
+                          {u.listing_count}
+                        </div>
+                        {u.active_listing_count > 0 && (
+                          <div style={{ fontSize: 11, color: 'var(--color-success)' }}>
+                            {u.active_listing_count} акт.
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td style={tdStyle}>
+                        {u.is_banned ? (
+                          <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'var(--color-error-dim)', color: 'var(--color-error)' }}>
+                            Заблокирован
+                          </span>
+                        ) : (
+                          <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'var(--color-success-dim)', color: 'var(--color-success)' }}>
+                            Активен
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Date */}
+                      <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                        {formatDate(u.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {pages > 1 && (
+          <div
+            className="flex items-center justify-between px-5 py-3 border-t flex-shrink-0"
+            style={{ borderColor: 'var(--border)', background: 'var(--card)' }}
+          >
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              style={{
+                padding: '5px 14px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: page <= 1 ? 'not-allowed' : 'pointer',
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: page <= 1 ? 'var(--text-muted)' : 'var(--text)',
+                opacity: page <= 1 ? 0.5 : 1,
+              }}
+            >
+              ← Назад
+            </button>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {page} / {pages}
+            </span>
+            <button
+              disabled={page >= pages}
+              onClick={() => setPage((p) => p + 1)}
+              style={{
+                padding: '5px 14px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: page >= pages ? 'not-allowed' : 'pointer',
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: page >= pages ? 'var(--text-muted)' : 'var(--text)',
+                opacity: page >= pages ? 0.5 : 1,
+              }}
+            >
+              Вперёд →
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AdminDashboardPage() {
   const { lang } = useLang()
@@ -394,6 +701,7 @@ export default function AdminDashboardPage() {
   const [moderatorActivity, setModeratorActivity] = useState<ModeratorActivity[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [showNewUsers, setShowNewUsers] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -416,6 +724,8 @@ export default function AdminDashboardPage() {
 
   return (
     <div>
+      {showNewUsers && <NewUsersPanel onClose={() => setShowNewUsers(false)} />}
+
       {/* Page header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-6">
         <div>
@@ -509,6 +819,7 @@ export default function AdminDashboardPage() {
                   ? { value: stats.new_users_today, label: `+${stats.new_users_today} ${t('admin.newUsersToday', lang)}` }
                   : undefined
               }
+              onClick={() => setShowNewUsers(true)}
             />
             <StatCard
               label={t('admin.activeListings', lang)}
@@ -544,6 +855,7 @@ export default function AdminDashboardPage() {
               value={stats?.new_users_today ?? stats?.active_users_today ?? 0}
               accentColor="var(--color-success)"
               icon={<IconUserPlus />}
+              onClick={() => setShowNewUsers(true)}
             />
           </div>
 

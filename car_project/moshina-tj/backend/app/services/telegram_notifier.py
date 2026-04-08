@@ -379,3 +379,50 @@ async def send_telegram_notification(
         )
     finally:
         db.close()
+
+
+async def notify_admin_new_user(
+    name: Optional[str],
+    phone: Optional[str],
+    email: Optional[str],
+    method: str = "phone",
+) -> None:
+    """Send a Telegram notification to the admin/support chat when a new user registers.
+
+    Silently returns if SUPPORT_TELEGRAM_CHAT_ID is not configured.
+    """
+    chat_id = settings.support_telegram_chat_id
+    if not chat_id:
+        return
+
+    METHOD_LABELS = {
+        "phone":   "Телефон + пароль",
+        "otp":     "SMS OTP",
+        "email":   "Email",
+        "google":  "Google OAuth",
+        "telegram": "Telegram OTP",
+    }
+    method_label = METHOD_LABELS.get(method, method)
+
+    name_line  = f"\n<b>Имя:</b> {name}" if name else ""
+    phone_line = f"\n<b>Телефон:</b> <code>{phone}</code>" if phone else ""
+    email_line = f"\n<b>Email:</b> {email}" if email else ""
+
+    from datetime import datetime as _dt, timezone as _tz
+    now_str = _dt.now(_tz.utc).strftime("%d.%m.%Y %H:%M UTC")
+
+    text = (
+        f"👤 <b>Новый пользователь зарегистрировался</b>\n"
+        f"{name_line}{phone_line}{email_line}\n"
+        f"<b>Способ:</b> {method_label}\n"
+        f"<b>Время:</b> {now_str}"
+    )
+
+    try:
+        await _send_telegram_message(
+            chat_id=chat_id,
+            text=text,
+            inline_button=("Управление пользователями", f"{settings.frontend_url}/admin/users"),
+        )
+    except Exception as exc:
+        logger.warning("notify_admin_new_user failed: %s", exc)
