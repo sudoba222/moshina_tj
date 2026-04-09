@@ -235,39 +235,59 @@ class ResendEmailOtpPayload(BaseModel):
     email: EmailStr
 
 
+def _get_eskiz_token() -> str | None:
+    """Authenticate with Eskiz.uz and return a bearer token."""
+    try:
+        import httpx
+        resp = httpx.post(
+            "https://notify.eskiz.uz/api/auth/login",
+            data={"email": settings.eskiz_email, "password": settings.eskiz_password},
+            timeout=10,
+        )
+        if resp.is_success:
+            return resp.json().get("data", {}).get("token")
+        logger.error("Eskiz auth failed — status=%s body=%s", resp.status_code, resp.text[:200])
+    except Exception:
+        logger.exception("Eskiz auth request failed")
+    return None
+
+
 def _send_sms(phone: str, message: str) -> bool:
-    """Send SMS via Infobip if configured, else log the code (dev mode)."""
-    api_key = settings.infobip_api_key
-    base_url = settings.infobip_base_url
-    sender = settings.infobip_sender or "TajCar"
-    if api_key and base_url:
+    """Send SMS via Eskiz.uz if configured, else log the code (dev mode)."""
+    if settings.eskiz_email and settings.eskiz_password:
         try:
             import httpx
-            # Strip any accidental https:// or http:// prefix from base_url
-            base_url_clean = base_url.removeprefix("https://").removeprefix("http://").rstrip("/")
-            url = f"https://{base_url_clean}/sms/2/text/advanced"
-            headers = {
-                "Authorization": f"App {api_key}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            }
-            body = {
-                "messages": [{
-                    "from": sender,
-                    "destinations": [{"to": phone}],
-                    "text": message,
-                }]
-            }
-            resp = httpx.post(url, json=body, headers=headers, timeout=10)
+            token = _get_eskiz_token()
+            if not token:
+                return False
+            # Eskiz requires international format without leading +
+            phone_clean = phone.lstrip("+")
+            resp = httpx.post(
+                "https://notify.eskiz.uz/api/message/sms/send",
+                headers={"Authorization": f"Bearer {token}"},
+                data={
+                    "mobile_phone": phone_clean,
+                    "message": message,
+                    "from": settings.eskiz_sender,
+                },
+                timeout=10,
+            )
             if not resp.is_success:
                 logger.error(
-                    "Infobip SMS failed to %s — status=%s body=%s",
+                    "Eskiz SMS failed to %s — status=%s body=%s",
                     phone, resp.status_code, resp.text[:300],
                 )
                 return False
+            result = resp.json()
+            if result.get("status") == "waiting":
+                return True
+            # status "error" means rejected
+            if result.get("status") == "error":
+                logger.error("Eskiz SMS rejected for %s — %s", phone, result)
+                return False
             return True
         except Exception:
-            logger.exception("Infobip SMS failed to %s", phone)
+            logger.exception("Eskiz SMS failed to %s", phone)
             return False
     else:
         # Dev mode: log the code so it is visible in server logs
@@ -469,7 +489,7 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
     _send_sms(payload.phone, message)
 
     dev_code = None
-    if not settings.infobip_api_key and settings.environment == "development":
+    if not settings.eskiz_email and settings.environment == "development":
         logger.debug("[DEV OTP] phone=%s code=%s", payload.phone, code)
         dev_code = code
 
@@ -860,7 +880,7 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         message_text = f"Ваш код сброса пароля TajCar.tj: {code}. Действителен 10 минут."
         _send_sms(identifier, message_text)
         dev_code = None
-        if not settings.infobip_api_key and settings.environment == "development":
+        if not settings.eskiz_email and settings.environment == "development":
             logger.debug("[DEV OTP] phone=%s code=%s", identifier, code)
             dev_code = code
         return ApiResponse(success=True, data={"dev_code": dev_code} if dev_code else {}, message="Code sent to your phone")

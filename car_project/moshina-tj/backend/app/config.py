@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     apple_client_id: str = ""
     apple_client_secret: str = ""
 
-    infobip_api_key: str = ""
-    infobip_base_url: str = ""   # e.g. xxxxx.api.infobip.com (from Infobip dashboard)
-    infobip_sender: str = "TajCar"  # alphanumeric sender ID, max 11 chars
+    eskiz_email: str = ""        # Eskiz.uz login email
+    eskiz_password: str = ""     # Eskiz.uz password
+    eskiz_sender: str = "4546"   # Approved sender name or numeric (default test: 4546)
 
     frontend_url: str = "http://localhost:3000"
     google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"
