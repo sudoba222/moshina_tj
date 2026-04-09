@@ -29,9 +29,8 @@ class Settings(BaseSettings):
     apple_client_id: str = ""
     apple_client_secret: str = ""
 
-    eskiz_email: str = ""        # Eskiz.uz login email
-    eskiz_password: str = ""     # Eskiz.uz password
-    eskiz_sender: str = "4546"   # Approved sender name or numeric (default test: 4546)
+    unimtx_access_key: str = ""  # Unimtx.com API access key
+    unimtx_sender: str = ""      # Optional sender name (2-16 chars, e.g. TajCar)
 
     frontend_url: str = "http://localhost:3000"
     google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"
