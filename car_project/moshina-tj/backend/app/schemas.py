@@ -64,7 +64,7 @@ class UserResponse(BaseModel):
 
     id: uuid.UUID
     user_number: Optional[int] = None
-    phone: str
+    phone: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
     role: UserRole
