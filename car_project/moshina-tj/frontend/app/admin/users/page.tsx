@@ -55,6 +55,13 @@ function UsersPageInner() {
   const [createUserForm, setCreateUserForm] = useState({ phone: '', name: '', password: '', role: 'user' as UserRole })
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState('')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  function copyId(id: string) {
+    navigator.clipboard.writeText(id)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 1500)
+  }
 
   // Login history modal
   const [historyUserId, setHistoryUserId] = useState<string | null>(null)
@@ -236,13 +243,32 @@ function UsersPageInner() {
                 users.map((u) => (
                   <tr key={u.id}>
                     <td style={tdStyle}>
-                      <span
+                      <button
+                        onClick={() => copyId(u.id)}
                         title={u.id}
-                        style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer' }}
-                        onClick={() => navigator.clipboard.writeText(u.id)}
+                        style={{
+                          background: 'none',
+                          border: '1px solid var(--border)',
+                          borderRadius: '6px',
+                          padding: '3px 7px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
                       >
-                        {u.id.slice(0, 8)}…
-                      </span>
+                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-muted)' }}>
+                          {u.id.slice(0, 12)}…
+                        </span>
+                        {copiedId === u.id ? (
+                          <span style={{ fontSize: '10px', color: 'var(--color-success)', fontWeight: 600 }}>✓</span>
+                        ) : (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                            <rect x="9" y="9" width="13" height="13" rx="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                          </svg>
+                        )}
+                      </button>
                     </td>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
