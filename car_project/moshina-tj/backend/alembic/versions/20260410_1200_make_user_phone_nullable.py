@@ -14,10 +14,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Clear fake placeholder phones created by email-only registration
-    op.execute("UPDATE users SET phone = NULL WHERE phone LIKE 'email\\_%' ESCAPE '\\'")
-    # Make phone nullable
+    # Make phone nullable first, then clear fake placeholder phones
     op.alter_column('users', 'phone', existing_type=sa.String(50), nullable=True)
+    op.execute("UPDATE users SET phone = NULL WHERE phone LIKE 'email\\_%' ESCAPE '\\'")
+    op.execute("UPDATE users SET phone = NULL WHERE phone LIKE 'deleted\\_%' ESCAPE '\\'")
 
 
 def downgrade() -> None:
