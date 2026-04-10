@@ -50,7 +50,7 @@ function UsersPageInner() {
   const [changeRoleUserId, setChangeRoleUserId] = useState<string | null>(null)
   const [newRole, setNewRole] = useState<UserRole>('user')
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
-  const [editUserData, setEditUserData] = useState<{ id: string; name: string; phone: string; email: string } | null>(null)
+  const [editUserData, setEditUserData] = useState<{ id: string; name: string; phone: string | null; email: string } | null>(null)
   const [createUserOpen, setCreateUserOpen] = useState(false)
   const [createUserForm, setCreateUserForm] = useState({ phone: '', name: '', password: '', role: 'user' as UserRole })
   const [actionLoading, setActionLoading] = useState(false)
@@ -260,7 +260,7 @@ function UsersPageInner() {
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span>{u.name ?? '—'}</span>
-                        {u.user_number !== undefined && (
+                        {u.user_number != null && u.user_number > 0 && (
                           <span style={{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                             #{u.user_number}
                           </span>
@@ -428,7 +428,7 @@ function UsersPageInner() {
             ] as const).map(({ label, key }) => (
               <FormField key={key} label={label}>
                 <input
-                  value={editUserData[key]}
+                  value={editUserData[key] ?? ''}
                   onChange={(e) => setEditUserData((d) => d ? { ...d, [key]: e.target.value } : d)}
                   style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
                 />
