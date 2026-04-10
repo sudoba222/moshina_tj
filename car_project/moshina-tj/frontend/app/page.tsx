@@ -58,19 +58,15 @@ export default async function HomePage() {
     <>
       <HomeClient initialFeatured={initialFeatured} initialStats={initialStats} />
 
-      {/*
-        Server-rendered SEO section — rendered directly in the HTML before
-        any JavaScript. Google reads this immediately on crawl. Contains
-        keyword-rich Russian text for Tajikistan car market searches.
-        Styled as a natural "about the marketplace" section below the footer.
-      */}
+      {/* Server-rendered SEO section — Google reads this from raw HTML immediately on crawl */}
       <section
         aria-label="О сайте TAJCAR.TJ — авторынок Таджикистана"
         style={{
-          background: 'var(--card)',
-          borderTop: '1px solid var(--border)',
-          padding: '40px 16px',
+          background: 'var(--bg)',
+          borderTop: '2px solid var(--border)',
+          padding: '40px 16px 60px',
           fontFamily: 'inherit',
+          marginTop: '-1px',
         }}
       >
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
