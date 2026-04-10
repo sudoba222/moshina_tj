@@ -210,6 +210,19 @@ export default function AuthorContext({ lang, listing }: AuthorContextProps) {
                   </div>
                 )}
 
+                {/* User ID */}
+                <div
+                  title={listing.user_id}
+                  onClick={() => navigator.clipboard.writeText(listing.user_id)}
+                  style={{
+                    fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace',
+                    marginBottom: '6px', cursor: 'pointer', overflow: 'hidden',
+                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}
+                >
+                  ID: {listing.user_id}
+                </div>
+
                 {/* Registration date + time */}
                 {authorUser?.created_at && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>

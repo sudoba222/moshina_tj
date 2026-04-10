@@ -53,6 +53,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    robots: { index: true, follow: true },
     openGraph: {
       title: `${title} | TAJCAR.TJ`,
       description,

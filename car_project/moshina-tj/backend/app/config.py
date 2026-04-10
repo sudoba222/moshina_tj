@@ -29,8 +29,9 @@ class Settings(BaseSettings):
     apple_client_id: str = ""
     apple_client_secret: str = ""
 
-    unimtx_access_key: str = ""  # Unimtx.com API access key
-    unimtx_sender: str = ""      # Optional sender name (2-16 chars, e.g. TajCar)
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_from_number: str = ""  # E.164 format or Alphanumeric Sender ID e.g. "TajCar"
 
     frontend_url: str = "http://localhost:3000"
     google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"

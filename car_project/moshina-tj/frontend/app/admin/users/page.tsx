@@ -218,24 +218,45 @@ function UsersPageInner() {
           <table className="w-full min-w-[600px]" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {[t('admin.phone', lang), t('admin.name', lang), t('admin.role', lang), t('admin.created', lang), t('admin.status', lang), t('admin.actions', lang)].map((h) => (
+                {['ID', 'Email / Phone', t('admin.name', lang), t('admin.role', lang), t('admin.created', lang), t('admin.status', lang), t('admin.actions', lang)].map((h) => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <LoadingRow colSpan={6} />
+                <LoadingRow colSpan={7} />
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 px-4" style={{ ...tdStyle, color: 'var(--text-muted)' }}>
+                  <td colSpan={7} className="text-center py-8 px-4" style={{ ...tdStyle, color: 'var(--text-muted)' }}>
                     {t('adminForm.noUsers', lang)}
                   </td>
                 </tr>
               ) : (
                 users.map((u) => (
                   <tr key={u.id}>
-                    <td style={tdStyle}>{u.phone}</td>
+                    <td style={tdStyle}>
+                      <span
+                        title={u.id}
+                        style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer' }}
+                        onClick={() => navigator.clipboard.writeText(u.id)}
+                      >
+                        {u.id.slice(0, 8)}…
+                      </span>
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {u.phone && (
+                          <span style={{ fontSize: '13px', color: 'var(--text)' }}>{u.phone}</span>
+                        )}
+                        {u.email && (
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{u.email}</span>
+                        )}
+                        {!u.phone && !u.email && (
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>—</span>
+                        )}
+                      </div>
+                    </td>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span>{u.name ?? '—'}</span>
