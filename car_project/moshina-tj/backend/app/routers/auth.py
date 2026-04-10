@@ -627,9 +627,9 @@ def register_email(request: Request, payload: EmailRegisterPayload, background_t
             message="Verification code resent to your email",
         )
 
-    # Create user with email_verified=False
+    # Create user with email_verified=False; phone is null for email-only accounts
     user = User(
-        phone=f"email_{secrets.token_hex(8)}",  # placeholder — phone required by schema
+        phone=None,
         name=payload.name,
         email=payload.email,
         password_hash=hash_password(payload.password),

@@ -14,8 +14,10 @@ router = APIRouter(prefix="/users", tags=["users"])
 _STAFF_ROLES = {UserRole.admin, UserRole.moderator, UserRole.manager, UserRole.support}
 
 
-def _mask_phone(phone: str) -> str:
+def _mask_phone(phone: str | None) -> str | None:
     """Return a partially masked phone number, e.g. +9929*******56."""
+    if not phone:
+        return None
     if len(phone) <= 7:
         return phone
     return phone[:5] + "*" * (len(phone) - 7) + phone[-2:]

@@ -107,7 +107,7 @@ class User(Base):
         unique=True,
         index=True,
     )
-    phone = Column(String(50), unique=True, nullable=False, index=True)
+    phone = Column(String(50), unique=True, nullable=True, index=True)
     name = Column(String(100), nullable=True)
     email = Column(String(200), unique=True, nullable=True, index=True)
     password_hash = Column(String(255), nullable=False)
