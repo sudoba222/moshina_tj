@@ -114,6 +114,18 @@ def _seed_staff_accounts() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Run startup tasks then yield control to the application."""
+    # AUTOMATIC REPAIR FOR PRODUCTION DATABASE VERSION
+    try:
+        from app.database import SessionLocal
+        from sqlalchemy import text
+        db = SessionLocal()
+        db.execute(text("UPDATE alembic_version SET version_num='20260410_1200'"))
+        db.commit()
+        db.close()
+        print("DATABASE VERSION AUTO-STAMPED TO 20260410_1200")
+    except Exception as e:
+        print(f"DATABASE AUTO-STAMP SKIPPED: {e}")
+
     _check_production_config()
     _seed_staff_accounts()
     yield
