@@ -93,6 +93,8 @@ export interface Listing {
   is_favorited?: boolean
   favorites_count?: number
   user_name?: string | null
+  vin?: string | null
+  vin_verified?: boolean
 }
 
 export interface PaginatedListings {

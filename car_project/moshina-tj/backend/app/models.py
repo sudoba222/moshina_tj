@@ -249,6 +249,10 @@ class Listing(Base):
     locked_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     locked_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
+    # VIN
+    vin = Column(String(17), unique=True, nullable=True, index=True)
+    vin_verified = Column(Boolean, nullable=False, default=False, server_default="false")
+
     # Relationships
     user = relationship("User", back_populates="listings", foreign_keys=[user_id])
     category = relationship("Category", foreign_keys=[category_id])

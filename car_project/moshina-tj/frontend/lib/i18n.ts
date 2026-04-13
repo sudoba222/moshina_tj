@@ -117,6 +117,7 @@ const strings = {
     noLabel:         { ru: 'Нет',                   tj: 'Не' },
     negotiable:      { ru: 'Торг',                  tj: 'Муомила' },
     phoneHidden:     { ru: 'Номер телефона скрыт',  tj: 'Рақами телефон пинҳон аст' },
+    verified:        { ru: 'проверен',              tj: 'тасдиқ шуд' },
   },
   dealers: {
     title:       { ru: 'Официальные дилеры', tj: 'Намоишгоҳҳои расмӣ' },
@@ -1030,6 +1031,16 @@ const strings = {
     saveChanges:        { ru: 'Сохранить изменения',               tj: 'Тағйиротро нигоҳ доред' },
     submitListing:      { ru: 'Подать объявление',                 tj: 'Додани эълон' },
     selectSubcategory:  { ru: 'Выберите подкатегорию',             tj: 'Зеркатегорияро интихоб кунед' },
+    vinLabel:           { ru: 'VIN-номер',                         tj: 'Рақами VIN' },
+    vinPlaceholder:     { ru: '17 символов, например: JT3HP10V8X0005485', tj: '17 аломат, масалан: JT3HP10V8X0005485' },
+    vinHint:            { ru: 'Необязательно. Повышает доверие покупателей.', tj: 'Ихтиёрӣ. Эътимоди харидоронро меафзояд.' },
+    vinCheck:           { ru: 'Проверить',                         tj: 'Санҷидан' },
+    vinChecking:        { ru: 'Проверка...',                       tj: 'Санҷиш...' },
+    vinValid:           { ru: 'VIN подтверждён',                   tj: 'VIN тасдиқ шуд' },
+    vinInvalid:         { ru: 'Неверный VIN',                      tj: 'VIN нодуруст' },
+    vinManufacturer:    { ru: 'Производитель',                     tj: 'Истеҳсолкунанда' },
+    vinYear:            { ru: 'Год выпуска',                       tj: 'Соли истеҳсол' },
+    vinCountry:         { ru: 'Страна',                            tj: 'Кишвар' },
   },
   // ── CarDetail inline strings ─────────────────────────────────────────────────
   carDetailForm: {

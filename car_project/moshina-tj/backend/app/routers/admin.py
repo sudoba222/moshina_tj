@@ -130,6 +130,16 @@ class BulkRejectPayload(BaseModel):
 class NotePayload(BaseModel):
     note: str
 
+    @field_validator("note")
+    @classmethod
+    def note_max_length(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Note cannot be empty")
+        if len(v) > 2000:
+            raise ValueError("Note must be at most 2000 characters")
+        return v
+
 
 class CreateUserPayload(BaseModel):
     phone: str

@@ -72,6 +72,15 @@ const BODY_TYPES: { value: BodyType; ru: string; tj: string }[] = [
 
 const DRAFT_KEY = 'post_draft_v2'
 
+interface VinResult {
+  manufacturer: string | null
+  country: string | null
+  year: number | null
+  is_valid: boolean
+  check_digit_valid: boolean
+  error?: string | null
+}
+
 interface FormState {
   category_slug: string
   subcategory_slug: string
@@ -98,6 +107,7 @@ interface FormState {
   whatsapp_number: string
   availability: 'in_stock' | 'on_order' | 'abroad'
   installment_available: boolean
+  vin: string
 }
 
 interface RentalRulesForm {
@@ -123,6 +133,7 @@ const initialForm: FormState = {
   contact_name: '', contact_phone: '', whatsapp_number: '',
   availability: 'in_stock',
   installment_available: false,
+  vin: '',
 }
 
 const initialRental: RentalRulesForm = {
@@ -201,6 +212,10 @@ function PostPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
 
+  // VIN check state
+  const [vinChecking, setVinChecking] = useState(false)
+  const [vinResult, setVinResult] = useState<VinResult | null>(null)
+
   const brandsList = SORTED_BRANDS.map((b) => b.name)
   const [modelsList, setModelsList] = useState<string[]>([])
 
@@ -276,7 +291,11 @@ function PostPage() {
           whatsapp_number: l.whatsapp_number ?? '',
           availability: (l.availability as 'in_stock' | 'on_order' | 'abroad') ?? 'in_stock',
           installment_available: l.installment_available,
+          vin: l.vin ?? '',
         })
+        if (l.vin) {
+          setVinResult({ is_valid: true, check_digit_valid: true, manufacturer: null, country: null, year: null })
+        }
         if (l.type === 'rent' && l.rental_rules) {
           const r = l.rental_rules
           setRental({
@@ -339,6 +358,21 @@ function PostPage() {
     }
   }
 
+  async function checkVin() {
+    const vin = form.vin.trim().toUpperCase()
+    if (vin.length !== 17) return
+    setVinChecking(true)
+    setVinResult(null)
+    try {
+      const res = await api.get<{ data: VinResult }>(`/vin/check/${vin}`)
+      setVinResult(res.data.data)
+    } catch {
+      setVinResult({ is_valid: false, check_digit_valid: false, manufacturer: null, country: null, year: null, error: t('postForm.vinInvalid', lang) })
+    } finally {
+      setVinChecking(false)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -395,6 +429,7 @@ function PostPage() {
         installment_available: form.installment_available,
         image_urls: imageUrls,
         ...(rentalPayload ? { rental_rules: rentalPayload } : {}),
+        vin: form.vin.trim().toUpperCase() || undefined,
       }
 
       setSubmitting(true)
@@ -829,6 +864,115 @@ function PostPage() {
                   </label>
                 </div>
               </div>
+            </div>
+
+            {/* ── VIN ── */}
+            <div style={card}>
+              <SectionTitle>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+                {t('postForm.vinLabel', lang)}
+              </SectionTitle>
+
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+                {t('postForm.vinHint', lang)}
+              </p>
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="text"
+                    value={form.vin}
+                    maxLength={17}
+                    placeholder={t('postForm.vinPlaceholder', lang)}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase().replace(/[IOQ]/g, '')
+                      setField('vin', val)
+                      setVinResult(null)
+                    }}
+                    style={{
+                      ...inp,
+                      fontFamily: 'monospace',
+                      letterSpacing: '0.08em',
+                      borderColor: vinResult
+                        ? vinResult.is_valid ? 'var(--color-success)' : 'var(--color-error)'
+                        : 'var(--border)',
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                    <span style={{ fontSize: '11px', color: form.vin.length === 17 ? 'var(--color-success)' : 'var(--text-muted)', fontWeight: 600 }}>
+                      {form.vin.length}/17
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={form.vin.length !== 17 || vinChecking}
+                  onClick={checkVin}
+                  style={{
+                    padding: '13px 16px',
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    border: '1.5px solid var(--accent)',
+                    background: form.vin.length !== 17 || vinChecking ? 'var(--surface)' : 'var(--accent)',
+                    color: form.vin.length !== 17 || vinChecking ? 'var(--text-muted)' : 'var(--color-white)',
+                    cursor: form.vin.length !== 17 || vinChecking ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    transition: 'all 0.13s',
+                    minHeight: '48px',
+                  }}
+                >
+                  {vinChecking
+                    ? t('postForm.vinChecking', lang)
+                    : t('postForm.vinCheck', lang)}
+                </button>
+              </div>
+
+              {/* VIN result */}
+              {vinResult && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: `1.5px solid ${vinResult.is_valid ? 'var(--color-success)' : 'var(--color-error)'}`,
+                  background: vinResult.is_valid ? 'var(--color-success-dim)' : 'rgba(239,68,68,0.06)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {vinResult.is_valid ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    )}
+                    <span style={{ fontWeight: 700, fontSize: '14px', color: vinResult.is_valid ? 'var(--color-success)' : 'var(--color-error)' }}>
+                      {vinResult.is_valid ? t('postForm.vinValid', lang) : (vinResult.error ?? t('postForm.vinInvalid', lang))}
+                    </span>
+                  </div>
+                  {vinResult.is_valid && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', paddingLeft: '26px' }}>
+                      {vinResult.manufacturer && (
+                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                          <strong>{t('postForm.vinManufacturer', lang)}:</strong> {vinResult.manufacturer}
+                        </span>
+                      )}
+                      {vinResult.country && (
+                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                          <strong>{t('postForm.vinCountry', lang)}:</strong> {vinResult.country}
+                        </span>
+                      )}
+                      {vinResult.year && (
+                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                          <strong>{t('postForm.vinYear', lang)}:</strong> {vinResult.year}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ── Фотографии ── */}

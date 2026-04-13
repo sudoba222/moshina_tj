@@ -26,6 +26,7 @@ if _SENTRY_DSN:
     )
 from app.limiter import limiter
 from app.routers import admin, ai, auth, catalog, dealers, listings, search, upload, users
+from app.routers.vin import router as vin_router
 from app.routers.vehicles import router as vehicles_router
 from app.routers.stats import router as stats_router
 from app.routers.chat import router as chat_router, ws_router as chat_ws_router
@@ -114,18 +115,6 @@ def _seed_staff_accounts() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Run startup tasks then yield control to the application."""
-    # AUTOMATIC REPAIR FOR PRODUCTION DATABASE VERSION
-    try:
-        from app.database import SessionLocal
-        from sqlalchemy import text
-        db = SessionLocal()
-        db.execute(text("UPDATE alembic_version SET version_num='20260410_1200'"))
-        db.commit()
-        db.close()
-        print("DATABASE VERSION AUTO-STAMPED TO 20260410_1200")
-    except Exception as e:
-        print(f"DATABASE AUTO-STAMP SKIPPED: {e}")
-
     _check_production_config()
     _seed_staff_accounts()
     yield
@@ -220,6 +209,7 @@ app.include_router(subscriptions_router, prefix="/api/v1")
 app.include_router(support_router, prefix="/api/v1")
 app.include_router(chat_ws_router)        # WebSocket — no /api/v1 prefix (WS handshake)
 app.include_router(telegram_router)
+app.include_router(vin_router, prefix="/api/v1")
 
 
 # ---------------------------------------------------------------------------

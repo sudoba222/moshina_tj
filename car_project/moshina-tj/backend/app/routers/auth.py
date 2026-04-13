@@ -24,7 +24,7 @@ from app.schemas import ApiResponse, AuthResponse, Token, UserCreate, UserRespon
 logger = logging.getLogger(__name__)
 
 _COOKIE_MAX_AGE_DEFAULT = 7 * 24 * 60 * 60    # 7 days in seconds
-_COOKIE_MAX_AGE_REMEMBER = 30 * 24 * 60 * 60  # 30 days in seconds
+_COOKIE_MAX_AGE_REMEMBER = 7 * 24 * 60 * 60   # 7 days — matches JWT expiry
 
 
 def _set_auth_cookie(response: Response, token: str, remember_me: bool = False) -> None:

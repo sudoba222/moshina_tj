@@ -825,6 +825,55 @@ export default function CarDetailClient() {
                 ))}
               </div>
 
+              {/* VIN badge */}
+              {listing.vin && (
+                <div style={{
+                  marginTop: '20px',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '1.5px solid var(--border)',
+                  background: 'var(--surface)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  flexWrap: 'wrap',
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                  </svg>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>VIN:</span>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    color: 'var(--text)',
+                    letterSpacing: '0.08em',
+                  }}>
+                    {/* Show first 8 chars, mask middle 4, show last 5 */}
+                    {listing.vin.slice(0, 8)}
+                    {'*'.repeat(4)}
+                    {listing.vin.slice(12)}
+                  </span>
+                  {listing.vin_verified && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                      background: 'var(--color-success-dim)',
+                      border: '1px solid var(--color-success)',
+                      borderRadius: '20px',
+                      padding: '3px 10px',
+                      marginLeft: 'auto',
+                    }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-success)' }}>
+                        VIN {t('carDetail.verified', lang)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Rental rules */}
               {listing.type === 'rent' && listing.rental_rules && (
                 <RentalRulesCard rules={listing.rental_rules} lang={lang} />

@@ -191,6 +191,18 @@ class ListingCreate(BaseModel):
     image_urls: list[str] = []
     rental_rules: Optional[RentalRules] = None
 
+    # VIN — optional; validated client-side and stored as-is (uppercase)
+    vin: Optional[str] = Field(default=None, min_length=17, max_length=17)
+
+    @field_validator("vin", mode="before")
+    @classmethod
+    def vin_uppercase(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip().upper()
+            if not v:
+                return None
+        return v
+
     @field_validator("contact_phone", mode="before")
     @classmethod
     def strip_contact_phone(cls, v: Optional[str]) -> Optional[str]:
@@ -337,6 +349,16 @@ class ListingUpdate(BaseModel):
     installment_available: Optional[bool] = None
     rental_rules: Optional[RentalRules] = None
     image_urls: Optional[list[str]] = None
+    vin: Optional[str] = Field(default=None, min_length=17, max_length=17)
+
+    @field_validator("vin", mode="before")
+    @classmethod
+    def vin_uppercase_update(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip().upper()
+            if not v:
+                return None
+        return v
 
     @field_validator("contact_phone", mode="before")
     @classmethod
@@ -455,6 +477,8 @@ class ListingResponse(BaseModel):
     images: list[ImageResponse] = []
     rental_rules: Optional[Dict[str, Any]] = None
     user_name: Optional[str] = None
+    vin: Optional[str] = None
+    vin_verified: bool = False
 
 
 class ListingListResponse(BaseModel):
