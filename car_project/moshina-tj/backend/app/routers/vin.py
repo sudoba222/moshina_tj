@@ -1,13 +1,20 @@
 """
-GET /vin/check/{vin} — free VIN decode, no auth required, no external API.
+GET /vin/check/{vin} — VIN decode, no auth required.
 
-Uses a local WMI (World Manufacturer Identifier) table covering all brands
-common in Tajikistan. Decodes manufacturer, country, and model year.
+Strategy (hybrid):
+1. Validate format + check digit locally (instant, no I/O).
+2. Call the free NHTSA vPIC API for rich data (make, model, year, body, engine).
+3. If NHTSA returns nothing useful (common for CIS/Chinese brands), fall back to
+   the local WMI table which covers Lada, UzAvto/Nexia, BYD, Haval, Geely, etc.
+
+NHTSA vPIC: https://vpic.nhtsa.dot.gov/api/ — free, no key, no rate limit published.
 """
 import re
 from typing import Optional
 
+import httpx
 from fastapi import APIRouter
+
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/vin", tags=["vin"])
@@ -27,8 +34,6 @@ _WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2]
 
 # ---------------------------------------------------------------------------
 # Model year codes (VIN position 10, index 9)
-# Digits 1-9 only appear in the 2001-2009 cycle.
-# Letters repeat every 30 years; we prefer the more recent cycle (2010+).
 # ---------------------------------------------------------------------------
 _YEAR_CYCLE1: dict[str, int] = {
     'A': 1980, 'B': 1981, 'C': 1982, 'D': 1983, 'E': 1984,
@@ -53,14 +58,12 @@ _YEAR_DIGITS: dict[str, int] = {
 def _decode_year(code: str) -> Optional[int]:
     if code in _YEAR_DIGITS:
         return _YEAR_DIGITS[code]
-    # Prefer cycle 2 (2010+) for letter codes since most active cars are recent
     return _YEAR_CYCLE2.get(code) or _YEAR_CYCLE1.get(code)
 
 
 # ---------------------------------------------------------------------------
-# WMI (World Manufacturer Identifier) table
-# Covers brands popular in Tajikistan: Japanese, Korean, Russian, Chinese,
-# German, Uzbek/Kazakh, US
+# WMI table — covers brands common in Tajikistan not well-served by NHTSA
+# (CIS, Chinese, Uzbek/Kazakh, and others)
 # ---------------------------------------------------------------------------
 _WMI: dict[str, tuple[str, str]] = {
     # ── Japan ──
@@ -164,13 +167,26 @@ _COUNTRY_PREFIX: dict[str, str] = {
 # ---------------------------------------------------------------------------
 _VIN_RE = re.compile(r'^[A-HJ-NPR-Z0-9]{17}$', re.IGNORECASE)
 
+NHTSA_URL = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/{}?format=json"
+
+# Fields we extract from NHTSA response; key = NHTSA "Variable" string
+_NHTSA_FIELDS = {
+    "Make": "manufacturer",
+    "Model": "model",
+    "Model Year": "year",
+    "Body Class": "body_class",
+    "Engine Displacement (L)": "engine_displacement_l",
+    "Fuel Type - Primary": "fuel_type",
+    "Plant Country": "country",
+    "Manufacturer Name": "_manufacturer_long",
+}
+
 
 def _validate_format(vin: str) -> bool:
     return bool(_VIN_RE.match(vin.upper()))
 
 
 def _check_digit_valid(vin: str) -> bool:
-    """Validate the North-American style check digit at position 9 (index 8)."""
     vin = vin.upper()
     try:
         total = sum(_CHAR_VALUES[c] * _WEIGHTS[i] for i, c in enumerate(vin))
@@ -182,13 +198,45 @@ def _check_digit_valid(vin: str) -> bool:
 
 
 def _decode_wmi(vin: str) -> tuple[Optional[str], Optional[str]]:
-    """Return (manufacturer, country). Tries 3-char WMI then country prefix."""
     vin = vin.upper()
     wmi3 = vin[:3]
     if wmi3 in _WMI:
         return _WMI[wmi3]
     country = _COUNTRY_PREFIX.get(vin[0])
     return None, country
+
+
+def _parse_nhtsa(results: list[dict]) -> dict:
+    """Extract useful fields from the NHTSA results array."""
+    data: dict = {}
+    for item in results:
+        variable = item.get("Variable", "")
+        value = item.get("Value") or ""
+        value = value.strip()
+        if not value or value in ("Not Applicable", "null", "0"):
+            continue
+        key = _NHTSA_FIELDS.get(variable)
+        if key:
+            data[key] = value
+
+    # Normalise year to int
+    if "year" in data:
+        try:
+            data["year"] = int(data["year"])
+        except (ValueError, TypeError):
+            data.pop("year", None)
+
+    # Use long manufacturer name only as fallback if short "Make" is absent
+    long_name = data.pop("_manufacturer_long", None)
+    if "manufacturer" not in data and long_name:
+        data["manufacturer"] = long_name
+
+    return data
+
+
+def _is_nhtsa_useful(data: dict) -> bool:
+    """Return True if NHTSA gave us at least manufacturer or model."""
+    return bool(data.get("manufacturer") or data.get("model"))
 
 
 # ---------------------------------------------------------------------------
@@ -199,9 +247,14 @@ class VinDecodeResult(BaseModel):
     is_valid: bool
     check_digit_valid: bool
     manufacturer: Optional[str] = None
+    model: Optional[str] = None
     country: Optional[str] = None
     year: Optional[int] = None
+    body_class: Optional[str] = None
+    engine_displacement_l: Optional[str] = None
+    fuel_type: Optional[str] = None
     wmi: str
+    source: str = "local"          # "nhtsa" | "local"
     error: Optional[str] = None
 
 
@@ -209,11 +262,12 @@ class VinDecodeResult(BaseModel):
 # Endpoint
 # ---------------------------------------------------------------------------
 @router.get("/check/{vin}", response_model=VinDecodeResult)
-def check_vin(vin: str) -> VinDecodeResult:
+async def check_vin(vin: str) -> VinDecodeResult:
     """
-    Free VIN decode — public endpoint, no auth required.
-    Validates format + check digit, decodes manufacturer and model year
-    using a local WMI table (no external API calls).
+    Hybrid VIN decode — public endpoint, no auth required.
+
+    Calls NHTSA vPIC for rich data first; falls back to the local WMI table
+    when NHTSA returns nothing (CIS/Chinese/Uzbek brands).
     """
     vin_upper = vin.upper().strip()
 
@@ -229,16 +283,48 @@ def check_vin(vin: str) -> VinDecodeResult:
             ),
         )
 
-    manufacturer, country = _decode_wmi(vin_upper)
-    year = _decode_year(vin_upper[9])
     check_ok = _check_digit_valid(vin_upper)
+    year_local = _decode_year(vin_upper[9])
+    wmi = vin_upper[:3]
 
+    # ── 1. Try NHTSA ──────────────────────────────────────────────────────────
+    nhtsa_data: dict = {}
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(NHTSA_URL.format(vin_upper))
+            resp.raise_for_status()
+            payload = resp.json()
+            nhtsa_data = _parse_nhtsa(payload.get("Results", []))
+    except Exception:
+        # Network error or timeout — fall through to local table silently
+        pass
+
+    # ── 2. Use NHTSA if useful, otherwise fall back to local WMI ─────────────
+    if _is_nhtsa_useful(nhtsa_data):
+        return VinDecodeResult(
+            vin=vin_upper,
+            is_valid=True,
+            check_digit_valid=check_ok,
+            manufacturer=nhtsa_data.get("manufacturer"),
+            model=nhtsa_data.get("model"),
+            country=nhtsa_data.get("country"),
+            year=nhtsa_data.get("year") or year_local,
+            body_class=nhtsa_data.get("body_class"),
+            engine_displacement_l=nhtsa_data.get("engine_displacement_l"),
+            fuel_type=nhtsa_data.get("fuel_type"),
+            wmi=wmi,
+            source="nhtsa",
+        )
+
+    # Local fallback
+    manufacturer, country = _decode_wmi(vin_upper)
     return VinDecodeResult(
         vin=vin_upper,
         is_valid=True,
         check_digit_valid=check_ok,
         manufacturer=manufacturer,
         country=country,
-        year=year,
-        wmi=vin_upper[:3],
+        year=year_local,
+        wmi=wmi,
+        source="local",
     )

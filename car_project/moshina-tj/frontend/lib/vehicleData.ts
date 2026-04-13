@@ -153,6 +153,10 @@ export const VEHICLE_BRANDS: VehicleBrand[] = [
     models: ['Tiggo 4', 'Tiggo 4 Pro', 'Tiggo 7', 'Tiggo 7 Pro', 'Tiggo 7 Pro Max', 'Tiggo 8', 'Tiggo 8 Pro', 'Tiggo 8 Pro Max', 'Tiggo 9', 'Arrizo 5', 'Arrizo 5 Pro', 'Arrizo 6', 'Arrizo 8', 'QQ', 'Amulet', 'Omoda 5', 'Fulwin T9', 'Fulwin A8'],
   },
   {
+    name: 'iCAR',
+    models: ['03', 'V23', 'GT'],
+  },
+  {
     name: 'Exeed',
     models: ['TXL', 'VX', 'RX', 'LX', 'TX', 'LX Plus', 'Sterra ES', 'Sterra ET'],
   },
@@ -503,6 +507,18 @@ export const VEHICLE_BRANDS: VehicleBrand[] = [
     models: ['R1T', 'R1S', 'R2', 'R3'],
   },
   {
+    name: 'Fisker',
+    models: ['Ocean', 'Pear', 'Ronin', 'Karma', 'Alaska'],
+  },
+  {
+    name: 'Saleen',
+    models: ['S7', 'S1', 'S302', 'Sportruck'],
+  },
+  {
+    name: 'Shelby',
+    models: ['Cobra', 'GT350', 'GT500', 'Super Snake', 'Series 1', 'F-150 Shelby'],
+  },
+  {
     name: 'Ram',
     models: ['1500', '2500', '3500', 'ProMaster', '1200', 'TRX'],
   },
@@ -519,6 +535,10 @@ export const VEHICLE_BRANDS: VehicleBrand[] = [
   {
     name: 'Renault',
     models: ['Logan', 'Sandero', 'Duster', 'Megane', 'Clio', 'Laguna', 'Scenic', 'Kadjar', 'Koleos', 'Arkana', 'Captur', 'Trafic', 'Master', 'Kangoo', 'Austral', 'Rafale', 'Espace', 'Talisman', 'Kwid', 'Triber', 'Kiger'],
+  },
+  {
+    name: 'Alpine',
+    models: ['A110', 'A290', 'A390'],
   },
   {
     name: 'Seat',
@@ -541,6 +561,10 @@ export const VEHICLE_BRANDS: VehicleBrand[] = [
     models: ['Range Rover', 'Range Rover Sport', 'Range Rover Velar', 'Range Rover Evoque', 'Discovery', 'Discovery Sport', 'Defender', 'Freelander'],
   },
   {
+    name: 'Jaguar',
+    models: ['F-Pace', 'E-Pace', 'I-Pace', 'XE', 'XF', 'XJ', 'F-Type', 'S-Type', 'X-Type'],
+  },
+  {
     name: 'Mini',
     models: ['Cooper', 'Cooper S', 'Countryman', 'Clubman', 'Paceman', 'Roadster', 'Convertible', 'Aceman'],
   },
@@ -559,6 +583,18 @@ export const VEHICLE_BRANDS: VehicleBrand[] = [
   {
     name: 'Lamborghini',
     models: ['Urus', 'Huracan', 'Aventador', 'Revuelto', 'Temerario', 'Gallardo', 'Murcielago', 'Diablo'],
+  },
+  {
+    name: 'Bugatti',
+    models: ['Chiron', 'Veyron', 'Divo', 'Mistral', 'Bolide', 'EB110'],
+  },
+  {
+    name: 'Koenigsegg',
+    models: ['Jesko', 'Regera', 'Gemera', 'Agera', 'CCX', 'One:1'],
+  },
+  {
+    name: 'Pagani',
+    models: ['Huayra', 'Zonda', 'Utopia'],
   },
   {
     name: 'Maserati',
@@ -652,6 +688,26 @@ export const VEHICLE_BRANDS: VehicleBrand[] = [
     name: 'Aurus',
     models: ['Senat', 'Komendant', 'Arsenal'],
   },
+  {
+    name: 'ZAZ',
+    models: ['Chance', 'Sens', 'Lanos', 'Vida', 'Forza', 'Slavuta', 'Tavria', '968'],
+  },
+  {
+    name: 'IZH',
+    models: ['2126 Oda', '2717', '2125 Kombi', '21175', 'Oda'],
+  },
+  {
+    name: 'LuAZ',
+    models: ['969', '1302', 'Proto'],
+  },
+  {
+    name: 'PAZ',
+    models: ['3205', '4234', 'Vector Next', '3204', '3206'],
+  },
+  {
+    name: 'LiAZ',
+    models: ['5256', '5292', '6213', '4292', '5293'],
+  },
 
   // Trucks / Commercial / Buses
   {
@@ -709,6 +765,22 @@ export const VEHICLE_BRANDS: VehicleBrand[] = [
   {
     name: 'FAW Truck',
     models: ['J6P', 'J7', 'J6L', 'Tiger V'],
+  },
+  {
+    name: 'Scania',
+    models: ['R-series', 'S-series', 'G-series', 'P-series', 'L-series', 'V8'],
+  },
+  {
+    name: 'Volvo Trucks',
+    models: ['FH', 'FM', 'FMX', 'FL', 'FE', 'FH16', 'VNL'],
+  },
+  {
+    name: 'Iveco',
+    models: ['Daily', 'EuroCargo', 'Stralis', 'Trakker', 'S-Way', 'X-Way', 'T-Way'],
+  },
+  {
+    name: 'Mercedes-Benz Trucks',
+    models: ['Actros', 'Arocs', 'Atego', 'Unimog', 'Econic', 'Zetros'],
   },
   {
     name: 'Другое',

@@ -151,6 +151,34 @@ export default function ModeratorDashboard({ lang, onSessionStart }: ModeratorDa
           </div>
         </div>
 
+        {/* Quick nav */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          {[
+            { href: '/moderator',          label: lang === 'ru' ? 'Очередь'         : 'Навбат',    active: true },
+            { href: '/moderator/users',    label: lang === 'ru' ? 'Пользователи'    : 'Корбарон', active: false },
+            { href: '/moderator/listings', label: lang === 'ru' ? 'Объявления'      : 'Эълонҳо',  active: false },
+            { href: '/moderator/activity', label: lang === 'ru' ? 'Активность'      : 'Фаъолият', active: false },
+          ].map(({ href, label, active }) => (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                background: active ? 'var(--accent)' : 'var(--card)',
+                color: active ? 'var(--color-white)' : 'var(--text-secondary)',
+                border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
+                transition: 'all 0.13s',
+              }}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+
         {/* Stats row */}
         <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: 'repeat(3, 1fr)', display: 'grid' }}>
           {statsCards.map(({ label, value, color }) => (

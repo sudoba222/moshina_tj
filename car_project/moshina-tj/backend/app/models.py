@@ -106,6 +106,7 @@ class User(Base):
         nullable=True,
         unique=True,
         index=True,
+        server_default=text("nextval('users_user_number_seq')"),
     )
     phone = Column(String(50), unique=True, nullable=True, index=True)
     name = Column(String(100), nullable=True)
