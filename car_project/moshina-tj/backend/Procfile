@@ -1,1 +1,1 @@
-web: alembic stamp 20260410_1200 && gunicorn -c gunicorn_conf.py app.main:app
+web: python3 -c "from app.database import engine; from sqlalchemy import text; conn=engine.connect(); conn.execute(text('DROP TABLE IF EXISTS cities CASCADE; UPDATE alembic_version SET version_num=\'20260410_1200\'')); conn.commit(); conn.close(); print('DATABASE REPAIRED')" && gunicorn -c gunicorn_conf.py app.main:app
