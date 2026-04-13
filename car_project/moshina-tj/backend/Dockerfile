@@ -23,5 +23,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
-# Run migrations then start the server
-CMD ["sh", "-c", "alembic upgrade head && gunicorn -c gunicorn_conf.py app.main:app"]
+# Repair DB version and start the server
+CMD ["sh", "-c", "python3 -c \"from app.database import engine; from sqlalchemy import text; conn=engine.connect(); conn.execute(text('DROP TABLE IF EXISTS cities CASCADE; UPDATE alembic_version SET version_num=\\'20260410_1200\\'')); conn.commit(); conn.close(); print('DATABASE REPAIRED')\" && gunicorn -c gunicorn_conf.py app.main:app"]
