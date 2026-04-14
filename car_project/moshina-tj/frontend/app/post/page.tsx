@@ -265,6 +265,37 @@ function PostPage() {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...form, _savedAt: Date.now() }))
   }, [form, isEdit])
 
+  // ── Step wizard ──────────────────────────────────────────────────────────────
+  const [step, setStep] = useState(1)
+  const TOTAL_STEPS = 4
+
+  function validateStep(s: number): string {
+    if (s === 1 && !form.category_slug) return t('post.fillRequired', lang)
+    if (s === 2) {
+      const finalBrand = form.brand === 'Другое' ? customBrand.trim() : form.brand
+      const finalModel = form.model === 'Другое' ? customModel.trim() : form.model
+      if (!finalBrand) return t('postForm.brandLabel', lang) + ' — ' + t('post.fillRequired', lang)
+      if (!finalModel) return t('postForm.modelLabel', lang) + ' — ' + t('post.fillRequired', lang)
+      if (!form.year) return t('post.fillRequired', lang)
+    }
+    if (s === 3 && existingUrls.length + imageFiles.length === 0) return t('post.photoRequired', lang)
+    return ''
+  }
+
+  function goNext() {
+    const err = validateStep(step)
+    if (err) { setError(err); return }
+    setError('')
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function goBack() {
+    setError('')
+    setStep((s) => Math.max(s - 1, 1))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   // Load listing in edit mode
   useEffect(() => {
     if (!editId) return
@@ -499,8 +530,51 @@ function PostPage() {
             {isEdit ? t('post.editTitle', lang) : t('post.postTitle', lang)}
           </h1>
 
+          {/* ── Progress bar ── */}
+          {!isEdit && (
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                {[1,2,3,4].map((s, i) => (
+                  <div key={s} style={{ display: 'flex', alignItems: 'center', flex: s < 4 ? 1 : 'none' }}>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '12px', fontWeight: 800,
+                      background: step > s ? 'var(--accent)' : step === s ? 'var(--accent)' : 'var(--surface)',
+                      border: `2px solid ${step >= s ? 'var(--accent)' : 'var(--border)'}`,
+                      color: step >= s ? 'var(--color-white)' : 'var(--text-muted)',
+                      transition: 'all 0.2s',
+                    }}>
+                      {step > s ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      ) : s}
+                    </div>
+                    {s < 4 && (
+                      <div style={{ flex: 1, height: '2px', background: step > s ? 'var(--accent)' : 'var(--border)', transition: 'background 0.2s', margin: '0 4px' }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                {[
+                  t('post.stepCategory', lang),
+                  t('post.stepDetails', lang),
+                  t('post.stepPhotos', lang),
+                  t('post.stepPricing', lang),
+                ].map((label, i) => (
+                  <span key={i} style={{ fontSize: '10px', fontWeight: 700, color: step === i+1 ? 'var(--accent)' : 'var(--text-muted)', flex: i < 3 ? 1 : 'none', textAlign: i === 0 ? 'left' : i === 3 ? 'right' : 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
 
+            {/* ══ STEP 1: Type + Category ══ */}
+            {(step === 1 || isEdit) && (
+            <div>
             {/* ── Тип объявления ── */}
             <div style={card}>
               <SectionTitle>
@@ -585,6 +659,21 @@ function PostPage() {
                   </div>
                 )}
               </div>
+
+            {/* ── Step 1 nav ── */}
+            {!isEdit && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', marginBottom: '16px' }}>
+                <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
+                  {lang === 'ru' ? 'Далее →' : 'Идома →'}
+                </button>
+              </div>
+            )}
+            </div>
+            )} {/* end step 1 */}
+
+            {/* ══ STEP 2: Vehicle Details ══ */}
+            {(step === 2 || isEdit) && (
+            <div>
 
             {/* ── Марка, модель, год ── */}
             <div style={card}>
@@ -975,6 +1064,24 @@ function PostPage() {
               )}
             </div>
 
+            {/* ── Step 2 nav ── */}
+            {!isEdit && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', marginBottom: '16px' }}>
+                <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px' }}>
+                  ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+                </button>
+                <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
+                  {lang === 'ru' ? 'Далее →' : 'Идома →'}
+                </button>
+              </div>
+            )}
+            </div>
+            )} {/* end step 2 */}
+
+            {/* ══ STEP 3: Photos ══ */}
+            {(step === 3 || isEdit) && (
+            <div>
+
             {/* ── Фотографии ── */}
             <div style={card}>
               <SectionTitle>
@@ -1029,6 +1136,24 @@ function PostPage() {
                 </div>
               )}
             </div>
+
+            {/* ── Step 3 nav ── */}
+            {!isEdit && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', marginBottom: '16px' }}>
+                <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px' }}>
+                  ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+                </button>
+                <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
+                  {lang === 'ru' ? 'Далее →' : 'Идома →'}
+                </button>
+              </div>
+            )}
+            </div>
+            )} {/* end step 3 */}
+
+            {/* ══ STEP 4: Description, Contacts, Price details ══ */}
+            {(step === 4 || isEdit) && (
+            <div>
 
             {/* ── Описание ── */}
             <div style={card}>
@@ -1146,26 +1271,35 @@ function PostPage() {
               </div>
             )}
 
-            {/* ── Submit ── */}
-            <button
-              type="submit"
-              disabled={submitting || uploading}
-              style={{
-                width: '100%', padding: '16px', borderRadius: '14px',
-                background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)',
-                color: 'var(--color-white)', fontWeight: 800, fontSize: '16px',
-                border: 'none', cursor: submitting || uploading ? 'not-allowed' : 'pointer',
-                transition: 'background 0.15s', minHeight: '54px',
-              }}
-            >
-              {uploading
-                ? t('postForm.uploading', lang)
-                : submitting
-                  ? t('postForm.sending', lang)
-                  : isEdit
-                    ? t('postForm.saveChanges', lang)
-                    : t('postForm.submitListing', lang)}
-            </button>
+            {/* ── Step 4 nav + Submit ── */}
+            {!isEdit && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px', flexShrink: 0 }}>
+                  ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || uploading}
+                  style={{ flex: 1, padding: '16px', borderRadius: '14px', background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 800, fontSize: '16px', border: 'none', cursor: submitting || uploading ? 'not-allowed' : 'pointer', transition: 'background 0.15s', minHeight: '54px' }}
+                >
+                  {uploading ? t('postForm.uploading', lang) : submitting ? t('postForm.sending', lang) : t('postForm.submitListing', lang)}
+                </button>
+              </div>
+            )}
+
+            {/* Edit mode submit */}
+            {isEdit && (
+              <button
+                type="submit"
+                disabled={submitting || uploading}
+                style={{ width: '100%', padding: '16px', borderRadius: '14px', background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 800, fontSize: '16px', border: 'none', cursor: submitting || uploading ? 'not-allowed' : 'pointer', transition: 'background 0.15s', minHeight: '54px' }}
+              >
+                {uploading ? t('postForm.uploading', lang) : submitting ? t('postForm.sending', lang) : t('postForm.saveChanges', lang)}
+              </button>
+            )}
+
+            </div>
+            )} {/* end step 4 */}
 
           </form>
         </div>

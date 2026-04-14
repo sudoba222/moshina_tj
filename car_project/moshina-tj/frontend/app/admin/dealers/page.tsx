@@ -28,6 +28,92 @@ import { useToast } from '../components/ToastContext'
 
 const PAGE_SIZE = 20
 
+// ── Create Dealer modal ────────────────────────────────────────────────────────
+function CreateDealerModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const { lang } = useLang()
+  const { showToast } = useToast()
+  const [form, setForm] = useState({ user_id: '', phone: '', name: '', business_name: '', city: '', description: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    setError('')
+    if (!form.business_name.trim()) { setError('Введите название автосалона'); return }
+    if (!form.user_id.trim() && !form.phone.trim()) { setError('Укажите ID пользователя или номер телефона'); return }
+    setSaving(true)
+    try {
+      await adminApi.createDealer({
+        user_id: form.user_id.trim() || undefined,
+        phone: form.phone.trim() || undefined,
+        name: form.name.trim() || undefined,
+        business_name: form.business_name.trim(),
+        city: form.city.trim() || undefined,
+        description: form.description.trim() || undefined,
+      })
+      showToast('Дилер создан', 'success')
+      onCreated()
+      onClose()
+    } catch (e) {
+      setError(extractApiError(e, t('common.errorSave', lang)))
+    }
+    setSaving(false)
+  }
+
+  const field = (key: keyof typeof form, label: string, placeholder?: string, type = 'text') => (
+    <FormField label={label}>
+      <input
+        type={type}
+        placeholder={placeholder ?? ''}
+        style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+        value={form[key]}
+        onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
+      />
+    </FormField>
+  )
+
+  return (
+    <ModalBackdrop onClose={onClose}>
+      <ModalCard maxWidth="440px">
+        <ModalTitle>Создать аккаунт дилера</ModalTitle>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          Укажите ID существующего пользователя или номер телефона для создания нового.
+        </p>
+
+        {error && <ErrorText>{error}</ErrorText>}
+
+        {field('user_id', 'ID пользователя (если уже есть аккаунт)', 'xxxxxxxx-xxxx-...')}
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '-8px 0 8px', fontWeight: 600 }}>— или —</p>
+        {field('phone', 'Телефон (создать нового пользователя)', '+992...')}
+        {field('name', 'Имя пользователя', 'Имя')}
+        <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '4px 0 8px' }} />
+        {field('business_name', 'Название автосалона *', 'Авто Плюс')}
+        {field('city', 'Город', 'Душанбе')}
+        <FormField label="Описание">
+          <textarea
+            placeholder="Краткое описание..."
+            style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: '72px' }}
+            value={form.description}
+            onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+          />
+        </FormField>
+
+        <ModalActions>
+          <BtnSecondary onClick={onClose}>{t('adminForm.cancel', lang)}</BtnSecondary>
+          <BtnPrimary onClick={handleSave} disabled={saving}>
+            {saving ? t('adminForm.saving', lang) : 'Создать дилера'}
+          </BtnPrimary>
+        </ModalActions>
+      </ModalCard>
+    </ModalBackdrop>
+  )
+}
+
 // ── Edit max-ads modal ─────────────────────────────────────────────────────────
 function EditMaxAdsModal({
   dealer,
@@ -113,6 +199,9 @@ function DealersPageInner() {
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
+  // Create dealer modal
+  const [showCreate, setShowCreate] = useState(false)
+
   // Edit max-ads modal
   const [editTarget, setEditTarget] = useState<Dealer | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
@@ -195,6 +284,7 @@ function DealersPageInner() {
         <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
           {t('admin.tabDealers', lang)}
         </h1>
+        <BtnPrimary onClick={() => setShowCreate(true)}>+ Создать дилера</BtnPrimary>
       </div>
 
       {/* Filters row */}
@@ -398,6 +488,14 @@ function DealersPageInner() {
           onPage={(p) => updateParams({ page: String(p) })}
         />
       </div>
+
+      {/* Create dealer modal */}
+      {showCreate && (
+        <CreateDealerModal
+          onClose={() => setShowCreate(false)}
+          onCreated={() => loadDealers(page, filter)}
+        />
+      )}
 
       {/* Edit max-ads modal */}
       {editTarget && (

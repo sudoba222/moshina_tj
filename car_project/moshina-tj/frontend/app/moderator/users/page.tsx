@@ -66,7 +66,7 @@ export default function ModeratorUsersPage() {
     setLoading(true)
     try {
       const res = await adminApi.getUsers(p, undefined, q || undefined, banned)
-      const d = res.data.data as { items: UserRow[]; total: number; page: number; pages: number }
+      const d = res.data.data as unknown as { items: UserRow[]; total: number; page: number; pages: number }
       setUsers(d.items ?? [])
       setTotal(d.total ?? 0)
       setPage(d.page ?? 1)

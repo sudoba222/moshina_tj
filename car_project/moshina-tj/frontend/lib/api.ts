@@ -452,6 +452,8 @@ export const adminApi = {
     api.put<ApiResponse<Dealer>>(`/admin/dealers/${dealerId}/unverify`),
   updateDealer: (dealerId: string, data: { max_ads_allowed?: number }) =>
     api.patch<ApiResponse<Dealer>>(`/admin/dealers/${dealerId}`, data),
+  createDealer: (data: { user_id?: string; phone?: string; name?: string; business_name: string; city?: string; description?: string }) =>
+    api.post<ApiResponse<Dealer>>('/admin/dealers', data),
 }
 
 // ─── Chat / Conversations ────────────────────────────────────────────────────

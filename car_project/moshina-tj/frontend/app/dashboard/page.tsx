@@ -112,6 +112,45 @@ export default function DashboardPage() {
       .finally(() => setFavoritesLoading(false))
   }, [tab, user])
 
+  useEffect(() => {
+    if (tab !== 'dealership' || !user) return
+    setDealerLoading(true)
+    dealersApi.my()
+      .then((res) => {
+        const d = res.data.data
+        setDealer(d)
+        setDealerForm({
+          business_name: d.business_name ?? '',
+          city: d.city ?? '',
+          address: d.address ?? '',
+          phone: d.phone ?? '',
+          description: d.description ?? '',
+          website: d.website ?? '',
+          working_hours: d.working_hours ?? '',
+          instagram: d.instagram ?? '',
+          telegram_handle: d.telegram_handle ?? '',
+        })
+      })
+      .catch(() => setDealer(null))
+      .finally(() => setDealerLoading(false))
+  }, [tab, user])
+
+  async function saveDealer() {
+    if (!dealer) return
+    setDealerError(''); setDealerSuccess(false)
+    if (!dealerForm.business_name.trim()) { setDealerError('Введите название автосалона'); return }
+    setDealerSaving(true)
+    try {
+      const res = await dealersApi.update(dealer.id, dealerForm)
+      setDealer(res.data.data)
+      setDealerSuccess(true)
+    } catch {
+      setDealerError('Ошибка сохранения')
+    } finally {
+      setDealerSaving(false)
+    }
+  }
+
   async function saveProfile() {
     setProfileError(''); setProfileSuccess(false)
     if (!name.trim()) { setProfileError(t('dashboard.enterName', lang)); return }
@@ -229,12 +268,13 @@ export default function DashboardPage() {
 
           {/* Tabs */}
           <div className="scrollbar-hide" style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '28px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-            {(['profile', 'listings', 'favorites', 'settings'] as Tab[]).map((tabKey) => {
+            {(['profile', 'listings', 'favorites', 'settings', ...(user.role === 'dealer' ? ['dealership'] : [])] as Tab[]).map((tabKey) => {
               const labelMap: Record<Tab, string> = {
                 profile: t('dashboard.profile', lang),
                 listings: t('dashboard.myListings', lang),
                 favorites: t('favorites.title', lang),
                 settings: t('dashboard.settings', lang),
+                dealership: lang === 'tj' ? 'Автосалон' : 'Автосалон',
               }
               return (
                 <button
@@ -604,6 +644,85 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── Dealership tab (dealer role only) ── */}
+          {tab === 'dealership' && (
+            <div className="animate-fade-in" style={{ maxWidth: '560px' }}>
+              {dealerLoading ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>{t('common.loading', lang)}</div>
+              ) : !dealer ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+                  <p style={{ fontSize: '15px', fontWeight: 600 }}>Профиль автосалона не найден</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* Status banner */}
+                  <div style={{ padding: '12px 16px', borderRadius: '12px', background: dealer.verified ? 'rgba(22,163,74,0.08)' : 'var(--color-warning-dim, rgba(234,179,8,0.1))', border: `1px solid ${dealer.verified ? 'rgba(22,163,74,0.3)' : 'rgba(234,179,8,0.3)'}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={dealer.verified ? 'var(--color-success)' : 'var(--color-warning-alt)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      {dealer.verified ? <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></> : <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>}
+                    </svg>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: dealer.verified ? 'var(--color-success)' : 'var(--color-warning-alt)' }}>
+                      {dealer.verified ? 'Профиль верифицирован' : 'Ожидает верификации администратором'}
+                    </span>
+                  </div>
+
+                  {/* Edit form */}
+                  <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(20px, 4vw, 28px)' }}>
+                    <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '20px' }}>Информация об автосалоне</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {([
+                        { key: 'business_name', label: 'Название автосалона', type: 'text', required: true },
+                        { key: 'city', label: 'Город', type: 'text' },
+                        { key: 'address', label: 'Адрес', type: 'text' },
+                        { key: 'phone', label: 'Телефон', type: 'tel' },
+                        { key: 'website', label: 'Веб-сайт', type: 'url' },
+                        { key: 'working_hours', label: 'Часы работы', type: 'text' },
+                        { key: 'instagram', label: 'Instagram (без @)', type: 'text' },
+                        { key: 'telegram_handle', label: 'Telegram (без @)', type: 'text' },
+                      ] as { key: keyof typeof dealerForm; label: string; type: string; required?: boolean }[]).map(({ key, label, type, required }) => (
+                        <div key={key}>
+                          <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
+                            {label}{required && <span style={{ color: 'var(--accent)' }}> *</span>}
+                          </label>
+                          <input
+                            type={type}
+                            value={dealerForm[key]}
+                            onChange={(e) => setDealerForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '14px', fontWeight: 500, outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      ))}
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Описание</label>
+                        <textarea
+                          value={dealerForm.description}
+                          onChange={(e) => setDealerForm((prev) => ({ ...prev, description: e.target.value }))}
+                          rows={4}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '14px', fontWeight: 500, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      {dealerError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{dealerError}</p>}
+                      {dealerSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>Сохранено</p>}
+                      <button
+                        onClick={saveDealer}
+                        disabled={dealerSaving}
+                        style={{ background: dealerSaving ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: dealerSaving ? 'not-allowed' : 'pointer' }}
+                      >
+                        {dealerSaving ? t('common.loading', lang) : t('dashboard.save', lang)}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Link to public profile */}
+                  <div style={{ textAlign: 'center' }}>
+                    <a href={`/dealers/${dealer.id}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>
+                      Открыть публичный профиль →
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
