@@ -18,7 +18,7 @@ from app.auth import (
 )
 from app.database import get_db
 from app.email_service import send_email_otp, send_welcome_email, send_password_changed
-from app.models import OtpCode, TelegramToken, User, UserRole, log_audit
+from app.models import Dealer, OtpCode, TelegramToken, User, UserRole, log_audit
 from app.schemas import ApiResponse, AuthResponse, Token, UserCreate, UserResponse
 
 logger = logging.getLogger(__name__)
@@ -120,6 +120,8 @@ class VerifyOtpPayload(BaseModel):
     code: str
     name: Optional[str] = None
     password: Optional[str] = None  # if provided, used as the new user's password
+    is_dealer: bool = False
+    dealership_name: Optional[str] = None
 
     @field_validator("code")
     @classmethod
@@ -176,6 +178,8 @@ class EmailRegisterPayload(BaseModel):
     email: EmailStr
     name: str
     password: str
+    is_dealer: bool = False
+    dealership_name: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -279,7 +283,18 @@ def register(request: Request, response: Response, payload: UserCreate, backgrou
         name=payload.name,
         password_hash=hash_password(payload.password),
     )
+    if payload.is_dealer:
+        user.role = UserRole.dealer
     db.add(user)
+    db.flush()  # get user.id before creating Dealer
+
+    if payload.is_dealer:
+        dealer = Dealer(
+            user_id=user.id,
+            business_name=(payload.dealership_name or payload.name or "").strip() or "My Dealership",
+        )
+        db.add(dealer)
+
     db.commit()
     db.refresh(user)
 
@@ -561,7 +576,18 @@ def verify_otp(request: Request, response: Response, payload: VerifyOtpPayload, 
             phone_verified=True,
             telegram_chat_id=tg_chat_id,
         )
+        if payload.is_dealer:
+            user.role = UserRole.dealer
         db.add(user)
+        db.flush()
+
+        if payload.is_dealer:
+            dealer = Dealer(
+                user_id=user.id,
+                business_name=(payload.dealership_name or name or "").strip() or "My Dealership",
+            )
+            db.add(dealer)
+
         db.commit()
         db.refresh(user)
 
@@ -635,8 +661,17 @@ def register_email(request: Request, payload: EmailRegisterPayload, background_t
         password_hash=hash_password(payload.password),
         email_verified=False,
     )
+    if payload.is_dealer:
+        user.role = UserRole.dealer
     db.add(user)
     db.flush()  # get the ID without committing
+
+    if payload.is_dealer:
+        dealer = Dealer(
+            user_id=user.id,
+            business_name=(payload.dealership_name or payload.name or "").strip() or "My Dealership",
+        )
+        db.add(dealer)
 
     code = _generate_and_store_email_otp(payload.email, db)
     db.commit()

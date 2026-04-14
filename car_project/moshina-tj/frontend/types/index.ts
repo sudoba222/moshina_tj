@@ -152,7 +152,12 @@ export interface Dealer {
   address: string | null
   phone: string | null
   logo_url: string | null
+  cover_image_url: string | null
   description: string | null
+  website: string | null
+  working_hours: string | null
+  instagram: string | null
+  telegram_handle: string | null
   verified: boolean
   created_at: string
   // Admin-only fields returned by /admin/dealers

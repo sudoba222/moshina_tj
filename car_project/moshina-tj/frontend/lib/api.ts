@@ -180,12 +180,12 @@ export const authApi = {
     api.post<ApiResponse<AuthData>>('/auth/register', { phone, name, password }),
   sendOtp: (phone: string) =>
     api.post<ApiResponse<{ dev_code?: string }>>('/auth/send-otp', { phone }),
-  verifyOtp: (phone: string, code: string, name?: string, password?: string) =>
-    api.post<ApiResponse<AuthData>>('/auth/verify-otp', { phone, code, name, password }),
+  verifyOtp: (phone: string, code: string, name?: string, password?: string, isDealer?: boolean, dealershipName?: string) =>
+    api.post<ApiResponse<AuthData>>('/auth/verify-otp', { phone, code, name, password, is_dealer: isDealer ?? false, dealership_name: dealershipName }),
 
   // ── Email ──────────────────────────────────────────────────────────────────
-  registerEmail: (email: string, name: string, password: string) =>
-    api.post<ApiResponse<{ dev_code?: string }>>('/auth/register-email', { email, name, password }),
+  registerEmail: (email: string, name: string, password: string, isDealer?: boolean, dealershipName?: string) =>
+    api.post<ApiResponse<{ dev_code?: string }>>('/auth/register-email', { email, name, password, is_dealer: isDealer ?? false, dealership_name: dealershipName }),
   loginEmail: (email: string, password: string, rememberMe?: boolean) =>
     api.post<ApiResponse<AuthData>>('/auth/login-email', { email, password, remember_me: rememberMe ?? false }),
   verifyEmailOtp: (email: string, code: string) =>
@@ -227,6 +227,10 @@ export const dealersApi = {
     api.get<ApiResponse<{ items: Dealer[]; total: number; page: number; pages: number }>>('/dealers'),
   get: (id: string) =>
     api.get<ApiResponse<{ dealer: Dealer; listings: Listing[] }>>(`/dealers/${id}`),
+  my: () =>
+    api.get<ApiResponse<Dealer>>('/dealers/my'),
+  update: (id: string, data: Partial<Dealer>) =>
+    api.put<ApiResponse<Dealer>>(`/dealers/${id}`, data),
 }
 
 export interface SuggestionItem {

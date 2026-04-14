@@ -32,6 +32,19 @@ from app.schemas import (
     UserUpdateRole,
 )
 
+# ---------------------------------------------------------------------------
+# Admin dealer creation schema (local to admin router)
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel as _BaseModel
+class AdminCreateDealer(_BaseModel):
+    """Create a dealer profile for an existing user or a brand-new user."""
+    user_id: Optional[str] = None        # existing user's UUID (as string)
+    phone: Optional[str] = None          # phone to create new user if user_id absent
+    name: Optional[str] = None           # display name for new user
+    business_name: str
+    city: Optional[str] = None
+    description: Optional[str] = None
+
 router = APIRouter(prefix="/admin", tags=["admin"])
 limiter = Limiter(key_func=get_remote_address)
 
@@ -2264,6 +2277,62 @@ def support_stats(db: Session = Depends(get_db), _: User = Depends(require_suppo
         "today_new_users": today_new_users,
         "today_new_listings": today_new_listings,
     }, message="Support stats fetched")
+
+
+# ---------------------------------------------------------------------------
+# Admin: create dealer account
+# ---------------------------------------------------------------------------
+
+@router.post("/dealers", response_model=ApiResponse[DealerResponse], status_code=status.HTTP_201_CREATED)
+def admin_create_dealer(
+    payload: AdminCreateDealer,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """
+    Create a dealer account.
+    - If user_id is provided, assign dealer role to that existing user.
+    - Otherwise create a new user with the supplied phone/name (no password — admin sets it later).
+    """
+    from app.auth import hash_password
+    import uuid as _uuid
+
+    if payload.user_id:
+        user = db.query(User).filter(User.id == payload.user_id, User.is_deleted == False).first()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    elif payload.phone:
+        existing = db.query(User).filter(User.phone == payload.phone).first()
+        if existing:
+            user = existing
+        else:
+            user = User(
+                phone=payload.phone,
+                name=payload.name or "Dealer",
+                password_hash=hash_password(_uuid.uuid4().hex),  # random unusable password
+            )
+            db.add(user)
+            db.flush()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Provide either user_id or phone",
+        )
+
+    if db.query(Dealer).filter(Dealer.user_id == user.id).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already has a dealer profile")
+
+    user.role = UserRole.dealer
+    dealer = Dealer(
+        user_id=user.id,
+        business_name=payload.business_name,
+        city=payload.city,
+        description=payload.description,
+    )
+    db.add(dealer)
+    db.commit()
+    db.refresh(dealer)
+    return ApiResponse(success=True, data=DealerResponse.model_validate(dealer), message="Dealer account created")
 
 
 # ---------------------------------------------------------------------------

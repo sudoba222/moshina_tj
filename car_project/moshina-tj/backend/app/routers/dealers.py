@@ -6,12 +6,13 @@ from sqlalchemy.orm import Session, joinedload
 from app.auth import get_current_user
 from app.database import get_db
 from app.limiter import limiter
-from app.models import Dealer, Listing, ListingStatus, User
+from app.models import Dealer, Listing, ListingStatus, User, UserRole
 from app.schemas import (
     ApiResponse,
     DealerCreate,
     DealerDetailResponse,
     DealerResponse,
+    DealerUpdate,
     ListingResponse,
 )
 
@@ -38,6 +39,18 @@ def list_dealers(
         },
         message="Dealers fetched",
     )
+
+
+@router.get("/my", response_model=ApiResponse[DealerResponse])
+def get_my_dealer_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the dealer profile for the currently authenticated user."""
+    dealer = db.query(Dealer).filter(Dealer.user_id == current_user.id).first()
+    if not dealer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dealer profile not found")
+    return ApiResponse(success=True, data=DealerResponse.model_validate(dealer), message="")
 
 
 @router.get("/{dealer_id}", response_model=ApiResponse[DealerDetailResponse])
@@ -92,6 +105,11 @@ def create_dealer(
         description=payload.description,
     )
     db.add(dealer)
+
+    # Upgrade role to dealer if not already
+    if current_user.role == UserRole.user:
+        current_user.role = UserRole.dealer
+
     db.commit()
     db.refresh(dealer)
 
@@ -100,3 +118,29 @@ def create_dealer(
         data=DealerResponse.model_validate(dealer),
         message="Dealer profile created. Awaiting verification.",
     )
+
+
+@router.put("/{dealer_id}", response_model=ApiResponse[DealerResponse])
+def update_dealer(
+    dealer_id: str,
+    payload: DealerUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a dealer profile. Only the owner or an admin can update."""
+    dealer = db.query(Dealer).filter(Dealer.id == dealer_id).first()
+    if not dealer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dealer not found")
+
+    is_owner = dealer.user_id == current_user.id
+    is_admin = current_user.role in {UserRole.admin, UserRole.moderator, UserRole.manager}
+    if not (is_owner or is_admin):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorised")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(dealer, field, value)
+
+    db.commit()
+    db.refresh(dealer)
+    return ApiResponse(success=True, data=DealerResponse.model_validate(dealer), message="Dealer profile updated")

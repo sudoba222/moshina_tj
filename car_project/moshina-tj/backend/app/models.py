@@ -381,7 +381,12 @@ class Dealer(Base):
     address = Column(Text, nullable=True)
     phone = Column(String(20), nullable=True)
     logo_url = Column(Text, nullable=True)
+    cover_image_url = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
+    website = Column(String(300), nullable=True)
+    working_hours = Column(JSON, nullable=True)
+    instagram = Column(String(200), nullable=True)
+    telegram_handle = Column(String(200), nullable=True)
     verified = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(
         TIMESTAMP(timezone=True),

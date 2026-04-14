@@ -5,14 +5,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, authApi, usersApi, favoritesApi } from '@/lib/api'
+import { listingsApi, authApi, usersApi, favoritesApi, dealersApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import CarCard from '@/components/CarCard'
-import type { Listing } from '@/types'
+import type { Dealer, Listing } from '@/types'
 
-type Tab = 'profile' | 'listings' | 'favorites' | 'settings'
+type Tab = 'profile' | 'listings' | 'favorites' | 'settings' | 'dealership'
 
 // ─── SearchParams reader (must be inside Suspense) ────────────────────────────
 function SearchParamsReader({ onParams }: { onParams: (tab: Tab | null) => void }) {
@@ -59,6 +59,17 @@ export default function DashboardPage() {
   const [pwdError, setPwdError] = useState('')
   const [pwdSuccess, setPwdSuccess] = useState(false)
   const [pwdLoading, setPwdLoading] = useState(false)
+
+  // Dealership profile
+  const [dealer, setDealer] = useState<Dealer | null>(null)
+  const [dealerLoading, setDealerLoading] = useState(false)
+  const [dealerSaving, setDealerSaving] = useState(false)
+  const [dealerError, setDealerError] = useState('')
+  const [dealerSuccess, setDealerSuccess] = useState(false)
+  const [dealerForm, setDealerForm] = useState({
+    business_name: '', city: '', address: '', phone: '',
+    description: '', website: '', working_hours: '', instagram: '', telegram_handle: '',
+  })
 
   useEffect(() => {
     if (authLoading) return

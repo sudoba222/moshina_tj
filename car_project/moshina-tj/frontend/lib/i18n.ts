@@ -224,6 +224,10 @@ const strings = {
     codeSentToEmail:        { ru: 'Код отправлен на {email}',                          tj: 'Рамз ба {email} фиристода шуд' },
     haveAccount:            { ru: 'Уже есть аккаунт?',                                tj: 'Аккаунт дорӣ?' },
     loginLink:              { ru: 'Войти',                                             tj: 'Даромад' },
+    isDealer:               { ru: 'Я дилер / автосалон',                              tj: 'Ман дилер / автосалон ҳастам' },
+    dealershipName:         { ru: 'Название автосалона',                              tj: 'Номи автосалон' },
+    dealershipNamePlaceholder: { ru: 'Например: Авто Плюс',                           tj: 'Масалан: Авто Плюс' },
+    errorEnterDealerName:   { ru: 'Введите название автосалона',                      tj: 'Номи автосалонро ворид кунед' },
   },
   forgotPassword: {
     title:                  { ru: 'Восстановление пароля',                             tj: 'Барқарорсозии рамз' },

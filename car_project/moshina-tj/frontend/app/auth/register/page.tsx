@@ -143,6 +143,8 @@ function PhoneTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('+992')
   const [password, setPassword] = useState('')
+  const [isDealer, setIsDealer] = useState(false)
+  const [dealershipName, setDealershipName] = useState('')
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', ''])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -178,6 +180,7 @@ function PhoneTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
     if (!localDigits.trim()) { setError(t('register.errorEnterPhone', lang)); return }
     if (!password.trim()) { setError(t('register.errorEnterPassword', lang)); return }
     if (password.length < 8) { setError(t('register.errorPasswordLength', lang)); return }
+    if (isDealer && !dealershipName.trim()) { setError(t('register.errorEnterDealerName', lang)); return }
     try {
       setLoading(true)
       const res = await authApi.sendOtp(fullPhone)
@@ -213,7 +216,7 @@ function PhoneTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
     if (code.length < 6) { setError(t('register.errorEnterAllDigits', lang)); return }
     try {
       setLoading(true)
-      const res = await authApi.verifyOtp(fullPhone, code, name, password)
+      const res = await authApi.verifyOtp(fullPhone, code, name, password, isDealer, dealershipName || undefined)
       const data = res.data.data!
       login(data.token.access_token, data.user)
       onSuccess(data.user)
@@ -270,6 +273,22 @@ function PhoneTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
           onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
           style={baseInput} />
       </div>
+      {/* Dealer toggle */}
+      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: isDealer ? 'var(--accent-dim, rgba(220,38,38,0.07))' : 'transparent' }}>
+        <input type="checkbox" checked={isDealer} onChange={(e) => setIsDealer(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', cursor: 'pointer' }} />
+        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{t('register.isDealer', lang)}</span>
+      </label>
+      {isDealer && (
+        <div>
+          <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
+            {t('register.dealershipName', lang)}
+          </label>
+          <input type="text" value={dealershipName}
+            placeholder={t('register.dealershipNamePlaceholder', lang)}
+            onChange={(e) => setDealershipName(e.target.value)}
+            style={baseInput} />
+        </div>
+      )}
       {error && <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600 }}>{error}</p>}
       <button type="button" onClick={handleSendOtp} disabled={loading} style={submitBtn(loading)}>
         {loading && <Spinner />}
@@ -362,6 +381,8 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [isDealer, setIsDealer] = useState(false)
+  const [dealershipName, setDealershipName] = useState('')
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', ''])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -392,9 +413,10 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
       setError(t('register.errorFillAllFields', lang)); return
     }
     if (password.length < 8) { setError(t('register.errorPasswordLength8', lang)); return }
+    if (isDealer && !dealershipName.trim()) { setError(t('register.errorEnterDealerName', lang)); return }
     try {
       setLoading(true)
-      const res = await authApi.registerEmail(email, name, password)
+      const res = await authApi.registerEmail(email, name, password, isDealer, dealershipName || undefined)
       const dc = res.data.data?.dev_code ?? null
       setDevCode(dc)
       setDigits(dc ? dc.split('').slice(0, 6) : ['', '', '', '', '', ''])
@@ -463,6 +485,22 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
           onFocus={(e) => { setTimeout(() => { e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 300) }}
           style={baseInput} />
       </div>
+      {/* Dealer toggle */}
+      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: isDealer ? 'var(--accent-dim, rgba(220,38,38,0.07))' : 'transparent' }}>
+        <input type="checkbox" checked={isDealer} onChange={(e) => setIsDealer(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', cursor: 'pointer' }} />
+        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{t('register.isDealer', lang)}</span>
+      </label>
+      {isDealer && (
+        <div>
+          <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
+            {t('register.dealershipName', lang)}
+          </label>
+          <input type="text" value={dealershipName}
+            placeholder={t('register.dealershipNamePlaceholder', lang)}
+            onChange={(e) => setDealershipName(e.target.value)}
+            style={baseInput} />
+        </div>
+      )}
       {error && <p role="alert" style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600 }}>{error}</p>}
       <button type="submit" disabled={loading} style={submitBtn(loading)}>
         {loading && <Spinner />}

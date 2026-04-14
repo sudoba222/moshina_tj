@@ -31,6 +31,8 @@ class UserCreate(BaseModel):
     name: Optional[str] = None
     password: str
     remember_me: bool = False
+    is_dealer: bool = False
+    dealership_name: Optional[str] = None
 
     @field_validator("phone")
     @classmethod
@@ -541,6 +543,20 @@ class DealerCreate(BaseModel):
         return v
 
 
+class DealerUpdate(BaseModel):
+    business_name: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    logo_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    description: Optional[str] = None
+    website: Optional[str] = None
+    working_hours: Optional[str] = None
+    instagram: Optional[str] = None
+    telegram_handle: Optional[str] = None
+
+
 class DealerResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -551,7 +567,12 @@ class DealerResponse(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     logo_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
     description: Optional[str] = None
+    website: Optional[str] = None
+    working_hours: Optional[str] = None
+    instagram: Optional[str] = None
+    telegram_handle: Optional[str] = None
     verified: bool
     created_at: datetime
 
