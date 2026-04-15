@@ -1347,7 +1347,7 @@ def approve_listing(
     listing = db.query(Listing).options(joinedload(Listing.user), joinedload(Listing.images)).filter(Listing.id == listing_id, Listing.is_deleted == False).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
-    if listing.user_id == current_user.id:
+    if listing.user_id == current_user.id and current_user.role != UserRole.admin:
         raise HTTPException(status_code=403, detail="Moderators cannot approve their own listings")
     if listing.status == ListingStatus.active:
         return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing is already active")

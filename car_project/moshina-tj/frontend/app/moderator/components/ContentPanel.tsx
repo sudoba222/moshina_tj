@@ -353,6 +353,83 @@ export default function ContentPanel({
           </div>
       </div>
 
+      {/* VIN + contact + availability */}
+      <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* VIN */}
+        {listing.vin && (
+          <div style={{
+            background: listing.vin_verified ? 'var(--color-success-dim)' : 'var(--surface)',
+            border: `1px solid ${listing.vin_verified ? 'var(--color-success)' : 'var(--border)'}`,
+            borderRadius: '10px',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>VIN</span>
+            <span style={{ fontFamily: 'monospace', fontSize: '13px', fontWeight: 700, color: 'var(--text)', letterSpacing: '0.08em' }}>{listing.vin}</span>
+            {listing.vin_verified && (
+              <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 700, color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                {t('postForm.vinValid', lang)}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Contact info */}
+        {(listing.contact_name || listing.contact_phone || listing.whatsapp_number) && (
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            padding: '10px 14px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '6px 20px',
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', width: '100%' }}>{t('moderator.contactInfo', lang)}</span>
+            {listing.contact_name && (
+              <span style={{ fontSize: '13px', color: 'var(--text)' }}>{listing.contact_name}</span>
+            )}
+            {listing.contact_phone && (
+              <span style={{ fontSize: '13px', color: 'var(--text)', fontFamily: 'monospace' }}>{listing.contact_phone}</span>
+            )}
+            {listing.whatsapp_number && (
+              <span style={{ fontSize: '13px', color: 'var(--color-success)', fontFamily: 'monospace' }}>WhatsApp: {listing.whatsapp_number}</span>
+            )}
+          </div>
+        )}
+
+        {/* Availability + installment */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '12px',
+            fontWeight: 600,
+            padding: '4px 10px',
+            borderRadius: '8px',
+            background: listing.availability === 'in_stock' ? 'var(--color-success-dim)' : listing.availability === 'on_order' ? 'rgba(234,179,8,0.12)' : 'var(--surface)',
+            color: listing.availability === 'in_stock' ? 'var(--color-success)' : listing.availability === 'on_order' ? '#ca8a04' : 'var(--text-muted)',
+            border: `1px solid ${listing.availability === 'in_stock' ? 'var(--color-success)' : listing.availability === 'on_order' ? '#ca8a04' : 'var(--border)'}`,
+          }}>
+            {listing.availability === 'in_stock' ? t('availability.inStock', lang) : listing.availability === 'on_order' ? t('availability.onOrder', lang) : t('availability.abroad', lang)}
+          </span>
+          {listing.installment_available && (
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              padding: '4px 10px',
+              borderRadius: '8px',
+              background: 'rgba(99,102,241,0.1)',
+              color: '#6366f1',
+              border: '1px solid rgba(99,102,241,0.3)',
+            }}>
+              {t('catalog.installment', lang)}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Description with stop-word highlighting */}
       <div style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
