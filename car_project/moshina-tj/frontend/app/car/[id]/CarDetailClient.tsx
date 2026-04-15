@@ -698,6 +698,15 @@ export default function CarDetailClient() {
     ...(listing.taxi_license ? [{ icon: <RoadIcon />, label: t('carDetail.taxiLabel', lang), value: t('carDetail.yesLabel', lang) }] : []),
     ...(listing.color ? [{ icon: <ColorIcon />, label: t('carDetail.color', lang), value: listing.color }] : []),
     { icon: <PinIcon />, label: t('carDetail.city', lang), value: listing.city },
+    // Category-specific extra attributes
+    ...(listing.extra_attrs?.moto_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип мотоцикла' : 'Намуди мотосикл', value: listing.extra_attrs.moto_type }] : []),
+    ...(listing.extra_attrs?.engine_cc ? [{ icon: <EngineIcon />, label: lang === 'ru' ? 'Объём (куб. см)' : 'Ҳаҷм (кб. см)', value: `${listing.extra_attrs.engine_cc} cc` }] : []),
+    ...(listing.extra_attrs?.truck_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип грузовика' : 'Намуди боркаш', value: listing.extra_attrs.truck_type }] : []),
+    ...(listing.extra_attrs?.payload_capacity ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Грузоподъёмность' : 'Ҳадди бор', value: `${listing.extra_attrs.payload_capacity} т` }] : []),
+    ...(listing.extra_attrs?.bus_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип автобуса' : 'Намуди автобус', value: listing.extra_attrs.bus_type }] : []),
+    ...(listing.extra_attrs?.seats_count ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Количество мест' : 'Шумораи нишастгоҳ', value: listing.extra_attrs.seats_count }] : []),
+    ...(listing.extra_attrs?.special_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип спецтехники' : 'Намуди техника', value: listing.extra_attrs.special_type }] : []),
+    ...(listing.extra_attrs?.commercial_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип коммерческого' : 'Намуди тиҷоратӣ', value: listing.extra_attrs.commercial_type }] : []),
   ]
 
   return (
@@ -994,6 +1003,15 @@ export default function CarDetailClient() {
                 </div>
 
                 <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text)', marginBottom: '6px', lineHeight: 1.2 }}>
+                  {(() => {
+                    const CAT_PREFIX: Record<string, { ru: string; tj: string }> = {
+                      truck: { ru: 'Грузовик', tj: 'Боркаш' }, bus: { ru: 'Автобус', tj: 'Автобус' },
+                      motorcycle: { ru: 'Мотоцикл', tj: 'Мотосикл' }, special: { ru: 'Спецтехника', tj: 'Техникаи махсус' },
+                      commercial: { ru: 'Коммерческий', tj: 'Тиҷоратӣ' },
+                    }
+                    const entry = listing.category_slug ? CAT_PREFIX[listing.category_slug] : null
+                    return entry ? <>{lang === 'ru' ? entry.ru : entry.tj} </> : null
+                  })()}
                   {listing.brand} {listing.model}
                 </h1>
                 <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '20px' }}>

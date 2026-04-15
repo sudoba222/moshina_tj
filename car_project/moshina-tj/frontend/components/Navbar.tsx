@@ -139,6 +139,7 @@ function matchRussianBrands(q: string): SuggestionItem[] {
 
 const NAV_LINKS = [
   { href: '/catalog',     key: 'nav.catalog' },
+  { href: '/categories',  key: 'nav.categories' },
   { href: '/rent',        key: 'nav.rent' },
   { href: '/installment', key: 'nav.installment' },
   { href: '/dealers',     key: 'nav.dealers' },

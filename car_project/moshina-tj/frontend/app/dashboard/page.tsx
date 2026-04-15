@@ -274,7 +274,7 @@ export default function DashboardPage() {
                 listings: t('dashboard.myListings', lang),
                 favorites: t('favorites.title', lang),
                 settings: t('dashboard.settings', lang),
-                dealership: lang === 'tj' ? 'Автосалон' : 'Автосалон',
+                dealership: t('dashboard.dealershipTab', lang),
               }
               return (
                 <button

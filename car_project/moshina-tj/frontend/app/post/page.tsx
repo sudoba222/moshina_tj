@@ -13,19 +13,38 @@ import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import type { ListingType, Currency, FuelType, TransmissionType, BodyType, RentalRules } from '@/types'
 
+// ─── Category helpers ─────────────────────────────────────────────────────────
+
+// Categories that are NOT standard passenger cars and get a category prefix in title
+const NON_PASSENGER_CATS = new Set(['truck','bus','motorcycle','special','commercial'])
+
+// Derive the listing title prefix for a given category slug
+function getCategoryTitlePrefix(slug: string, isRu: boolean): string {
+  const MAP: Record<string, { ru: string; tj: string }> = {
+    truck:      { ru: 'Грузовик',          tj: 'Боркаш' },
+    bus:        { ru: 'Автобус',           tj: 'Автобус' },
+    motorcycle: { ru: 'Мотоцикл',          tj: 'Мотосикл' },
+    special:    { ru: 'Спецтехника',       tj: 'Техникаи махсус' },
+    commercial: { ru: 'Коммерческий',      tj: 'Нақлиёти тиҷоратӣ' },
+  }
+  const entry = MAP[slug]
+  if (!entry) return ''
+  return isRu ? entry.ru : entry.tj
+}
+
 // ─── Static data ──────────────────────────────────────────────────────────────
 const VEHICLE_CATEGORIES = [
   { id: 'car',         labelRu: 'Легковые',       labelTj: 'Мошинаҳои сабук' },
   { id: 'suv',         labelRu: 'Внедорожники',   labelTj: 'Внедорожник / SUV' },
   { id: 'minivan',     labelRu: 'Минивэны',        labelTj: 'Минивэн' },
   { id: 'pickup',      labelRu: 'Пикапы',          labelTj: 'Пикап' },
-  { id: 'truck',       labelRu: 'Грузовики',       labelTj: 'Боркаш' },
-  { id: 'bus',         labelRu: 'Автобусы',        labelTj: 'Автобус' },
-  { id: 'motorcycle',  labelRu: 'Мотоциклы',       labelTj: 'Мотосикл' },
+  { id: 'truck',       labelRu: 'Грузовики',       labelTj: 'Боркашҳо' },
+  { id: 'bus',         labelRu: 'Автобусы',        labelTj: 'Автобусҳо' },
+  { id: 'motorcycle',  labelRu: 'Мотоциклы',       labelTj: 'Мотосиклҳо' },
   { id: 'special',     labelRu: 'Спецтехника',     labelTj: 'Техникаи махсус' },
   { id: 'parts',       labelRu: 'Автозапчасти',    labelTj: 'Қисмҳои эҳтиётӣ' },
-  { id: 'commercial',  labelRu: 'Коммерческий',    labelTj: 'Тиҷоратӣ' },
-  { id: 'electric',    labelRu: 'Электромобили',   labelTj: 'Автомобили барқӣ' },
+  { id: 'commercial',  labelRu: 'Коммерческий',    labelTj: 'Нақлиёти тиҷоратӣ' },
+  { id: 'electric',    labelRu: 'Электромобили',   labelTj: 'Автомобилҳои барқӣ' },
   { id: 'other',       labelRu: 'Другое',          labelTj: 'Дигар' },
 ]
 
@@ -199,8 +218,10 @@ function PostPage() {
   const { logout } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [form, setForm] = useState<FormState>(initialForm)
+  const categoryParam = params.get('category') ?? ''
+  const [form, setForm] = useState<FormState>({ ...initialForm, category_slug: categoryParam })
   const [rental, setRental] = useState<RentalRulesForm>(initialRental)
+  const [extraAttrs, setExtraAttrs] = useState<Record<string, string>>({})
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingUrls, setExistingUrls] = useState<string[]>([])
@@ -341,6 +362,13 @@ function PostPage() {
           })
         }
         setExistingUrls(l.images.map((i) => i.url))
+        if (l.extra_attrs && typeof l.extra_attrs === 'object') {
+          const attrs: Record<string, string> = {}
+          for (const [k, v] of Object.entries(l.extra_attrs as Record<string, unknown>)) {
+            attrs[k] = String(v ?? '')
+          }
+          setExtraAttrs(attrs)
+        }
       })
       .catch(() => setError(t('post.errorLoad', lang)))
       .finally(() => setLoadingEdit(false))
@@ -350,6 +378,10 @@ function PostPage() {
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setError('')
     setForm((p) => ({ ...p, [key]: value }))
+    // Reset category-specific attrs when category changes
+    if (key === 'category_slug') {
+      setExtraAttrs({})
+    }
   }
 
   function addImages(e: ChangeEvent<HTMLInputElement>) {
@@ -461,6 +493,7 @@ function PostPage() {
         image_urls: imageUrls,
         ...(rentalPayload ? { rental_rules: rentalPayload } : {}),
         vin: form.vin.trim().toUpperCase() || undefined,
+        extra_attrs: Object.keys(extraAttrs).length > 0 ? extraAttrs : undefined,
       }
 
       setSubmitting(true)
@@ -1063,6 +1096,153 @@ function PostPage() {
                 </div>
               )}
             </div>
+
+            {/* ── Title preview (non-passenger categories) ── */}
+            {NON_PASSENGER_CATS.has(form.category_slug) && (form.brand || form.year) && (
+              <div style={{ ...card, background: 'var(--accent-dim)', border: '1.5px solid var(--accent)' }}>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                  {t('catFields.titlePreviewLabel', lang)}
+                </p>
+                <p style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>
+                  {[
+                    getCategoryTitlePrefix(form.category_slug, lang === 'ru'),
+                    form.brand !== 'Другое' ? form.brand : customBrand.trim(),
+                    form.model !== 'Другое' ? form.model : customModel.trim(),
+                    form.year,
+                  ].filter(Boolean).join(' ')}
+                </p>
+                <p style={{ fontSize: '12px', color: 'var(--accent)', marginTop: '4px' }}>
+                  {t('catFields.titlePreviewHint', lang)}
+                </p>
+              </div>
+            )}
+
+            {/* ── Category-specific extra fields ── */}
+            {form.category_slug === 'motorcycle' && (
+              <div style={card}>
+                <SectionTitle>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M5 17h4l4-8h3l2 4h-3"/></svg>
+                  {t('catFields.motoTypeLabel', lang)}
+                </SectionTitle>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                  {(['sport','cruiser','touring','enduro','scooter','naked','other'] as const).map((v) => (
+                    <Chip key={v}
+                      label={t(`catFields.motoType_${v}` as Parameters<typeof t>[0], lang)}
+                      selected={extraAttrs.moto_type === v}
+                      onClick={() => setExtraAttrs((p) => ({ ...p, moto_type: p.moto_type === v ? '' : v }))}
+                    />
+                  ))}
+                </div>
+                <div>
+                  <label style={lbl}>{t('catFields.engineCcLabel', lang)}</label>
+                  <input type="number" min={49} max={9999}
+                    value={extraAttrs.engine_cc ?? ''}
+                    onChange={(e) => setExtraAttrs((p) => ({ ...p, engine_cc: e.target.value }))}
+                    placeholder={t('catFields.engineCcPlaceholder', lang)}
+                    style={inp}
+                  />
+                </div>
+              </div>
+            )}
+
+            {form.category_slug === 'truck' && (
+              <div style={card}>
+                <SectionTitle>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/></svg>
+                  {t('catFields.truckTypeLabel', lang)}
+                </SectionTitle>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                  {(['flatbed','dump','refrigerator','van','tanker','tractor','other'] as const).map((v) => (
+                    <Chip key={v}
+                      label={t(`catFields.truckType_${v}` as Parameters<typeof t>[0], lang)}
+                      selected={extraAttrs.truck_type === v}
+                      onClick={() => setExtraAttrs((p) => ({ ...p, truck_type: p.truck_type === v ? '' : v }))}
+                    />
+                  ))}
+                </div>
+                <div>
+                  <label style={lbl}>{t('catFields.payloadLabel', lang)}</label>
+                  <input type="number" min={0} step={0.5}
+                    value={extraAttrs.payload_capacity ?? ''}
+                    onChange={(e) => setExtraAttrs((p) => ({ ...p, payload_capacity: e.target.value }))}
+                    placeholder={t('catFields.payloadPlaceholder', lang)}
+                    style={inp}
+                  />
+                </div>
+              </div>
+            )}
+
+            {form.category_slug === 'bus' && (
+              <div style={card}>
+                <SectionTitle>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                  {t('catFields.busTypeLabel', lang)}
+                </SectionTitle>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                  {(['city','intercity','school','minibus','other'] as const).map((v) => (
+                    <Chip key={v}
+                      label={t(`catFields.busType_${v}` as Parameters<typeof t>[0], lang)}
+                      selected={extraAttrs.bus_type === v}
+                      onClick={() => setExtraAttrs((p) => ({ ...p, bus_type: p.bus_type === v ? '' : v }))}
+                    />
+                  ))}
+                </div>
+                <div>
+                  <label style={lbl}>{t('catFields.seatsLabel', lang)}</label>
+                  <input type="number" min={2} max={100}
+                    value={extraAttrs.seats_count ?? ''}
+                    onChange={(e) => setExtraAttrs((p) => ({ ...p, seats_count: e.target.value }))}
+                    placeholder={t('catFields.seatsPlaceholder', lang)}
+                    style={inp}
+                  />
+                </div>
+              </div>
+            )}
+
+            {form.category_slug === 'special' && (
+              <div style={card}>
+                <SectionTitle>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20v-4H2z"/><path d="M10 16V8l-4 4"/><path d="M14 16V8l4 4"/></svg>
+                  {t('catFields.specialTypeLabel', lang)}
+                </SectionTitle>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {(['excavator','crane','bulldozer','loader','tractor','other'] as const).map((v) => (
+                    <Chip key={v}
+                      label={t(`catFields.specialType_${v}` as Parameters<typeof t>[0], lang)}
+                      selected={extraAttrs.special_type === v}
+                      onClick={() => setExtraAttrs((p) => ({ ...p, special_type: p.special_type === v ? '' : v }))}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {form.category_slug === 'commercial' && (
+              <div style={card}>
+                <SectionTitle>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="14" height="12" rx="2"/><path d="M15 10h4l3 3v5h-7V10z"/></svg>
+                  {t('catFields.commercialTypeLabel', lang)}
+                </SectionTitle>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                  {(['minibus','van','truck','other'] as const).map((v) => (
+                    <Chip key={v}
+                      label={t(`catFields.commercialType_${v}` as Parameters<typeof t>[0], lang)}
+                      selected={extraAttrs.commercial_type === v}
+                      onClick={() => setExtraAttrs((p) => ({ ...p, commercial_type: p.commercial_type === v ? '' : v }))}
+                    />
+                  ))}
+                </div>
+                <div>
+                  <label style={lbl}>{t('catFields.payloadLabel', lang)}</label>
+                  <input type="number" min={0} step={0.5}
+                    value={extraAttrs.payload_capacity ?? ''}
+                    onChange={(e) => setExtraAttrs((p) => ({ ...p, payload_capacity: e.target.value }))}
+                    placeholder={t('catFields.payloadPlaceholder', lang)}
+                    style={inp}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* ── Step 2 nav ── */}
             {!isEdit && (
