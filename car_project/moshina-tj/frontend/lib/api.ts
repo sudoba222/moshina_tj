@@ -148,6 +148,7 @@ export interface ListingFilters {
   color?: string
   max_mileage?: number
   installment?: boolean
+  category_slug?: string
   sort?: string
   page?: number
   limit?: number

@@ -387,7 +387,7 @@ function PostPage() {
   function addImages(e: ChangeEvent<HTMLInputElement>) {
     setError('')
     const files = Array.from(e.target.files ?? [])
-    const remaining = 8 - existingUrls.length - imageFiles.length
+    const remaining = 20 - existingUrls.length - imageFiles.length
     const toAdd = files.slice(0, remaining)
     setImageFiles((p) => [...p, ...toAdd])
     toAdd.forEach((f) => setImagePreviews((p) => [...p, URL.createObjectURL(f)]))
@@ -441,8 +441,18 @@ function PostPage() {
     setError('')
     const finalBrand = form.brand === 'Другое' ? customBrand.trim() : form.brand.trim()
     const finalModel = form.model === 'Другое' ? customModel.trim() : form.model.trim()
-    if (!finalBrand || !finalModel || !form.price || !form.city) {
-      setError(t('post.fillRequired', lang))
+    const missing: string[] = []
+    if (!finalBrand) missing.push(lang === 'ru' ? 'марка' : 'марка')
+    if (!finalModel) missing.push(lang === 'ru' ? 'модель' : 'модел')
+    if (!form.price) missing.push(lang === 'ru' ? 'цена' : 'нарх')
+    if (!form.city) missing.push(lang === 'ru' ? 'город' : 'шаҳр')
+    if (missing.length > 0) {
+      setError(
+        lang === 'ru'
+          ? `Заполните обязательные поля: ${missing.join(', ')}`
+          : `Майдонҳои ҳатмӣ пур нашудаанд: ${missing.join(', ')}`
+      )
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
     try {
@@ -1266,14 +1276,14 @@ function PostPage() {
             <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                {`${t('post.photosCount', lang)} (${totalImages}/8)`}
+                {`${t('post.photosCount', lang)} (${totalImages}/20)`}
               </SectionTitle>
 
               <input ref={fileInputRef} id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" multiple
                 onChange={addImages}
                 style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} />
 
-              {totalImages < 8 && (
+              {totalImages < 20 && (
                 <label htmlFor="photo-input" style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   gap: '8px', background: 'var(--surface)', border: '2px dashed var(--border)',
@@ -1287,7 +1297,7 @@ function PostPage() {
                     {t('post.add_photos', lang)}
                   </span>
                   <span style={{ fontSize: '12px' }}>
-                    {t('post.photosRemaining', lang).replace('{n}', String(8 - totalImages))}
+                    {t('post.photosRemaining', lang).replace('{n}', String(20 - totalImages))}
                   </span>
                 </label>
               )}

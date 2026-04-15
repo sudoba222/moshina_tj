@@ -410,6 +410,93 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
           </div>
         </section>
 
+        {/* ── Category type strip ─────────────────────────────────────────── */}
+        <section style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: '14px 0 12px' }}>
+          <div style={{ position: 'relative' }}>
+            <div aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '28px', background: 'linear-gradient(to right, var(--bg), transparent)', pointerEvents: 'none', zIndex: 1 }} />
+            <div aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '28px', background: 'linear-gradient(to left, var(--bg), transparent)', pointerEvents: 'none', zIndex: 1 }} />
+            <div className="scrollbar-hide" style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 16px', WebkitOverflowScrolling: 'touch' }}>
+
+              {/* "Все типы" → opens /categories */}
+              <button
+                onClick={() => router.push('/categories')}
+                style={{
+                  flexShrink: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '10px 14px',
+                  borderRadius: '14px',
+                  border: '1.5px solid var(--accent)',
+                  background: 'var(--accent-dim)',
+                  cursor: 'pointer',
+                  minWidth: '64px',
+                }}
+              >
+                <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-white)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                  </svg>
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+                  {lang === 'ru' ? 'Все типы' : 'Ҳама навъ'}
+                </span>
+              </button>
+
+              {[
+                { slug: 'car',        ru: 'Легковые',    tj: 'Сабук',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3v-7l3-4h10l3 4v7h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg> },
+                { slug: 'suv',        ru: 'Внедорожники', tj: 'SUV',       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17v-5l2-5h14l2 5v5"/><path d="M3 12h18"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg> },
+                { slug: 'minivan',    ru: 'Минивэны',    tj: 'Минивэн',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 17H2V8l2-3h14l2 3v9h-2"/><rect x="6" y="5" width="8" height="6" rx="1"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg> },
+                { slug: 'pickup',     ru: 'Пикапы',      tj: 'Пикап',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17H2V10l3-5h7v5h8v7h-2"/><rect x="10" y="10" width="8" height="5"/><circle cx="6" cy="17" r="1.5"/><circle cx="18" cy="17" r="1.5"/></svg> },
+                { slug: 'truck',      ru: 'Грузовики',   tj: 'Боркаш',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> },
+                { slug: 'motorcycle', ru: 'Мото',        tj: 'Мото',       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M5 17h4l4-8h3l2 4h-3"/><path d="M13 9l3 8"/></svg> },
+                { slug: 'bus',        ru: 'Автобусы',    tj: 'Автобус',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M7 10v4"/><path d="M17 10v4"/><circle cx="7" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg> },
+                { slug: 'special',    ru: 'Спецтехника', tj: 'Техника',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20v-4H2z"/><path d="M10 16V8l-4 4"/><path d="M14 16V8l4 4"/><rect x="8" y="3" width="8" height="5" rx="1"/></svg> },
+                { slug: 'electric',   ru: 'Электро',     tj: 'Барқӣ',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3v-7l3-4h10l3 4v7h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/><path d="M13 2 9 9h5l-4 7"/></svg> },
+                { slug: 'parts',      ru: 'Запчасти',    tj: 'Эҳтиёт',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
+                { slug: 'commercial', ru: 'Коммерческий', tj: 'Тиҷоратӣ', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="14" height="12" rx="2"/><path d="M15 10h4l3 3v5h-7V10z"/><circle cx="5.5" cy="19.5" r="1.5"/><circle cx="18.5" cy="19.5" r="1.5"/></svg> },
+              ].map((cat) => (
+                <button
+                  key={cat.slug}
+                  onClick={() => router.push(`/catalog?category=${cat.slug}`)}
+                  style={{
+                    flexShrink: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '10px 14px',
+                    borderRadius: '14px',
+                    border: '1.5px solid var(--border)',
+                    background: 'var(--card)',
+                    cursor: 'pointer',
+                    minWidth: '64px',
+                    transition: 'border-color 0.15s, background 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--accent)'
+                    e.currentTarget.style.background = 'var(--accent-dim)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                    e.currentTarget.style.background = 'var(--card)'
+                  }}
+                >
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                    {cat.icon}
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    {lang === 'ru' ? cat.ru : cat.tj}
+                  </span>
+                </button>
+              ))}
+
+            </div>
+          </div>
+        </section>
+
         {/* ── Quick brand scroll ──────────────────────────────────────────── */}
         <section style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '0' }}>
           <div

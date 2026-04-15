@@ -189,6 +189,7 @@ def list_listings(
     body_type: Optional[BodyType] = None,
     availability: Optional[AvailabilityStatus] = None,
     currency: Optional[Currency] = None,
+    category_slug: Optional[str] = None,
     sort: Optional[str] = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=_MAX_LIMIT),
@@ -235,6 +236,10 @@ def list_listings(
         query = query.filter(Listing.body_type == body_type)
     if currency:
         query = query.filter(Listing.currency == currency)
+    if category_slug:
+        cat = db.query(Category).filter(Category.slug == category_slug).first()
+        if cat:
+            query = query.filter(Listing.category_id == cat.id)
 
     # Sorting
     if sort == "price_asc":

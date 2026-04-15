@@ -81,6 +81,21 @@ const COLORS = [
   { label: 'Зелёный',  value: 'Зелёный',   swatch: '#16a34a' },
   { label: 'Другой',   value: 'Другой',    swatch: 'linear-gradient(135deg, #f59e0b, #8b5cf6)' },
 ]
+const CATEGORY_OPTIONS = [
+  { value: 'car',         labelRu: 'Легковые',          labelTj: 'Мошинаҳои сабук' },
+  { value: 'suv',         labelRu: 'Внедорожники',      labelTj: 'Внедорожник / SUV' },
+  { value: 'minivan',     labelRu: 'Минивэны',           labelTj: 'Минивэн' },
+  { value: 'pickup',      labelRu: 'Пикапы',             labelTj: 'Пикап' },
+  { value: 'truck',       labelRu: 'Грузовики',          labelTj: 'Боркашҳо' },
+  { value: 'bus',         labelRu: 'Автобусы',           labelTj: 'Автобусҳо' },
+  { value: 'motorcycle',  labelRu: 'Мотоциклы',          labelTj: 'Мотосиклҳо' },
+  { value: 'special',     labelRu: 'Спецтехника',        labelTj: 'Техникаи махсус' },
+  { value: 'parts',       labelRu: 'Автозапчасти',       labelTj: 'Қисмҳои эҳтиётӣ' },
+  { value: 'commercial',  labelRu: 'Коммерческий',       labelTj: 'Нақлиёти тиҷоратӣ' },
+  { value: 'electric',    labelRu: 'Электромобили',      labelTj: 'Автомобилҳои барқӣ' },
+  { value: 'other',       labelRu: 'Другое',             labelTj: 'Дигар' },
+]
+
 const MILEAGE_OPTIONS = [
   { label: { ru: 'Любой',         tj: 'Ҳар гуна' },   value: '' },
   { label: { ru: 'До 50 000 км',  tj: 'То 50 000 км' }, value: '50000' },
@@ -327,6 +342,7 @@ function CatalogContent() {
   }
 
   // Filter state
+  const [category, setCategory] = useState(searchParams.get('category') ?? '')
   const [type, setType] = useState<string>(searchParams.get('type') ?? '')
   const [city, setCity] = useState(searchParams.get('city') ?? '')
   const [brand, setBrand] = useState(searchParams.get('brand') ?? searchParams.get('q') ?? '')
@@ -344,7 +360,7 @@ function CatalogContent() {
   const [sort, setSort] = useState(searchParams.get('sort') ?? '')
   const [page, setPage] = useState(Number(searchParams.get('page') ?? '1'))
 
-  const activeFilterCount = [type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, color, maxMileage, bodyType]
+  const activeFilterCount = [category, type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, color, maxMileage, bodyType]
     .filter(Boolean).length + (installmentOnly ? 1 : 0)
 
   // Local brands/models from static data
@@ -356,6 +372,7 @@ function CatalogContent() {
     setDidYouMean(null)
     try {
       const filters: ListingFilters = { page, limit: 20 }
+      if (category) filters.category_slug = category
       if (type) filters.type = type
       if (city) filters.city = city
       if (brand) filters.brand = brand
@@ -396,7 +413,7 @@ function CatalogContent() {
     } finally {
       setLoading(false)
     }
-  }, [type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, bodyType, color, maxMileage, installmentOnly, sort, page, searchParams])
+  }, [category, type, city, brand, model, minPrice, maxPrice, minYear, maxYear, fuel, transmission, bodyType, color, maxMileage, installmentOnly, sort, page, searchParams])
 
   useEffect(() => {
     fetchListings()
@@ -405,6 +422,7 @@ function CatalogContent() {
   function applyFilters() {
     setPage(1)
     const params = new URLSearchParams()
+    if (category) params.set('category', category)
     if (type) params.set('type', type)
     if (city) params.set('city', city)
     if (brand) params.set('brand', brand)
@@ -426,7 +444,7 @@ function CatalogContent() {
   }
 
   function resetFilters() {
-    setType(''); setCity(''); setBrand(''); setModel('')
+    setCategory(''); setType(''); setCity(''); setBrand(''); setModel('')
     setMinPrice(''); setMaxPrice(''); setMinYear(''); setMaxYear('')
     setFuel(''); setTransmission(''); setBodyType(''); setColor(''); setMaxMileage('')
     setInstallmentOnly(false); setSort(''); setPage(1)
@@ -485,6 +503,24 @@ function CatalogContent() {
       </div>
 
       <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* Category */}
+        <div>
+          <label htmlFor="filter-category" style={labelStyle}>{t('nav.categories', lang)}</label>
+          <select
+            id="filter-category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={inputStyle}
+          >
+            <option value="">{t('filters.all', lang)}</option>
+            {CATEGORY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {lang === 'ru' ? c.labelRu : c.labelTj}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Type pills */}
         <div>
           <label style={labelStyle}>{t('post.type', lang)}</label>
