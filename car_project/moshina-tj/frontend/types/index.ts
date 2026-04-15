@@ -95,6 +95,11 @@ export interface Listing {
   user_name?: string | null
   vin?: string | null
   vin_verified?: boolean
+  ranking_score?: number
+  is_featured?: boolean
+  featured_until?: string | null
+  favorites_count?: number
+  extra_attrs?: Record<string, string> | null
 }
 
 export interface PaginatedListings {

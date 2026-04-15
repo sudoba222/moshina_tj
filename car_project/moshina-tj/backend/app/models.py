@@ -254,6 +254,12 @@ class Listing(Base):
     vin = Column(String(17), unique=True, nullable=True, index=True)
     vin_verified = Column(Boolean, nullable=False, default=False, server_default="false")
 
+    # Ranking / featuring
+    ranking_score = Column(Numeric(8, 2), nullable=False, default=0.0, server_default="0.0", index=True)
+    is_featured = Column(Boolean, nullable=False, default=False, server_default="false")
+    featured_until = Column(TIMESTAMP(timezone=True), nullable=True)
+    favorites_count = Column(Integer, nullable=False, default=0, server_default="0")
+
     # Relationships
     user = relationship("User", back_populates="listings", foreign_keys=[user_id])
     category = relationship("Category", foreign_keys=[category_id])

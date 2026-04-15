@@ -13,11 +13,14 @@ import re
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/vin", tags=["vin"])
+limiter = Limiter(key_func=get_remote_address)
 
 # ---------------------------------------------------------------------------
 # Character transliteration values used in check-digit calculation
@@ -262,7 +265,8 @@ class VinDecodeResult(BaseModel):
 # Endpoint
 # ---------------------------------------------------------------------------
 @router.get("/check/{vin}", response_model=VinDecodeResult)
-async def check_vin(vin: str) -> VinDecodeResult:
+@limiter.limit("30/minute")
+async def check_vin(request: Request, vin: str) -> VinDecodeResult:
     """
     Hybrid VIN decode — public endpoint, no auth required.
 

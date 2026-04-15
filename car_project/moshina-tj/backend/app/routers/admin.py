@@ -16,6 +16,7 @@ from sqlalchemy.sql import func, or_
 from app.auth import get_current_user
 from app.database import get_db
 from app.models import AuditLog, Currency, Dealer, FuelType, Listing, ListingLog, ListingStatus, TransmissionType, User, UserRole, log_audit
+from app.services.ranking import compute_ranking_score
 from app.services.telegram_notifier import send_telegram_notification
 from app.email_service import send_listing_approved, send_listing_rejected, send_account_banned, send_dealer_verified
 from app.schemas import (
@@ -1101,6 +1102,7 @@ def activate_listing(listing_id: str, db: Session = Depends(get_db), current_use
     listing.status = ListingStatus.active
     listing.moderated_by = current_user.id
     listing.rejection_reason = None
+    listing.ranking_score = compute_ranking_score(listing)
     log_audit(db, current_user.id, "approve_listing", "listing", listing.id)
     db.add(ListingLog(
         listing_id=listing.id,
@@ -1358,6 +1360,7 @@ def approve_listing(
     listing.moderated_by = current_user.id
     listing.locked_by = None
     listing.locked_at = None
+    listing.ranking_score = compute_ranking_score(listing)
     # Update session stats
     from app.models import ModerationSession
     active_session = db.query(ModerationSession).filter(
@@ -2098,6 +2101,7 @@ def bulk_approve_listings(
             listing.moderated_by = current_user.id
             listing.locked_by = None
             listing.locked_at = None
+            listing.ranking_score = compute_ranking_score(listing)
             log_audit(db, current_user.id, "approve_listing", "listing", listing.id)
             db.add(ListingLog(
                 listing_id=listing.id,

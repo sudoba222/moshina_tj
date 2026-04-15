@@ -481,6 +481,10 @@ class ListingResponse(BaseModel):
     user_name: Optional[str] = None
     vin: Optional[str] = None
     vin_verified: bool = False
+    ranking_score: float = 0.0
+    is_featured: bool = False
+    featured_until: Optional[datetime] = None
+    favorites_count: int = 0
 
 
 class ListingListResponse(BaseModel):

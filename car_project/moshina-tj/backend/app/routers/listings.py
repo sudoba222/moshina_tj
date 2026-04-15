@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user, get_current_user_optional
 from app.services import image_service
+from app.services.ranking import compute_ranking_score
 from app.services.telegram_notifier import send_telegram_notification, notify_admin_new_listing
 
 # 2-minute in-memory cache for featured listings (homepage hit on every page load)
@@ -237,13 +238,16 @@ def list_listings(
 
     # Sorting
     if sort == "price_asc":
-        query = query.order_by(Listing.price.asc())
+        query = query.order_by(Listing.price.asc(), Listing.ranking_score.desc())
     elif sort == "price_desc":
-        query = query.order_by(Listing.price.desc())
+        query = query.order_by(Listing.price.desc(), Listing.ranking_score.desc())
     elif sort == "views":
         query = query.order_by(Listing.views.desc())
-    else:
+    elif sort == "newest":
         query = query.order_by(Listing.created_at.desc())
+    else:
+        # Default: ranking score (featured + quality + freshness + engagement)
+        query = query.order_by(Listing.ranking_score.desc(), Listing.created_at.desc())
 
     total = query.count()
     pages = math.ceil(total / limit) if total > 0 else 1
@@ -282,7 +286,7 @@ def featured_listings(request: Request, db: Session = Depends(get_db)):
             Listing.is_active == True,
             Listing.is_deleted == False,
         )
-        .order_by(Listing.views.desc())
+        .order_by(Listing.is_featured.desc(), Listing.ranking_score.desc())
         .limit(8)
         .all()
     )
@@ -434,6 +438,10 @@ def create_listing(
 
     db.commit()
     db.refresh(listing)
+
+    # Compute initial ranking score (images are now loaded after refresh)
+    listing.ranking_score = compute_ranking_score(listing)
+    db.commit()
 
     # Record creation in the listing audit log
     db.add(ListingLog(
@@ -686,8 +694,7 @@ def toggle_favorite(
     current_user: User = Depends(get_current_user),
 ):
     """Toggle favorite for the current user. Returns favorited=True if added, False if removed."""
-    # Verify listing exists
-    _get_listing_or_404(listing_id, db)
+    listing = _get_listing_or_404(listing_id, db)
 
     existing = (
         db.query(Favorite)
@@ -696,10 +703,12 @@ def toggle_favorite(
     )
     if existing:
         db.delete(existing)
+        listing.favorites_count = max(0, (listing.favorites_count or 0) - 1)
         db.commit()
         return ApiResponse(success=True, data=FavoriteToggleResponse(favorited=False), message="Removed from favorites")
     else:
         fav = Favorite(user_id=current_user.id, listing_id=listing_id)
         db.add(fav)
+        listing.favorites_count = (listing.favorites_count or 0) + 1
         db.commit()
         return ApiResponse(success=True, data=FavoriteToggleResponse(favorited=True), message="Added to favorites")

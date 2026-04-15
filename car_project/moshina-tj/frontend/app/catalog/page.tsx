@@ -775,7 +775,8 @@ function CatalogContent() {
         <div>
           <label htmlFor="filter-sort" style={labelStyle}>{t('catalog.sort', lang)}</label>
           <select id="filter-sort" value={sort} onChange={(e) => setSort(e.target.value)} style={inputStyle}>
-            <option value="">{t('catalog.sortNewest', lang)}</option>
+            <option value="">{t('catalog.sortRelevance', lang)}</option>
+            <option value="newest">{t('catalog.sortNewest', lang)}</option>
             <option value="price_asc">{t('catalog.sortPriceAsc', lang)}</option>
             <option value="price_desc">{t('catalog.sortPriceDesc', lang)}</option>
             <option value="views">{t('catalog.sortViews', lang)}</option>

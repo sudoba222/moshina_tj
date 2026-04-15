@@ -19,6 +19,14 @@ interface CarCardProps {
   priority?: boolean
 }
 
+const NON_PASSENGER_CAT_PREFIX: Record<string, { ru: string; tj: string }> = {
+  truck:      { ru: 'Грузовик',        tj: 'Боркаш' },
+  bus:        { ru: 'Автобус',         tj: 'Автобус' },
+  motorcycle: { ru: 'Мотоцикл',        tj: 'Мотосикл' },
+  special:    { ru: 'Спецтехника',     tj: 'Техникаи махсус' },
+  commercial: { ru: 'Коммерческий',    tj: 'Тиҷоратӣ' },
+}
+
 const STATUS_STRIPE: Record<string, string> = {
   pending: 'var(--color-warning-alt)',
   active: 'var(--color-online)',
@@ -282,6 +290,27 @@ export default function CarCard({
                   {t('post.availability_abroad', lang)}
                 </span>
               )}
+              {listing.is_featured && (
+                <span
+                  style={{
+                    background: 'linear-gradient(90deg, #f59e0b, #ef4444)',
+                    color: '#fff',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '2px 7px',
+                    borderRadius: '4px',
+                    letterSpacing: '0.04em',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  {t('badges.featured', lang)}
+                </span>
+              )}
             </div>
 
             {/* Moderator status badge — top right */}
@@ -379,7 +408,11 @@ export default function CarCard({
                 minWidth: 0,
               }}
             >
-              {listing.brand} {listing.model}
+              {(() => {
+                const prefixEntry = listing.category_slug ? NON_PASSENGER_CAT_PREFIX[listing.category_slug] : null
+                const prefix = prefixEntry ? (lang === 'ru' ? prefixEntry.ru : prefixEntry.tj) : null
+                return <>{prefix ? <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{prefix} </span> : null}{listing.brand} {listing.model}</>
+              })()}
               {listing.year ? (
                 <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
                   {' '}&middot;{' '}{listing.year}
