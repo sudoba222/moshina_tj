@@ -630,18 +630,19 @@ def deactivate_listing(
 @router.delete("/{listing_id}", response_model=ApiResponse[None])
 def delete_listing(
     listing_id: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     listing = _get_listing_or_404(listing_id, db)
     _assert_owner_or_admin(listing, current_user)
 
-    # Collect public_ids before the soft-delete so we can clean up storage
-    images_to_delete = (
-        db.query(ListingImage)
-        .filter(ListingImage.listing_id == listing.id)
-        .all()
-    )
+    # Collect cloudinary_ids before soft-delete so background task can clean up
+    cloudinary_ids = [
+        img.cloudinary_id
+        for img in db.query(ListingImage).filter(ListingImage.listing_id == listing.id).all()
+        if img.cloudinary_id
+    ]
 
     prev_status = listing.status.value if listing.status else None
     listing.is_deleted = True
@@ -656,13 +657,16 @@ def delete_listing(
     ))
     db.commit()
 
-    # Delete images from storage after committing the soft-delete.
-    # Failures are logged but never propagated — the listing is already gone.
-    for img in images_to_delete:
-        if img.cloudinary_id:
-            image_service.delete_image(img.cloudinary_id)
+    # Delete images from storage in the background — don't block the response
+    if cloudinary_ids:
+        background_tasks.add_task(_delete_images_background, cloudinary_ids)
 
     return ApiResponse(success=True, data=None, message="Listing deleted")
+
+
+def _delete_images_background(cloudinary_ids: list[str]) -> None:
+    for cid in cloudinary_ids:
+        image_service.delete_image(cid)
 
 
 # ---------------------------------------------------------------------------
