@@ -381,6 +381,36 @@ async def send_telegram_notification(
         db.close()
 
 
+async def notify_admin_new_listing(
+    car_name: str,
+    listing_id: str,
+    username: Optional[str],
+    phone: Optional[str],
+) -> None:
+    """Send a Telegram notification to the admin/support chat when a listing is submitted for moderation."""
+    chat_id = settings.support_telegram_chat_id
+    if not chat_id:
+        return
+
+    user_line = f"\n<b>Пользователь:</b> {username}" if username else ""
+    phone_line = f"\n<b>Телефон:</b> <code>{phone}</code>" if phone else ""
+
+    text = (
+        f"🚗 <b>Новое объявление на проверке</b>\n"
+        f"<b>Авто:</b> {car_name}"
+        f"{user_line}{phone_line}"
+    )
+
+    try:
+        await _send_telegram_message(
+            chat_id=chat_id,
+            text=text,
+            inline_button=("Открыть очередь", f"{settings.frontend_url}/moderator"),
+        )
+    except Exception as exc:
+        logger.warning("notify_admin_new_listing failed: %s", exc)
+
+
 async def notify_admin_new_user(
     name: Optional[str],
     phone: Optional[str],

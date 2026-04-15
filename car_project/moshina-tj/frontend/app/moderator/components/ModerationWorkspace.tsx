@@ -186,6 +186,24 @@ export default function ModerationWorkspace({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buffer.length])
 
+  // ── Poll for new listings when queue is empty ─────────────────────────────────
+  useEffect(() => {
+    if (current !== null || isLoading) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await adminApi.getPendingListings(1, 5, true)
+        const items = res.data.data.items
+        if (items.length > 0) {
+          setCurrent(items[0])
+          setBuffer(items.slice(1))
+        }
+      } catch {
+        // keep polling silently
+      }
+    }, 15000) // check every 15 seconds
+    return () => clearInterval(interval)
+  }, [current, isLoading])
+
   // ── Actions ─────────────────────────────────────────────────────────────────
   async function handleApprove() {
     if (!current || actionInFlightRef.current) return
