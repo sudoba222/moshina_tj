@@ -5,9 +5,8 @@ from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from app.limiter import limiter
 from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import DATE as SADate
 from sqlalchemy.orm import Session, joinedload
@@ -47,7 +46,6 @@ class AdminCreateDealer(_BaseModel):
     description: Optional[str] = None
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-limiter = Limiter(key_func=get_remote_address)
 
 # ---------------------------------------------------------------------------
 # Access dependencies

@@ -14,13 +14,10 @@ from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-
 from pydantic import BaseModel
+from app.limiter import limiter
 
 router = APIRouter(prefix="/vin", tags=["vin"])
-limiter = Limiter(key_func=get_remote_address)
 
 # ---------------------------------------------------------------------------
 # Character transliteration values used in check-digit calculation
