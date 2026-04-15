@@ -14,10 +14,31 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column('listings', sa.Column('vin', sa.String(17), nullable=True))
-    op.add_column('listings', sa.Column('vin_verified', sa.Boolean(), nullable=False, server_default='false'))
-    # Unique index — no two listings can share the same VIN
-    op.create_index('ix_listings_vin', 'listings', ['vin'], unique=True)
+    conn = op.get_bind()
+
+    # Add vin column only if it doesn't already exist
+    result = conn.execute(sa.text(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_name='listings' AND column_name='vin'"
+    ))
+    if not result.fetchone():
+        op.add_column('listings', sa.Column('vin', sa.String(17), nullable=True))
+
+    # Add vin_verified column only if it doesn't already exist
+    result = conn.execute(sa.text(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_name='listings' AND column_name='vin_verified'"
+    ))
+    if not result.fetchone():
+        op.add_column('listings', sa.Column('vin_verified', sa.Boolean(), nullable=False, server_default='false'))
+
+    # Create unique index only if it doesn't already exist
+    result = conn.execute(sa.text(
+        "SELECT 1 FROM pg_indexes "
+        "WHERE tablename='listings' AND indexname='ix_listings_vin'"
+    ))
+    if not result.fetchone():
+        op.create_index('ix_listings_vin', 'listings', ['vin'], unique=True)
 
 
 def downgrade() -> None:
