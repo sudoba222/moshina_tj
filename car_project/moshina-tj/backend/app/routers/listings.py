@@ -473,7 +473,7 @@ def create_listing(
         notify_admin_new_listing,
         car_name,
         str(listing.id),
-        current_user.username or current_user.full_name,
+        current_user.name or current_user.phone or "User",
         current_user.phone,
     )
 
