@@ -209,7 +209,7 @@ app.include_router(subscriptions_router, prefix="/api/v1")
 app.include_router(support_router, prefix="/api/v1")
 app.include_router(chat_ws_router)        # WebSocket — no /api/v1 prefix (WS handshake)
 app.include_router(telegram_router)
-app.include_router(vin_router, prefix="/api/v1")
+app.include_router(vin_router, prefix="/api/v1/vin")
 
 
 # ---------------------------------------------------------------------------
