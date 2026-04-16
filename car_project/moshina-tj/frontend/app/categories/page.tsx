@@ -5,112 +5,121 @@ import Footer from '@/components/Footer'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 
-// ─── SVG Icons per category ──────────────────────────────────────────────────
+// ─── SVG Icons per category (Tabler Icons style, MIT) ────────────────────────
+const S = { width: 36, height: 36, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+
 const icons: Record<string, React.ReactNode> = {
   car: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 13V17H21V13L18.5 9H5.5L3 13Z"/>
-      <path d="M7 9L9 6H15L17 9"/>
-      <circle cx="6.5" cy="18.5" r="1.5"/>
-      <circle cx="17.5" cy="18.5" r="1.5"/>
+    <svg {...S}>
+      {/* Tabler: car */}
+      <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M5 17h-2v-6l2 -5h9l4 4h1a2 2 0 0 1 2 2v5h-2m-4 0h-6m-6 -6h15m-6 0v-5" />
     </svg>
   ),
   suv: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 16V10L4 5H20L22 10V16"/>
-      <path d="M2 11H22"/>
-      <path d="M7 5V11"/>
-      <path d="M17 5V11"/>
-      <circle cx="5.5" cy="18" r="2"/>
-      <circle cx="18.5" cy="18" r="2"/>
+    <svg {...S}>
+      {/* Tabler: car-suv */}
+      <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M5 17h-2v-7a1 1 0 0 1 1 -1h12l3 4h1a1 1 0 0 1 1 1v3h-2m-4 0h-6" />
+      <path d="M6 9l2 -4h7l2 4" />
     </svg>
   ),
   minivan: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 15V9L5 5H20L22 9V15"/>
-      <rect x="4" y="6" width="6" height="5" rx="1"/>
-      <rect x="12" y="6" width="6" height="5" rx="1"/>
-      <circle cx="5.5" cy="17.5" r="2"/>
-      <circle cx="18.5" cy="17.5" r="2"/>
+    <svg {...S}>
+      {/* Tabler: van */}
+      <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M3 17h-2v-11a2 2 0 0 1 2 -2h13v11" />
+      <path d="M16 4l4 4h-4v-4z" />
+      <path d="M16 8h4v9h-2" />
+      <path d="M5 6h4v5h-4z" />
+      <path d="M10 6h3v5h-3z" />
     </svg>
   ),
   pickup: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 17V10L5 5H12V10H22V17"/>
-      <rect x="12" y="10" width="10" height="7"/>
-      <circle cx="5" cy="19" r="2"/>
-      <circle cx="19" cy="19" r="2"/>
-      <rect x="4" y="6" width="5" height="4" rx="1"/>
+    <svg {...S}>
+      {/* Tabler: car-4wd / pickup style */}
+      <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M3 17h-2v-6l3 -5h6v11" />
+      <path d="M10 6h2l4 5h5v6h-2" />
+      <path d="M10 11h9" />
     </svg>
   ),
   truck: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="4" width="13" height="12" rx="1"/>
-      <path d="M14 8H19L22 12V16H14V8Z"/>
-      <circle cx="4.5" cy="18.5" r="2"/>
-      <circle cx="10.5" cy="18.5" r="2"/>
-      <circle cx="18.5" cy="18.5" r="2"/>
+    <svg {...S}>
+      {/* Tabler: truck */}
+      <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M5 17h-2v-11a1 1 0 0 1 1 -1h9v12m-4 0h6m4 0h2v-6a1 1 0 0 0 -1 -1h-2l-3 -4h-1" />
     </svg>
   ),
   bus: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="13" rx="2"/>
-      <line x1="2" y1="10" x2="22" y2="10"/>
-      <line x1="7" y1="10" x2="7" y2="17"/>
-      <line x1="12" y1="10" x2="12" y2="17"/>
-      <line x1="17" y1="10" x2="17" y2="17"/>
-      <circle cx="6.5" cy="19.5" r="2"/>
-      <circle cx="17.5" cy="19.5" r="2"/>
+    <svg {...S}>
+      {/* Tabler: bus */}
+      <path d="M6 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M18 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M4 17h-2v-11a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v11h-2m-10 0h8" />
+      <path d="M4 9l16 0" />
+      <path d="M9 9l0 6" />
+      <path d="M15 9l0 6" />
     </svg>
   ),
   motorcycle: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="5" cy="17" r="3"/>
-      <circle cx="19" cy="17" r="3"/>
-      <path d="M5 17L9 11L14 10H17L19 14"/>
-      <path d="M15 5H19L20 10"/>
-      <path d="M11 11L13 5"/>
+    <svg {...S}>
+      {/* Tabler: motorcycle */}
+      <path d="M5 16m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+      <path d="M19 16m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+      <path d="M7.5 14l2.5 -4h5l2 -3" />
+      <path d="M6 5l3 1l1 3h2" />
+      <path d="M12 9h4" />
+      <path d="M17 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
     </svg>
   ),
   special: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="16" width="10" height="5" rx="1"/>
-      <circle cx="3.5" cy="21" r="1"/>
-      <circle cx="8.5" cy="21" r="1"/>
-      <path d="M9 16V9L14 4"/>
-      <path d="M14 4L19 7L16 12L11 11"/>
-      <path d="M11 16H22V13L18 9"/>
+    <svg {...S}>
+      {/* Tabler: bulldozer */}
+      <path d="M4 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M13 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M2 17h-1v-4l2 -5h7l1 9h-2" />
+      <path d="M6 8v-5l6 3v2" />
+      <path d="M15 17h-2" />
+      <path d="M15 13h4l2 4h-6v-4z" />
     </svg>
   ),
   parts: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    <svg {...S}>
+      {/* Tabler: tool */}
+      <path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5" />
     </svg>
   ),
   commercial: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="6" width="13" height="11" rx="1"/>
-      <path d="M14 10H19L22 14V17H14V10Z"/>
-      <circle cx="4.5" cy="19.5" r="1.5"/>
-      <circle cx="18.5" cy="19.5" r="1.5"/>
-      <rect x="3" y="9" width="4" height="4" rx="0.5"/>
-      <rect x="8" y="9" width="4" height="4" rx="0.5"/>
+    <svg {...S}>
+      {/* Tabler: truck-delivery */}
+      <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M5 17h-2v-4m-1 -8h11v12m-4 0h6m4 0h2v-6a1 1 0 0 0 -1 -1h-2l-3 -4h-1" />
+      <path d="M3 9l11 0" />
+      <path d="M3 13l11 0" />
     </svg>
   ),
   electric: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 13V17H20V13L18 9H6L4 13Z"/>
-      <path d="M8 9L10 6H14L16 9"/>
-      <circle cx="7.5" cy="18.5" r="1.5"/>
-      <circle cx="16.5" cy="18.5" r="1.5"/>
-      <path d="M13 3L10 8H13L10 13" strokeWidth="2"/>
+    <svg {...S}>
+      {/* Tabler: car + zap */}
+      <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M5 17h-2v-6l2 -5h9l4 4h1a2 2 0 0 1 2 2v5h-2m-4 0h-6" />
+      <path d="M13 4l-3 4h4l-3 4" strokeWidth="1.8" />
     </svg>
   ),
   other: (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    <svg {...S}>
+      {/* Tabler: help-circle */}
+      <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+      <path d="M12 17l0 .01" strokeWidth="2.5" />
+      <path d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4" />
     </svg>
   ),
 }
