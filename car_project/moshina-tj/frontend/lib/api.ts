@@ -359,6 +359,7 @@ export const adminApi = {
     brand?: string; model?: string; description?: string;
     price?: number; currency?: string; year?: number; city?: string;
     mileage?: number; fuel?: string; transmission?: string; color?: string;
+    category_slug?: string;
   }) => {
     const res = await fetch(`${BASE_URL}/admin/moderation/${id}/edit`, {
       method: 'PATCH',

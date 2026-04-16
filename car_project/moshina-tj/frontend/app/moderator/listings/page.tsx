@@ -113,6 +113,20 @@ export default function ModeratorListingsPage() {
     }
   }
 
+  async function doDeactivate(listingId: string) {
+    try {
+      await adminApi.deactivateListing(listingId)
+      fetchListings(page, search, filterStatus)
+    } catch { /* noop */ }
+  }
+
+  async function doActivate(listingId: string) {
+    try {
+      await adminApi.activateListing(listingId)
+      fetchListings(page, search, filterStatus)
+    } catch { /* noop */ }
+  }
+
   async function doDelete() {
     if (!deleteTarget) return
     setDeleteLoading(true)
@@ -311,20 +325,36 @@ export default function ModeratorListingsPage() {
                             {lang === 'ru' ? 'Открыть' : 'Кушодан'}
                           </Link>
                           {listing.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => doApprove(listing.id)}
-                                style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--color-success-dim)', border: '1px solid var(--color-success)', color: 'var(--color-success)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                              >
-                                {lang === 'ru' ? 'Одобрить' : 'Тасдиқ'}
-                              </button>
-                              <button
-                                onClick={() => { setRejectTarget(listing); setRejectReason('') }}
-                                style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--color-error-dim)', border: '1px solid var(--color-error)', color: 'var(--color-error)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                              >
-                                {lang === 'ru' ? 'Отклонить' : 'Рад кунед'}
-                              </button>
-                            </>
+                            <button
+                              onClick={() => doApprove(listing.id)}
+                              style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--color-success-dim)', border: '1px solid var(--color-success)', color: 'var(--color-success)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              {lang === 'ru' ? 'Одобрить' : 'Тасдиқ'}
+                            </button>
+                          )}
+                          {listing.status === 'active' && (
+                            <button
+                              onClick={() => doDeactivate(listing.id)}
+                              style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              {lang === 'ru' ? 'Снять' : 'Бозпас гиред'}
+                            </button>
+                          )}
+                          {listing.status === 'rejected' && (
+                            <button
+                              onClick={() => doActivate(listing.id)}
+                              style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--color-success-dim)', border: '1px solid var(--color-success)', color: 'var(--color-success)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              {lang === 'ru' ? 'Восстановить' : 'Барқарор'}
+                            </button>
+                          )}
+                          {listing.status !== 'rejected' && (
+                            <button
+                              onClick={() => { setRejectTarget(listing); setRejectReason('') }}
+                              style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--color-error-dim)', border: '1px solid var(--color-error)', color: 'var(--color-error)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              {lang === 'ru' ? 'Отклонить' : 'Рад кунед'}
+                            </button>
                           )}
                           <button
                             onClick={() => setDeleteTarget(listing)}

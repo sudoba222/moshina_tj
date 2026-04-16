@@ -14,7 +14,7 @@ from sqlalchemy.sql import func, or_
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import AuditLog, Currency, Dealer, FuelType, Listing, ListingLog, ListingStatus, TransmissionType, User, UserRole, log_audit
+from app.models import AuditLog, Category, Currency, Dealer, FuelType, Listing, ListingLog, ListingStatus, TransmissionType, User, UserRole, log_audit
 from app.services.ranking import compute_ranking_score
 from app.services.telegram_notifier import send_telegram_notification
 from app.email_service import send_listing_approved, send_listing_rejected, send_account_banned, send_dealer_verified
@@ -1557,6 +1557,7 @@ class ModeratorListingPatch(BaseModel):
     fuel: Optional[str] = None
     transmission: Optional[str] = None
     color: Optional[str] = None
+    category_slug: Optional[str] = None
 
     @field_validator("brand", "model", "city")
     @classmethod
@@ -1625,6 +1626,11 @@ def moderator_edit_listing(
             raise HTTPException(status_code=400, detail=f"Invalid currency: {payload.currency}")
     if payload.color is not None:
         listing.color = payload.color.strip()
+    if payload.category_slug is not None:
+        cat = db.query(Category).filter(Category.slug == payload.category_slug, Category.is_active == True).first()
+        if not cat:
+            raise HTTPException(status_code=400, detail=f"Unknown category slug: {payload.category_slug}")
+        listing.category_id = cat.id
     changed = {k: v for k, v in payload.model_dump(exclude_none=True).items()}
     log_audit(db, current_user.id, "moderator_edit_listing", "listing", listing.id, {"changes": changed})
     db.add(ListingLog(

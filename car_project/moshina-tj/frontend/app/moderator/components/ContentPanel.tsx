@@ -29,6 +29,22 @@ const TRANSMISSION_OPTIONS: TransmissionOption[] = [
 
 const CURRENCY_OPTIONS = ['USD', 'TJS']
 
+const CATEGORY_OPTIONS: { value: string; ru: string }[] = [
+  { value: '',           ru: '— не указана —' },
+  { value: 'car',        ru: 'Легковые' },
+  { value: 'suv',        ru: 'Внедорожники' },
+  { value: 'minivan',    ru: 'Минивэны' },
+  { value: 'pickup',     ru: 'Пикапы' },
+  { value: 'truck',      ru: 'Грузовики' },
+  { value: 'bus',        ru: 'Автобусы' },
+  { value: 'motorcycle', ru: 'Мотоциклы' },
+  { value: 'special',    ru: 'Спецтехника' },
+  { value: 'parts',      ru: 'Автозапчасти' },
+  { value: 'commercial', ru: 'Коммерческий' },
+  { value: 'electric',   ru: 'Электромобили' },
+  { value: 'other',      ru: 'Другое' },
+]
+
 interface SimilarListing {
   id: string
   brand: string
@@ -68,6 +84,7 @@ export default function ContentPanel({
   const [editTransmission, setEditTransmission] = useState(listing.transmission ?? '')
   const [editColor, setEditColor]               = useState(listing.color ?? '')
   const [editDescription, setEditDescription]   = useState(listing.description ?? '')
+  const [editCategory, setEditCategory]         = useState(listing.category_slug ?? '')
 
   // Moderator note
   const [noteText, setNoteText]   = useState('')
@@ -92,6 +109,7 @@ export default function ContentPanel({
     setEditTransmission(listing.transmission ?? '')
     setEditColor(listing.color ?? '')
     setEditDescription(listing.description ?? '')
+    setEditCategory(listing.category_slug ?? '')
     setNoteText('')
     setNoteSaved(false)
     setSimilarListings([])
@@ -338,7 +356,7 @@ export default function ContentPanel({
                 aria-label="Color"
               />
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
+            <div>
               <label style={LABEL_STYLE}>{t('admin.city', lang)}</label>
               <input
                 value={editCity}
@@ -349,6 +367,33 @@ export default function ContentPanel({
                 style={INPUT_STYLE}
                 aria-label="City"
               />
+            </div>
+            <div>
+              <label style={{ ...LABEL_STYLE, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {t('post.categoryLabel', lang)}
+                {editCategory && (
+                  <span style={{
+                    fontSize: '10px', fontWeight: 700, padding: '2px 7px',
+                    borderRadius: '20px', background: 'var(--accent-dim)',
+                    color: 'var(--accent)', textTransform: 'none', letterSpacing: 0,
+                  }}>
+                    {CATEGORY_OPTIONS.find((c) => c.value === editCategory)?.ru ?? editCategory}
+                  </span>
+                )}
+              </label>
+              <select
+                value={editCategory}
+                onChange={(e) => {
+                  setEditCategory(e.target.value)
+                  if (e.target.value) triggerSave({ category_slug: e.target.value })
+                }}
+                style={{ ...INPUT_STYLE, borderColor: editCategory ? 'var(--accent)' : 'var(--border)' }}
+                aria-label="Category"
+              >
+                {CATEGORY_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>{c.ru}</option>
+                ))}
+              </select>
             </div>
           </div>
       </div>

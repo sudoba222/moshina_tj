@@ -42,49 +42,6 @@ const QUICK_BRANDS = [
   'Chery', 'Geely', 'BYD', 'Mitsubishi', 'Mazda',
 ]
 
-// Real icons from Material Design Icons (mdi) library via @mdi/js
-function MdiIcon({ d, size = 20 }: { d: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d={d} />
-    </svg>
-  )
-}
-
-const MDI_CAR         = "M5,11L6.5,6.5H17.5L19,11M17.5,16A1.5,1.5 0 0,1 16,14.5A1.5,1.5 0 0,1 17.5,13A1.5,1.5 0 0,1 19,14.5A1.5,1.5 0 0,1 17.5,16M6.5,16A1.5,1.5 0 0,1 5,14.5A1.5,1.5 0 0,1 6.5,13A1.5,1.5 0 0,1 8,14.5A1.5,1.5 0 0,1 6.5,16M18.92,6C18.72,5.42 18.16,5 17.5,5H6.5C5.84,5 5.28,5.42 5.08,6L3,12V20A1,1 0 0,0 4,21H5A1,1 0 0,0 6,20V19H18V20A1,1 0 0,0 19,21H20A1,1 0 0,0 21,20V12L18.92,6Z"
-const MDI_HATCHBACK   = "M16,6H6L1,12V15H3A3,3 0 0,0 6,18A3,3 0 0,0 9,15H15A3,3 0 0,0 18,18A3,3 0 0,0 21,15H23V12C23,10.89 22.11,10 21,10H19L16,6M6.5,7.5H10.5V10H4.5L6.5,7.5M12,7.5H15.5L17.46,10H12V7.5M6,13.5A1.5,1.5 0 0,1 7.5,15A1.5,1.5 0 0,1 6,16.5A1.5,1.5 0 0,1 4.5,15A1.5,1.5 0 0,1 6,13.5M18,13.5A1.5,1.5 0 0,1 19.5,15A1.5,1.5 0 0,1 18,16.5A1.5,1.5 0 0,1 16.5,15A1.5,1.5 0 0,1 18,13.5Z"
-const MDI_CAR_SIDE    = "M16,6L19,10H21C22.11,10 23,10.89 23,12V15H21A3,3 0 0,1 18,18A3,3 0 0,1 15,15H9A3,3 0 0,1 6,18A3,3 0 0,1 3,15H1V12C1,10.89 1.89,10 3,10L6,6H16M10.5,7.5H6.75L4.86,10H10.5V7.5M12,7.5V10H17.14L15.25,7.5H12M6,13.5A1.5,1.5 0 0,0 4.5,15A1.5,1.5 0 0,0 6,16.5A1.5,1.5 0 0,0 7.5,15A1.5,1.5 0 0,0 6,13.5M18,13.5A1.5,1.5 0 0,0 16.5,15A1.5,1.5 0 0,0 18,16.5A1.5,1.5 0 0,0 19.5,15A1.5,1.5 0 0,0 18,13.5Z"
-const MDI_VAN         = "M3,7C1.89,7 1,7.89 1,9V17H3A3,3 0 0,0 6,20A3,3 0 0,0 9,17H15A3,3 0 0,0 18,20A3,3 0 0,0 21,17H23V13C23,11.89 22.11,11 21,11L18,7H3M3,8.5H7V11H3V8.5M9,8.5H13V11H9V8.5M15,8.5H17.5L19.46,11H15V8.5M6,15.5A1.5,1.5 0 0,1 7.5,17A1.5,1.5 0 0,1 6,18.5A1.5,1.5 0 0,1 4.5,17A1.5,1.5 0 0,1 6,15.5M18,15.5A1.5,1.5 0 0,1 19.5,17A1.5,1.5 0 0,1 18,18.5A1.5,1.5 0 0,1 16.5,17A1.5,1.5 0 0,1 18,15.5Z"
-const MDI_PICKUP      = "M16,6H10.5V10H1V15H3A3,3 0 0,0 6,18A3,3 0 0,0 9,15H15A3,3 0 0,0 18,18A3,3 0 0,0 21,15H23V12C23,10.89 22.11,10 21,10H19L16,6M12,7.5H15.5L17.46,10H12V7.5M6,13.5A1.5,1.5 0 0,1 7.5,15A1.5,1.5 0 0,1 6,16.5A1.5,1.5 0 0,1 4.5,15A1.5,1.5 0 0,1 6,13.5M18,13.5A1.5,1.5 0 0,1 19.5,15A1.5,1.5 0 0,1 18,16.5A1.5,1.5 0 0,1 16.5,15A1.5,1.5 0 0,1 18,13.5Z"
-const MDI_ESTATE      = "M3,6H16L19,10H21C22.11,10 23,10.89 23,12V15H21A3,3 0 0,1 18,18A3,3 0 0,1 15,15H9A3,3 0 0,1 6,18A3,3 0 0,1 3,15H1V8C1,6.89 1.89,6 3,6M2.5,7.5V10H10.5V7.5H2.5M12,7.5V10H17.14L15.25,7.5H12M6,13.5A1.5,1.5 0 0,0 4.5,15A1.5,1.5 0 0,0 6,16.5A1.5,1.5 0 0,0 7.5,15A1.5,1.5 0 0,0 6,13.5M18,13.5A1.5,1.5 0 0,0 16.5,15A1.5,1.5 0 0,0 18,16.5A1.5,1.5 0 0,0 19.5,15A1.5,1.5 0 0,0 18,13.5Z"
-const MDI_SPORTS      = "M12,8.5H7L4,11H3C1.89,11 1,11.89 1,13V16H3.17C3.6,17.2 4.73,18 6,18C7.27,18 8.4,17.2 8.82,16H15.17C15.6,17.2 16.73,18 18,18C19.27,18 20.4,17.2 20.82,16H23V15C23,13.89 21.97,13.53 21,13L12,8.5M5.25,12L7.5,10H11.5L15.5,12H5.25M6,13.5A1.5,1.5 0 0,1 7.5,15A1.5,1.5 0 0,1 6,16.5A1.5,1.5 0 0,1 4.5,15A1.5,1.5 0 0,1 6,13.5M18,13.5A1.5,1.5 0 0,1 19.5,15A1.5,1.5 0 0,1 18,16.5A1.5,1.5 0 0,1 16.5,15A1.5,1.5 0 0,1 18,13.5Z"
-
-const BODY_TYPE_ICONS: Record<string, React.ReactNode> = {
-  '':          <MdiIcon d={MDI_CAR} />,
-  sedan:       <MdiIcon d={MDI_CAR} />,
-  suv:         <MdiIcon d={MDI_CAR_SIDE} />,
-  hatchback:   <MdiIcon d={MDI_HATCHBACK} />,
-  minivan:     <MdiIcon d={MDI_VAN} />,
-  pickup:      <MdiIcon d={MDI_PICKUP} />,
-  wagon:       <MdiIcon d={MDI_ESTATE} />,
-  coupe:       <MdiIcon d={MDI_SPORTS} />,
-  crossover:   <MdiIcon d={MDI_CAR_SIDE} />,
-  convertible: <MdiIcon d={MDI_SPORTS} />,
-  van:         <MdiIcon d={MDI_VAN} />,
-  bus:         <MdiIcon d={MDI_CAR} />,
-  other:       <MdiIcon d={MDI_CAR} />,
-}
-
-const BODY_TYPES: { labelKey: string; value: string }[] = [
-  { labelKey: 'catalog.bodyTypeAll', value: '' },
-  { labelKey: 'options.bodySedan',      value: 'sedan' },
-  { labelKey: 'options.bodySuv',        value: 'suv' },
-  { labelKey: 'options.bodyHatchback',  value: 'hatchback' },
-  { labelKey: 'options.bodyMinivan',    value: 'minivan' },
-  { labelKey: 'options.bodyPickup',     value: 'pickup' },
-  { labelKey: 'options.bodyWagon',      value: 'wagon' },
-  { labelKey: 'options.bodyCoupe',      value: 'coupe' },
-]
 
 function formatStatNum(n: number): string {
   return n.toLocaleString('ru-RU')
@@ -109,9 +66,6 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
   const [searchQuery, setSearchQuery] = useState('')
   const [searchCity, setSearchCity] = useState('')
   const [searchBrand, setSearchBrand] = useState('')
-
-  // Active body type filter
-  const [activeBodyType, setActiveBodyType] = useState('')
 
   // Load user prefs and pre-fill city
   useEffect(() => {
@@ -155,13 +109,6 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
     if (searchQuery.trim()) params.set('q', searchQuery.trim())
     if (searchCity) params.set('city', searchCity)
     if (searchBrand) params.set('brand', searchBrand)
-    router.push(`/catalog${params.toString() ? `?${params.toString()}` : ''}`)
-  }
-
-  function handleBodyTypeClick(value: string) {
-    setActiveBodyType(value)
-    const params = new URLSearchParams()
-    if (value) params.set('body_type', value)
     router.push(`/catalog${params.toString() ? `?${params.toString()}` : ''}`)
   }
 
@@ -333,83 +280,6 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
           </div>
         </section>
 
-        {/* ── Body type horizontal scroll ──────────────────────────────────── */}
-        <section style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: '12px 0' }}>
-          <div style={{ position: 'relative' }}>
-            {/* Left fade — indicates more content to the left */}
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: '32px',
-                background: 'linear-gradient(to right, var(--bg), transparent)',
-                pointerEvents: 'none',
-                zIndex: 1,
-              }}
-            />
-            {/* Right fade — indicates more content to the right */}
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: '32px',
-                background: 'linear-gradient(to left, var(--bg), transparent)',
-                pointerEvents: 'none',
-                zIndex: 1,
-              }}
-            />
-          <div
-            className="scrollbar-hide"
-            style={{
-              display: 'flex',
-              gap: '8px',
-              overflowX: 'auto',
-              padding: '0 16px',
-              WebkitOverflowScrolling: 'touch',
-            }}
-            role="list"
-            aria-label={t('filters.bodyType', lang)}
-          >
-            {BODY_TYPES.map(({ labelKey, value }) => {
-              const isActive = activeBodyType === value
-              return (
-                <button
-                  key={value || 'all'}
-                  onClick={() => handleBodyTypeClick(value)}
-                  aria-pressed={isActive}
-                  style={{
-                    flexShrink: 0,
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                    cursor: 'pointer',
-                    border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
-                    background: isActive ? 'var(--accent-dim)' : 'var(--card)',
-                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                    transition: 'background 0.15s, border-color 0.15s, color 0.15s',
-                    minHeight: '44px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  {BODY_TYPE_ICONS[value]}
-                  {t(labelKey, lang)}
-                </button>
-              )
-            })}
-          </div>
-          </div>
-        </section>
-
         {/* ── Category type strip ─────────────────────────────────────────── */}
         <section style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: '14px 0 12px' }}>
           <div style={{ position: 'relative' }}>
@@ -446,17 +316,17 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
               </button>
 
               {[
-                { slug: 'car',        ru: 'Легковые',    tj: 'Сабук',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3v-7l3-4h10l3 4v7h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg> },
-                { slug: 'suv',        ru: 'Внедорожники', tj: 'SUV',       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17v-5l2-5h14l2 5v5"/><path d="M3 12h18"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg> },
-                { slug: 'minivan',    ru: 'Минивэны',    tj: 'Минивэн',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 17H2V8l2-3h14l2 3v9h-2"/><rect x="6" y="5" width="8" height="6" rx="1"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg> },
-                { slug: 'pickup',     ru: 'Пикапы',      tj: 'Пикап',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17H2V10l3-5h7v5h8v7h-2"/><rect x="10" y="10" width="8" height="5"/><circle cx="6" cy="17" r="1.5"/><circle cx="18" cy="17" r="1.5"/></svg> },
-                { slug: 'truck',      ru: 'Грузовики',   tj: 'Боркаш',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> },
-                { slug: 'motorcycle', ru: 'Мото',        tj: 'Мото',       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M5 17h4l4-8h3l2 4h-3"/><path d="M13 9l3 8"/></svg> },
-                { slug: 'bus',        ru: 'Автобусы',    tj: 'Автобус',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M7 10v4"/><path d="M17 10v4"/><circle cx="7" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg> },
-                { slug: 'special',    ru: 'Спецтехника', tj: 'Техника',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h20v-4H2z"/><path d="M10 16V8l-4 4"/><path d="M14 16V8l4 4"/><rect x="8" y="3" width="8" height="5" rx="1"/></svg> },
-                { slug: 'electric',   ru: 'Электро',     tj: 'Барқӣ',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3v-7l3-4h10l3 4v7h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/><path d="M13 2 9 9h5l-4 7"/></svg> },
+                { slug: 'car',        ru: 'Легковые',    tj: 'Сабук',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13V17H21V13L18.5 9H5.5L3 13Z"/><path d="M7 9L9 6H15L17 9"/><circle cx="6.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/></svg> },
+                { slug: 'suv',        ru: 'Внедорожники', tj: 'SUV',       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 16V10L4 5H20L22 10V16"/><path d="M2 11H22"/><path d="M7 5V11"/><path d="M17 5V11"/><circle cx="5.5" cy="18" r="2"/><circle cx="18.5" cy="18" r="2"/></svg> },
+                { slug: 'minivan',    ru: 'Минивэны',    tj: 'Минивэн',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 15V9L5 5H20L22 9V15"/><rect x="4" y="6" width="6" height="5" rx="1"/><rect x="12" y="6" width="6" height="5" rx="1"/><circle cx="5.5" cy="17.5" r="2"/><circle cx="18.5" cy="17.5" r="2"/></svg> },
+                { slug: 'pickup',     ru: 'Пикапы',      tj: 'Пикап',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 17V10L5 5H12V10H22V17"/><rect x="12" y="10" width="10" height="7"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><rect x="4" y="6" width="5" height="4" rx="1"/></svg> },
+                { slug: 'truck',      ru: 'Грузовики',   tj: 'Боркаш',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="13" height="12" rx="1"/><path d="M14 8H19L22 12V16H14V8Z"/><circle cx="4.5" cy="18.5" r="2"/><circle cx="10.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg> },
+                { slug: 'motorcycle', ru: 'Мото',        tj: 'Мото',       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M5 17L9 11L14 10H17L19 14"/><path d="M15 5H19L20 10"/><path d="M11 11L13 5"/></svg> },
+                { slug: 'bus',        ru: 'Автобусы',    tj: 'Автобус',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="7" y1="10" x2="7" y2="17"/><line x1="12" y1="10" x2="12" y2="17"/><line x1="17" y1="10" x2="17" y2="17"/><circle cx="6.5" cy="19.5" r="2"/><circle cx="17.5" cy="19.5" r="2"/></svg> },
+                { slug: 'special',    ru: 'Спецтехника', tj: 'Техника',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="16" width="10" height="5" rx="1"/><circle cx="3.5" cy="21" r="1"/><circle cx="8.5" cy="21" r="1"/><path d="M9 16V9L14 4"/><path d="M14 4L19 7L16 12L11 11"/><path d="M11 16H22V13L18 9"/></svg> },
+                { slug: 'electric',   ru: 'Электро',     tj: 'Барқӣ',      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 13V17H20V13L18 9H6L4 13Z"/><path d="M8 9L10 6H14L16 9"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="16.5" cy="18.5" r="1.5"/><path d="M13 3L10 8H13L10 13" strokeWidth="2"/></svg> },
                 { slug: 'parts',      ru: 'Запчасти',    tj: 'Эҳтиёт',    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
-                { slug: 'commercial', ru: 'Коммерческий', tj: 'Тиҷоратӣ', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="14" height="12" rx="2"/><path d="M15 10h4l3 3v5h-7V10z"/><circle cx="5.5" cy="19.5" r="1.5"/><circle cx="18.5" cy="19.5" r="1.5"/></svg> },
+                { slug: 'commercial', ru: 'Коммерческий', tj: 'Тиҷоратӣ', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="13" height="11" rx="1"/><path d="M14 10H19L22 14V17H14V10Z"/><circle cx="4.5" cy="19.5" r="1.5"/><circle cx="18.5" cy="19.5" r="1.5"/><rect x="3" y="9" width="4" height="4" rx="0.5"/><rect x="8" y="9" width="4" height="4" rx="0.5"/></svg> },
               ].map((cat) => (
                 <button
                   key={cat.slug}

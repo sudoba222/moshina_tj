@@ -985,6 +985,28 @@ export default function CarDetailClient() {
                   }}>
                     {listing.type === 'sale' ? t('badges.sale', lang) : t('badges.rent', lang)}
                   </span>
+                  {listing.category_slug && (() => {
+                    const CAT_LABELS: Record<string, { ru: string; tj: string }> = {
+                      car:        { ru: 'Легковые',       tj: 'Мошинаҳои сабук' },
+                      suv:        { ru: 'Внедорожники',   tj: 'Внедорожник / SUV' },
+                      minivan:    { ru: 'Минивэны',       tj: 'Минивэн' },
+                      pickup:     { ru: 'Пикапы',         tj: 'Пикап' },
+                      truck:      { ru: 'Грузовики',      tj: 'Боркашҳо' },
+                      bus:        { ru: 'Автобусы',       tj: 'Автобусҳо' },
+                      motorcycle: { ru: 'Мотоциклы',      tj: 'Мотосиклҳо' },
+                      special:    { ru: 'Спецтехника',    tj: 'Техникаи махсус' },
+                      parts:      { ru: 'Автозапчасти',   tj: 'Қисмҳои эҳтиётӣ' },
+                      commercial: { ru: 'Коммерческий',   tj: 'Нақлиёти тиҷоратӣ' },
+                      electric:   { ru: 'Электромобили',  tj: 'Автомобилҳои барқӣ' },
+                      other:      { ru: 'Другое',         tj: 'Дигар' },
+                    }
+                    const label = CAT_LABELS[listing.category_slug]
+                    return label ? (
+                      <span style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '4px' }}>
+                        {lang === 'ru' ? label.ru : label.tj}
+                      </span>
+                    ) : null
+                  })()}
                   {listing.is_dealer_listing && (
                     <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px' }}>
                       {t('badges.dealer', lang)}
