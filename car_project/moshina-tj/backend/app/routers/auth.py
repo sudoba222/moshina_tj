@@ -337,7 +337,7 @@ def register(request: Request, response: Response, payload: UserCreate, backgrou
     "/login",
     response_model=ApiResponse[AuthResponse],
 )
-@limiter.limit("5/15minutes")
+@limiter.limit("20/minute")
 def login(request: Request, response: Response, payload: LoginPayload, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
     if not user:
@@ -445,7 +445,7 @@ def change_password(
 
 
 @router.post("/send-otp", response_model=ApiResponse[dict])
-@limiter.limit("5/hour")
+@limiter.limit("10/minute")
 def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(get_db)):
     """Generate and send a 6-digit OTP to the given phone number.
 
