@@ -239,7 +239,32 @@ class ResendEmailOtpPayload(BaseModel):
 
 
 def _send_sms(phone: str, message: str) -> bool:
-    """Send SMS via Twilio if configured, else log the code (dev mode)."""
+    """Send SMS via Unimtx (primary) → Twilio (fallback) → dev log."""
+    # ── 1. Unimtx ────────────────────────────────────────────────────────────
+    if settings.unimtx_api_key:
+        try:
+            import httpx as _httpx
+            resp = _httpx.post(
+                "https://api.unimtx.com/",
+                json={
+                    "accessKeyId": settings.unimtx_api_key,
+                    "action": "uni.message.send",
+                    "to": phone,
+                    "signature": settings.unimtx_sender_id,
+                    "content": message,
+                },
+                timeout=10.0,
+            )
+            body = resp.json()
+            if body.get("code") == "0":
+                return True
+            logger.error("Unimtx error for %s: %s", phone, body)
+            return False
+        except Exception:
+            logger.exception("Unimtx SMS failed to %s", phone)
+            return False
+
+    # ── 2. Twilio fallback ────────────────────────────────────────────────────
     if settings.twilio_account_sid and settings.twilio_auth_token and settings.twilio_from_number:
         try:
             from twilio.rest import Client
@@ -253,10 +278,10 @@ def _send_sms(phone: str, message: str) -> bool:
         except Exception:
             logger.exception("Twilio SMS failed to %s", phone)
             return False
-    else:
-        # Dev mode: log the code so it is visible in server logs
-        logger.warning("[DEV MODE] SMS OTP for %s — message: %s", phone, message)
-        return True
+
+    # ── 3. Dev mode: log only ────────────────────────────────────────────────
+    logger.warning("[DEV MODE] SMS OTP for %s — message: %s", phone, message)
+    return True
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -463,7 +488,8 @@ def send_otp(request: Request, payload: SendOtpPayload, db: Session = Depends(ge
     _send_sms(payload.phone, message)
 
     dev_code = None
-    if not settings.twilio_account_sid and settings.environment == "development":
+    sms_configured = bool(settings.unimtx_api_key or settings.twilio_account_sid)
+    if not sms_configured and settings.environment == "development":
         logger.debug("[DEV OTP] phone=%s code=%s", payload.phone, code)
         dev_code = code
 
@@ -874,7 +900,8 @@ def forgot_password(request: Request, payload: ForgotPasswordPayload, db: Sessio
         message_text = f"Ваш код сброса пароля TajCar.tj: {code}. Действителен 10 минут."
         _send_sms(identifier, message_text)
         dev_code = None
-        if not settings.twilio_account_sid and settings.environment == "development":
+        sms_configured = bool(settings.unimtx_api_key or settings.twilio_account_sid)
+        if not sms_configured and settings.environment == "development":
             logger.debug("[DEV OTP] phone=%s code=%s", identifier, code)
             dev_code = code
         return ApiResponse(success=True, data={"dev_code": dev_code} if dev_code else {}, message="Code sent to your phone")

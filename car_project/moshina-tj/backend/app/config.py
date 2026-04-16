@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_from_number: str = ""  # E.164 format or Alphanumeric Sender ID e.g. "TajCar"
 
+    unimtx_api_key: str = ""
+    unimtx_sender_id: str = "TajCar"
+
     frontend_url: str = "http://localhost:3000"
     google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"
 
