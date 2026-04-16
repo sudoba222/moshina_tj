@@ -1,14 +1,14 @@
 """add ranking fields to listings
 
 Revision ID: 20260415_1200
-Revises: 20260413_1000
+Revises: 20260415_1000
 Create Date: 2026-04-15 12:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
 
 revision = '20260415_1200'
-down_revision = '20260413_1000'
+down_revision = '20260415_1000'
 branch_labels = None
 depends_on = None
 
