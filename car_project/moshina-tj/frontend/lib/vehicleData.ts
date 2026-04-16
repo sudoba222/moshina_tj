@@ -793,3 +793,40 @@ export const SORTED_BRANDS = [
   ...VEHICLE_BRANDS.filter((b) => b.name !== 'Другое').sort((a, b) => a.name.localeCompare(b.name)),
   ...VEHICLE_BRANDS.filter((b) => b.name === 'Другое'),
 ]
+
+// ─── Motorcycle brands ────────────────────────────────────────────────────────
+
+export const MOTORCYCLE_BRANDS: VehicleBrand[] = [
+  { name: 'Yamaha', models: ['YZF-R1', 'YZF-R3', 'YZF-R6', 'MT-07', 'MT-09', 'MT-03', 'XMAX 300', 'NMAX 155', 'TMAX 560', 'Tracer 9', 'Ténéré 700', 'XSR700', 'XSR900', 'FZ-07', 'FZ-09', 'WR450F', 'YZ450F', 'Bolt', 'V-Star 950'] },
+  { name: 'Kawasaki', models: ['Ninja ZX-10R', 'Ninja ZX-6R', 'Ninja 400', 'Ninja 650', 'Z900', 'Z650', 'Z400', 'Z900RS', 'Versys 650', 'Versys 1000', 'KLX450R', 'KX450', 'Vulcan S', 'Eliminator', 'W800'] },
+  { name: 'Honda (Мото)', models: ['CBR1000RR', 'CBR600RR', 'CBR300R', 'CBR500R', 'CB650R', 'CB750 Hornet', 'CB300R', 'CB125R', 'CRF450R', 'Africa Twin', 'NT1100', 'NC750X', 'PCX 150', 'ADV150', 'SH350', 'Forza 350', 'Gold Wing', 'Rebel 500', 'Rebel 1100'] },
+  { name: 'Suzuki (Мото)', models: ['GSX-R1000', 'GSX-R750', 'GSX-R600', 'GSX-S1000', 'GSX-S750', 'V-Strom 650', 'V-Strom 1050', 'SV650', 'Boulevard M109R', 'Burgman 400', 'Address 125'] },
+  { name: 'KTM', models: ['Duke 390', 'Duke 790', 'Duke 890', 'Duke 1290', 'RC 390', 'RC 990', 'Adventure 390', 'Adventure 790', 'Adventure 1290', 'EXC 450F', 'SX 450F', 'Enduro 690'] },
+  { name: 'Ducati', models: ['Panigale V2', 'Panigale V4', 'Monster', 'Monster SP', 'Streetfighter V2', 'Streetfighter V4', 'Multistrada V4', 'Diavel', 'Scrambler 800', 'Scrambler 1100', 'DesertX'] },
+  { name: 'BMW Motorrad', models: ['S1000RR', 'S1000R', 'S1000XR', 'R1250GS', 'R1250R', 'R1250RS', 'F850GS', 'F750GS', 'G310GS', 'G310R', 'R nineT', 'K1600GT', 'C400X', 'CE 04'] },
+  { name: 'Royal Enfield', models: ['Classic 350', 'Classic 500', 'Meteor 350', 'Hunter 350', 'Bullet 350', 'Thunderbird', 'Himalayan', 'Interceptor 650', 'Continental GT 650'] },
+  { name: 'Bajaj', models: ['Pulsar 125', 'Pulsar 150', 'Pulsar 160', 'Pulsar 180', 'Pulsar 200NS', 'Pulsar N250', 'Pulsar RS200', 'Dominar 250', 'Dominar 400', 'Avenger 160'] },
+  { name: 'TVS', models: ['Apache RTR 160', 'Apache RTR 200', 'Apache RR 310', 'Raider 125', 'Sport', 'Star City', 'Jupiter', 'Ntorq 125'] },
+  { name: 'Hero', models: ['Splendor Plus', 'HF Deluxe', 'Passion Pro', 'Glamour', 'Xtreme 160R', 'Xpulse 200', 'Destini 125'] },
+  { name: 'Harley-Davidson', models: ['Iron 883', 'Forty-Eight', 'Sportster S', 'Street Bob', 'Fat Bob', 'Low Rider S', 'Road King', 'Electra Glide', 'Street Glide', 'Pan America'] },
+  { name: 'Triumph', models: ['Street Triple', 'Speed Triple', 'Tiger 850', 'Tiger 900', 'Tiger 1200', 'Bonneville T100', 'Bonneville T120', 'Scrambler 1200', 'Thunderbird'] },
+  { name: 'CFMoto', models: ['150NK', '250NK', '300NK', '400NK', '650NK', '650MT', '700CL-X', '800MT', 'CFORCE 400', 'CFORCE 800'] },
+  { name: 'Loncin', models: ['LX250GS', 'LX300GY', 'LX250-15', 'LX150-70', 'GP250', 'SX2'] },
+  { name: 'Lifan (Мото)', models: ['LF150-10B', 'LF200-10L', 'LF250', 'LF200GY', 'SR200', 'KP200'] },
+  { name: 'Zontes', models: ['G1 125', 'G2 125', 'R250', 'R310', 'T310', 'U1 125', 'U2 125'] },
+  { name: 'Другое', models: ['Другое'] },
+]
+
+export const SORTED_MOTORCYCLE_BRANDS = [
+  ...MOTORCYCLE_BRANDS.filter((b) => b.name !== 'Другое').sort((a, b) => a.name.localeCompare(b.name)),
+  ...MOTORCYCLE_BRANDS.filter((b) => b.name === 'Другое'),
+]
+
+/**
+ * Returns the sorted brand list appropriate for a given category slug.
+ * Falls back to SORTED_BRANDS for car-type categories.
+ */
+export function getBrandsForCategory(categorySlug: string): VehicleBrand[] {
+  if (categorySlug === 'motorcycle') return SORTED_MOTORCYCLE_BRANDS
+  return SORTED_BRANDS
+}

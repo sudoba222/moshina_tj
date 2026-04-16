@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { listingsApi, authApi, usersApi, favoritesApi, dealersApi } from '@/lib/api'
+import { listingsApi, authApi, usersApi, favoritesApi, dealersApi, uploadApi } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
@@ -60,12 +60,19 @@ export default function DashboardPage() {
   const [pwdSuccess, setPwdSuccess] = useState(false)
   const [pwdLoading, setPwdLoading] = useState(false)
 
+  // Image upload refs
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+
   // Dealership profile
   const [dealer, setDealer] = useState<Dealer | null>(null)
   const [dealerLoading, setDealerLoading] = useState(false)
   const [dealerSaving, setDealerSaving] = useState(false)
   const [dealerError, setDealerError] = useState('')
   const [dealerSuccess, setDealerSuccess] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [coverUploading, setCoverUploading] = useState(false)
+
   const [dealerForm, setDealerForm] = useState({
     business_name: '', city: '', address: '', phone: '',
     description: '', website: '', working_hours: '', instagram: '', telegram_handle: '',
@@ -138,16 +145,50 @@ export default function DashboardPage() {
   async function saveDealer() {
     if (!dealer) return
     setDealerError(''); setDealerSuccess(false)
-    if (!dealerForm.business_name.trim()) { setDealerError('Введите название автосалона'); return }
+    if (!dealerForm.business_name.trim()) { setDealerError(t('dashboard.enterDealerName', lang)); return }
     setDealerSaving(true)
     try {
       const res = await dealersApi.update(dealer.id, dealerForm)
       setDealer(res.data.data)
       setDealerSuccess(true)
     } catch {
-      setDealerError('Ошибка сохранения')
+      setDealerError(t('common.errorSave', lang))
     } finally {
       setDealerSaving(false)
+    }
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !dealer) return
+    setLogoUploading(true)
+    try {
+      const res = await uploadApi.image(file)
+      const url = res.data.data.url
+      await dealersApi.update(dealer.id, { logo_url: url })
+      setDealer((prev) => prev ? { ...prev, logo_url: url } : prev)
+    } catch {
+      setDealerError(t('dashboard.logoUploadError', lang))
+    } finally {
+      setLogoUploading(false)
+      if (logoInputRef.current) logoInputRef.current.value = ''
+    }
+  }
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !dealer) return
+    setCoverUploading(true)
+    try {
+      const res = await uploadApi.image(file)
+      const url = res.data.data.url
+      await dealersApi.update(dealer.id, { cover_image_url: url })
+      setDealer((prev) => prev ? { ...prev, cover_image_url: url } : prev)
+    } catch {
+      setDealerError(t('dashboard.coverUploadError', lang))
+    } finally {
+      setCoverUploading(false)
+      if (coverInputRef.current) coverInputRef.current.value = ''
     }
   }
 
@@ -654,7 +695,7 @@ export default function DashboardPage() {
                 <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>{t('common.loading', lang)}</div>
               ) : !dealer ? (
                 <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
-                  <p style={{ fontSize: '15px', fontWeight: 600 }}>Профиль автосалона не найден</p>
+                  <p style={{ fontSize: '15px', fontWeight: 600 }}>{t('dashboard.dealerNotFound', lang)}</p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -664,27 +705,162 @@ export default function DashboardPage() {
                       {dealer.verified ? <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></> : <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>}
                     </svg>
                     <span style={{ fontSize: '13px', fontWeight: 700, color: dealer.verified ? 'var(--color-success)' : 'var(--color-warning-alt)' }}>
-                      {dealer.verified ? 'Профиль верифицирован' : 'Ожидает верификации администратором'}
+                      {dealer.verified ? t('dashboard.dealerVerified', lang) : t('dashboard.dealerPending', lang)}
                     </span>
+                  </div>
+
+                  {/* Images card */}
+                  <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(20px, 4vw, 28px)' }}>
+                    <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '20px' }}>
+                      {t('dashboard.profilePhotos', lang)}
+                    </h2>
+
+                    {/* Hidden inputs */}
+                    <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
+                    <input ref={coverInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCoverUpload} />
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      {/* Cover image */}
+                      <div>
+                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '10px' }}>
+                          {t('dashboard.coverBanner', lang)}
+                        </p>
+                        <div
+                          onClick={() => !coverUploading && coverInputRef.current?.click()}
+                          style={{
+                            position: 'relative',
+                            width: '100%',
+                            height: '160px',
+                            borderRadius: '14px',
+                            overflow: 'hidden',
+                            background: 'var(--surface)',
+                            border: '1.5px dashed var(--border)',
+                            cursor: coverUploading ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {dealer.cover_image_url ? (
+                            <Image src={dealer.cover_image_url} alt="cover" fill sizes="(max-width: 560px) 100vw, 560px" style={{ objectFit: 'cover' }} />
+                          ) : null}
+                          <div style={{
+                            position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center', gap: '8px',
+                            background: dealer.cover_image_url ? 'rgba(0,0,0,0.4)' : 'transparent',
+                            color: dealer.cover_image_url ? 'var(--color-white)' : 'var(--text-muted)',
+                            transition: 'opacity 0.15s',
+                            opacity: coverUploading ? 1 : undefined,
+                          }}>
+                            {coverUploading ? (
+                              <span style={{ fontSize: '13px', fontWeight: 600 }}>{t('dashboard.uploading', lang)}</span>
+                            ) : (
+                              <>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                                  <circle cx="8.5" cy="8.5" r="1.5" />
+                                  <polyline points="21 15 16 10 5 21" />
+                                </svg>
+                                <span style={{ fontSize: '12px', fontWeight: 600 }}>
+                                  {dealer.cover_image_url ? t('dashboard.changeCover', lang) : t('dashboard.uploadCover', lang)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Logo */}
+                      <div>
+                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '10px' }}>
+                          {t('dashboard.dealerLogoTitle', lang)}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          <div
+                            onClick={() => !logoUploading && logoInputRef.current?.click()}
+                            style={{
+                              position: 'relative',
+                              width: '88px',
+                              height: '88px',
+                              borderRadius: '16px',
+                              overflow: 'hidden',
+                              background: 'var(--surface)',
+                              border: '1.5px dashed var(--border)',
+                              cursor: logoUploading ? 'not-allowed' : 'pointer',
+                              flexShrink: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {dealer.logo_url ? (
+                              <Image src={dealer.logo_url} alt="logo" fill sizes="88px" style={{ objectFit: 'cover' }} />
+                            ) : (
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.8" strokeLinecap="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                              </svg>
+                            )}
+                            {logoUploading && (
+                              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-white)' }}>...</span>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
+                              {logoUploading ? t('dashboard.uploading', lang) : dealer.logo_url ? t('dashboard.logoUploaded', lang) : t('dashboard.noLogo', lang)}
+                            </p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                              {t('dashboard.clickToUpload', lang)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Preview link */}
+                      <a
+                        href={`/dealers/${dealer.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: 'var(--accent)',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                        {t('dashboard.previewPage', lang)}
+                      </a>
+                    </div>
                   </div>
 
                   {/* Edit form */}
                   <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: 'clamp(20px, 4vw, 28px)' }}>
-                    <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '20px' }}>Информация об автосалоне</h2>
+                    <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '20px' }}>{t('dashboard.dealerInfo', lang)}</h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                       {([
-                        { key: 'business_name', label: 'Название автосалона', type: 'text', required: true },
-                        { key: 'city', label: 'Город', type: 'text' },
-                        { key: 'address', label: 'Адрес', type: 'text' },
-                        { key: 'phone', label: 'Телефон', type: 'tel' },
-                        { key: 'website', label: 'Веб-сайт', type: 'url' },
-                        { key: 'working_hours', label: 'Часы работы', type: 'text' },
-                        { key: 'instagram', label: 'Instagram (без @)', type: 'text' },
-                        { key: 'telegram_handle', label: 'Telegram (без @)', type: 'text' },
-                      ] as { key: keyof typeof dealerForm; label: string; type: string; required?: boolean }[]).map(({ key, label, type, required }) => (
+                        { key: 'business_name', labelKey: 'dashboard.dealerName', type: 'text', required: true },
+                        { key: 'city', labelKey: 'dashboard.dealerCity', type: 'text' },
+                        { key: 'address', labelKey: 'dashboard.dealerAddress', type: 'text' },
+                        { key: 'phone', labelKey: 'admin.phone', type: 'tel' },
+                        { key: 'website', labelKey: 'dashboard.dealerWebsite', type: 'url' },
+                        { key: 'working_hours', labelKey: 'dashboard.dealerWorkingHours', type: 'text' },
+                        { key: 'instagram', labelKey: 'dashboard.dealerInstagram', type: 'text' },
+                        { key: 'telegram_handle', labelKey: 'dashboard.dealerTelegram', type: 'text' },
+                      ] as { key: keyof typeof dealerForm; labelKey: Parameters<typeof t>[0]; type: string; required?: boolean }[]).map(({ key, labelKey, type, required }) => (
                         <div key={key}>
                           <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-                            {label}{required && <span style={{ color: 'var(--accent)' }}> *</span>}
+                            {t(labelKey, lang)}{required && <span style={{ color: 'var(--accent)' }}> *</span>}
                           </label>
                           <input
                             type={type}
@@ -695,7 +871,7 @@ export default function DashboardPage() {
                         </div>
                       ))}
                       <div>
-                        <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Описание</label>
+                        <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>{t('dashboard.dealerDescription', lang)}</label>
                         <textarea
                           value={dealerForm.description}
                           onChange={(e) => setDealerForm((prev) => ({ ...prev, description: e.target.value }))}
@@ -704,7 +880,7 @@ export default function DashboardPage() {
                         />
                       </div>
                       {dealerError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{dealerError}</p>}
-                      {dealerSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>Сохранено</p>}
+                      {dealerSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{t('dashboard.savedSuccess', lang)}</p>}
                       <button
                         onClick={saveDealer}
                         disabled={dealerSaving}
@@ -715,12 +891,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Link to public profile */}
-                  <div style={{ textAlign: 'center' }}>
-                    <a href={`/dealers/${dealer.id}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>
-                      Открыть публичный профиль →
-                    </a>
-                  </div>
                 </div>
               )}
             </div>

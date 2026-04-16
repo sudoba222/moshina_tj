@@ -363,6 +363,17 @@ def create_listing(
                 detail=f"Listing limit reached ({limit}). Remove or wait for existing listings to be processed.",
             )
 
+    # VIN duplicate check — fail fast with a clear 409 instead of a DB constraint error
+    if payload.vin:
+        existing_vin = db.query(Listing).filter(
+            Listing.vin == payload.vin, Listing.is_deleted == False
+        ).first()
+        if existing_vin:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A listing with this VIN already exists",
+            )
+
     # Resolve category/subcategory slugs to IDs if provided
     category_id = payload.category_id
     subcategory_id = None
@@ -507,6 +518,19 @@ def update_listing(
     listing = _get_listing_or_404(listing_id, db)
     _assert_owner_or_admin(listing, current_user)
 
+    # VIN duplicate check on update — exclude current listing
+    if payload.vin and payload.vin != listing.vin:
+        existing_vin = db.query(Listing).filter(
+            Listing.vin == payload.vin,
+            Listing.id != listing.id,
+            Listing.is_deleted == False,
+        ).first()
+        if existing_vin:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A listing with this VIN already exists",
+            )
+
     update_data = payload.model_dump(exclude_unset=True, mode="json")
 
     # Handle image replacement — must happen before the generic field loop so
@@ -524,7 +548,10 @@ def update_listing(
         for img in existing_images:
             if img.url not in new_url_set:
                 if img.cloudinary_id:
-                    image_service.delete_image(img.cloudinary_id)
+                    try:
+                        image_service.delete_image(img.cloudinary_id)
+                    except Exception:
+                        logger.exception("Failed to delete Cloudinary image %s", img.cloudinary_id)
                 db.delete(img)
 
         # Add images that are newly introduced
@@ -615,6 +642,7 @@ def activate_listing(
         )
     listing.is_active = True
     db.commit()
+    _featured_cache.clear()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing activated")
 
@@ -634,6 +662,7 @@ def deactivate_listing(
         )
     listing.is_active = False
     db.commit()
+    _featured_cache.clear()
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing deactivated")
 
@@ -667,6 +696,7 @@ def delete_listing(
         to_status="deleted",
     ))
     db.commit()
+    _featured_cache.clear()
 
     # Delete images from storage in the background — don't block the response
     if cloudinary_ids:
@@ -677,7 +707,10 @@ def delete_listing(
 
 def _delete_images_background(cloudinary_ids: list[str]) -> None:
     for cid in cloudinary_ids:
-        image_service.delete_image(cid)
+        try:
+            image_service.delete_image(cid)
+        except Exception:
+            logger.exception("Failed to delete Cloudinary image %s in background", cid)
 
 
 # ---------------------------------------------------------------------------
@@ -706,12 +739,20 @@ def toggle_favorite(
     )
     if existing:
         db.delete(existing)
-        listing.favorites_count = max(0, (listing.favorites_count or 0) - 1)
+        db.execute(
+            update(Listing)
+            .where(Listing.id == listing_id)
+            .values(favorites_count=func.greatest(0, Listing.favorites_count - 1))
+        )
         db.commit()
         return ApiResponse(success=True, data=FavoriteToggleResponse(favorited=False), message="Removed from favorites")
     else:
         fav = Favorite(user_id=current_user.id, listing_id=listing_id)
         db.add(fav)
-        listing.favorites_count = (listing.favorites_count or 0) + 1
+        db.execute(
+            update(Listing)
+            .where(Listing.id == listing_id)
+            .values(favorites_count=Listing.favorites_count + 1)
+        )
         db.commit()
         return ApiResponse(success=True, data=FavoriteToggleResponse(favorited=True), message="Added to favorites")

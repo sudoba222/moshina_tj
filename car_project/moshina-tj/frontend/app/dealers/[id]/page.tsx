@@ -150,85 +150,104 @@ export default function DealerDetailPage() {
           </button>
 
           {/* Dealer header */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '28px', marginBottom: '36px' }}>
-            <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-              {/* Logo */}
-              <div style={{ width: '88px', height: '88px', borderRadius: '16px', background: 'var(--surface)', border: '1px solid var(--border)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                {dealer.logo_url ? (
-                  <Image src={dealer.logo_url} alt={dealer.business_name} fill sizes="88px" style={{ objectFit: 'cover' }} />
-                ) : (
-                  <BuildingIcon />
-                )}
-              </div>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', marginBottom: '36px', overflow: 'hidden' }}>
+            {/* Cover image */}
+            <div style={{ position: 'relative', width: '100%', height: '180px', background: 'var(--surface)' }}>
+              {dealer.cover_image_url ? (
+                <Image
+                  src={dealer.cover_image_url}
+                  alt={dealer.business_name}
+                  fill
+                  sizes="(max-width: 1280px) 100vw, 1280px"
+                  style={{ objectFit: 'cover' }}
+                  priority
+                />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--surface) 0%, var(--border) 100%)' }} />
+              )}
+            </div>
 
-              <div style={{ flex: 1 }}>
-                <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text)' }}>
-                    {dealer.business_name}
-                  </h1>
-                  {dealer.verified && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '3px 10px', borderRadius: '6px' }}>
-                      <CheckIcon />
-                      {t('dealers.verified', lang)}
-                    </span>
-                  )}
-                  {user && (
-                    <button
-                      onClick={handleSubscribeToggle}
-                      disabled={subLoading}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        padding: '5px 12px',
-                        borderRadius: '8px',
-                        border: subscribed ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
-                        background: subscribed ? 'var(--accent-dim, rgba(37,99,235,0.08))' : 'var(--surface)',
-                        color: subscribed ? 'var(--accent)' : 'var(--text-secondary)',
-                        cursor: subLoading ? 'not-allowed' : 'pointer',
-                        opacity: subLoading ? 0.6 : 1,
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <BellSubscribeIcon active={subscribed} />
-                      {subscribed ? t('dealers.unsubscribe', lang) : t('dealers.subscribe', lang)}
-                    </button>
+            {/* Info block */}
+            <div style={{ padding: '24px 28px 28px' }}>
+              <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+                {/* Logo — overlaps cover slightly */}
+                <div style={{ width: '88px', height: '88px', borderRadius: '16px', background: 'var(--surface)', border: '2px solid var(--card)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginTop: '-44px' }}>
+                  {dealer.logo_url ? (
+                    <Image src={dealer.logo_url} alt={dealer.business_name} fill sizes="88px" style={{ objectFit: 'cover' }} />
+                  ) : (
+                    <BuildingIcon />
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-x-5 gap-y-2">
-                  {dealer.city && (
-                    <span style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <PinIcon />
-                      {dealer.city}
-                    </span>
-                  )}
-                  {dealer.address && (
-                    <span style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <HomeIcon />
-                      {dealer.address}
-                    </span>
-                  )}
-                  {dealer.phone && (
-                    <a href={`tel:${dealer.phone}`} style={{ fontSize: '14px', color: 'var(--accent)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <PhoneIcon />
-                      {dealer.phone}
-                    </a>
+                <div style={{ flex: 1 }}>
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
+                    <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text)' }}>
+                      {dealer.business_name}
+                    </h1>
+                    {dealer.verified && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '3px 10px', borderRadius: '6px' }}>
+                        <CheckIcon />
+                        {t('dealers.verified', lang)}
+                      </span>
+                    )}
+                    {user && (
+                      <button
+                        onClick={handleSubscribeToggle}
+                        disabled={subLoading}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          padding: '5px 12px',
+                          borderRadius: '8px',
+                          border: subscribed ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
+                          background: subscribed ? 'var(--accent-dim, rgba(37,99,235,0.08))' : 'var(--surface)',
+                          color: subscribed ? 'var(--accent)' : 'var(--text-secondary)',
+                          cursor: subLoading ? 'not-allowed' : 'pointer',
+                          opacity: subLoading ? 0.6 : 1,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <BellSubscribeIcon active={subscribed} />
+                        {subscribed ? t('dealers.unsubscribe', lang) : t('dealers.subscribe', lang)}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-5 gap-y-2">
+                    {dealer.city && (
+                      <span style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <PinIcon />
+                        {dealer.city}
+                      </span>
+                    )}
+                    {dealer.address && (
+                      <span style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <HomeIcon />
+                        {dealer.address}
+                      </span>
+                    )}
+                    {dealer.phone && (
+                      <a href={`tel:${dealer.phone}`} style={{ fontSize: '14px', color: 'var(--accent)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <PhoneIcon />
+                        {dealer.phone}
+                      </a>
+                    )}
+                  </div>
+
+                  {dealer.description && (
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 }}>
+                      {dealer.description}
+                    </p>
                   )}
                 </div>
 
-                {dealer.description && (
-                  <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 }}>
-                    {dealer.description}
-                  </p>
-                )}
-              </div>
-
-              <div style={{ textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 24px', flexShrink: 0 }}>
-                <p style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent)' }}>{listings.length}</p>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('dealers.listings', lang)}</p>
+                <div style={{ textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 24px', flexShrink: 0 }}>
+                  <p style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent)' }}>{listings.length}</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('dealers.listings', lang)}</p>
+                </div>
               </div>
             </div>
           </div>

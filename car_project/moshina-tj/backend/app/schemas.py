@@ -226,6 +226,13 @@ class ListingCreate(BaseModel):
             raise ValueError("Price must be greater than zero")
         return v
 
+    @field_validator("prepayment_amount")
+    @classmethod
+    def prepayment_positive(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v <= 0:
+            raise ValueError("Prepayment amount must be greater than zero")
+        return v
+
     @field_validator("mileage")
     @classmethod
     def mileage_non_negative(cls, v: Optional[int]) -> Optional[int]:
@@ -352,6 +359,13 @@ class ListingUpdate(BaseModel):
     rental_rules: Optional[RentalRules] = None
     image_urls: Optional[list[str]] = None
     vin: Optional[str] = Field(default=None, min_length=17, max_length=17)
+
+    @field_validator("prepayment_amount")
+    @classmethod
+    def prepayment_positive(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v <= 0:
+            raise ValueError("Prepayment amount must be greater than zero")
+        return v
 
     @field_validator("vin", mode="before")
     @classmethod

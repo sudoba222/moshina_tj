@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { listingsApi, uploadApi, authApi } from '@/lib/api'
 import api from '@/lib/api'
-import { SORTED_BRANDS } from '@/lib/vehicleData'
+import { getBrandsForCategory } from '@/lib/vehicleData'
 import { PARTS_SUBCATEGORIES } from '@/lib/partsData'
 import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
@@ -237,7 +237,8 @@ function PostPage() {
   const [vinChecking, setVinChecking] = useState(false)
   const [vinResult, setVinResult] = useState<VinResult | null>(null)
 
-  const brandsList = SORTED_BRANDS.map((b) => b.name)
+  const activeBrands = getBrandsForCategory(form.category_slug)
+  const brandsList = activeBrands.map((b) => b.name)
   const [modelsList, setModelsList] = useState<string[]>([])
 
   const [customBrand, setCustomBrand] = useState('')
@@ -256,7 +257,7 @@ function PostPage() {
       setModelsList([])
       return
     }
-    const local = SORTED_BRANDS.find((b) => b.name === form.brand)?.models ?? []
+    const local = getBrandsForCategory(form.category_slug).find((b) => b.name === form.brand)?.models ?? []
     setModelsList(local.length ? local : ['Другое'])
   }, [form.brand])
 
@@ -377,11 +378,13 @@ function PostPage() {
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setError('')
-    setForm((p) => ({ ...p, [key]: value }))
-    // Reset category-specific attrs when category changes
+    // Reset category-specific attrs, brand, and model when category changes
     if (key === 'category_slug') {
       setExtraAttrs({})
+      setForm((p) => ({ ...p, [key]: value as string, brand: '', model: '' }))
+      return
     }
+    setForm((p) => ({ ...p, [key]: value }))
   }
 
   function addImages(e: ChangeEvent<HTMLInputElement>) {

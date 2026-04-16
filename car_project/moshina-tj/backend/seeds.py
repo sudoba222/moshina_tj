@@ -506,12 +506,90 @@ BRANDS_CATALOG = [
     {"name": "Moskvich", "slug": "moskvich", "country": "Россия", "is_popular": False, "models": [
         "3", "6",
     ]},
+    # ── Motorcycle brands ───────────────────────────────
+    {"name": "Yamaha", "slug": "yamaha", "country": "Япония", "is_popular": True, "models": [
+        "YZF-R1", "YZF-R3", "YZF-R6", "MT-07", "MT-09", "MT-03", "XMAX 300", "NMAX 155",
+        "TMAX 560", "Tracer 9", "Ténéré 700", "XSR700", "XSR900", "FZ-07", "FZ-09",
+        "WR450F", "YZ450F", "Bolt", "V-Star 950",
+    ]},
+    {"name": "Honda (Мото)", "slug": "honda-moto", "country": "Япония", "is_popular": True, "models": [
+        "CBR1000RR", "CBR600RR", "CBR300R", "CBR500R", "CB650R", "CB750 Hornet",
+        "CB300R", "CB125R", "CRF450R", "Africa Twin", "NT1100", "NC750X",
+        "PCX 150", "ADV150", "SH350", "Forza 350", "Gold Wing", "Rebel 500", "Rebel 1100",
+    ]},
+    {"name": "Kawasaki", "slug": "kawasaki", "country": "Япония", "is_popular": True, "models": [
+        "Ninja ZX-10R", "Ninja ZX-6R", "Ninja 400", "Ninja 650", "Z900", "Z650",
+        "Z400", "Z900RS", "Versys 650", "Versys 1000", "KLX450R", "KX450",
+        "Vulcan S", "Eliminator", "W800",
+    ]},
+    {"name": "Suzuki (Мото)", "slug": "suzuki-moto", "country": "Япония", "is_popular": False, "models": [
+        "GSX-R1000", "GSX-R750", "GSX-R600", "GSX-S1000", "GSX-S750",
+        "V-Strom 650", "V-Strom 1050", "SV650", "Boulevard M109R",
+        "Burgman 400", "Address 125",
+    ]},
+    {"name": "KTM", "slug": "ktm", "country": "Австрия", "is_popular": False, "models": [
+        "Duke 390", "Duke 790", "Duke 890", "Duke 1290", "RC 390", "RC 990",
+        "Adventure 390", "Adventure 790", "Adventure 1290", "EXC 450F",
+        "SX 450F", "Enduro 690",
+    ]},
+    {"name": "Ducati", "slug": "ducati", "country": "Италия", "is_popular": False, "models": [
+        "Panigale V2", "Panigale V4", "Monster", "Monster SP", "Streetfighter V2",
+        "Streetfighter V4", "Multistrada V4", "Diavel", "Scrambler 800",
+        "Scrambler 1100", "DesertX",
+    ]},
+    {"name": "BMW Motorrad", "slug": "bmw-motorrad", "country": "Германия", "is_popular": False, "models": [
+        "S1000RR", "S1000R", "S1000XR", "R1250GS", "R1250R", "R1250RS",
+        "F850GS", "F750GS", "G310GS", "G310R", "R nineT", "K1600GT",
+        "C400X", "CE 04",
+    ]},
+    {"name": "Royal Enfield", "slug": "royal-enfield", "country": "Индия", "is_popular": False, "models": [
+        "Classic 350", "Classic 500", "Meteor 350", "Hunter 350",
+        "Bullet 350", "Thunderbird", "Himalayan", "Interceptor 650", "Continental GT 650",
+    ]},
+    {"name": "Bajaj", "slug": "bajaj", "country": "Индия", "is_popular": False, "models": [
+        "Pulsar 125", "Pulsar 150", "Pulsar 160", "Pulsar 180", "Pulsar 200NS",
+        "Pulsar N250", "Pulsar RS200", "Dominar 250", "Dominar 400", "Avenger 160",
+    ]},
+    {"name": "TVS", "slug": "tvs", "country": "Индия", "is_popular": False, "models": [
+        "Apache RTR 160", "Apache RTR 200", "Apache RR 310", "Raider 125",
+        "Sport", "Star City", "Jupiter", "Ntorq 125",
+    ]},
+    {"name": "Hero", "slug": "hero", "country": "Индия", "is_popular": False, "models": [
+        "Splendor Plus", "HF Deluxe", "Passion Pro", "Glamour", "Xtreme 160R",
+        "Xpulse 200", "Destini 125",
+    ]},
+    {"name": "Harley-Davidson", "slug": "harley-davidson", "country": "США", "is_popular": False, "models": [
+        "Iron 883", "Forty-Eight", "Sportster S", "Street Bob", "Fat Bob",
+        "Low Rider S", "Road King", "Electra Glide", "Street Glide", "Pan America",
+    ]},
+    {"name": "Triumph", "slug": "triumph", "country": "Великобритания", "is_popular": False, "models": [
+        "Street Triple", "Speed Triple", "Tiger 850", "Tiger 900", "Tiger 1200",
+        "Bonneville T100", "Bonneville T120", "Scrambler 1200", "Thunderbird",
+    ]},
+    {"name": "Moto Guzzi", "slug": "moto-guzzi", "country": "Италия", "is_popular": False, "models": [
+        "V7", "V9", "V85 TT", "V100 Mandello", "Stelvio",
+    ]},
+    {"name": "CFMoto", "slug": "cfmoto", "country": "Китай", "is_popular": True, "models": [
+        "150NK", "250NK", "300NK", "400NK", "650NK", "650MT", "700CL-X",
+        "800MT", "CFORCE 400", "CFORCE 800", "ZFORCE 950",
+    ]},
+    {"name": "Loncin", "slug": "loncin", "country": "Китай", "is_popular": True, "models": [
+        "LX250GS", "LX300GY", "LX250-15", "LX150-70", "GP250", "SX2",
+    ]},
+    {"name": "Lifan (Мото)", "slug": "lifan-moto", "country": "Китай", "is_popular": True, "models": [
+        "LF150-10B", "LF200-10L", "LF250", "LF200GY", "SR200", "KP200",
+    ]},
+    {"name": "Zontes", "slug": "zontes", "country": "Китай", "is_popular": False, "models": [
+        "G1 125", "G2 125", "R250", "R310", "T310", "U1 125", "U2 125",
+    ]},
 ]
 
 
 def seed_catalog(db):
     for b_data in BRANDS_CATALOG:
-        existing = db.query(Brand).filter(Brand.name == b_data["name"]).first()
+        existing = db.query(Brand).filter(
+            (Brand.name == b_data["name"]) | (Brand.slug == b_data["slug"])
+        ).first()
         if existing:
             brand_obj = existing
         else:
@@ -641,9 +719,24 @@ def seed():
 
         db.flush()
 
+        cat_slug_to_id = {c.slug: c.id for c in db.query(Category).all()}
+
+        _BODY_TO_CAT = {
+            'sedan': 'car', 'hatchback': 'car', 'coupe': 'car',
+            'wagon': 'car', 'convertible': 'car',
+            'suv': 'suv', 'crossover': 'suv',
+            'minivan': 'minivan',
+            'pickup': 'pickup',
+            'van': 'commercial',
+            'bus': 'bus',
+            'other': 'other',
+        }
+
         print("Seeding listings and images...")
         for idx, ld in enumerate(LISTINGS_DATA):
             user = user_map[ld["user_phone"]]
+            body = ld.get("body_type", "")
+            cat_slug = _BODY_TO_CAT.get(body, "car")
             listing = Listing(
                 user_id=user.id,
                 type=ld["type"],
@@ -664,6 +757,7 @@ def seed():
                 views=idx * 7,  # Simulate varied view counts for featured ordering
                 status=ListingStatus.active,  # Seeds bypass moderation — activate immediately
                 is_active=True,
+                category_id=cat_slug_to_id.get(cat_slug),
             )
             db.add(listing)
             db.flush()
