@@ -86,7 +86,7 @@ export default function Footer() {
           <div>
             <ColTitle>{lang === 'ru' ? 'Поддержка' : 'Дастгирӣ'}</ColTitle>
             <a
-              href="https://t.me/+992918277695"
+              href="https://t.me/tajcartj"
               target="_blank"
               rel="noopener noreferrer"
               style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.65)', marginBottom: '10px', textDecoration: 'none', transition: 'color 0.13s' }}
