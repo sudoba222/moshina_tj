@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import AdBannerSection from '@/components/AdBanner'
+import FirstVisitModal from '@/components/FirstVisitModal'
 import CarBrandLogo from '@/components/CarBrandLogo'
 import { listingsApi, statsApi } from '@/lib/api'
 import type { MarketplaceStats } from '@/lib/api'
@@ -114,6 +115,7 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <FirstVisitModal />
       <Navbar />
 
       <main style={{ flex: 1, paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} className="pb-mobile">
