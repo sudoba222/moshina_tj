@@ -82,6 +82,42 @@ export default function Footer() {
             <FootLink href="/privacy">{t('footer.privacy', lang)}</FootLink>
           </div>
 
+          {/* Support */}
+          <div>
+            <ColTitle>{lang === 'ru' ? 'Поддержка' : 'Дастгирӣ'}</ColTitle>
+            <a
+              href="https://t.me/+992918277695"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.65)', marginBottom: '10px', textDecoration: 'none', transition: 'color 0.13s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-white)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.65)' }}
+            >
+              {/* Telegram icon */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.26 14.4l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.888.16z"/>
+              </svg>
+              Telegram
+            </a>
+            <a
+              href="https://wa.me/992918277695"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.65)', marginBottom: '10px', textDecoration: 'none', transition: 'color 0.13s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-white)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.65)' }}
+            >
+              {/* WhatsApp icon */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12.004 0C5.374 0 .006 5.368.006 11.997c0 2.117.554 4.103 1.522 5.83L.006 24l6.354-1.498a12.03 12.03 0 0 0 5.644 1.414C18.634 23.916 24 18.548 24 11.997 24 5.368 18.634 0 12.004 0zm6.235 16.77c-.26.733-1.522 1.398-2.08 1.448-.558.052-1.09.262-3.668-.764-3.094-1.232-5.07-4.38-5.224-4.583-.152-.203-1.24-1.648-1.24-3.143s.786-2.228 1.065-2.53c.278-.304.608-.38.811-.38l.583.01c.187.01.438-.07.684.523.26.617.882 2.142.96 2.296.078.155.128.336.026.539-.103.203-.155.33-.304.508l-.455.527c-.152.152-.31.317-.134.622.176.304.784 1.292 1.684 2.092 1.156 1.031 2.13 1.35 2.434 1.502.304.152.48.128.658-.077.178-.203.76-.887 1.015-1.19.254-.304.508-.253.857-.152.35.103 2.218 1.046 2.6 1.237.38.19.634.284.727.44.092.16.092.924-.168 1.657z"/>
+              </svg>
+              WhatsApp
+            </a>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
+              +992 91 827 7695
+            </p>
+          </div>
+
           {/* Post CTA */}
           <div>
             <ColTitle>{t('footer.colSellers', lang)}</ColTitle>
