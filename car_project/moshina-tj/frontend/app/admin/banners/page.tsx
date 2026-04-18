@@ -1,7 +1,7 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
-import { catalogApi } from '@/lib/api'
+import { catalogApi, uploadApi } from '@/lib/api'
 import type { AdBanner } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
@@ -21,6 +21,90 @@ type BannerForm = {
 const EMPTY_FORM: BannerForm = {
   title_ru: '', title_tj: '', subtitle_ru: '', subtitle_tj: '',
   image_url: '', link_url: '', display_order: 0,
+}
+
+// Reusable image URL field with "upload from computer" button
+function ImageField({
+  value,
+  onChange,
+  lang,
+}: {
+  value: string
+  onChange: (url: string) => void
+  lang: 'ru' | 'tj'
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadError('')
+    setUploading(true)
+    try {
+      const res = await uploadApi.image(file)
+      onChange(res.data.data.url)
+    } catch {
+      setUploadError(lang === 'ru' ? 'Ошибка загрузки' : 'Хатои бор кардан')
+    }
+    setUploading(false)
+    // reset input so same file can be re-selected
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="https://..."
+          style={{ ...inputStyle, flex: 1, minWidth: 0, boxSizing: 'border-box' }}
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          style={{
+            flexShrink: 0,
+            padding: '0 12px',
+            background: 'var(--accent-dim)',
+            color: 'var(--accent)',
+            border: '1px solid var(--accent)',
+            borderRadius: '8px',
+            cursor: uploading ? 'not-allowed' : 'pointer',
+            fontSize: '12px',
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+            opacity: uploading ? 0.6 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+          }}
+        >
+          <IconImage />
+          {uploading
+            ? (lang === 'ru' ? 'Загрузка...' : 'Бор кардан...')
+            : (lang === 'ru' ? 'С компьютера' : 'Аз компютер')}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleFile}
+        />
+      </div>
+      {value && (
+        <div style={{ marginTop: '8px', borderRadius: '8px', overflow: 'hidden', height: '80px', position: 'relative', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      )}
+      {uploadError && <ErrorText>{uploadError}</ErrorText>}
+    </div>
+  )
 }
 
 export default function AdminBannersPage() {
@@ -181,7 +265,7 @@ export default function AdminBannersPage() {
       {/* Create modal */}
       {createOpen && (
         <ModalBackdrop onClose={() => setCreateOpen(false)}>
-          <ModalCard maxWidth="500px">
+          <ModalCard maxWidth="520px">
             <ModalTitle>{lang === 'ru' ? 'Новый баннер' : 'Банери нав'}</ModalTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               {labelPairs.map(({ label, key }) => (
@@ -195,12 +279,11 @@ export default function AdminBannersPage() {
                 </div>
               ))}
             </div>
-            <FormField label={lang === 'ru' ? 'URL изображения' : 'URL акс'}>
-              <input
+            <FormField label={lang === 'ru' ? 'Изображение' : 'Акс'}>
+              <ImageField
                 value={createForm.image_url}
-                onChange={(e) => setCreateForm((f) => ({ ...f, image_url: e.target.value }))}
-                placeholder="https://..."
-                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+                onChange={(url) => setCreateForm((f) => ({ ...f, image_url: url }))}
+                lang={lang}
               />
             </FormField>
             <FormField label={lang === 'ru' ? 'Ссылка (необяз.)' : 'Истинод (ихтиёрӣ)'}>
@@ -231,7 +314,7 @@ export default function AdminBannersPage() {
       {/* Edit modal */}
       {editData && (
         <ModalBackdrop onClose={() => setEditData(null)}>
-          <ModalCard maxWidth="500px">
+          <ModalCard maxWidth="520px">
             <ModalTitle>{lang === 'ru' ? 'Редактировать баннер' : 'Таҳрири баннер'}</ModalTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               {labelPairs.map(({ label, key }) => (
@@ -245,11 +328,11 @@ export default function AdminBannersPage() {
                 </div>
               ))}
             </div>
-            <FormField label={lang === 'ru' ? 'URL изображения' : 'URL акс'}>
-              <input
+            <FormField label={lang === 'ru' ? 'Изображение' : 'Акс'}>
+              <ImageField
                 value={editData.image_url}
-                onChange={(e) => setEditData((d) => d ? { ...d, image_url: e.target.value } : d)}
-                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+                onChange={(url) => setEditData((d) => d ? { ...d, image_url: url } : d)}
+                lang={lang}
               />
             </FormField>
             <FormField label={lang === 'ru' ? 'Ссылка (необяз.)' : 'Истинод (ихтиёрӣ)'}>

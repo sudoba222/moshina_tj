@@ -1,30 +1,40 @@
 'use client'
+import { useEffect, useState } from 'react'
+import { catalogApi } from '@/lib/api'
+import type { AdBanner } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
-import { t } from '@/lib/i18n'
 
-// Static Unsplash car photo URLs — stable CDN links, no authentication required
-const CAR_PHOTOS = [
-  'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=480&q=75',
-  'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=480&q=75',
-  'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=480&q=75',
-  'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=480&q=75',
-  'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=480&q=75',
-  'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=480&q=75',
-]
-
-interface AdBannerProps {
-  adLink?: string
-}
-
-export default function AdBanner({ adLink = '#' }: AdBannerProps) {
+export default function AdBannerSection() {
   const { lang } = useLang()
+  const [banners, setBanners] = useState<AdBanner[]>([])
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    catalogApi.getBanners()
+      .then((res) => setBanners(res.data.data ?? []))
+      .catch(() => {})
+  }, [])
+
+  // Auto-rotate every 5 seconds when there are multiple banners
+  useEffect(() => {
+    if (banners.length < 2) return
+    const id = setInterval(() => setIndex((i) => (i + 1) % banners.length), 5000)
+    return () => clearInterval(id)
+  }, [banners.length])
+
+  if (banners.length === 0) return null
+
+  const banner = banners[index]
+  const title = lang === 'ru' ? banner.title_ru : (banner.title_tj || banner.title_ru)
+  const subtitle = lang === 'ru' ? banner.subtitle_ru : (banner.subtitle_tj || banner.subtitle_ru)
+  const href = banner.link_url ?? '#'
 
   return (
     <a
-      href={adLink}
-      target="_blank"
+      href={href}
+      target={href !== '#' ? '_blank' : undefined}
       rel="noopener noreferrer"
-      aria-label={t('adBanner.title', lang)}
+      aria-label={title}
       style={{
         display: 'block',
         textDecoration: 'none',
@@ -34,41 +44,26 @@ export default function AdBanner({ adLink = '#' }: AdBannerProps) {
         overflow: 'hidden',
         borderRadius: '12px',
         border: '1px solid var(--border)',
-        cursor: adLink === '#' ? 'default' : 'pointer',
+        cursor: href === '#' ? 'default' : 'pointer',
       }}
-      onClick={adLink === '#' ? (e) => e.preventDefault() : undefined}
+      onClick={href === '#' ? (e) => e.preventDefault() : undefined}
     >
-      {/* Horizontally scrollable photo strip */}
-      <div
-        aria-hidden="true"
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          height: '100%',
-          width: '100%',
-          position: 'absolute',
-          inset: 0,
-          overflow: 'hidden',
-        }}
-      >
-        {CAR_PHOTOS.map((src, i) => (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            key={i}
-            src={src}
-            alt=""
-            loading={i === 0 ? 'eager' : 'lazy'}
-            style={{
-              flexShrink: 0,
-              width: `${100 / CAR_PHOTOS.length}%`,
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'center',
-              display: 'block',
-            }}
-          />
-        ))}
-      </div>
+      {/* Background image */}
+      {banner.image_url && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={banner.image_url}
+          alt=""
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+          }}
+        />
+      )}
 
       {/* Dark gradient overlay */}
       <div
@@ -76,8 +71,7 @@ export default function AdBanner({ adLink = '#' }: AdBannerProps) {
         style={{
           position: 'absolute',
           inset: 0,
-          background:
-            'linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.62) 100%)',
+          background: 'linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.62) 100%)',
         }}
       />
 
@@ -94,7 +88,7 @@ export default function AdBanner({ adLink = '#' }: AdBannerProps) {
           gap: '8px',
         }}
       >
-        {/* Ad label badge */}
+        {/* Ad badge */}
         <span
           style={{
             fontSize: '10px',
@@ -122,57 +116,76 @@ export default function AdBanner({ adLink = '#' }: AdBannerProps) {
             textShadow: '0 2px 8px rgba(0,0,0,0.4)',
           }}
         >
-          {t('adBanner.title', lang)}
+          {title}
         </h2>
 
-        <p
-          style={{
-            margin: 0,
-            fontSize: 'clamp(12px, 1.8vw, 14px)',
-            color: 'rgba(255,255,255,0.82)',
-            lineHeight: 1.5,
-            maxWidth: '420px',
-          }}
-        >
-          {t('adBanner.sub', lang)}
-        </p>
+        {subtitle && (
+          <p
+            style={{
+              margin: 0,
+              fontSize: 'clamp(12px, 1.8vw, 14px)',
+              color: 'rgba(255,255,255,0.82)',
+              lineHeight: 1.5,
+              maxWidth: '420px',
+            }}
+          >
+            {subtitle}
+          </p>
+        )}
 
-        {/* CTA button */}
+        {href !== '#' && (
+          <div
+            style={{
+              marginTop: '4px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: 'var(--accent)',
+              color: 'var(--color-white)',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
+            }}
+          >
+            {lang === 'ru' ? 'Подробнее' : 'Бештар'}
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M2 6h8M6 2l4 4-4 4" />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      {/* Dot indicators for multiple banners */}
+      {banners.length > 1 && (
         <div
           style={{
-            marginTop: '4px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 16px',
-            background: 'var(--accent)',
-            color: 'var(--color-white)',
-            borderRadius: '6px',
-            fontSize: '13px',
-            fontWeight: 700,
-            minHeight: '36px',
-            transition: 'opacity 0.15s ease',
+            position: 'absolute',
+            bottom: '10px',
+            right: '14px',
+            display: 'flex',
+            gap: '5px',
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '0.85' }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '1' }}
         >
-          {t('adBanner.cta', lang)}
-          {/* Chevron right icon */}
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M2 6h8M6 2l4 4-4 4" />
-          </svg>
+          {banners.map((_, i) => (
+            <button
+              key={i}
+              onClick={(e) => { e.preventDefault(); setIndex(i) }}
+              aria-label={`Banner ${i + 1}`}
+              style={{
+                width: i === index ? '18px' : '6px',
+                height: '6px',
+                borderRadius: '3px',
+                background: i === index ? 'var(--color-white)' : 'rgba(255,255,255,0.4)',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                transition: 'width 0.2s, background 0.2s',
+              }}
+            />
+          ))}
         </div>
-      </div>
+      )}
     </a>
   )
 }
