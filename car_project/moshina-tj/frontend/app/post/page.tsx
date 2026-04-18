@@ -293,7 +293,7 @@ function PostPage() {
 
   function validateStep(s: number): string {
     if (s === 1 && !form.category_slug) return t('post.fillRequired', lang)
-    if (s === 2) {
+    if (s === 2 && form.category_slug !== 'parts') {
       const finalBrand = form.brand === 'Другое' ? customBrand.trim() : form.brand
       const finalModel = form.model === 'Другое' ? customModel.trim() : form.model
       if (!finalBrand) return t('postForm.brandLabel', lang) + ' — ' + t('post.fillRequired', lang)
@@ -721,8 +721,8 @@ function PostPage() {
             {(step === 2 || isEdit) && (
             <div>
 
-            {/* ── Марка, модель, год ── */}
-            <div style={card}>
+            {/* ── Марка, модель, год (скрыто для запчастей) ── */}
+            {form.category_slug !== 'parts' && <div style={card}>
               <SectionTitle>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 {t('postForm.brandModelYear', lang)}
@@ -831,7 +831,7 @@ function PostPage() {
                   />
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* ── Цена и город ── */}
             <div style={card}>
