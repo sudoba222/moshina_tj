@@ -108,7 +108,7 @@ function CatalogFallback() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{ height: '100px', background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)' }} />
-      <div className="max-w-7xl mx-auto px-4 md:px-6 w-full" style={{ paddingTop: '32px' }}>
+      <div className="max-w-7xl mx-auto px-4 md:px-6 w-full" style={{ paddingTop: 'clamp(12px, 3vw, 32px)' }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {Array.from({ length: 9 }).map((_, i) => <CatalogSkeleton key={i} />)}
         </div>
@@ -864,7 +864,7 @@ function CatalogContent() {
       <Navbar />
 
       <main style={{ flex: 1 }} className="pb-mobile">
-        <div className="max-w-7xl mx-auto px-4 md:px-6" style={{ paddingTop: '32px', paddingBottom: '60px' }}>
+        <div className="max-w-7xl mx-auto px-4 md:px-6" style={{ paddingTop: 'clamp(12px, 3vw, 32px)', paddingBottom: '60px' }}>
 
           {/* Mobile search bar */}
           <MobileCatalogSearch

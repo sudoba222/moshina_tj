@@ -531,6 +531,17 @@ img, video, iframe, embed, object {
   max-width: 100%;
 }
 
+/* Prevent long words / URLs from breaking layout on mobile */
+p, h1, h2, h3, h4, h5, h6, span, li, td, th {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Touch devices: faster tap response */
+a, button, [role="button"], label {
+  touch-action: manipulation;
+}
+
 /* Remove tap highlight on touch devices */
 a, button, [role="button"] {
   -webkit-tap-highlight-color: transparent;

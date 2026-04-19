@@ -608,7 +608,7 @@ function PostPage() {
                   t('post.stepPhotos', lang),
                   t('post.stepPricing', lang),
                 ].map((label, i) => (
-                  <span key={i} style={{ fontSize: '10px', fontWeight: 700, color: step === i+1 ? 'var(--accent)' : 'var(--text-muted)', flex: i < 3 ? 1 : 'none', textAlign: i === 0 ? 'left' : i === 3 ? 'right' : 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span key={i} style={{ fontSize: '10px', fontWeight: 700, color: step === i+1 ? 'var(--accent)' : 'var(--text-muted)', flex: i < 3 ? 1 : 'none', textAlign: i === 0 ? 'left' : i === 3 ? 'right' : 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                     {label}
                   </span>
                 ))}
@@ -655,7 +655,7 @@ function PostPage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                 {t('postForm.categoryLabel', lang)}
               </SectionTitle>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '8px' }}>
                 {VEHICLE_CATEGORIES.map((cat) => {
                   const selected = form.category_slug === cat.id
                   return (
@@ -935,7 +935,7 @@ function PostPage() {
                 {/* Body type */}
                 <div>
                   <label style={lbl}>{t('postForm.bodyLabel', lang)}</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '8px' }}>
                     {BODY_TYPES.map((bt) => {
                       const selected = form.body_type === bt.value
                       return (
