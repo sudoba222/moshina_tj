@@ -261,22 +261,8 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
       <main style={{ flex: 1, paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} className="pb-mobile">
 
         {/* ── HERO SECTION ──────────────────────────────────────────────────── */}
-        <section className="hero-section" style={{ position: 'relative', overflow: 'hidden', background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: 'clamp(32px, 6vw, 64px) 16px clamp(28px, 4vw, 48px)' }}>
-          {/* Decorative gradient blobs */}
-          <div className="hero-blob hero-blob-1" aria-hidden="true" />
-          <div className="hero-blob hero-blob-2" aria-hidden="true" />
-
-          <div style={{ position: 'relative', zIndex: 1, maxWidth: '680px', margin: '0 auto' }}>
-
-            {/* Badge pill */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', border: '1.5px solid var(--accent)', borderRadius: '20px', padding: '5px 14px', marginBottom: '18px', background: 'var(--accent-dim)' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" stroke="none" aria-hidden="true">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-              </svg>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.01em' }}>
-                {lang === 'ru' ? 'Авторынок №1 в Таджикистане' : 'Бозори мошин №1 дар Тоҷикистон'}
-              </span>
-            </div>
+        <section className="hero-section" style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: 'clamp(32px, 6vw, 64px) 16px clamp(28px, 4vw, 48px)' }}>
+          <div style={{ maxWidth: '680px', margin: '0 auto' }}>
 
             {/* H1 */}
             <h1 style={{ fontSize: 'clamp(28px, 7vw, 52px)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '12px' }}>
@@ -492,30 +478,23 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
         )}
 
         {/* ── HOW IT WORKS ──────────────────────────────────────────────────── */}
-        <section style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: 'clamp(28px, 4vw, 48px) 16px' }}>
+        <section style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: 'clamp(24px, 4vw, 40px) 16px' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <h2 style={{ fontSize: 'clamp(16px, 2.5vw, 22px)', fontWeight: 800, color: 'var(--text)', marginBottom: '24px', textAlign: 'center' }}>
-              {lang === 'ru' ? 'Как купить авто?' : 'Чӣ тавр мошин харидан?'}
+            <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '20px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {lang === 'ru' ? 'Как это работает' : 'Ин чӣ тавр кор мекунад'}
             </h2>
             <div className="how-grid">
-              {howItWorks.map((item) => (
+              {howItWorks.map((item, idx) => (
                 <div key={item.step} className="how-card">
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {item.icon}
-                    </div>
-                    <div>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: '11px', fontWeight: 800, marginBottom: '6px' }}>
-                        {item.step}
-                      </div>
-                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px', lineHeight: 1.3 }}>
-                        {lang === 'ru' ? item.ru_title : item.tj_title}
-                      </h3>
-                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.55, margin: 0 }}>
-                        {lang === 'ru' ? item.ru_desc : item.tj_desc}
-                      </p>
-                    </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--accent)', marginBottom: '8px', letterSpacing: '0.02em' }}>
+                    {String(idx + 1).padStart(2, '0')}
                   </div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px', lineHeight: 1.3 }}>
+                    {lang === 'ru' ? item.ru_title : item.tj_title}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                    {lang === 'ru' ? item.ru_desc : item.tj_desc}
+                  </p>
                 </div>
               ))}
             </div>
@@ -579,22 +558,14 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <div className="sell-banner">
               <div className="sell-banner-left">
-                <h2 style={{ fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 900, color: 'var(--color-white)', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: '8px' }}>
+                <h2 style={{ fontSize: 'clamp(20px, 3vw, 28px)', fontWeight: 800, color: 'var(--color-white)', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: '8px' }}>
                   {lang === 'ru' ? 'Продайте ваш автомобиль' : 'Мошини худро фурӯшед'}
                 </h2>
-                <p style={{ fontSize: '14px', color: 'var(--color-white)', opacity: 0.85, marginBottom: '16px', lineHeight: 1.5 }}>
-                  {lang === 'ru' ? 'Это быстро, бесплатно и просто' : 'Ин зуд, ройгон ва осон аст'}
+                <p style={{ fontSize: '14px', color: 'var(--color-white)', opacity: 0.8, lineHeight: 1.55, margin: 0 }}>
+                  {lang === 'ru'
+                    ? 'Разместите объявление бесплатно — тысячи покупателей увидят его уже сегодня'
+                    : 'Эълонро ройгон гузоред — ҳазорон харидор онро имрӯз мебинанд'}
                 </p>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {(lang === 'ru'
-                    ? ['Бесплатно', 'За 5 минут', 'Тысячи покупателей']
-                    : ['Ройгон', 'Дар 5 дақиқа', 'Ҳазорон харидор']
-                  ).map((badge) => (
-                    <span key={badge} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-white)', background: 'rgba(255,255,255,0.18)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.28)' }}>
-                      {badge}
-                    </span>
-                  ))}
-                </div>
               </div>
               <div className="sell-banner-right">
                 <Link
@@ -666,34 +637,6 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
       <Footer />
 
       <style>{`
-        /* ── Hero blobs ── */
-        .hero-blob {
-          position: absolute;
-          border-radius: 50%;
-          pointer-events: none;
-          filter: blur(60px);
-        }
-        .hero-blob-1 {
-          width: clamp(280px, 50vw, 520px);
-          height: clamp(280px, 50vw, 520px);
-          background: radial-gradient(circle, rgba(200,56,8,0.07) 0%, transparent 70%);
-          top: -120px;
-          right: -80px;
-          animation: blobFloat 10s ease-in-out infinite alternate;
-        }
-        .hero-blob-2 {
-          width: clamp(200px, 40vw, 400px);
-          height: clamp(200px, 40vw, 400px);
-          background: radial-gradient(circle, rgba(200,56,8,0.06) 0%, transparent 70%);
-          bottom: -60px;
-          left: -60px;
-          animation: blobFloat 12s ease-in-out infinite alternate-reverse;
-        }
-        @keyframes blobFloat {
-          from { transform: translate(0, 0) scale(1); }
-          to   { transform: translate(20px, 16px) scale(1.06); }
-        }
-
         /* ── Hero search bar ── */
         .hero-search-bar {
           display: flex;
@@ -881,8 +824,9 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
         .how-card {
           background: var(--card);
           border: 1px solid var(--border);
-          border-radius: 16px;
-          padding: clamp(16px, 3vw, 24px);
+          border-left: 3px solid var(--accent);
+          border-radius: 12px;
+          padding: clamp(16px, 3vw, 22px);
         }
 
         /* ── Sell banner ── */
