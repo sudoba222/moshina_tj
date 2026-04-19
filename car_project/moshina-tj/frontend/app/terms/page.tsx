@@ -76,7 +76,7 @@ export default function TermsPage() {
             Условия использования
           </h1>
           <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-            Дата вступления в силу: 1 января 2025 г. &nbsp;&middot;&nbsp; Платформа TAJCAR.TJ
+            Дата вступления в силу: 1 января 2026 г. &nbsp;&middot;&nbsp; Платформа TAJCAR.TJ
           </p>
         </div>
 

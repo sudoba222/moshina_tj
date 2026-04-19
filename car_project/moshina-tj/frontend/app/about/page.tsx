@@ -276,7 +276,7 @@ export default async function AboutPage() {
               <StatCard value={formatStat(stats?.listings_count)} label="объявлений" />
               <StatCard value={formatStat(stats?.cities_count)} label="городов" />
               <StatCard value={formatStat(stats?.dealers_count)} label="дилеров" />
-              <StatCard value="2024" label="год основания" />
+              <StatCard value="2026" label="год основания" />
             </div>
           </section>
 
