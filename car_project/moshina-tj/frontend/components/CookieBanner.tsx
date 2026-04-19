@@ -46,7 +46,6 @@ export default function CookieBanner() {
         borderTop: '1px solid var(--border)',
         boxShadow: 'var(--shadow-md)',
         padding: '16px',
-        position: 'relative',
       }}
     >
       {/* X close button */}
