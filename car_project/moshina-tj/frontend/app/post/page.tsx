@@ -708,10 +708,17 @@ function PostPage() {
 
             {/* ── Step 1 nav ── */}
             {!isEdit && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', marginBottom: '16px' }}>
-                <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
-                  {lang === 'ru' ? 'Далее →' : 'Идома →'}
-                </button>
+              <div style={{ marginTop: '8px', marginBottom: '16px' }}>
+                {error && (
+                  <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', color: 'var(--color-error)', fontWeight: 600, marginBottom: '10px' }}>
+                    {error}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
+                    {lang === 'ru' ? 'Далее →' : 'Идома →'}
+                  </button>
+                </div>
               </div>
             )}
             </div>
@@ -1259,13 +1266,20 @@ function PostPage() {
 
             {/* ── Step 2 nav ── */}
             {!isEdit && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', marginBottom: '16px' }}>
-                <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px' }}>
-                  ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
-                </button>
-                <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
-                  {lang === 'ru' ? 'Далее →' : 'Идома →'}
-                </button>
+              <div style={{ marginTop: '8px', marginBottom: '16px' }}>
+                {error && (
+                  <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', color: 'var(--color-error)', fontWeight: 600, marginBottom: '10px' }}>
+                    {error}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px' }}>
+                    ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+                  </button>
+                  <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
+                    {lang === 'ru' ? 'Далее →' : 'Идома →'}
+                  </button>
+                </div>
               </div>
             )}
             </div>
@@ -1332,13 +1346,20 @@ function PostPage() {
 
             {/* ── Step 3 nav ── */}
             {!isEdit && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', marginBottom: '16px' }}>
-                <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px' }}>
-                  ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
-                </button>
-                <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
-                  {lang === 'ru' ? 'Далее →' : 'Идома →'}
-                </button>
+              <div style={{ marginTop: '8px', marginBottom: '16px' }}>
+                {error && (
+                  <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', color: 'var(--color-error)', fontWeight: 600, marginBottom: '10px' }}>
+                    {error}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px' }}>
+                    ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+                  </button>
+                  <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
+                    {lang === 'ru' ? 'Далее →' : 'Идома →'}
+                  </button>
+                </div>
               </div>
             )}
             </div>

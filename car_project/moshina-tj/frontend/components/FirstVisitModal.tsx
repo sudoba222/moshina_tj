@@ -56,9 +56,38 @@ export default function FirstVisitModal() {
           textAlign: 'center',
           boxShadow: '0 24px 64px rgba(0,0,0,0.28)',
           animation: 'fvModalIn 0.25s ease',
+          position: 'relative',
         }}
       >
         <style>{`@keyframes fvModalIn { from { opacity:0; transform:translateY(16px) scale(0.97) } to { opacity:1; transform:none } }`}</style>
+
+        {/* Close button */}
+        <button
+          onClick={dismiss}
+          aria-label="Close"
+          style={{
+            position: 'absolute',
+            top: '14px',
+            right: '14px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--text-muted)',
+            padding: '6px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'color 0.13s, background 0.13s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.background = 'var(--surface)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'none' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
 
         {/* Icon */}
         <div style={{

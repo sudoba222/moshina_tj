@@ -443,7 +443,7 @@ export default function Navbar() {
       {/* ── Mobile drawer panel ── */}
       {mobileOpen && (
         <div id="mobile-nav-drawer" role="dialog" aria-modal="true" className="md:hidden"
-          style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '300px', maxWidth: 'calc(100vw - 40px)', background: 'var(--nav-bg)', borderRight: '1px solid var(--border)', boxShadow: '4px 0 40px rgba(0,0,0,0.18)', zIndex: 9999, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '300px', maxWidth: 'calc(100vw - 40px)', background: 'var(--nav-bg)', borderLeft: '1px solid var(--border)', boxShadow: '-4px 0 40px rgba(0,0,0,0.18)', zIndex: 9999, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
           {/* Drawer header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 16px', borderBottom: '1px solid var(--border)' }}>
