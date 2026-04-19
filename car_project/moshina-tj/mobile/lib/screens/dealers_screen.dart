@@ -44,20 +44,21 @@ class _DealersScreenState extends State<DealersScreen> {
         '/dealers',
         queryParams: {'page': _page, 'limit': 20},
       );
-      final List items;
+      final List<dynamic> items;
       int pages = 1;
       if (data is Map) {
-        items = data['items'] as List? ?? [];
-        pages = data['pages'] as int? ?? 1;
-      } else if (data is List) {
+        items = data['items'] as List<dynamic>? ?? [];
+        pages = (data['pages'] as num?)?.toInt() ?? 1;
+      } else if (data is List<dynamic>) {
         items = data;
       } else {
         items = [];
       }
-      final newDealers =
-          items.map((e) => Dealer.fromJson(e as Map<String, dynamic>)).toList();
+      final newDealers = items
+          .map((e) => Dealer.fromJson(e as Map<String, dynamic>))
+          .toList();
       setState(() {
-        if (refresh) {
+        if (refresh || _page == 1 && !_loadingMore) {
           _dealers = newDealers;
         } else {
           _dealers.addAll(newDealers);
@@ -66,7 +67,7 @@ class _DealersScreenState extends State<DealersScreen> {
         _loading = false;
         _loadingMore = false;
       });
-    } catch (e) {
+    } catch (_) {
       setState(() {
         _loading = false;
         _loadingMore = false;
@@ -86,20 +87,19 @@ class _DealersScreenState extends State<DealersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: c.bg,
       appBar: AppBar(
-        title: Text(t('dealers', lang)),
+        title: Text(t('nav.dealers', lang)),
       ),
-      body: _buildBody(context, colors, lang),
+      body: _buildBody(context, c, lang),
     );
   }
 
-  Widget _buildBody(
-      BuildContext context, AppColorExtension colors, String lang) {
+  Widget _buildBody(BuildContext context, AppColors c, String lang) {
     if (_loading) {
       return GridView.builder(
         padding: const EdgeInsets.all(16),
@@ -110,12 +110,12 @@ class _DealersScreenState extends State<DealersScreen> {
           childAspectRatio: 0.85,
         ),
         itemCount: 6,
-        itemBuilder: (_, __) => Shimmer.fromColors(
-          baseColor: colors.border,
-          highlightColor: colors.surface,
+        itemBuilder: (_, index) => Shimmer.fromColors(
+          baseColor: c.border,
+          highlightColor: c.surface,
           child: Container(
             decoration: BoxDecoration(
-              color: colors.card,
+              color: c.card,
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -128,14 +128,16 @@ class _DealersScreenState extends State<DealersScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.wifi_off_outlined, size: 48, color: colors.textMuted),
+            Icon(Icons.wifi_off_outlined, size: 48, color: c.textMuted),
             const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: colors.textSecondary)),
+            Text(_error!, style: TextStyle(color: c.textSecondary)),
             const SizedBox(height: 12),
             TextButton(
               onPressed: () => _load(refresh: true),
-              child: Text(t('retry', lang),
-                  style: TextStyle(color: colors.accent)),
+              child: Text(
+                t('error.retry', lang),
+                style: TextStyle(color: c.accent),
+              ),
             ),
           ],
         ),
@@ -147,17 +149,19 @@ class _DealersScreenState extends State<DealersScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.store_outlined, size: 48, color: colors.textMuted),
+            Icon(Icons.store_outlined, size: 48, color: c.textMuted),
             const SizedBox(height: 12),
-            Text(t('no_listings', lang),
-                style: TextStyle(color: colors.textSecondary)),
+            Text(
+              t('common.noListings', lang),
+              style: TextStyle(color: c.textSecondary),
+            ),
           ],
         ),
       );
     }
 
     return RefreshIndicator(
-      color: colors.accent,
+      color: c.accent,
       onRefresh: () => _load(refresh: true),
       child: GridView.builder(
         padding: const EdgeInsets.all(16),
@@ -172,9 +176,10 @@ class _DealersScreenState extends State<DealersScreen> {
           if (i >= _dealers.length) {
             if (!_loadingMore) _loadMore();
             return Center(
-                child: CircularProgressIndicator(color: colors.accent));
+              child: CircularProgressIndicator(color: c.accent),
+            );
           }
-          return _DealerCard(dealer: _dealers[i], colors: colors, lang: lang);
+          return _DealerCard(dealer: _dealers[i], c: c, lang: lang);
         },
       ),
     );
@@ -183,12 +188,12 @@ class _DealersScreenState extends State<DealersScreen> {
 
 class _DealerCard extends StatelessWidget {
   final Dealer dealer;
-  final AppColorExtension colors;
+  final AppColors c;
   final String lang;
 
   const _DealerCard({
     required this.dealer,
-    required this.colors,
+    required this.c,
     required this.lang,
   });
 
@@ -196,9 +201,9 @@ class _DealerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: colors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -210,7 +215,7 @@ class _DealerCard extends StatelessWidget {
             child: Text(
               dealer.name,
               style: TextStyle(
-                color: colors.text,
+                color: c.text,
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
               ),
@@ -224,14 +229,15 @@ class _DealerCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.location_on_outlined,
-                    size: 12, color: colors.textMuted),
+                Icon(Icons.location_on_outlined, size: 12, color: c.textMuted),
                 const SizedBox(width: 2),
-                Text(
-                  dealer.city!,
-                  style: TextStyle(color: colors.textMuted, fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Flexible(
+                  child: Text(
+                    dealer.city!,
+                    style: TextStyle(color: c.textMuted, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -241,12 +247,12 @@ class _DealerCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '${dealer.listingCount} ${t('dealer_listings', lang)}',
-                style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                '${dealer.listingCount} ${t('dealers.listings', lang)}',
+                style: TextStyle(color: c.textSecondary, fontSize: 12),
               ),
               if (dealer.isVerified) ...[
                 const SizedBox(width: 4),
-                Icon(Icons.verified, size: 14, color: colors.accent),
+                Icon(Icons.verified, size: 14, color: c.accent),
               ],
             ],
           ),
@@ -264,7 +270,7 @@ class _DealerCard extends StatelessWidget {
           width: 64,
           height: 64,
           fit: BoxFit.contain,
-          errorWidget: (_, __, ___) => _placeholder(),
+          errorWidget: (ctx, url, err) => _placeholder(),
         ),
       );
     }
@@ -276,10 +282,10 @@ class _DealerCard extends StatelessWidget {
       width: 64,
       height: 64,
       decoration: BoxDecoration(
-        color: colors.border,
+        color: c.border,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(Icons.store, size: 32, color: colors.textMuted),
+      child: Icon(Icons.store, size: 32, color: c.textMuted),
     );
   }
 }

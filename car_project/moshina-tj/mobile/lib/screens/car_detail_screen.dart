@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/listing.dart';
@@ -22,6 +23,7 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
   bool _loading = true;
   String? _error;
   int _currentImageIndex = 0;
+  List<Listing> _related = [];
 
   @override
   void initState() {
@@ -35,17 +37,20 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
       _error = null;
     });
     try {
-      final listing = await context
-          .read<ListingProvider>()
-          .getListingById(widget.listingId);
+      final provider = context.read<ListingProvider>();
+      final listing = await provider.getListingById(widget.listingId);
       if (mounted) {
         setState(() {
           _listing = listing;
           _loading = false;
           if (listing == null) _error = 'Объявление не найдено';
         });
+        if (listing != null) {
+          final related = await provider.getRelatedListings(widget.listingId);
+          if (mounted) setState(() => _related = related);
+        }
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _loading = false;
@@ -59,7 +64,7 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
     final phone = _listing?.sellerPhone;
     if (phone == null) return;
     final uri = Uri.parse('tel:$phone');
-    if (await canLaunchUrl(uri)) launchUrl(uri);
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   Future<void> _whatsappSeller() async {
@@ -67,39 +72,45 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
     if (phone == null) return;
     final cleaned = phone.replaceAll(RegExp(r'[^\d]'), '');
     final uri = Uri.parse('https://wa.me/$cleaned');
-    if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
 
     if (_loading) {
       return Scaffold(
-        backgroundColor: colors.bg,
+        backgroundColor: c.bg,
         appBar: AppBar(),
-        body: Center(child: CircularProgressIndicator(color: colors.accent)),
+        body: Center(child: CircularProgressIndicator(color: c.accent)),
       );
     }
 
     if (_error != null || _listing == null) {
       return Scaffold(
-        backgroundColor: colors.bg,
+        backgroundColor: c.bg,
         appBar: AppBar(),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 48, color: colors.textMuted),
+              Icon(Icons.error_outline, size: 48, color: c.textMuted),
               const SizedBox(height: 12),
-              Text(_error ?? t('error_loading', lang),
-                  style: TextStyle(color: colors.textSecondary)),
+              Text(
+                _error ?? t('error.loading', lang),
+                style: TextStyle(color: c.textSecondary),
+              ),
               const SizedBox(height: 12),
               TextButton(
                 onPressed: _loadListing,
-                child: Text(t('retry', lang),
-                    style: TextStyle(color: colors.accent)),
+                child: Text(
+                  t('error.retry', lang),
+                  style: TextStyle(color: c.accent),
+                ),
               ),
             ],
           ),
@@ -110,16 +121,17 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
     final listing = _listing!;
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: c.bg,
+      extendBodyBehindAppBar: false,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
             expandedHeight: 280,
-            backgroundColor: colors.surface,
+            backgroundColor: c.surface,
             foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
-              background: _buildGallery(listing, colors),
+              background: _buildGallery(listing, c),
             ),
           ),
           SliverToBoxAdapter(
@@ -128,21 +140,32 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildTitleRow(listing, colors, lang),
-                  const SizedBox(height: 8),
-                  _buildPrice(listing, colors),
+                  _buildTitleRow(listing, c, lang),
+                  const SizedBox(height: 6),
+                  _buildPrice(listing, c, lang),
                   const SizedBox(height: 16),
-                  _buildSpecs(listing, colors, lang),
+                  _buildSpecsGrid(listing, c, lang),
                   if (listing.description != null &&
                       listing.description!.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _buildDescription(listing, colors, lang),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle(t('detail.description', lang), c),
+                    const SizedBox(height: 8),
+                    _buildDescription(listing, c),
                   ],
-                  const SizedBox(height: 16),
-                  _buildSellerCard(listing, colors, lang),
                   const SizedBox(height: 20),
-                  _buildActionButtons(context, colors, lang),
+                  _buildSectionTitle(t('detail.seller', lang), c),
+                  const SizedBox(height: 8),
+                  _buildSellerCard(listing, c),
                   const SizedBox(height: 24),
+                  // Action buttons (sticky bottom bar feel)
+                  _buildActionButtons(context, c, lang),
+                  if (_related.isNotEmpty) ...[
+                    const SizedBox(height: 28),
+                    _buildSectionTitle(t('detail.related', lang), c),
+                    const SizedBox(height: 12),
+                    _buildRelated(context, c, lang),
+                  ],
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -152,13 +175,12 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
     );
   }
 
-  Widget _buildGallery(Listing listing, AppColorExtension colors) {
+  Widget _buildGallery(Listing listing, AppColors c) {
     if (listing.images.isEmpty) {
       return Container(
-        color: colors.border,
+        color: c.border,
         child: Center(
-          child: Icon(Icons.directions_car_outlined,
-              size: 80, color: colors.textMuted),
+          child: Icon(Icons.directions_car_outlined, size: 80, color: c.textMuted),
         ),
       );
     }
@@ -168,16 +190,16 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
         PageView.builder(
           itemCount: listing.images.length,
           onPageChanged: (i) => setState(() => _currentImageIndex = i),
-          itemBuilder: (ctx, i) {
+          itemBuilder: (_, i) {
             return CachedNetworkImage(
               imageUrl: listing.images[i].url,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(color: colors.border),
-              errorWidget: (_, __, ___) => Container(
-                color: colors.border,
+              placeholder: (ctx, url) => Container(color: c.border),
+              errorWidget: (ctx, url, err) => Container(
+                color: c.border,
                 child: Center(
                   child: Icon(Icons.directions_car_outlined,
-                      size: 80, color: colors.textMuted),
+                      size: 80, color: c.textMuted),
                 ),
               ),
             );
@@ -225,8 +247,21 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
     );
   }
 
-  Widget _buildTitleRow(
-      Listing listing, AppColorExtension colors, String lang) {
+  Widget _buildTitleRow(Listing listing, AppColors c, String lang) {
+    Color badgeColor;
+    String badgeLabel;
+    switch (listing.listingType) {
+      case 'rent':
+        badgeColor = AppColors.colorInfo;
+        badgeLabel = t('filters.rent', lang);
+      case 'installment':
+        badgeColor = AppColors.colorWarning;
+        badgeLabel = t('filters.installment', lang);
+      default:
+        badgeColor = c.accent;
+        badgeLabel = t('filters.sale', lang);
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -234,193 +269,252 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
           child: Text(
             '${listing.brand} ${listing.model} ${listing.year}',
             style: TextStyle(
-              color: colors.text,
+              color: c.text,
               fontWeight: FontWeight.w700,
               fontSize: 22,
             ),
           ),
         ),
         const SizedBox(width: 8),
-        _buildTypeBadge(listing, colors, lang),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: badgeColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            badgeLabel,
+            style: TextStyle(
+              color: badgeColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildTypeBadge(
-      Listing listing, AppColorExtension colors, String lang) {
-    Color color;
-    String label;
-    switch (listing.listingType) {
-      case 'rent':
-        color = AppColors.rentBlue;
-        label = t('rent', lang);
-      case 'installment':
-        color = AppColors.installmentOrange;
-        label = t('installment', lang);
-      default:
-        color = colors.accent;
-        label = t('sale', lang);
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(label,
+  Widget _buildPrice(Listing listing, AppColors c, String lang) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          listing.formattedPrice(lang),
           style: TextStyle(
-              color: color, fontWeight: FontWeight.w600, fontSize: 13)),
+            color: c.accent,
+            fontWeight: FontWeight.w900,
+            fontSize: 28,
+          ),
+        ),
+        if (listing.isNegotiable) ...[
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.colorSuccess.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              t('common.negotiable', lang),
+              style: const TextStyle(
+                color: AppColors.colorSuccess,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _buildPrice(Listing listing, AppColorExtension colors) {
+  Widget _buildSectionTitle(String title, AppColors c) {
     return Text(
-      listing.formattedPrice,
+      title,
       style: TextStyle(
-        color: colors.accent,
-        fontWeight: FontWeight.w800,
-        fontSize: 26,
+        color: c.text,
+        fontWeight: FontWeight.w700,
+        fontSize: 17,
       ),
     );
   }
 
-  Widget _buildSpecs(
-      Listing listing, AppColorExtension colors, String lang) {
+  Widget _buildSpecsGrid(Listing listing, AppColors c, String lang) {
+    final specs = <(IconData, String, String?)>[
+      (Icons.calendar_today_outlined, t('detail.year', lang), listing.year.toString()),
+      if (listing.mileage != null)
+        (Icons.speed_outlined, t('detail.mileage', lang), listing.formattedMileage),
+      if (listing.fuel != null)
+        (Icons.local_gas_station_outlined, t('detail.fuel', lang), listing.fuel),
+      if (listing.transmission != null)
+        (Icons.settings_outlined, t('detail.transmission', lang), listing.transmission),
+      if (listing.engineVolume != null)
+        (Icons.engineering_outlined, t('detail.engine', lang),
+            '${listing.engineVolume} л'),
+      if (listing.driveType != null)
+        (Icons.four_k_plus_outlined, t('detail.drive', lang), listing.driveType),
+      if (listing.bodyType != null)
+        (Icons.directions_car_outlined, t('detail.body', lang), listing.bodyType),
+      if (listing.color != null)
+        (Icons.palette_outlined, t('detail.color', lang), listing.color),
+      (Icons.location_on_outlined, t('detail.city', lang), listing.city),
+      if (listing.customsCleared != null)
+        (
+          Icons.fact_check_outlined,
+          t('detail.customs', lang),
+          listing.customsCleared! ? 'Да' : 'Нет'
+        ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.border),
+      ),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 3.2,
+        ),
+        itemCount: specs.length,
+        itemBuilder: (_, i) {
+          final (icon, label, value) = specs[i];
+          if (value == null) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: c.textMuted),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                            color: c.textMuted, fontSize: 10),
+                        maxLines: 1,
+                      ),
+                      Text(
+                        value,
+                        style: TextStyle(
+                          color: c.text,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDescription(Listing listing, AppColors c) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: colors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: c.border),
       ),
-      child: Column(
+      child: Text(
+        listing.description!,
+        style: TextStyle(
+          color: c.textSecondary,
+          fontSize: 14,
+          height: 1.6,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSellerCard(Listing listing, AppColors c) {
+    final name = listing.sellerName ?? 'Продавец';
+    final phone = listing.sellerPhone ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.border),
+      ),
+      child: Row(
         children: [
-          _SpecRow(
-            icon: Icons.calendar_today_outlined,
-            label: t('year', lang),
-            value: listing.year.toString(),
-            colors: colors,
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: c.accent.withValues(alpha: 0.1),
+            child: Icon(Icons.person_outline, color: c.accent, size: 24),
           ),
-          if (listing.mileage != null) ...[
-            Divider(color: colors.border, height: 16),
-            _SpecRow(
-              icon: Icons.speed_outlined,
-              label: t('mileage', lang),
-              value: '${listing.formattedMileage} ${t('km', lang)}',
-              colors: colors,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: TextStyle(
+                    color: c.text,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                if (phone.isNotEmpty)
+                  Text(
+                    phone,
+                    style: TextStyle(color: c.textSecondary, fontSize: 13),
+                  ),
+              ],
             ),
-          ],
-          Divider(color: colors.border, height: 16),
-          _SpecRow(
-            icon: Icons.location_on_outlined,
-            label: t('city', lang),
-            value: listing.city,
-            colors: colors,
           ),
+          if (listing.isDealerListing)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: c.accentDim,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                t('badges.dealer', ''),
+                style: TextStyle(
+                  color: c.accent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildDescription(
-      Listing listing, AppColorExtension colors, String lang) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          t('description', lang),
-          style: TextStyle(
-            color: colors.text,
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: colors.card,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.border),
-          ),
-          child: Text(
-            listing.description!,
-            style: TextStyle(
-              color: colors.textSecondary,
-              fontSize: 14,
-              height: 1.6,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSellerCard(
-      Listing listing, AppColorExtension colors, String lang) {
-    final name = listing.sellerName ?? 'Продавец';
-    final phone = listing.sellerPhone ?? '';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          t('seller', lang),
-          style: TextStyle(
-            color: colors.text,
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: colors.card,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.border),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: colors.accent.withValues(alpha: 0.1),
-                child: Icon(Icons.person_outline,
-                    color: colors.accent, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name,
-                        style: TextStyle(
-                            color: colors.text,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15)),
-                    if (phone.isNotEmpty)
-                      Text(phone,
-                          style: TextStyle(
-                              color: colors.textSecondary, fontSize: 13)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButtons(
-      BuildContext context, AppColorExtension colors, String lang) {
+  Widget _buildActionButtons(BuildContext context, AppColors c, String lang) {
     return Row(
       children: [
         Expanded(
           child: ElevatedButton.icon(
             onPressed: _callSeller,
             icon: const Icon(Icons.phone_outlined, size: 18),
-            label: Text(t('call', lang)),
+            label: Text(t('detail.call', lang)),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(0, 52),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -428,49 +522,89 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
           child: OutlinedButton.icon(
             onPressed: _whatsappSeller,
             icon: const Icon(Icons.chat_outlined, size: 18),
-            label: Text(t('whatsapp', lang)),
+            label: Text(t('detail.whatsapp', lang)),
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF25D366),
-              side: const BorderSide(color: Color(0xFF25D366)),
-              minimumSize: const Size(0, 48),
+              foregroundColor: AppColors.whatsapp,
+              side: const BorderSide(color: AppColors.whatsapp),
+              minimumSize: const Size(0, 52),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(14)),
             ),
           ),
         ),
       ],
     );
   }
-}
 
-class _SpecRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final AppColorExtension colors;
-
-  const _SpecRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.colors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: colors.textMuted),
-        const SizedBox(width: 8),
-        Text(label,
-            style: TextStyle(color: colors.textSecondary, fontSize: 14)),
-        const Spacer(),
-        Text(value,
-            style: TextStyle(
-                color: colors.text,
-                fontWeight: FontWeight.w600,
-                fontSize: 14)),
-      ],
+  Widget _buildRelated(BuildContext context, AppColors c, String lang) {
+    return SizedBox(
+      height: 270,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _related.length,
+        separatorBuilder: (_, index) => const SizedBox(width: 12),
+        itemBuilder: (ctx, i) {
+          final item = _related[i];
+          return GestureDetector(
+            onTap: () => ctx.push('/car/${item.id}'),
+            child: SizedBox(
+              width: 240,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: c.border),
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: item.firstImageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: item.firstImageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (ctx2, url) =>
+                                  Container(color: c.border),
+                              errorWidget: (ctx2, url, err) =>
+                                  Container(color: c.border),
+                            )
+                          : Container(color: c.border),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${item.brand} ${item.model} ${item.year}',
+                            style: TextStyle(
+                                color: c.text,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item.formattedPrice(lang),
+                            style: TextStyle(
+                              color: c.accent,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

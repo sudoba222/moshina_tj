@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
@@ -37,23 +38,19 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     if (mounted) {
       setState(() => _loading = false);
-      if (ok) {
-        context.go('/');
-      }
+      if (ok) context.go('/');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
     final error = context.select((AuthProvider p) => p.error);
 
     return Scaffold(
-      backgroundColor: colors.bg,
-      appBar: AppBar(
-        title: Text(t('login', lang)),
-      ),
+      backgroundColor: c.bg,
+      appBar: AppBar(title: Text(t('auth.login', lang))),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -68,21 +65,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: colors.accent.withValues(alpha: 0.1),
+                      color: c.accent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Icon(Icons.directions_car,
-                        color: colors.accent, size: 36),
+                    child:
+                        Icon(Icons.directions_car, color: c.accent, size: 36),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 Center(
                   child: Text(
-                    'MOSHINA.TJ',
-                    style: TextStyle(
-                      color: colors.text,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 22,
+                    'TAJCAR',
+                    style: GoogleFonts.outfit(
+                      color: c.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 24,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
@@ -91,19 +89,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: colors.accent.withValues(alpha: 0.08),
+                      color: c.accent.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: colors.accent.withValues(alpha: 0.3)),
+                      border: Border.all(
+                          color: c.accent.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
                         Icon(Icons.error_outline,
-                            color: colors.accent, size: 18),
+                            color: c.accent, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
-                            child: Text(error,
-                                style: TextStyle(
-                                    color: colors.accent, fontSize: 14))),
+                          child: Text(
+                            error,
+                            style: TextStyle(color: c.accent, fontSize: 14),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -112,12 +113,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  style: TextStyle(color: colors.text),
+                  style: TextStyle(color: c.text),
                   decoration: InputDecoration(
-                    labelText: t('phone', lang),
-                    labelStyle: TextStyle(color: colors.textMuted),
+                    labelText: t('auth.phone', lang),
+                    labelStyle: TextStyle(color: c.textMuted),
+                    hintText: '+992...',
+                    hintStyle: TextStyle(color: c.textMuted),
                     prefixIcon: Icon(Icons.phone_outlined,
-                        color: colors.textMuted, size: 20),
+                        color: c.textMuted, size: 20),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
@@ -130,19 +133,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _passCtrl,
                   obscureText: _obscure,
-                  style: TextStyle(color: colors.text),
+                  style: TextStyle(color: c.text),
                   decoration: InputDecoration(
-                    labelText: t('password', lang),
-                    labelStyle: TextStyle(color: colors.textMuted),
+                    labelText: t('auth.password', lang),
+                    labelStyle: TextStyle(color: c.textMuted),
                     prefixIcon: Icon(Icons.lock_outline,
-                        color: colors.textMuted, size: 20),
+                        color: c.textMuted, size: 20),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscure ? Icons.visibility_off : Icons.visibility,
-                        color: colors.textMuted,
+                        _obscure
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: c.textMuted,
                         size: 20,
                       ),
-                      onPressed: () => setState(() => _obscure = !_obscure),
+                      onPressed: () =>
+                          setState(() => _obscure = !_obscure),
                     ),
                   ),
                   validator: (v) {
@@ -162,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             strokeWidth: 2,
                           ),
                         )
-                      : Text(t('login', lang)),
+                      : Text(t('auth.login', lang)),
                 ),
                 const SizedBox(height: 20),
                 Center(
@@ -170,14 +176,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     onTap: () => context.push('/register'),
                     child: RichText(
                       text: TextSpan(
-                        text: '${t('no_account', lang)} ',
+                        text: '${t('auth.noAccount', lang)} ',
                         style: TextStyle(
-                            color: colors.textSecondary, fontSize: 14),
+                            color: c.textSecondary, fontSize: 14),
                         children: [
                           TextSpan(
-                            text: t('register', lang),
+                            text: t('auth.register', lang),
                             style: TextStyle(
-                              color: colors.accent,
+                              color: c.accent,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

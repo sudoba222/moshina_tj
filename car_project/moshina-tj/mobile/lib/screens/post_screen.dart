@@ -11,14 +11,14 @@ class PostScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
     final auth = context.watch<AuthProvider>();
 
     if (!auth.isAuthenticated) {
       return Scaffold(
-        backgroundColor: colors.bg,
-        appBar: AppBar(title: Text(t('post', lang))),
+        backgroundColor: c.bg,
+        appBar: AppBar(title: Text(t('nav.post', lang))),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
@@ -29,18 +29,18 @@ class PostScreen extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: colors.accent.withValues(alpha: 0.08),
+                    color: c.accent.withValues(alpha: 0.08),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.add_box_outlined,
-                      size: 40, color: colors.accent),
+                  child:
+                      Icon(Icons.add_box_outlined, size: 40, color: c.accent),
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  t('sign_in_to_post', lang),
+                  t('post.loginRequired', lang),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: colors.text,
+                    color: c.text,
                     fontWeight: FontWeight.w600,
                     fontSize: 17,
                   ),
@@ -48,14 +48,14 @@ class PostScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () => context.push('/login'),
-                  child: Text(t('login', lang)),
+                  child: Text(t('auth.login', lang)),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => context.push('/register'),
                   child: Text(
-                    t('register', lang),
-                    style: TextStyle(color: colors.accent),
+                    t('auth.register', lang),
+                    style: TextStyle(color: c.accent),
                   ),
                 ),
               ],
@@ -66,67 +66,64 @@ class PostScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: colors.bg,
-      appBar: AppBar(title: Text(t('post', lang))),
+      backgroundColor: c.bg,
+      appBar: AppBar(title: Text(t('nav.post', lang))),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionHeader(title: 'Информация об автомобиле', colors: colors),
-            const SizedBox(height: 12),
-            _buildComingSoonCard(colors),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: c.card,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: c.border),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.construction_outlined,
+                      size: 48, color: c.textMuted),
+                  const SizedBox(height: 16),
+                  Text(
+                    t('post.comingSoon', lang),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: c.text,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    lang == 'tj'
+                        ? 'Гузоштани эълонҳо тавассути барнома ба зудӣ дастрас мешавад. Ҳоло метавонед аз сайти tajcar.tj истифода баред.'
+                        : 'Размещение объявлений через приложение скоро станет доступно. Пока используйте сайт tajcar.tj.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: c.textSecondary,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.open_in_browser, size: 18),
+                    label: const Text('tajcar.tj'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: c.accent,
+                      side: BorderSide(color: c.accent),
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildComingSoonCard(AppColorExtension colors) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: colors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.construction_outlined, size: 48, color: colors.textMuted),
-          const SizedBox(height: 12),
-          Text(
-            'Размещение объявлений',
-            style: TextStyle(
-                color: colors.text,
-                fontWeight: FontWeight.w700,
-                fontSize: 16),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Функция размещения объявлений доступна на сайте tajcar.tj. Мобильное приложение будет обновлено в ближайшее время.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.5),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final AppColorExtension colors;
-
-  const _SectionHeader({required this.title, required this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: TextStyle(
-        color: colors.text,
-        fontWeight: FontWeight.w700,
-        fontSize: 16,
       ),
     );
   }

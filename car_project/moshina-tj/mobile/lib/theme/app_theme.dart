@@ -1,276 +1,362 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class AppColors {
-  // Light mode
-  static const lightBg = Color(0xFFF2F4F7);
-  static const lightSurface = Color(0xFFFFFFFF);
-  static const lightCard = Color(0xFFFFFFFF);
-  static const lightBorder = Color(0xFFE4E8EF);
-  static const lightText = Color(0xFF191F28);
-  static const lightTextSecondary = Color(0xFF4B5668);
-  static const lightTextMuted = Color(0xFF8A95A8);
-  static const lightAccent = Color(0xFFC83808);
-  static const lightAccentHover = Color(0xFFA82E06);
+// Raw color constants — internal only, use AppColors extension in widgets
+class _C {
+  // Light
+  static const lBg = Color(0xFFF2F4F7);
+  static const lSurface = Color(0xFFFFFFFF);
+  static const lCard = Color(0xFFFFFFFF);
+  static const lBorder = Color(0xFFE4E8EF);
+  static const lBorderStrong = Color(0xFFCDD3DE);
+  static const lText = Color(0xFF191F28);
+  static const lTextSecondary = Color(0xFF4B5668);
+  static const lTextMuted = Color(0xFF8A95A8);
+  static const lAccent = Color(0xFFC83808);
+  static const lAccentHover = Color(0xFFA82E06);
+  static const lTagBg = Color(0xFFF2F4F7);
+  static const lNavBg = Color(0xFFFFFFFF);
+  static const lFooterBg = Color(0xFF111827);
 
-  // Dark mode
-  static const darkBg = Color(0xFF111318);
-  static const darkSurface = Color(0xFF1A1E27);
-  static const darkCard = Color(0xFF1E2330);
-  static const darkBorder = Color(0xFF2E3548);
-  static const darkText = Color(0xFFEAEFF8);
-  static const darkTextSecondary = Color(0xFF9AAFCF);
-  static const darkAccent = Color(0xFFD94020);
-  static const darkFooterBg = Color(0xFF0F1117);
+  // Dark
+  static const dBg = Color(0xFF111318);
+  static const dSurface = Color(0xFF1A1E27);
+  static const dCard = Color(0xFF1E2330);
+  static const dBorder = Color(0xFF2E3548);
+  static const dBorderStrong = Color(0xFF3A4557);
+  static const dText = Color(0xFFEAEFF8);
+  static const dTextSecondary = Color(0xFF9AAFCF);
+  static const dTextMuted = Color(0xFF6D7D99);
+  static const dAccent = Color(0xFFD94020);
+  static const dAccentHover = Color(0xFFF05030);
+  static const dTagBg = Color(0xFF252B3A);
+  static const dNavBg = Color(0xFF1A1E27);
 
-  // Badge colors
-  static const rentBlue = Color(0xFF1E6FC8);
-  static const installmentOrange = Color(0xFFD97706);
+  // Semantic
+  static const colorError = Color(0xFFEF4444);
+  static const colorSuccess = Color(0xFF16A34A);
+  static const colorInfo = Color(0xFF2563EB);
+  static const colorWarning = Color(0xFFF59E0B);
+  static const colorOnline = Color(0xFF22C55E);
+  static const whatsapp = Color(0xFF25D366);
+}
+
+class AppColors extends ThemeExtension<AppColors> {
+  final Color bg;
+  final Color surface;
+  final Color card;
+  final Color border;
+  final Color borderStrong;
+  final Color text;
+  final Color textSecondary;
+  final Color textMuted;
+  final Color accent;
+  final Color accentHover;
+  final Color accentDim;
+  final Color tagBg;
+  final Color navBg;
+  final Color footerBg;
+
+  // Semantic — same in both themes
+  static const colorError = _C.colorError;
+  static const colorSuccess = _C.colorSuccess;
+  static const colorInfo = _C.colorInfo;
+  static const colorWarning = _C.colorWarning;
+  static const colorOnline = _C.colorOnline;
+  static const whatsapp = _C.whatsapp;
+
+  const AppColors({
+    required this.bg,
+    required this.surface,
+    required this.card,
+    required this.border,
+    required this.borderStrong,
+    required this.text,
+    required this.textSecondary,
+    required this.textMuted,
+    required this.accent,
+    required this.accentHover,
+    required this.accentDim,
+    required this.tagBg,
+    required this.navBg,
+    required this.footerBg,
+  });
+
+  static const light = AppColors(
+    bg: _C.lBg,
+    surface: _C.lSurface,
+    card: _C.lCard,
+    border: _C.lBorder,
+    borderStrong: _C.lBorderStrong,
+    text: _C.lText,
+    textSecondary: _C.lTextSecondary,
+    textMuted: _C.lTextMuted,
+    accent: _C.lAccent,
+    accentHover: _C.lAccentHover,
+    accentDim: Color(0x14C83808),
+    tagBg: _C.lTagBg,
+    navBg: _C.lNavBg,
+    footerBg: _C.lFooterBg,
+  );
+
+  static const dark = AppColors(
+    bg: _C.dBg,
+    surface: _C.dSurface,
+    card: _C.dCard,
+    border: _C.dBorder,
+    borderStrong: _C.dBorderStrong,
+    text: _C.dText,
+    textSecondary: _C.dTextSecondary,
+    textMuted: _C.dTextMuted,
+    accent: _C.dAccent,
+    accentHover: _C.dAccentHover,
+    accentDim: Color(0x24D94020),
+    tagBg: _C.dTagBg,
+    navBg: _C.dNavBg,
+    footerBg: _C.dBg,
+  );
+
+  @override
+  AppColors copyWith({
+    Color? bg,
+    Color? surface,
+    Color? card,
+    Color? border,
+    Color? borderStrong,
+    Color? text,
+    Color? textSecondary,
+    Color? textMuted,
+    Color? accent,
+    Color? accentHover,
+    Color? accentDim,
+    Color? tagBg,
+    Color? navBg,
+    Color? footerBg,
+  }) {
+    return AppColors(
+      bg: bg ?? this.bg,
+      surface: surface ?? this.surface,
+      card: card ?? this.card,
+      border: border ?? this.border,
+      borderStrong: borderStrong ?? this.borderStrong,
+      text: text ?? this.text,
+      textSecondary: textSecondary ?? this.textSecondary,
+      textMuted: textMuted ?? this.textMuted,
+      accent: accent ?? this.accent,
+      accentHover: accentHover ?? this.accentHover,
+      accentDim: accentDim ?? this.accentDim,
+      tagBg: tagBg ?? this.tagBg,
+      navBg: navBg ?? this.navBg,
+      footerBg: footerBg ?? this.footerBg,
+    );
+  }
+
+  @override
+  AppColors lerp(AppColors? other, double t) {
+    if (other == null) return this;
+    return AppColors(
+      bg: Color.lerp(bg, other.bg, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      card: Color.lerp(card, other.card, t)!,
+      border: Color.lerp(border, other.border, t)!,
+      borderStrong: Color.lerp(borderStrong, other.borderStrong, t)!,
+      text: Color.lerp(text, other.text, t)!,
+      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
+      textMuted: Color.lerp(textMuted, other.textMuted, t)!,
+      accent: Color.lerp(accent, other.accent, t)!,
+      accentHover: Color.lerp(accentHover, other.accentHover, t)!,
+      accentDim: Color.lerp(accentDim, other.accentDim, t)!,
+      tagBg: Color.lerp(tagBg, other.tagBg, t)!,
+      navBg: Color.lerp(navBg, other.navBg, t)!,
+      footerBg: Color.lerp(footerBg, other.footerBg, t)!,
+    );
+  }
+}
+
+extension AppThemeContext on BuildContext {
+  AppColors get colors => Theme.of(this).extension<AppColors>()!;
 }
 
 class AppTheme {
   static ThemeData light() {
     final base = ThemeData.light(useMaterial3: true);
     return base.copyWith(
-      scaffoldBackgroundColor: AppColors.lightBg,
+      scaffoldBackgroundColor: _C.lBg,
       colorScheme: const ColorScheme.light(
-        primary: AppColors.lightAccent,
+        primary: _C.lAccent,
         onPrimary: Colors.white,
-        surface: AppColors.lightCard,
-        onSurface: AppColors.lightText,
-        outline: AppColors.lightBorder,
+        surface: _C.lCard,
+        onSurface: _C.lText,
+        outline: _C.lBorder,
       ),
-      textTheme: GoogleFonts.outfitTextTheme(base.textTheme).apply(
-        bodyColor: AppColors.lightText,
-        displayColor: AppColors.lightText,
-      ),
+      textTheme: GoogleFonts.outfitTextTheme(base.textTheme)
+          .apply(bodyColor: _C.lText, displayColor: _C.lText),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.lightSurface,
-        foregroundColor: AppColors.lightText,
+        backgroundColor: _C.lNavBg,
+        foregroundColor: _C.lText,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: GoogleFonts.outfit(
-          color: AppColors.lightText,
+          color: _C.lText,
           fontSize: 18,
           fontWeight: FontWeight.w700,
         ),
       ),
       cardTheme: const CardThemeData(
-        color: AppColors.lightCard,
+        color: _C.lCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          side: BorderSide(color: AppColors.lightBorder),
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          side: BorderSide(color: _C.lBorder),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.lightSurface,
+        fillColor: _C.lSurface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.lightBorder),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _C.lBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.lightBorder),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _C.lBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide:
-              const BorderSide(color: AppColors.lightAccent, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _C.lAccent, width: 1.5),
         ),
-        hintStyle: const TextStyle(color: AppColors.lightTextMuted),
+        hintStyle: const TextStyle(color: _C.lTextMuted),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.lightAccent,
+          backgroundColor: _C.lAccent,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(double.infinity, 52),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: GoogleFonts.outfit(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+              fontSize: 15, fontWeight: FontWeight.w700),
+          elevation: 0,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _C.lAccent,
+          side: const BorderSide(color: _C.lAccent),
+          minimumSize: const Size(double.infinity, 52),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: GoogleFonts.outfit(
+              fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.lightSurface,
-        selectedItemColor: AppColors.lightAccent,
-        unselectedItemColor: AppColors.lightTextMuted,
+        backgroundColor: _C.lNavBg,
+        selectedItemColor: _C.lAccent,
+        unselectedItemColor: _C.lTextMuted,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        selectedLabelStyle:
+            TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+        unselectedLabelStyle: TextStyle(fontSize: 11),
       ),
-      dividerColor: AppColors.lightBorder,
-      extensions: const [AppColorExtension.light],
+      dividerColor: _C.lBorder,
+      extensions: const [AppColors.light],
     );
   }
 
   static ThemeData dark() {
     final base = ThemeData.dark(useMaterial3: true);
     return base.copyWith(
-      scaffoldBackgroundColor: AppColors.darkBg,
+      scaffoldBackgroundColor: _C.dBg,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.darkAccent,
+        primary: _C.dAccent,
         onPrimary: Colors.white,
-        surface: AppColors.darkCard,
-        onSurface: AppColors.darkText,
-        outline: AppColors.darkBorder,
+        surface: _C.dCard,
+        onSurface: _C.dText,
+        outline: _C.dBorder,
       ),
-      textTheme: GoogleFonts.outfitTextTheme(base.textTheme).apply(
-        bodyColor: AppColors.darkText,
-        displayColor: AppColors.darkText,
-      ),
+      textTheme: GoogleFonts.outfitTextTheme(base.textTheme)
+          .apply(bodyColor: _C.dText, displayColor: _C.dText),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.darkSurface,
-        foregroundColor: AppColors.darkText,
+        backgroundColor: _C.dNavBg,
+        foregroundColor: _C.dText,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: GoogleFonts.outfit(
-          color: AppColors.darkText,
+          color: _C.dText,
           fontSize: 18,
           fontWeight: FontWeight.w700,
         ),
       ),
       cardTheme: const CardThemeData(
-        color: AppColors.darkCard,
+        color: _C.dCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          side: BorderSide(color: AppColors.darkBorder),
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          side: BorderSide(color: _C.dBorder),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.darkSurface,
+        fillColor: _C.dSurface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.darkBorder),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _C.dBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.darkBorder),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _C.dBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide:
-              const BorderSide(color: AppColors.darkAccent, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _C.dAccent, width: 1.5),
         ),
-        hintStyle: const TextStyle(color: AppColors.darkTextSecondary),
+        hintStyle: const TextStyle(color: _C.dTextMuted),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.darkAccent,
+          backgroundColor: _C.dAccent,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(double.infinity, 52),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: GoogleFonts.outfit(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+              fontSize: 15, fontWeight: FontWeight.w700),
+          elevation: 0,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _C.dAccent,
+          side: const BorderSide(color: _C.dAccent),
+          minimumSize: const Size(double.infinity, 52),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: GoogleFonts.outfit(
+              fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.darkSurface,
-        selectedItemColor: AppColors.darkAccent,
-        unselectedItemColor: AppColors.darkTextSecondary,
+        backgroundColor: _C.dNavBg,
+        selectedItemColor: _C.dAccent,
+        unselectedItemColor: _C.dTextMuted,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        selectedLabelStyle:
+            TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+        unselectedLabelStyle: TextStyle(fontSize: 11),
       ),
-      dividerColor: AppColors.darkBorder,
-      extensions: const [AppColorExtension.dark],
+      dividerColor: _C.dBorder,
+      extensions: const [AppColors.dark],
     );
   }
-}
-
-class AppColorExtension extends ThemeExtension<AppColorExtension> {
-  final Color bg;
-  final Color surface;
-  final Color card;
-  final Color border;
-  final Color text;
-  final Color textSecondary;
-  final Color textMuted;
-  final Color accent;
-
-  const AppColorExtension({
-    required this.bg,
-    required this.surface,
-    required this.card,
-    required this.border,
-    required this.text,
-    required this.textSecondary,
-    required this.textMuted,
-    required this.accent,
-  });
-
-  static const light = AppColorExtension(
-    bg: AppColors.lightBg,
-    surface: AppColors.lightSurface,
-    card: AppColors.lightCard,
-    border: AppColors.lightBorder,
-    text: AppColors.lightText,
-    textSecondary: AppColors.lightTextSecondary,
-    textMuted: AppColors.lightTextMuted,
-    accent: AppColors.lightAccent,
-  );
-
-  static const dark = AppColorExtension(
-    bg: AppColors.darkBg,
-    surface: AppColors.darkSurface,
-    card: AppColors.darkCard,
-    border: AppColors.darkBorder,
-    text: AppColors.darkText,
-    textSecondary: AppColors.darkTextSecondary,
-    textMuted: AppColors.darkTextSecondary,
-    accent: AppColors.darkAccent,
-  );
-
-  @override
-  AppColorExtension copyWith({
-    Color? bg,
-    Color? surface,
-    Color? card,
-    Color? border,
-    Color? text,
-    Color? textSecondary,
-    Color? textMuted,
-    Color? accent,
-  }) {
-    return AppColorExtension(
-      bg: bg ?? this.bg,
-      surface: surface ?? this.surface,
-      card: card ?? this.card,
-      border: border ?? this.border,
-      text: text ?? this.text,
-      textSecondary: textSecondary ?? this.textSecondary,
-      textMuted: textMuted ?? this.textMuted,
-      accent: accent ?? this.accent,
-    );
-  }
-
-  @override
-  AppColorExtension lerp(AppColorExtension? other, double t) {
-    if (other is! AppColorExtension) return this;
-    return AppColorExtension(
-      bg: Color.lerp(bg, other.bg, t)!,
-      surface: Color.lerp(surface, other.surface, t)!,
-      card: Color.lerp(card, other.card, t)!,
-      border: Color.lerp(border, other.border, t)!,
-      text: Color.lerp(text, other.text, t)!,
-      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
-      textMuted: Color.lerp(textMuted, other.textMuted, t)!,
-      accent: Color.lerp(accent, other.accent, t)!,
-    );
-  }
-}
-
-extension AppThemeContext on BuildContext {
-  AppColorExtension get appColors =>
-      Theme.of(this).extension<AppColorExtension>()!;
 }

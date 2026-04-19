@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/listing_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
@@ -31,7 +32,7 @@ class _TajcarAppState extends State<TajcarApp> {
   late final AuthProvider _authProvider;
   late final ListingProvider _listingProvider;
   late final LanguageProvider _languageProvider;
-  bool _isDark = false;
+  late final ThemeProvider _themeProvider;
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _TajcarAppState extends State<TajcarApp> {
     _authProvider = AuthProvider(_authService);
     _listingProvider = ListingProvider(_apiService);
     _languageProvider = LanguageProvider();
+    _themeProvider = ThemeProvider();
   }
 
   @override
@@ -50,32 +52,19 @@ class _TajcarAppState extends State<TajcarApp> {
         Provider<ApiService>.value(value: _apiService),
         ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
         ChangeNotifierProvider<ListingProvider>.value(value: _listingProvider),
-        ChangeNotifierProvider<LanguageProvider>.value(
-            value: _languageProvider),
+        ChangeNotifierProvider<LanguageProvider>.value(value: _languageProvider),
+        ChangeNotifierProvider<ThemeProvider>.value(value: _themeProvider),
       ],
-      child: _ThemeWrapper(
-        isDark: _isDark,
-        onToggleTheme: (dark) => setState(() => _isDark = dark),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) => MaterialApp.router(
+          title: 'TAJCAR',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: themeProvider.mode,
+          routerConfig: appRouter,
+        ),
       ),
-    );
-  }
-}
-
-class _ThemeWrapper extends StatelessWidget {
-  final bool isDark;
-  final ValueChanged<bool> onToggleTheme;
-
-  const _ThemeWrapper({required this.isDark, required this.onToggleTheme});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'MOSHINA.TJ',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      routerConfig: appRouter,
     );
   }
 }

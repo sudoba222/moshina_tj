@@ -5,44 +5,56 @@ import '../services/api_service.dart';
 class ListingProvider extends ChangeNotifier {
   final ApiService _api;
 
+  // Featured listings for home screen
   List<Listing> _featured = [];
-  List<Listing> _fresh = [];
   bool _featuredLoading = false;
-  bool _freshLoading = false;
   String? _featuredError;
+
+  // Fresh listings for home screen
+  List<Listing> _fresh = [];
+  bool _freshLoading = false;
   String? _freshError;
   int _freshPage = 1;
   int _freshTotalPages = 1;
   bool _freshLoadingMore = false;
 
-  List<Listing> get featured => _featured;
-  List<Listing> get fresh => _fresh;
-  bool get featuredLoading => _featuredLoading;
-  bool get freshLoading => _freshLoading;
-  String? get featuredError => _featuredError;
-  String? get freshError => _freshError;
-  bool get hasMoreFresh => _freshPage < _freshTotalPages;
-  bool get freshLoadingMore => _freshLoadingMore;
+  // Stats
+  AppStats? _stats;
+  bool _statsLoading = false;
 
-  // Catalog state
+  // Catalog
   List<Listing> _catalogItems = [];
   bool _catalogLoading = false;
   String? _catalogError;
   int _catalogPage = 1;
   int _catalogTotalPages = 1;
   bool _catalogLoadingMore = false;
-  Map<String, String> _filters = {};
+  Map<String, String> _catalogFilters = {};
+
+  List<Listing> get featured => _featured;
+  bool get featuredLoading => _featuredLoading;
+  String? get featuredError => _featuredError;
+
+  List<Listing> get fresh => _fresh;
+  bool get freshLoading => _freshLoading;
+  String? get freshError => _freshError;
+  bool get hasMoreFresh => _freshPage < _freshTotalPages;
+  bool get freshLoadingMore => _freshLoadingMore;
+
+  AppStats? get stats => _stats;
+  bool get statsLoading => _statsLoading;
 
   List<Listing> get catalogItems => _catalogItems;
   bool get catalogLoading => _catalogLoading;
   String? get catalogError => _catalogError;
   bool get hasMoreCatalog => _catalogPage < _catalogTotalPages;
   bool get catalogLoadingMore => _catalogLoadingMore;
-  Map<String, String> get filters => _filters;
+  Map<String, String> get catalogFilters => _catalogFilters;
 
   ListingProvider(this._api);
 
   Future<void> loadFeatured() async {
+    if (_featuredLoading) return;
     _featuredLoading = true;
     _featuredError = null;
     notifyListeners();
@@ -57,8 +69,8 @@ class ListingProvider extends ChangeNotifier {
             .map((e) => Listing.fromJson(e as Map<String, dynamic>))
             .toList();
       }
-    } catch (e) {
-      _featuredError = 'Ошибка загрузки рекомендуемых';
+    } catch (_) {
+      _featuredError = 'Ошибка загрузки';
     } finally {
       _featuredLoading = false;
       notifyListeners();
@@ -70,7 +82,8 @@ class ListingProvider extends ChangeNotifier {
       _freshPage = 1;
       _fresh = [];
     }
-    _freshLoading = refresh || _fresh.isEmpty;
+    if (_freshLoading) return;
+    _freshLoading = true;
     _freshError = null;
     notifyListeners();
     try {
@@ -78,14 +91,15 @@ class ListingProvider extends ChangeNotifier {
         '/listings',
         queryParams: {'page': _freshPage, 'limit': 20},
       );
-      final paginated = PaginatedListings.fromJson(data as Map<String, dynamic>);
+      final paginated =
+          PaginatedListings.fromJson(data as Map<String, dynamic>);
       if (refresh) {
         _fresh = paginated.items;
       } else {
         _fresh.addAll(paginated.items);
       }
       _freshTotalPages = paginated.pages;
-    } catch (e) {
+    } catch (_) {
       _freshError = 'Ошибка загрузки объявлений';
     } finally {
       _freshLoading = false;
@@ -103,13 +117,31 @@ class ListingProvider extends ChangeNotifier {
         '/listings',
         queryParams: {'page': _freshPage, 'limit': 20},
       );
-      final paginated = PaginatedListings.fromJson(data as Map<String, dynamic>);
+      final paginated =
+          PaginatedListings.fromJson(data as Map<String, dynamic>);
       _fresh.addAll(paginated.items);
       _freshTotalPages = paginated.pages;
     } catch (_) {
       _freshPage--;
     } finally {
       _freshLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadStats() async {
+    if (_statsLoading || _stats != null) return;
+    _statsLoading = true;
+    notifyListeners();
+    try {
+      final data = await _api.getRaw('/stats');
+      if (data is Map<String, dynamic>) {
+        _stats = AppStats.fromJson(data);
+      }
+    } catch (_) {
+      // Stats are non-critical; silently ignore
+    } finally {
+      _statsLoading = false;
       notifyListeners();
     }
   }
@@ -121,26 +153,28 @@ class ListingProvider extends ChangeNotifier {
     if (refresh) {
       _catalogPage = 1;
       _catalogItems = [];
-      if (filters != null) _filters = filters;
+      if (filters != null) _catalogFilters = Map.from(filters);
     }
-    _catalogLoading = refresh || _catalogItems.isEmpty;
+    if (_catalogLoading) return;
+    _catalogLoading = true;
     _catalogError = null;
     notifyListeners();
     try {
       final params = <String, dynamic>{
         'page': _catalogPage,
         'limit': 20,
-        ..._filters,
+        ..._catalogFilters,
       };
       final data = await _api.getRaw('/catalog', queryParams: params);
-      final paginated = PaginatedListings.fromJson(data as Map<String, dynamic>);
+      final paginated =
+          PaginatedListings.fromJson(data as Map<String, dynamic>);
       if (refresh) {
         _catalogItems = paginated.items;
       } else {
         _catalogItems.addAll(paginated.items);
       }
       _catalogTotalPages = paginated.pages;
-    } catch (e) {
+    } catch (_) {
       _catalogError = 'Ошибка загрузки каталога';
     } finally {
       _catalogLoading = false;
@@ -157,10 +191,11 @@ class ListingProvider extends ChangeNotifier {
       final params = <String, dynamic>{
         'page': _catalogPage,
         'limit': 20,
-        ..._filters,
+        ..._catalogFilters,
       };
       final data = await _api.getRaw('/catalog', queryParams: params);
-      final paginated = PaginatedListings.fromJson(data as Map<String, dynamic>);
+      final paginated =
+          PaginatedListings.fromJson(data as Map<String, dynamic>);
       _catalogItems.addAll(paginated.items);
       _catalogTotalPages = paginated.pages;
     } catch (_) {
@@ -178,5 +213,17 @@ class ListingProvider extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<List<Listing>> getRelatedListings(int id) async {
+    try {
+      final data = await _api.getRaw('/listings/$id/related');
+      if (data is List) {
+        return data
+            .map((e) => Listing.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (_) {}
+    return [];
   }
 }

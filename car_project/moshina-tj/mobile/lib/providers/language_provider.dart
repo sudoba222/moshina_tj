@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageProvider extends ChangeNotifier {
-  static const _storage = FlutterSecureStorage();
   static const _key = 'app_lang';
 
   String _lang = 'ru';
@@ -13,20 +12,21 @@ class LanguageProvider extends ChangeNotifier {
   }
 
   Future<void> _load() async {
-    final saved = await _storage.read(key: _key);
-    if (saved != null && (saved == 'ru' || saved == 'tj')) {
-      _lang = saved;
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_key);
+    if (saved == 'ru' || saved == 'tj') {
+      _lang = saved!;
       notifyListeners();
     }
   }
 
   Future<void> setLang(String lang) async {
+    if (lang != 'ru' && lang != 'tj') return;
     _lang = lang;
-    await _storage.write(key: _key, value: lang);
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, lang);
   }
 
-  void toggle() {
-    setLang(_lang == 'ru' ? 'tj' : 'ru');
-  }
+  void toggle() => setLang(_lang == 'ru' ? 'tj' : 'ru');
 }
