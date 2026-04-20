@@ -61,7 +61,7 @@ final appRouter = GoRouter(
       path: '/car/:id',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+        final id = state.pathParameters['id'] ?? '';
         return CarDetailScreen(listingId: id);
       },
     ),

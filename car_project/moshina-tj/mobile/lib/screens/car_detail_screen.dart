@@ -10,7 +10,7 @@ import '../theme/app_theme.dart';
 import '../l10n/strings.dart';
 
 class CarDetailScreen extends StatefulWidget {
-  final int listingId;
+  final String listingId;
 
   const CarDetailScreen({super.key, required this.listingId});
 

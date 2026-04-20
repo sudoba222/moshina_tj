@@ -206,7 +206,7 @@ class ListingProvider extends ChangeNotifier {
     }
   }
 
-  Future<Listing?> getListingById(int id) async {
+  Future<Listing?> getListingById(String id) async {
     try {
       final data = await _api.getRaw('/listings/$id');
       return Listing.fromJson(data as Map<String, dynamic>);
@@ -215,7 +215,7 @@ class ListingProvider extends ChangeNotifier {
     }
   }
 
-  Future<List<Listing>> getRelatedListings(int id) async {
+  Future<List<Listing>> getRelatedListings(String id) async {
     try {
       final data = await _api.getRaw('/listings/$id/related');
       if (data is List) {

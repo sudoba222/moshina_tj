@@ -3,7 +3,7 @@ import { JsonLd } from '@/components/JsonLd'
 import CarDetailClient from './CarDetailClient'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tajcar.tj'
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.tajcar.tj/api/v1'
 
 interface ListingMeta {
   brand: string

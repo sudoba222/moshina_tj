@@ -19,7 +19,7 @@ class ListingImage {
 }
 
 class Listing {
-  final int id;
+  final String id;
   final String brand;
   final String model;
   final int year;
@@ -46,7 +46,7 @@ class Listing {
   final DateTime createdAt;
   final List<ListingImage> images;
   final int viewsCount;
-  final int? userId;
+  final String? userId;
   final String? sellerPhone;
   final String? sellerName;
 
@@ -91,7 +91,7 @@ class Listing {
     final userMap = json['user'] as Map<String, dynamic>?;
 
     return Listing(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      id: json['id']?.toString() ?? '',
       brand: json['brand'] as String? ?? '',
       model: json['model'] as String? ?? '',
       year: (json['year'] as num?)?.toInt() ?? 0,
@@ -122,7 +122,7 @@ class Listing {
           : DateTime.now(),
       images: imagesList,
       viewsCount: (json['views_count'] as num?)?.toInt() ?? 0,
-      userId: (json['user_id'] as num?)?.toInt(),
+      userId: json['user_id']?.toString(),
       sellerPhone: json['seller_phone'] as String? ??
           userMap?['phone'] as String?,
       sellerName: json['seller_name'] as String? ??
