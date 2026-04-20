@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     cloudinary_api_secret: str = ""
 
     anthropic_api_key: str = ""
+    groq_api_key: str = ""
     resend_api_key: str = ""
     resend_from_email: str = ""
     telegram_bot_token: str = ""
