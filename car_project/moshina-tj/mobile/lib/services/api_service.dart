@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static const String baseUrl = 'https://api.tajcar.tj/api/v1';
-  static const _storage = FlutterSecureStorage();
+  static const String _tokenKey = 'auth_token';
 
   late final Dio _dio;
 
@@ -17,7 +17,8 @@ class ApiService {
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await _storage.read(key: 'auth_token');
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString(_tokenKey);
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -29,46 +30,36 @@ class ApiService {
     ));
   }
 
-  Future<Map<String, dynamic>> get(
-    String path, {
-    Map<String, dynamic>? queryParams,
-  }) async {
-    final response = await _dio.get(path, queryParameters: queryParams);
-    return _unwrap(response.data);
+  Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
   }
 
-  Future<Map<String, dynamic>> post(
-    String path, {
-    required Map<String, dynamic> body,
-  }) async {
+  Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
+
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
+
+  Future<dynamic> getRaw(String path, {Map<String, dynamic>? queryParams}) async {
+    final response = await _dio.get(path, queryParameters: queryParams);
+    final data = response.data;
+    if (data is Map<String, dynamic> && data.containsKey('success')) {
+      return data['data'];
+    }
+    return data;
+  }
+
+  Future<dynamic> postRaw(String path, {required Map<String, dynamic> body}) async {
     final response = await _dio.post(path, data: body);
-    return _unwrap(response.data);
-  }
-
-  Map<String, dynamic> _unwrap(dynamic raw) {
-    if (raw is Map<String, dynamic>) {
-      if (raw.containsKey('success') && raw.containsKey('data')) {
-        final data = raw['data'];
-        if (data is Map<String, dynamic>) return data;
-        // For list responses like featured listings
-        return {'_raw': raw['data'], '_message': raw['message']};
-      }
-      return raw;
+    final data = response.data;
+    if (data is Map<String, dynamic> && data.containsKey('success')) {
+      return data['data'];
     }
-    return {'_raw': raw};
-  }
-
-  Future<dynamic> getRaw(
-    String path, {
-    Map<String, dynamic>? queryParams,
-  }) async {
-    final response = await _dio.get(path, queryParameters: queryParams);
-    if (response.data is Map<String, dynamic>) {
-      final map = response.data as Map<String, dynamic>;
-      if (map.containsKey('success')) {
-        return map['data'];
-      }
-    }
-    return response.data;
+    return data;
   }
 }

@@ -8,11 +8,11 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
 
   AuthStatus _status = AuthStatus.unknown;
-  User? _user;
+  AppUser? _user;
   String? _error;
 
   AuthStatus get status => _status;
-  User? get user => _user;
+  AppUser? get user => _user;
   String? get error => _error;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
 
@@ -21,11 +21,18 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    final user = await _authService.getCurrentUser();
-    if (user != null) {
-      _user = user;
+    // Show cached user instantly, then verify with server
+    final cached = await _authService.getCachedUser();
+    if (cached != null) {
+      _user = cached;
       _status = AuthStatus.authenticated;
-    } else {
+      notifyListeners();
+    }
+    final live = await _authService.getCurrentUser();
+    if (live != null) {
+      _user = live;
+      _status = AuthStatus.authenticated;
+    } else if (cached == null) {
       _status = AuthStatus.unauthenticated;
     }
     notifyListeners();
@@ -33,14 +40,15 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> login({required String phone, required String password}) async {
     _error = null;
+    notifyListeners();
     try {
-      final result = await _authService.login(phone: phone, password: password);
-      _user = result.user;
+      final user = await _authService.login(phone: phone, password: password);
+      _user = user;
       _status = AuthStatus.authenticated;
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
       return false;
     }
@@ -52,20 +60,26 @@ class AuthProvider extends ChangeNotifier {
     required String fullName,
   }) async {
     _error = null;
+    notifyListeners();
     try {
-      await _authService.register(
-          phone: phone, password: password, fullName: fullName);
-      // After register, immediately log in
-      return login(phone: phone, password: password);
+      final user = await _authService.register(
+        phone: phone,
+        password: password,
+        fullName: fullName,
+      );
+      _user = user;
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
     } catch (e) {
-      _error = e.toString();
+      _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
       return false;
     }
   }
 
   Future<void> logout() async {
-    await _authService.clearToken();
+    await _authService.logout();
     _user = null;
     _status = AuthStatus.unauthenticated;
     notifyListeners();
