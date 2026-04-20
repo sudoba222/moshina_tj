@@ -240,6 +240,19 @@ function PhoneTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
 
   if (step === 1) return (
     <div className="otp-step" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{
+        background: 'rgba(234,179,8,0.1)',
+        border: '1px solid rgba(234,179,8,0.3)',
+        borderRadius: '12px',
+        padding: '12px',
+        fontSize: '13px',
+        color: 'var(--text)',
+        fontWeight: 600,
+        marginBottom: '4px',
+        lineHeight: '1.4'
+      }}>
+        ⚠️ У нас сейчас не работает SMS OTP. Пожалуйста, используйте кнопку "Продолжить через Telegram" ниже, чтобы получить код.
+      </div>
       <div>
         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
           {t('auth.name', lang)}
