@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/dealer.dart';
@@ -179,7 +180,12 @@ class _DealersScreenState extends State<DealersScreen> {
               child: CircularProgressIndicator(color: c.accent),
             );
           }
-          return _DealerCard(dealer: _dealers[i], c: c, lang: lang);
+          return _DealerCard(
+            dealer: _dealers[i],
+            c: c,
+            lang: lang,
+            onTap: () => context.push('/dealers/${_dealers[i].id}'),
+          );
         },
       ),
     );
@@ -190,73 +196,78 @@ class _DealerCard extends StatelessWidget {
   final Dealer dealer;
   final AppColors c;
   final String lang;
+  final VoidCallback? onTap;
 
   const _DealerCard({
     required this.dealer,
     required this.c,
     required this.lang,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.border),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildLogo(),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
-              dealer.name,
-              style: TextStyle(
-                color: c.text,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.border),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildLogo(),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                dealer.name,
+                style: TextStyle(
+                  color: c.text,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          if (dealer.city != null) ...[
-            const SizedBox(height: 4),
+            if (dealer.city != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.location_on_outlined, size: 12, color: c.textMuted),
+                  const SizedBox(width: 2),
+                  Flexible(
+                    child: Text(
+                      dealer.city!,
+                      style: TextStyle(color: c.textMuted, fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.location_on_outlined, size: 12, color: c.textMuted),
-                const SizedBox(width: 2),
-                Flexible(
-                  child: Text(
-                    dealer.city!,
-                    style: TextStyle(color: c.textMuted, fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  '${dealer.listingCount} ${t('dealers.listings', lang)}',
+                  style: TextStyle(color: c.textSecondary, fontSize: 12),
                 ),
+                if (dealer.isVerified) ...[
+                  const SizedBox(width: 4),
+                  Icon(Icons.verified, size: 14, color: c.accent),
+                ],
               ],
             ),
           ],
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '${dealer.listingCount} ${t('dealers.listings', lang)}',
-                style: TextStyle(color: c.textSecondary, fontSize: 12),
-              ),
-              if (dealer.isVerified) ...[
-                const SizedBox(width: 4),
-                Icon(Icons.verified, size: 14, color: c.accent),
-              ],
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -78,6 +78,68 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> loginWithOtp(String phone, String code, {String? name}) async {
+    _error = null;
+    notifyListeners();
+    try {
+      final user = await _authService.loginWithOtp(phone, code, name: name);
+      _user = user;
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> loginWithEmail(String email, String password) async {
+    _error = null;
+    notifyListeners();
+    try {
+      final user = await _authService.loginWithEmail(email, password);
+      _user = user;
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> registerWithEmail(String email, String name) async {
+    _error = null;
+    notifyListeners();
+    try {
+      await _authService.registerWithEmail(email, name);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> verifyEmailOtp(String email, String code) async {
+    _error = null;
+    notifyListeners();
+    try {
+      final user = await _authService.verifyEmailOtp(email, code);
+      _user = user;
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     await _authService.logout();
     _user = null;

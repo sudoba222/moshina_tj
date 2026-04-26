@@ -6,6 +6,7 @@ class AppUser {
   final String? avatarUrl;
   final String role;
   final bool isVerified;
+  final String? whatsapp;
 
   const AppUser({
     required this.id,
@@ -15,6 +16,7 @@ class AppUser {
     this.avatarUrl,
     required this.role,
     required this.isVerified,
+    this.whatsapp,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class AppUser {
       avatarUrl: json['avatar_url'] as String?,
       role: json['role'] as String? ?? 'user',
       isVerified: json['is_verified'] as bool? ?? false,
+      whatsapp: json['whatsapp_number'] as String?,
     );
   }
 
@@ -37,6 +40,7 @@ class AppUser {
     'avatar_url': avatarUrl,
     'role': role,
     'is_verified': isVerified,
+    'whatsapp_number': whatsapp,
   };
 
   String get displayName => fullName ?? phone ?? email ?? 'User';

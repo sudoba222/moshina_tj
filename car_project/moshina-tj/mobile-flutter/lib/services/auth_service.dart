@@ -12,7 +12,7 @@ class AuthService {
   Future<AppUser> login({required String phone, required String password}) async {
     final data = await _api.postRaw('/auth/login', body: {'phone': phone, 'password': password});
     if (data is Map<String, dynamic>) {
-      final token = data['token'] as String?;
+      final token = _extractToken(data['token']);
       if (token != null) {
         await _api.saveToken(token);
         final userMap = data['user'] as Map<String, dynamic>? ?? data;
@@ -35,7 +35,7 @@ class AuthService {
       'full_name': fullName,
     });
     if (data is Map<String, dynamic>) {
-      final token = data['token'] as String?;
+      final token = _extractToken(data['token']);
       if (token != null) {
         await _api.saveToken(token);
         final userMap = data['user'] as Map<String, dynamic>? ?? data;
@@ -45,6 +45,13 @@ class AuthService {
       }
     }
     throw Exception('Ошибка регистрации');
+  }
+
+  // Backend returns token as {"access_token": "...", "token_type": "bearer"} — extract the string.
+  String? _extractToken(dynamic tokenField) {
+    if (tokenField is String) return tokenField;
+    if (tokenField is Map) return tokenField['access_token'] as String?;
+    return null;
   }
 
   Future<AppUser?> getCurrentUser() async {
@@ -82,6 +89,55 @@ class AuthService {
   }
 
   Future<bool> isLoggedIn() async => (await _api.getToken()) != null;
+
+  Future<AppUser> loginWithOtp(String phone, String code, {String? name}) async {
+    final data = await _api.verifyOtp(phone, code, name: name);
+    if (data is Map<String, dynamic>) {
+      final token = _extractToken(data['token'] ?? data['access_token']);
+      if (token != null) {
+        await _api.saveToken(token);
+        final userMap = data['user'] as Map<String, dynamic>? ?? data;
+        final user = AppUser.fromJson(userMap);
+        await _cacheUser(user);
+        return user;
+      }
+    }
+    throw Exception('Неверный код');
+  }
+
+  Future<AppUser> loginWithEmail(String email, String password) async {
+    final data = await _api.loginEmail(email, password);
+    if (data is Map<String, dynamic>) {
+      final token = _extractToken(data['token'] ?? data['access_token']);
+      if (token != null) {
+        await _api.saveToken(token);
+        final userMap = data['user'] as Map<String, dynamic>? ?? data;
+        final user = AppUser.fromJson(userMap);
+        await _cacheUser(user);
+        return user;
+      }
+    }
+    throw Exception('Неверный email или пароль');
+  }
+
+  Future<void> registerWithEmail(String email, String name) async {
+    await _api.registerEmail(email, name);
+  }
+
+  Future<AppUser> verifyEmailOtp(String email, String code) async {
+    final data = await _api.verifyEmailOtp(email, code);
+    if (data is Map<String, dynamic>) {
+      final token = _extractToken(data['token'] ?? data['access_token']);
+      if (token != null) {
+        await _api.saveToken(token);
+        final userMap = data['user'] as Map<String, dynamic>? ?? data;
+        final user = AppUser.fromJson(userMap);
+        await _cacheUser(user);
+        return user;
+      }
+    }
+    throw Exception('Неверный код');
+  }
 
   Future<void> _cacheUser(AppUser user) async {
     final prefs = await SharedPreferences.getInstance();

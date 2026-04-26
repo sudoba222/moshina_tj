@@ -5,13 +5,26 @@ import 'package:shimmer/shimmer.dart';
 import '../models/listing.dart';
 import '../providers/language_provider.dart';
 import '../theme/app_theme.dart';
-import '../l10n/strings.dart';
+
+// Standard card shadow used across the app
+BoxShadow get _cardShadow => BoxShadow(
+      color: Colors.black.withValues(alpha: 0.07),
+      blurRadius: 16,
+      offset: const Offset(0, 6),
+    );
 
 class CarCard extends StatelessWidget {
   final Listing listing;
   final VoidCallback? onTap;
+  /// When true renders a compact 2-col grid variant (image-only top, minimal info bottom).
+  final bool compact;
 
-  const CarCard({super.key, required this.listing, this.onTap});
+  const CarCard({
+    super.key,
+    required this.listing,
+    this.onTap,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,15 +37,17 @@ class CarCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: c.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.border, width: 1),
+          boxShadow: [_cardShadow],
         ),
         clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            _ImageSection(listing: listing, colors: c),
-            _ContentSection(listing: listing, colors: c, lang: lang),
+            _ImageSection(listing: listing, colors: c, compact: compact),
+            compact
+                ? _CompactContent(listing: listing, colors: c, lang: lang)
+                : _ContentSection(listing: listing, colors: c, lang: lang),
           ],
         ),
       ),
@@ -40,21 +55,31 @@ class CarCard extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Image section
+// ---------------------------------------------------------------------------
+
 class _ImageSection extends StatelessWidget {
   final Listing listing;
   final AppColors colors;
+  final bool compact;
 
-  const _ImageSection({required this.listing, required this.colors});
+  const _ImageSection({
+    required this.listing,
+    required this.colors,
+    required this.compact,
+  });
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = listing.firstImageUrl;
+    final imageHeight = compact ? 120.0 : 200.0;
 
     return Stack(
       children: [
-        // 16:9 image
-        AspectRatio(
-          aspectRatio: 16 / 9,
+        SizedBox(
+          height: imageHeight,
+          width: double.infinity,
           child: imageUrl.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: imageUrl,
@@ -68,39 +93,48 @@ class _ImageSection extends StatelessWidget {
                 )
               : _NoImage(colors: colors),
         ),
+        // Gradient overlay (bottom of image, for badge legibility)
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            height: imageHeight * 0.45,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black45],
+              ),
+            ),
+          ),
+        ),
         // Top-left badges
         Positioned(
           top: 8,
           left: 8,
           child: _BadgeRow(listing: listing),
         ),
-        // Dealer badge bottom-left
-        if (listing.isDealerListing)
+        // Top-right: favourite placeholder (48x48 touch target)
+        if (!compact)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: _FavButton(colors: colors),
+          ),
+        // Bottom-left: negotiable badge
+        if (listing.isNegotiable)
           Positioned(
             bottom: 8,
             left: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.store, size: 10, color: Colors.white),
-                  const SizedBox(width: 3),
-                  Text(
-                    'Дилер',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            child: _NegotiableBadge(),
+          ),
+        // Bottom-right: dealer badge
+        if (listing.isDealerListing)
+          Positioned(
+            bottom: 8,
+            right: 8,
+            child: _DealerBadge(),
           ),
       ],
     );
@@ -113,11 +147,87 @@ class _NoImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ColoredBox(
       color: colors.border,
       child: Center(
         child: Icon(Icons.directions_car_outlined,
             size: 40, color: colors.textMuted),
+      ),
+    );
+  }
+}
+
+class _FavButton extends StatelessWidget {
+  final AppColors colors;
+  const _FavButton({required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      margin: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.favorite_border_rounded,
+          color: Colors.black54, size: 18),
+    );
+  }
+}
+
+class _NegotiableBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.colorSuccess,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: const Text(
+        'Торг',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _DealerBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.store_rounded, size: 10, color: Colors.white),
+          SizedBox(width: 3),
+          Text(
+            'Дилер',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -132,40 +242,26 @@ class _BadgeRow extends StatelessWidget {
     final badges = <Widget>[];
 
     if (listing.isFeatured) {
-      badges.add(_Badge(
+      badges.add(const _Badge(
         label: 'Топ',
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [Color(0xFFD4AF37), Color(0xFFC83808)],
         ),
       ));
     }
     if (listing.listingType == 'rent') {
-      badges.add(_Badge(
-        label: 'Аренда',
-        color: const Color(0xFF2563EB),
-      ));
+      badges.add(const _Badge(label: 'Аренда', color: Color(0xFF2563EB)));
     }
-    if (listing.listingType == 'installment' ||
-        listing.installmentAvailable) {
-      badges.add(_Badge(
-        label: 'Рассрочка',
-        color: const Color(0xFFC83808),
-      ));
+    if (listing.listingType == 'installment' || listing.installmentAvailable) {
+      badges.add(const _Badge(label: 'Рассрочка', color: Color(0xFFC83808)));
     }
     if (listing.availability == 'on_order') {
-      badges.add(_Badge(
-        label: 'На заказ',
-        color: const Color(0xFFF59E0B),
-      ));
+      badges.add(const _Badge(label: 'На заказ', color: Color(0xFFF59E0B)));
     }
 
     if (badges.isEmpty) return const SizedBox.shrink();
 
-    return Wrap(
-      spacing: 4,
-      runSpacing: 4,
-      children: badges,
-    );
+    return Wrap(spacing: 4, runSpacing: 4, children: badges);
   }
 }
 
@@ -197,6 +293,10 @@ class _Badge extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Full-size content section
+// ---------------------------------------------------------------------------
+
 class _ContentSection extends StatelessWidget {
   final Listing listing;
   final AppColors colors;
@@ -215,35 +315,24 @@ class _ContentSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Brand · Model · Year row
-          Row(
-            children: [
-              Icon(Icons.directions_car,
-                  size: 14, color: colors.textSecondary),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  '${listing.brand} ${listing.model}',
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '· ${listing.year}',
-                style: TextStyle(
-                  color: colors.textMuted,
-                  fontSize: 13,
-                ),
-              ),
-            ],
+          // Title: brand + model
+          Text(
+            '${listing.brand} ${listing.model}',
+            style: TextStyle(
+              color: colors.text,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
+          // Year + mileage chips
+          if (_hasChips) ...[
+            _ChipRow(listing: listing, colors: colors),
+            const SizedBox(height: 8),
+          ],
           // Price row
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -252,56 +341,40 @@ class _ContentSection extends StatelessWidget {
                 listing.formattedPrice(lang),
                 style: TextStyle(
                   color: colors.accent,
-                  fontSize: 19,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
                 ),
               ),
-              if (listing.isNegotiable) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.colorSuccess.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    t('common.negotiable', lang),
-                    style: TextStyle(
-                      color: AppColors.colorSuccess,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
           const SizedBox(height: 8),
-          // Spec chips
-          if (_hasSpecs)
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: _buildSpecChips(colors),
-            ),
-          const SizedBox(height: 8),
-          // Bottom row: city | date
+          // Bottom row: city · date
           Row(
             children: [
-              Icon(Icons.location_on_outlined, size: 12, color: colors.textMuted),
+              Icon(Icons.location_on_outlined,
+                  size: 12, color: colors.textMuted),
               const SizedBox(width: 2),
               Expanded(
                 child: Text(
                   listing.city,
-                  style: TextStyle(color: colors.textMuted, fontSize: 11),
+                  style: TextStyle(color: colors.textMuted, fontSize: 12),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              Container(
+                width: 3,
+                height: 3,
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                decoration: BoxDecoration(
+                  color: colors.textMuted,
+                  shape: BoxShape.circle,
+                ),
+              ),
               Text(
                 listing.formattedDate(lang),
-                style: TextStyle(color: colors.textMuted, fontSize: 11),
+                style: TextStyle(color: colors.textMuted, fontSize: 12),
               ),
             ],
           ),
@@ -310,23 +383,87 @@ class _ContentSection extends StatelessWidget {
     );
   }
 
-  bool get _hasSpecs =>
+  bool get _hasChips =>
       listing.transmission != null ||
       listing.fuel != null ||
       listing.mileage != null;
+}
 
-  List<Widget> _buildSpecChips(AppColors c) {
-    final chips = <Widget>[];
-    if (listing.transmission != null) {
-      chips.add(_SpecChip(label: listing.transmission!, colors: c));
-    }
-    if (listing.fuel != null) {
-      chips.add(_SpecChip(label: listing.fuel!, colors: c));
-    }
-    if (listing.mileage != null) {
-      chips.add(_SpecChip(label: listing.formattedMileage, colors: c));
-    }
-    return chips;
+// ---------------------------------------------------------------------------
+// Compact content section (grid mode)
+// ---------------------------------------------------------------------------
+
+class _CompactContent extends StatelessWidget {
+  final Listing listing;
+  final AppColors colors;
+  final String lang;
+
+  const _CompactContent({
+    required this.listing,
+    required this.colors,
+    required this.lang,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${listing.brand} ${listing.model}',
+            style: TextStyle(
+              color: colors.text,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            listing.formattedPrice(lang),
+            style: TextStyle(
+              color: colors.accent,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Year + mileage chip row
+// ---------------------------------------------------------------------------
+
+class _ChipRow extends StatelessWidget {
+  final Listing listing;
+  final AppColors colors;
+
+  const _ChipRow({required this.listing, required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 5,
+      runSpacing: 4,
+      children: [
+        _SpecChip(
+          label: listing.year.toString(),
+          colors: colors,
+        ),
+        if (listing.mileage != null)
+          _SpecChip(label: listing.formattedMileage, colors: colors),
+        if (listing.transmission != null)
+          _SpecChip(label: listing.transmission!, colors: colors),
+        if (listing.fuel != null)
+          _SpecChip(label: listing.fuel!, colors: colors),
+      ],
+    );
   }
 }
 
@@ -342,7 +479,8 @@ class _SpecChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: colors.tagBg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.border, width: 0.5),
       ),
       child: Text(
         label,
@@ -355,6 +493,10 @@ class _SpecChip extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Shimmer skeleton
+// ---------------------------------------------------------------------------
 
 class CarCardShimmer extends StatelessWidget {
   const CarCardShimmer({super.key});
@@ -369,27 +511,24 @@ class CarCardShimmer extends StatelessWidget {
         decoration: BoxDecoration(
           color: c.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.border),
         ),
         clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Container(color: c.card),
-            ),
+            Container(height: 200, color: c.card),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                      height: 13, width: 140, color: Colors.white),
+                  Container(height: 16, width: 160, color: Colors.white),
                   const SizedBox(height: 8),
-                  Container(height: 19, width: 100, color: Colors.white),
-                  const SizedBox(height: 10),
-                  Container(height: 11, width: 160, color: Colors.white),
+                  Container(height: 11, width: 120, color: Colors.white),
+                  const SizedBox(height: 8),
+                  Container(height: 20, width: 90, color: Colors.white),
+                  const SizedBox(height: 8),
+                  Container(height: 12, width: 180, color: Colors.white),
                 ],
               ),
             ),

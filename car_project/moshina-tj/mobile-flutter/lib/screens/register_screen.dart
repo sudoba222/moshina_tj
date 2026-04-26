@@ -4,8 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../l10n/strings.dart';
+import '../widgets/auth_widgets.dart';
+import '../widgets/country_picker.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,211 +17,393 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabCtrl;
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
+
+  // Phone OTP tab
+  CountryCode _country = CountryCode.all.first;
+  final _phoneNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-  bool _obscure = true;
-  bool _loading = false;
+  bool _phoneLoading = false;
+  String? _phoneError;
+
+  // Email tab
+  final _emailFormKey = GlobalKey<FormState>();
+  final _emailNameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  bool _emailLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabCtrl = TabController(length: 2, vsync: this);
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut));
+    _fadeCtrl.forward();
+  }
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
+    _tabCtrl.dispose();
+    _phoneNameCtrl.dispose();
     _phoneCtrl.dispose();
-    _passCtrl.dispose();
+    _emailNameCtrl.dispose();
+    _emailCtrl.dispose();
+    _fadeCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
+  Future<void> _sendPhoneOtp() async {
+    final name = _phoneNameCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim();
+    if (phone.isEmpty) {
+      setState(() => _phoneError = 'Введите номер телефона');
+      return;
+    }
+    setState(() {
+      _phoneLoading = true;
+      _phoneError = null;
+    });
+    try {
+      final api = context.read<ApiService>();
+      final fullPhone = _country.dialCode + phone;
+      await api.sendPhoneOtp(fullPhone);
+      if (mounted) {
+        final encodedPhone = Uri.encodeComponent(fullPhone);
+        final encodedName = Uri.encodeComponent(name.isEmpty ? '' : name);
+        context.push('/otp?phone=$encodedPhone&mode=register&name=$encodedName');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _phoneError = 'Ошибка отправки кода. Проверьте номер.');
+      }
+    } finally {
+      if (mounted) setState(() => _phoneLoading = false);
+    }
+  }
+
+  Future<void> _submitEmail() async {
+    if (!_emailFormKey.currentState!.validate()) return;
+    setState(() => _emailLoading = true);
     final auth = context.read<AuthProvider>();
-    final ok = await auth.register(
-      phone: _phoneCtrl.text.trim(),
-      password: _passCtrl.text,
-      fullName: _nameCtrl.text.trim(),
+    final ok = await auth.registerWithEmail(
+      _emailCtrl.text.trim(),
+      _emailNameCtrl.text.trim(),
     );
     if (mounted) {
-      setState(() => _loading = false);
-      if (ok) context.go('/');
+      setState(() => _emailLoading = false);
+      if (ok) {
+        final encodedEmail = Uri.encodeComponent(_emailCtrl.text.trim());
+        context.push('/otp?email=$encodedEmail&mode=email');
+      }
     }
+  }
+
+  double _hPad(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    if (w < 360) return 18;
+    if (w < 400) return 22;
+    return 28;
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
-    final error = context.select((AuthProvider p) => p.error);
+    final authError = context.select((AuthProvider p) => p.error);
+    final hp = _hPad(context);
 
     return Scaffold(
       backgroundColor: c.bg,
-      appBar: AppBar(title: Text(t('auth.register', lang))),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                Center(
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: c.accent.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Icon(Icons.person_add_outlined,
-                        color: c.accent, size: 36),
-                  ),
+      body: Stack(
+        children: [
+          // Subtle gradient backdrop
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [c.bg, Color.lerp(c.bg, c.accent, 0.04)!],
                 ),
-                const SizedBox(height: 16),
-                Center(
-                  child: Text(
-                    'TAJCAR',
-                    style: GoogleFonts.outfit(
-                      color: c.text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 24,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                if (error != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: c.accent.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: c.accent.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline,
-                            color: c.accent, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            error,
-                            style: TextStyle(color: c.accent, fontSize: 14),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                TextFormField(
-                  controller: _nameCtrl,
-                  textCapitalization: TextCapitalization.words,
-                  style: TextStyle(color: c.text),
-                  decoration: InputDecoration(
-                    labelText: t('auth.fullName', lang),
-                    labelStyle: TextStyle(color: c.textMuted),
-                    prefixIcon: Icon(Icons.badge_outlined,
-                        color: c.textMuted, size: 20),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Введите полное имя';
-                    }
-                    if (v.trim().length < 2) return 'Слишком короткое имя';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  style: TextStyle(color: c.text),
-                  decoration: InputDecoration(
-                    labelText: t('auth.phone', lang),
-                    labelStyle: TextStyle(color: c.textMuted),
-                    hintText: '+992...',
-                    hintStyle: TextStyle(color: c.textMuted),
-                    prefixIcon: Icon(Icons.phone_outlined,
-                        color: c.textMuted, size: 20),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Введите номер телефона';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passCtrl,
-                  obscureText: _obscure,
-                  style: TextStyle(color: c.text),
-                  decoration: InputDecoration(
-                    labelText: t('auth.password', lang),
-                    labelStyle: TextStyle(color: c.textMuted),
-                    prefixIcon: Icon(Icons.lock_outline,
-                        color: c.textMuted, size: 20),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscure
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: c.textMuted,
-                        size: 20,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscure = !_obscure),
-                    ),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Введите пароль';
-                    if (v.length < 6) return 'Минимум 6 символов';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _loading ? null : _submit,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(t('auth.register', lang)),
-                ),
-                const SizedBox(height: 20),
-                Center(
-                  child: GestureDetector(
-                    onTap: () => context.pop(),
-                    child: RichText(
-                      text: TextSpan(
-                        text: '${t('auth.hasAccount', lang)} ',
-                        style: TextStyle(
-                            color: c.textSecondary, fontSize: 14),
-                        children: [
-                          TextSpan(
-                            text: t('auth.login', lang),
-                            style: TextStyle(
-                              color: c.accent,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
+          // Decorative blob
+          Positioned(
+            bottom: 100,
+            left: -80,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: c.accent.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: SlideTransition(
+                position: _slideAnim,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: hp),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      // Back button
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: () => context.pop(),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: c.card,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: c.border),
+                            ),
+                            child: Icon(Icons.arrow_back_rounded, color: c.text, size: 20),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      AuthHeroSection(c: c, lang: lang),
+                      const SizedBox(height: 28),
+                      // Form card
+                      Container(
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 4)),
+                            BoxShadow(color: c.accent.withValues(alpha: 0.04), blurRadius: 30, offset: const Offset(0, 8)),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Tabs
+                            Container(
+                              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              decoration: BoxDecoration(
+                                color: c.bg,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: TabBar(
+                                controller: _tabCtrl,
+                                indicator: BoxDecoration(
+                                  color: c.accent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                indicatorSize: TabBarIndicatorSize.tab,
+                                labelColor: Colors.white,
+                                unselectedLabelColor: c.textMuted,
+                                labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14),
+                                unselectedLabelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w500, fontSize: 14),
+                                dividerColor: Colors.transparent,
+                                tabs: [
+                                  Tab(text: t('auth.phoneTab', lang)),
+                                  Tab(text: t('auth.emailTab', lang)),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                              child: Column(
+                                children: [
+                                  if (authError != null) ...[
+                                    AuthErrorBanner(message: authError),
+                                    const SizedBox(height: 14),
+                                  ],
+                                  SizedBox(
+                                    height: 320,
+                                    child: TabBarView(
+                                      controller: _tabCtrl,
+                                      children: [
+                                        _PhoneTab(
+                                          nameCtrl: _phoneNameCtrl,
+                                          phoneCtrl: _phoneCtrl,
+                                          country: _country,
+                                          onCountryChanged: (cc) => setState(() => _country = cc),
+                                          loading: _phoneLoading,
+                                          error: _phoneError,
+                                          onSubmit: _sendPhoneOtp,
+                                          lang: lang,
+                                          c: c,
+                                        ),
+                                        _EmailTab(
+                                          formKey: _emailFormKey,
+                                          nameCtrl: _emailNameCtrl,
+                                          emailCtrl: _emailCtrl,
+                                          loading: _emailLoading,
+                                          onSubmit: _submitEmail,
+                                          lang: lang,
+                                          c: c,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      AuthBottomLink(
+                        prefix: t('auth.hasAccount', lang),
+                        linkText: t('auth.login', lang),
+                        onTap: () => context.pop(),
+                        c: c,
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhoneTab extends StatelessWidget {
+  final TextEditingController nameCtrl;
+  final TextEditingController phoneCtrl;
+  final CountryCode country;
+  final ValueChanged<CountryCode> onCountryChanged;
+  final bool loading;
+  final String? error;
+  final VoidCallback onSubmit;
+  final String lang;
+  final AppColors c;
+
+  const _PhoneTab({
+    required this.nameCtrl,
+    required this.phoneCtrl,
+    required this.country,
+    required this.onCountryChanged,
+    required this.loading,
+    required this.error,
+    required this.onSubmit,
+    required this.lang,
+    required this.c,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AuthField(
+          controller: nameCtrl,
+          label: t('auth.fullName', lang),
+          prefixIcon: Icons.badge_outlined,
+          c: c,
         ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            CountryPickerButton(selected: country, onChanged: onCountryChanged, c: c),
+            const SizedBox(width: 8),
+            Expanded(
+              child: AuthField(
+                controller: phoneCtrl,
+                label: t('auth.phone', lang),
+                prefixIcon: Icons.phone_outlined,
+                c: c,
+                keyboardType: TextInputType.phone,
+                hint: '900 00 00 00',
+              ),
+            ),
+          ],
+        ),
+        if (error != null) ...[
+          const SizedBox(height: 10),
+          AuthErrorBanner(message: error!),
+        ],
+        const Spacer(),
+        AuthPrimaryButton(
+          label: t('auth.getCode', lang),
+          onPressed: loading ? null : onSubmit,
+          loading: loading,
+          c: c,
+        ),
+      ],
+    );
+  }
+}
+
+class _EmailTab extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController nameCtrl;
+  final TextEditingController emailCtrl;
+  final bool loading;
+  final VoidCallback onSubmit;
+  final String lang;
+  final AppColors c;
+
+  const _EmailTab({
+    required this.formKey,
+    required this.nameCtrl,
+    required this.emailCtrl,
+    required this.loading,
+    required this.onSubmit,
+    required this.lang,
+    required this.c,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: formKey,
+      child: Column(
+        children: [
+          AuthField(
+            controller: nameCtrl,
+            label: t('auth.fullName', lang),
+            prefixIcon: Icons.badge_outlined,
+            c: c,
+            validator: (v) {
+              if (v == null || v.trim().length < 2) return 'Минимум 2 символа';
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          AuthField(
+            controller: emailCtrl,
+            label: 'Email',
+            prefixIcon: Icons.email_outlined,
+            c: c,
+            keyboardType: TextInputType.emailAddress,
+            validator: (v) {
+              if (v == null || !v.contains('@')) return 'Введите корректный email';
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
+          AuthPrimaryButton(
+            label: t('auth.getCode', lang),
+            onPressed: loading ? null : onSubmit,
+            loading: loading,
+            c: c,
+          ),
+        ],
       ),
     );
   }

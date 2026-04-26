@@ -8,6 +8,18 @@ import '../screens/register_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/dealers_screen.dart';
 import '../screens/post_screen.dart';
+import '../screens/chat_list_screen.dart';
+import '../screens/chat_screen.dart';
+import '../screens/otp_screen.dart';
+import '../screens/edit_profile_screen.dart';
+import '../screens/change_password_screen.dart';
+import '../screens/dealer_detail_screen.dart';
+import '../screens/notifications_screen.dart';
+import '../screens/edit_listing_screen.dart';
+import '../screens/support_screen.dart';
+import '../l10n/strings.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -32,8 +44,10 @@ final appRouter = GoRouter(
           path: '/catalog',
           pageBuilder: (context, state) {
             final q = state.uri.queryParameters['q'];
+            final type = state.uri.queryParameters['type'];
+            final category = state.uri.queryParameters['category'];
             return NoTransitionPage(
-              child: CatalogScreen(initialQuery: q),
+              child: CatalogScreen(initialQuery: q, initialType: type, initialCategory: category),
             );
           },
         ),
@@ -55,6 +69,12 @@ final appRouter = GoRouter(
             child: DealersScreen(),
           ),
         ),
+        GoRoute(
+          path: '/chat',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: ChatListScreen(),
+          ),
+        ),
       ],
     ),
     GoRoute(
@@ -66,6 +86,15 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/chat/:id',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final convId = state.pathParameters['id'] ?? '';
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return ChatScreen(convId: convId, convData: extra);
+      },
+    ),
+    GoRoute(
       path: '/login',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const LoginScreen(),
@@ -74,6 +103,51 @@ final appRouter = GoRouter(
       path: '/register',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/otp',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final p = state.uri.queryParameters;
+        return OtpScreen(
+          phone: p['phone'],
+          email: p['email'],
+          mode: p['mode'] ?? 'login',
+          name: p['name'],
+        );
+      },
+    ),
+    GoRoute(
+      path: '/edit-profile',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const EditProfileScreen(),
+    ),
+    GoRoute(
+      path: '/change-password',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ChangePasswordScreen(),
+    ),
+    GoRoute(
+      path: '/dealers/:id',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) =>
+          DealerDetailScreen(dealerId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/notifications',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/edit-listing/:id',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) =>
+          EditListingScreen(listingId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/support',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SupportScreen(),
     ),
   ],
 );
@@ -91,14 +165,14 @@ class MainScaffold extends StatelessWidget {
   int _currentIndex(String loc) {
     if (loc.startsWith('/catalog')) return 1;
     if (loc.startsWith('/post')) return 2;
-    if (loc.startsWith('/profile')) return 3;
+    if (loc.startsWith('/chat')) return 3;
+    if (loc.startsWith('/profile')) return 4;
     return 0;
   }
 
   @override
   Widget build(BuildContext context) {
     final currentIndex = _currentIndex(location);
-
     return Scaffold(
       body: child,
       bottomNavigationBar: _BottomNav(currentIndex: currentIndex),
@@ -113,6 +187,7 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>().lang;
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: (i) {
@@ -124,29 +199,36 @@ class _BottomNav extends StatelessWidget {
           case 2:
             context.go('/post');
           case 3:
+            context.go('/chat');
+          case 4:
             context.go('/profile');
         }
       },
-      items: const [
+      items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          activeIcon: Icon(Icons.home),
-          label: 'Главная',
+          icon: const Icon(Icons.home_outlined),
+          activeIcon: const Icon(Icons.home),
+          label: t('nav.home', lang),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.grid_view_outlined),
-          activeIcon: Icon(Icons.grid_view),
-          label: 'Каталог',
+          icon: const Icon(Icons.grid_view_outlined),
+          activeIcon: const Icon(Icons.grid_view),
+          label: t('nav.catalog', lang),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.add_circle_outline),
-          activeIcon: Icon(Icons.add_circle),
-          label: 'Продать',
+          icon: const Icon(Icons.add_circle_outline),
+          activeIcon: const Icon(Icons.add_circle),
+          label: t('nav.post', lang),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
-          label: 'Профиль',
+          icon: const Icon(Icons.chat_bubble_outline),
+          activeIcon: const Icon(Icons.chat_bubble),
+          label: t('nav.chat', lang),
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.person_outline),
+          activeIcon: const Icon(Icons.person),
+          label: t('nav.profile', lang),
         ),
       ],
     );
