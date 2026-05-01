@@ -34,13 +34,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/search", tags=["search"])
 
 # ---------------------------------------------------------------------------
-# Module-level caches
+# Caching strategy:
+# Primary  — Redis (shared across all workers).
+# Fallback — per-worker in-memory cache.
 # ---------------------------------------------------------------------------
-_popular_cache: Dict[str, Any] = {}   # keys: "ts" (float), "data" (list[str])
-_POPULAR_CACHE_TTL = 600              # 10 minutes in seconds
+_POPULAR_REDIS_KEY = "search:popular"
+_POPULAR_REDIS_TTL = 600   # 10 minutes
 
-_trending_cache: Dict[str, Any] = {}  # same shape
-_TRENDING_CACHE_TTL = 300             # 5 minutes — trending changes slowly
+_TRENDING_REDIS_KEY = "search:trending"
+_TRENDING_REDIS_TTL = 300  # 5 minutes
+
+_popular_cache: Dict[str, Any] = {}   # keys: "ts", "data"
+_trending_cache: Dict[str, Any] = {}
+
+from app.redis_client import cache_get, cache_set
 
 # ---------------------------------------------------------------------------
 # Thresholds
@@ -342,7 +349,12 @@ def search_suggestions(
             return {}
         rows = (
             db.query(field, func.count(Listing.id))
-            .filter(Listing.status == ListingStatus.active, field.in_(terms))
+            .filter(
+                Listing.status == ListingStatus.active,
+                Listing.is_active == True,
+                Listing.is_deleted == False,
+                field.in_(terms),
+            )
             .group_by(field)
             .all()
         )
@@ -488,21 +500,24 @@ def did_you_mean(
 
 @router.get("/popular", response_model=ApiResponse[list[str]])
 @limiter.limit("30/minute")
-def popular_searches(request: Request, db: Session = Depends(get_db)):
+async def popular_searches(request: Request, db: Session = Depends(get_db)):
     """
     Returns top 10 most searched queries from the past 30 days by frequency.
 
     Falls back to top brands by listing count if SearchLog has fewer than 5
-    entries. Result is cached in memory for 10 minutes.
+    entries. Result is cached in Redis (10m) with memory fallback.
     """
-    now = time.monotonic()
-    if _popular_cache.get("ts") and (now - _popular_cache["ts"]) < _POPULAR_CACHE_TTL:
-        return ApiResponse(
-            success=True,
-            data=_popular_cache["data"],
-            message="Popular searches fetched",
-        )
+    # 1. Try Redis first
+    redis_hit = await cache_get(_POPULAR_REDIS_KEY)
+    if redis_hit is not None:
+        return ApiResponse(success=True, data=redis_hit, message="Popular searches fetched")
 
+    # 2. Fall back to in-process memory
+    now = time.monotonic()
+    if _popular_cache.get("ts") and (now - _popular_cache["ts"]) < _POPULAR_REDIS_TTL:
+        return ApiResponse(success=True, data=_popular_cache["data"], message="Popular searches fetched")
+
+    # 3. Query DB
     cutoff = datetime.now(timezone.utc) - timedelta(days=30)
 
     log_count = (
@@ -534,6 +549,8 @@ def popular_searches(request: Request, db: Session = Depends(get_db)):
         )
         result = [row.brand for row in rows]
 
+    # Populate caches
+    await cache_set(_POPULAR_REDIS_KEY, result, _POPULAR_REDIS_TTL)
     _popular_cache["ts"] = now
     _popular_cache["data"] = result
 
@@ -550,15 +567,22 @@ def popular_searches(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/trending", response_model=ApiResponse[dict])
 @limiter.limit("30/minute")
-def trending(request: Request, db: Session = Depends(get_db)):
+async def trending(request: Request, db: Session = Depends(get_db)):
     """
     Returns top 5 brands and top 5 cities with the most new active listings
-    created in the past 7 days. Cached for 5 minutes.
+    created in the past 7 days. Cached in Redis (5m).
     """
+    # 1. Try Redis
+    redis_hit = await cache_get(_TRENDING_REDIS_KEY)
+    if redis_hit is not None:
+        return ApiResponse(success=True, data=redis_hit, message="Trending fetched")
+
+    # 2. Fall back to memory
     now = time.monotonic()
-    if _trending_cache.get("ts") and (now - _trending_cache["ts"]) < _TRENDING_CACHE_TTL:
+    if _trending_cache.get("ts") and (now - _trending_cache["ts"]) < _TRENDING_REDIS_TTL:
         return ApiResponse(success=True, data=_trending_cache["data"], message="Trending fetched")
 
+    # 3. Query DB
     cutoff = datetime.now(timezone.utc) - timedelta(days=7)
 
     brand_rows = (
@@ -592,10 +616,13 @@ def trending(request: Request, db: Session = Depends(get_db)):
         "cities": [{"term": r.city,  "count": r.cnt} for r in city_rows],
     }
 
+    # Populate caches
+    await cache_set(_TRENDING_REDIS_KEY, data, _TRENDING_REDIS_TTL)
     _trending_cache["data"] = data
     _trending_cache["ts"] = now
 
     return ApiResponse(success=True, data=data, message="Trending fetched")
+
 
 
 # ---------------------------------------------------------------------------

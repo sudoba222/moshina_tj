@@ -111,8 +111,16 @@ class MessagePageOut(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _build_conversation_out(conv: Conversation, current_user_id) -> ConversationOut:
-    """Build the public-facing ConversationOut from an ORM object."""
+def _build_conversation_out(
+    conv: Conversation,
+    current_user_id,
+    last_message: Optional["Message"] = None,
+) -> ConversationOut:
+    """Build the public-facing ConversationOut from an ORM object.
+
+    last_message should be pre-fetched by the caller in a batch query so this
+    function never triggers lazy loading of conv.messages.
+    """
     if conv.participant1_id == current_user_id:
         other = conv.participant2
     else:
@@ -127,15 +135,13 @@ def _build_conversation_out(conv: Conversation, current_user_id) -> Conversation
         )
 
     last_msg: Optional[LastMessageOut] = None
-    if conv.messages:
-        # messages are ordered asc; last element is newest
-        m = conv.messages[-1]
+    if last_message:
         last_msg = LastMessageOut(
-            id=m.id,
-            content=m.content,
-            sender_id=m.sender_id,
-            is_read=m.is_read,
-            created_at=m.created_at.isoformat(),
+            id=last_message.id,
+            content=last_message.content,
+            sender_id=last_message.sender_id,
+            is_read=last_message.is_read,
+            created_at=last_message.created_at.isoformat(),
         )
 
     listing_preview: Optional[ListingPreviewOut] = None
@@ -164,12 +170,12 @@ def _build_conversation_out(conv: Conversation, current_user_id) -> Conversation
 
 
 def _get_conversation_or_403(conv_id: str, current_user: User, db: Session) -> Conversation:
+    """Load a conversation with participants and listing (but NOT all messages)."""
     conv = (
         db.query(Conversation)
         .options(
             joinedload(Conversation.participant1),
             joinedload(Conversation.participant2),
-            joinedload(Conversation.messages),
             joinedload(Conversation.listing).joinedload(Listing.images),
         )
         .filter(Conversation.id == conv_id)
@@ -188,33 +194,68 @@ def _get_conversation_or_403(conv_id: str, current_user: User, db: Session) -> C
     return conv
 
 
+def _fetch_last_messages_batch(conv_ids: list, db: Session) -> dict:
+    """Return {conv_id: Message} for the most recent message in each conversation.
+
+    Uses a single SQL query with a subquery instead of one query per conversation.
+    This eliminates the N+1 that would otherwise occur when loading conversation lists.
+    """
+    if not conv_ids:
+        return {}
+    from sqlalchemy import func as _func
+    subq = (
+        db.query(
+            Message.conversation_id,
+            _func.max(Message.created_at).label("max_ts"),
+        )
+        .filter(Message.conversation_id.in_(conv_ids))
+        .group_by(Message.conversation_id)
+        .subquery()
+    )
+    rows = (
+        db.query(Message)
+        .join(
+            subq,
+            (Message.conversation_id == subq.c.conversation_id)
+            & (Message.created_at == subq.c.max_ts),
+        )
+        .all()
+    )
+    return {row.conversation_id: row for row in rows}
+
+
 # ---------------------------------------------------------------------------
 # REST: list conversations
 # ---------------------------------------------------------------------------
 
 @router.get("", response_model=ApiResponse[list[ConversationOut]])
-def list_conversations(current_user: User = Depends(get_current_user)):
-    db = SessionLocal()
-    try:
-        convs = (
-            db.query(Conversation)
-            .options(
-                joinedload(Conversation.participant1),
-                joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
-                joinedload(Conversation.listing).joinedload(Listing.images),
-            )
-            .filter(
-                (Conversation.participant1_id == current_user.id)
-                | (Conversation.participant2_id == current_user.id)
-            )
-            .order_by(Conversation.updated_at.desc())
-            .all()
+@limiter.limit("60/minute")
+def list_conversations(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    convs = (
+        db.query(Conversation)
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.listing).joinedload(Listing.images),
+            # messages are NOT eagerly loaded here — we batch-fetch last messages below
         )
-        current_user_id = current_user.id
-        data = [_build_conversation_out(c, current_user_id) for c in convs]
-    finally:
-        db.close()
+        .filter(
+            (Conversation.participant1_id == current_user.id)
+            | (Conversation.participant2_id == current_user.id)
+        )
+        .order_by(Conversation.updated_at.desc())
+        .all()
+    )
+    # Fetch the most recent message for each conversation in a single query
+    conv_ids = [c.id for c in convs]
+    last_msgs = _fetch_last_messages_batch(conv_ids, db)
+
+    current_user_id = current_user.id
+    data = [_build_conversation_out(c, current_user_id, last_msgs.get(c.id)) for c in convs]
     return ApiResponse(success=True, data=data, message="Conversations fetched")
 
 
@@ -223,109 +264,32 @@ def list_conversations(current_user: User = Depends(get_current_user)):
 # ---------------------------------------------------------------------------
 
 @router.post("", response_model=ApiResponse[ConversationOut], status_code=status.HTTP_200_OK)
+@limiter.limit("30/minute")
 def create_or_get_conversation(
+    request: Request,
     body: ConversationCreateBody,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        conv_type = body.type
+    conv_type = body.type
 
-        if conv_type == ConversationType.support:
-            # Support ticket — participant1 is user, participant2 is unassigned (null)
-            conv = Conversation(
-                type=ConversationType.support,
-                participant1_id=current_user.id,
-                participant2_id=None,
-                listing_id=None,
-            )
-            db.add(conv)
-            db.commit()
-            db.refresh(conv)
-            # Eager load for response
-            conv = (
-                db.query(Conversation)
-                .options(
-                    joinedload(Conversation.participant1),
-                    joinedload(Conversation.participant2),
-                    joinedload(Conversation.messages),
-                    joinedload(Conversation.listing).joinedload(Listing.images),
-                )
-                .filter(Conversation.id == conv.id)
-                .first()
-            )
-            return ApiResponse(
-                success=True,
-                data=_build_conversation_out(conv, current_user.id),
-                message="Support conversation created",
-            )
-
-        # Direct conversation
-        if not body.participant_id:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="participant_id is required for direct conversations",
-            )
-
-        if body.participant_id == current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Cannot start a conversation with yourself",
-            )
-
-        # Determine canonical participant order (lower UUID first) for
-        # consistent unique constraint matching.
-        uid = current_user.id
-        pid = body.participant_id
-        if uid < pid:
-            p1_id, p2_id = uid, pid
-        else:
-            p1_id, p2_id = pid, uid
-
-        listing_id = body.listing_id
-
-        # Find existing — handle nullable listing_id
-        query = db.query(Conversation).filter(
-            Conversation.participant1_id == p1_id,
-            Conversation.participant2_id == p2_id,
-        )
-        if listing_id is None:
-            query = query.filter(Conversation.listing_id.is_(None))
-        else:
-            query = query.filter(Conversation.listing_id == listing_id)
-
-        existing = (
-            query
-            .options(
-                joinedload(Conversation.participant1),
-                joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
-                joinedload(Conversation.listing).joinedload(Listing.images),
-            )
-            .first()
-        )
-        if existing:
-            return ApiResponse(
-                success=True,
-                data=_build_conversation_out(existing, current_user.id),
-                message="Existing conversation returned",
-            )
-
+    if conv_type == ConversationType.support:
+        # Support ticket — participant1 is user, participant2 is unassigned (null)
         conv = Conversation(
-            type=ConversationType.direct,
-            participant1_id=p1_id,
-            participant2_id=p2_id,
-            listing_id=listing_id,
+            type=ConversationType.support,
+            participant1_id=current_user.id,
+            participant2_id=None,
+            listing_id=None,
         )
         db.add(conv)
         db.commit()
         db.refresh(conv)
+        # Eager load for response (no messages needed — last_message fetched separately)
         conv = (
             db.query(Conversation)
             .options(
                 joinedload(Conversation.participant1),
                 joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
                 joinedload(Conversation.listing).joinedload(Listing.images),
             )
             .filter(Conversation.id == conv.id)
@@ -334,10 +298,84 @@ def create_or_get_conversation(
         return ApiResponse(
             success=True,
             data=_build_conversation_out(conv, current_user.id),
-            message="Conversation created",
+            message="Support conversation created",
         )
-    finally:
-        db.close()
+
+    # Direct conversation
+    if not body.participant_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="participant_id is required for direct conversations",
+        )
+
+    if body.participant_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cannot start a conversation with yourself",
+        )
+
+    # Determine canonical participant order (lower UUID first) for
+    # consistent unique constraint matching.
+    uid = current_user.id
+    pid = body.participant_id
+    if uid < pid:
+        p1_id, p2_id = uid, pid
+    else:
+        p1_id, p2_id = pid, uid
+
+    listing_id = body.listing_id
+
+    # Find existing — handle nullable listing_id
+    query = db.query(Conversation).filter(
+        Conversation.participant1_id == p1_id,
+        Conversation.participant2_id == p2_id,
+    )
+    if listing_id is None:
+        query = query.filter(Conversation.listing_id.is_(None))
+    else:
+        query = query.filter(Conversation.listing_id == listing_id)
+
+    existing = (
+        query
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.listing).joinedload(Listing.images),
+        )
+        .first()
+    )
+    if existing:
+        last_msg = _fetch_last_messages_batch([existing.id], db).get(existing.id)
+        return ApiResponse(
+            success=True,
+            data=_build_conversation_out(existing, current_user.id, last_msg),
+            message="Existing conversation returned",
+        )
+
+    conv = Conversation(
+        type=ConversationType.direct,
+        participant1_id=p1_id,
+        participant2_id=p2_id,
+        listing_id=listing_id,
+    )
+    db.add(conv)
+    db.commit()
+    db.refresh(conv)
+    conv = (
+        db.query(Conversation)
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.listing).joinedload(Listing.images),
+        )
+        .filter(Conversation.id == conv.id)
+        .first()
+    )
+    return ApiResponse(
+        success=True,
+        data=_build_conversation_out(conv, current_user.id),
+        message="Conversation created",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -345,47 +383,43 @@ def create_or_get_conversation(
 # ---------------------------------------------------------------------------
 
 @router.get("/{conv_id}/messages", response_model=ApiResponse[MessagePageOut])
+@limiter.limit("60/minute")
 def list_messages(
+    request: Request,
     conv_id: str,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=30, ge=1, le=100),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        _get_conversation_or_403(conv_id, current_user, db)
+    _get_conversation_or_403(conv_id, current_user, db)
 
-        base = db.query(Message).filter(Message.conversation_id == conv_id)
-        total = base.count()
-        pages = math.ceil(total / limit) if total > 0 else 1
-        msgs = (
-            base
-            .order_by(Message.created_at.asc())
-            .offset((page - 1) * limit)
-            .limit(limit)
-            .all()
+    base = db.query(Message).filter(Message.conversation_id == conv_id)
+    total = base.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    msgs = (
+        base
+        .order_by(Message.created_at.asc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    items = [
+        MessageOut(
+            id=m.id,
+            conversation_id=m.conversation_id,
+            sender_id=m.sender_id,
+            content=m.content,
+            is_read=m.is_read,
+            created_at=m.created_at.isoformat(),
         )
-
-        items = [
-            MessageOut(
-                id=m.id,
-                conversation_id=m.conversation_id,
-                sender_id=m.sender_id,
-                content=m.content,
-                is_read=m.is_read,
-                created_at=m.created_at.isoformat(),
-            )
-            for m in msgs
-        ]
-        total_val = total
-        page_val = page
-        pages_val = pages
-    finally:
-        db.close()
+        for m in msgs
+    ]
 
     return ApiResponse(
         success=True,
-        data=MessagePageOut(items=items, total=total_val, page=page_val, pages=pages_val),
+        data=MessagePageOut(items=items, total=total, page=page, pages=pages),
         message="Messages fetched",
     )
 
@@ -393,6 +427,74 @@ def list_messages(
 # ---------------------------------------------------------------------------
 # REST: send a message
 # ---------------------------------------------------------------------------
+
+def _notify_support_agents(
+    ws_payload: dict,
+    sender_name: Optional[str],
+    msg_content: str,
+    conv_id_str: str,
+) -> None:
+    """Background task: fan-out a support message to all online agents and
+    persist DB notifications for offline ones. Opens its own session so it
+    does not hold the request-scoped session open."""
+    db = SessionLocal()
+    try:
+        support_agents = db.query(User).filter(
+            User.role.in_([UserRole.support, UserRole.admin]),
+            User.is_deleted == False,  # noqa: E712
+            User.is_banned == False,  # noqa: E712
+        ).all()
+        import asyncio as _asyncio
+        offline_agents = []
+        for agent in support_agents:
+            agent_id_str = str(agent.id)
+            if manager.is_online(agent_id_str):
+                try:
+                    loop = _asyncio.get_running_loop()
+                    _asyncio.run_coroutine_threadsafe(
+                        manager.send_to_user(agent_id_str, ws_payload), loop
+                    )
+                except RuntimeError:
+                    offline_agents.append(agent)
+            else:
+                offline_agents.append(agent)
+        for agent in offline_agents:
+            db.add(Notification(
+                user_id=agent.id,
+                type=NotificationType.message,
+                title="Новое обращение в поддержку",
+                body=f"{sender_name or 'Пользователь'}: {msg_content[:100]}",
+                link=f"/support?tab=messages&conv={conv_id_str}",
+            ))
+        db.commit()
+    except Exception:
+        logger.exception("Failed to notify support agents")
+    finally:
+        db.close()
+
+
+def _create_message_notification(
+    recipient_id_str: str,
+    sender_name: Optional[str],
+    msg_content: str,
+    conv_id_str: str,
+) -> None:
+    """Background task: persist an in-app notification for an offline DM recipient."""
+    db = SessionLocal()
+    try:
+        db.add(Notification(
+            user_id=_uuid.UUID(recipient_id_str),
+            type=NotificationType.message,
+            title=f"Новое сообщение от {sender_name or 'пользователя'}",
+            body=msg_content[:100],
+            link=f"/dashboard?tab=messages&conv={conv_id_str}",
+        ))
+        db.commit()
+    except Exception:
+        logger.exception("Failed to create message notification")
+    finally:
+        db.close()
+
 
 def _notify_offline_recipient(recipient_email: Optional[str], sender_name: Optional[str]) -> None:
     """Background task: email the recipient if they are offline."""
@@ -414,6 +516,7 @@ def send_message(
     body: SendMessageBody,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     content = body.content.strip()
     if not content:
@@ -421,47 +524,43 @@ def send_message(
     if len(content) > 10000:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message too long (max 10 000 chars)")
 
-    db = SessionLocal()
-    try:
-        conv = _get_conversation_or_403(conv_id, current_user, db)
+    conv = _get_conversation_or_403(conv_id, current_user, db)
 
-        msg = Message(
-            conversation_id=conv.id,
-            sender_id=current_user.id,
-            content=content,
-        )
-        db.add(msg)
+    msg = Message(
+        conversation_id=conv.id,
+        sender_id=current_user.id,
+        content=content,
+    )
+    db.add(msg)
 
-        # Touch conversation updated_at so conversations sort correctly
-        from sqlalchemy import func as _sqla_func
-        conv.updated_at = _sqla_func.now()
+    # Touch conversation updated_at so conversations sort correctly
+    from sqlalchemy import func as _sqla_func
+    conv.updated_at = _sqla_func.now()
 
-        db.commit()
-        db.refresh(msg)
+    db.commit()
+    db.refresh(msg)
 
-        # Read scalars before close
-        msg_id = msg.id
-        msg_conv_id = msg.conversation_id
-        msg_sender_id = msg.sender_id
-        msg_content = msg.content
-        msg_is_read = msg.is_read
-        msg_created_at = msg.created_at.isoformat()
+    # Read scalars before the session is reused by background tasks
+    msg_id = msg.id
+    msg_conv_id = msg.conversation_id
+    msg_sender_id = msg.sender_id
+    msg_content = msg.content
+    msg_is_read = msg.is_read
+    msg_created_at = msg.created_at.isoformat()
 
-        # Determine recipient
-        if conv.participant1_id == current_user.id:
-            recipient_id = conv.participant2_id
-            recipient = conv.participant2
-        else:
-            recipient_id = conv.participant1_id
-            recipient = conv.participant1
+    # Determine recipient
+    if conv.participant1_id == current_user.id:
+        recipient_id = conv.participant2_id
+        recipient = conv.participant2
+    else:
+        recipient_id = conv.participant1_id
+        recipient = conv.participant1
 
-        recipient_email: Optional[str] = recipient.email if recipient else None
-        recipient_id_str: Optional[str] = str(recipient_id) if recipient_id else None
-        sender_name: Optional[str] = current_user.name
-        conv_type = conv.type
-        conv_id_str = str(conv.id)
-    finally:
-        db.close()
+    recipient_email: Optional[str] = recipient.email if recipient else None
+    recipient_id_str: Optional[str] = str(recipient_id) if recipient_id else None
+    sender_name: Optional[str] = current_user.name
+    conv_type = conv.type
+    conv_id_str = str(conv.id)
 
     # Push real-time event to recipient (non-blocking)
     ws_payload = {
@@ -477,36 +576,15 @@ def send_message(
     }
 
     if conv_type == ConversationType.support and str(msg_sender_id) != recipient_id_str:
-        # User wrote to support — notify ALL online support/admin agents
-        db2 = SessionLocal()
-        try:
-            support_agents = db2.query(User).filter(
-                User.role.in_([UserRole.support, UserRole.admin]),
-                User.is_deleted == False,  # noqa: E712
-                User.is_banned == False,  # noqa: E712
-            ).all()
-            offline_agents = []
-            for agent in support_agents:
-                agent_id_str = str(agent.id)
-                if manager.is_online(agent_id_str):
-                    background_tasks.add_task(manager.send_to_user, agent_id_str, ws_payload)
-                else:
-                    offline_agents.append(agent)
-            # Create DB notifications for offline support agents
-            for agent in offline_agents:
-                notif = Notification(
-                    user_id=agent.id,
-                    type=NotificationType.message,
-                    title="Новое обращение в поддержку",
-                    body=f"{sender_name or 'Пользователь'}: {msg_content[:100]}",
-                    link=f"/support?tab=messages&conv={conv_id_str}",
-                )
-                db2.add(notif)
-            db2.commit()
-        except Exception:
-            logger.exception("Failed to notify support agents")
-        finally:
-            db2.close()
+        # User wrote to support — notify agents in a background task so the
+        # request thread is not blocked by DB + WS fan-out.
+        background_tasks.add_task(
+            _notify_support_agents,
+            ws_payload,
+            sender_name,
+            msg_content,
+            conv_id_str,
+        )
     elif recipient_id_str:
         # Direct message or support agent replying to user
         if manager.is_online(recipient_id_str):
@@ -523,22 +601,14 @@ def send_message(
                     "conversation_id": str(msg_conv_id),
                 },
             )
-            # Also create a DB notification for the offline recipient
-            db2 = SessionLocal()
-            try:
-                notif = Notification(
-                    user_id=_uuid.UUID(recipient_id_str),
-                    type=NotificationType.message,
-                    title=f"Новое сообщение от {sender_name or 'пользователя'}",
-                    body=msg_content[:100],
-                    link=f"/dashboard?tab=messages&conv={str(msg_conv_id)}",
-                )
-                db2.add(notif)
-                db2.commit()
-            except Exception:
-                logger.exception("Failed to create message notification")
-            finally:
-                db2.close()
+            # Create a DB notification for the offline recipient in the background
+            background_tasks.add_task(
+                _create_message_notification,
+                recipient_id_str,
+                sender_name,
+                msg_content,
+                str(msg_conv_id),
+            )
 
     out = MessageOut(
         id=msg_id,
@@ -556,22 +626,21 @@ def send_message(
 # ---------------------------------------------------------------------------
 
 @router.put("/{conv_id}/read", response_model=ApiResponse[None])
+@limiter.limit("60/minute")
 def mark_conversation_read(
+    request: Request,
     conv_id: str,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        _get_conversation_or_403(conv_id, current_user, db)
+    _get_conversation_or_403(conv_id, current_user, db)
 
-        db.query(Message).filter(
-            Message.conversation_id == conv_id,
-            Message.sender_id != current_user.id,
-            Message.is_read == False,  # noqa: E712
-        ).update({"is_read": True}, synchronize_session=False)
-        db.commit()
-    finally:
-        db.close()
+    db.query(Message).filter(
+        Message.conversation_id == conv_id,
+        Message.sender_id != current_user.id,
+        Message.is_read == False,  # noqa: E712
+    ).update({"is_read": True}, synchronize_session=False)
+    db.commit()
     return ApiResponse(success=True, data=None, message="Conversation marked as read")
 
 

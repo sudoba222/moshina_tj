@@ -3,7 +3,7 @@ import logging
 import math
 import time
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from app.limiter import limiter
@@ -12,13 +12,21 @@ from sqlalchemy import func, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user, get_current_user_optional
+from app.redis_client import cache_get, cache_set, cache_delete
 from app.services import image_service
 from app.services.ranking import compute_ranking_score
 from app.services.telegram_notifier import send_telegram_notification, notify_admin_new_listing
 
-# 2-minute in-memory cache for featured listings (homepage hit on every page load)
-_featured_cache: Dict[str, Any] = {}
-_FEATURED_CACHE_TTL = 120  # seconds
+# ---------------------------------------------------------------------------
+# Featured-listings cache.
+# Primary  — Redis (shared across all workers, 5-minute TTL).
+# Fallback — per-worker in-memory tuple (2-minute TTL, GIL-safe atomic reads).
+# ---------------------------------------------------------------------------
+_FEATURED_REDIS_KEY = "listings:featured"
+_FEATURED_REDIS_TTL = 300   # 5 minutes
+_FEATURED_CACHE_TTL = 120   # 2 minutes (in-memory fallback)
+# (serialized_list, monotonic_ts) | None
+_featured_snapshot: tuple | None = None
 from app.database import SessionLocal, get_db
 from app.models import AvailabilityStatus, BodyType, Category, Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingLog, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
 from app.schemas import (
@@ -275,12 +283,28 @@ def list_listings(
 
 @router.get("/featured", response_model=ApiResponse[list[ListingResponse]])
 @limiter.limit("60/minute")
-def featured_listings(request: Request, db: Session = Depends(get_db)):
-    now = time.monotonic()
-    cached = _featured_cache.get("data")
-    if cached and now - _featured_cache.get("ts", 0) < _FEATURED_CACHE_TTL:
-        return ApiResponse(success=True, data=cached, message="Featured listings fetched")
+async def featured_listings(request: Request, db: Session = Depends(get_db)):
+    global _featured_snapshot
 
+    # 1. Try Redis (shared across workers, 5-minute TTL).
+    redis_hit = await cache_get(_FEATURED_REDIS_KEY)
+    if redis_hit is not None:
+        # Deserialise stored dicts back into ListingResponse objects.
+        return ApiResponse(
+            success=True,
+            data=[ListingResponse.model_validate(item) for item in redis_hit],
+            message="Featured listings fetched",
+        )
+
+    # 2. Fall back to per-worker in-memory cache.
+    now = time.monotonic()
+    snapshot = _featured_snapshot  # atomic read (CPython GIL)
+    if snapshot is not None:
+        cached_data, cached_ts = snapshot
+        if now - cached_ts < _FEATURED_CACHE_TTL:
+            return ApiResponse(success=True, data=cached_data, message="Featured listings fetched")
+
+    # 3. Query the database.
     listings = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
@@ -294,8 +318,14 @@ def featured_listings(request: Request, db: Session = Depends(get_db)):
         .all()
     )
     data = [ListingResponse.model_validate(l) for l in listings]
-    _featured_cache["data"] = data
-    _featured_cache["ts"] = now
+
+    # Populate both caches.
+    await cache_set(
+        _FEATURED_REDIS_KEY,
+        [item.model_dump() for item in data],
+        _FEATURED_REDIS_TTL,
+    )
+    _featured_snapshot = (data, now)  # atomic write (CPython GIL)
     return ApiResponse(success=True, data=data, message="Featured listings fetched")
 
 
@@ -628,7 +658,7 @@ def update_listing(
 
 
 @router.put("/{listing_id}/activate", response_model=ApiResponse[ListingResponse])
-def activate_listing(
+async def activate_listing(
     listing_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -642,13 +672,16 @@ def activate_listing(
         )
     listing.is_active = True
     db.commit()
-    _featured_cache.clear()
+    global _featured_snapshot
+    _featured_snapshot = None
+    await cache_delete(_FEATURED_REDIS_KEY)
+    await cache_delete("stats:marketplace")
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing activated")
 
 
 @router.put("/{listing_id}/deactivate", response_model=ApiResponse[ListingResponse])
-def deactivate_listing(
+async def deactivate_listing(
     listing_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -662,13 +695,16 @@ def deactivate_listing(
         )
     listing.is_active = False
     db.commit()
-    _featured_cache.clear()
+    global _featured_snapshot
+    _featured_snapshot = None
+    await cache_delete(_FEATURED_REDIS_KEY)
+    await cache_delete("stats:marketplace")
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing deactivated")
 
 
 @router.delete("/{listing_id}", response_model=ApiResponse[None])
-def delete_listing(
+async def delete_listing(
     listing_id: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -696,7 +732,10 @@ def delete_listing(
         to_status="deleted",
     ))
     db.commit()
-    _featured_cache.clear()
+    global _featured_snapshot
+    _featured_snapshot = None
+    await cache_delete(_FEATURED_REDIS_KEY)
+    await cache_delete("stats:marketplace")
 
     # Delete images from storage in the background — don't block the response
     if cloudinary_ids:

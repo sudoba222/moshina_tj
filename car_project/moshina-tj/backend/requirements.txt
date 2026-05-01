@@ -24,3 +24,4 @@ aiohttp>=3.13.4            # pin: 10 CVEs fixed in 3.13.4 (transitive via python
 ecdsa>=0.19.2              # pin: CVE-2026-33936 timing attack fix
 requests>=2.33.0           # pin: CVE-2026-25645 proxy credential leak fix
 sentry-sdk[fastapi]>=2.19.0
+redis[asyncio]>=5.0.0      # async Redis client for pub/sub and response caching

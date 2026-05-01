@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"
 
+    # Proxy Support
+    trusted_proxy: bool = False
+
     # Staff account seeding — intentionally empty; set these in .env for each environment
     staff_default_password: str = ""
     admin_phone: str = ""
@@ -48,6 +51,16 @@ class Settings(BaseSettings):
     support_phone: str = ""
 
     allowed_origins: str = "http://localhost:3000"
+
+    # ---------------------------------------------------------------------------
+    # Redis — required for multi-worker WebSocket pub/sub and response caching.
+    # Set REDIS_URL in .env / Coolify environment variables.
+    # Format: redis://<host>:<port>  or  redis://:<password>@<host>:<port>
+    # Default: redis://localhost:6379 (suitable for local development)
+    # If Redis is unavailable at startup the app falls back to local-only
+    # in-memory caching and single-worker WebSocket broadcast.
+    # ---------------------------------------------------------------------------
+    redis_url: str = "redis://localhost:6379"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

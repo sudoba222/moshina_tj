@@ -10,16 +10,23 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Dealer, Listing, ListingStatus, User
 from app.schemas import ApiResponse
+from app.redis_client import cache_get, cache_set
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 # ---------------------------------------------------------------------------
-# In-memory TTL cache — stats are displayed on the homepage hero section and
-# called on every page load. A 2-minute TTL is imperceptible to users but
-# eliminates 4 COUNT(*) queries per visitor.
+# Caching strategy:
+# Primary  — Redis (shared across all workers, 5-minute TTL).
+# Fallback — per-worker in-memory cache (2-minute TTL).
+# Stats are displayed on the homepage hero section and called on every page
+# load. A short TTL is imperceptible to users but eliminates heavy COUNT(*)
+# queries per visitor.
 # ---------------------------------------------------------------------------
+_REDIS_CACHE_KEY = "stats:marketplace"
+_REDIS_CACHE_TTL = 300  # 5 minutes
+
 _stats_cache: Dict[str, Any] = {}
-_STATS_CACHE_TTL = 120  # 2 minutes
+_STATS_CACHE_TTL = 120  # 2 minutes (in-memory fallback)
 
 
 class MarketplaceStats(BaseModel):
@@ -30,18 +37,26 @@ class MarketplaceStats(BaseModel):
 
 
 @router.get("", response_model=ApiResponse[MarketplaceStats])
-def get_stats(db: Session = Depends(get_db)) -> ApiResponse[MarketplaceStats]:
-    """Return live marketplace counts — cached for 2 minutes.
+async def get_stats(db: Session = Depends(get_db)) -> ApiResponse[MarketplaceStats]:
+    """Return live marketplace counts — cached for 5 minutes in Redis (2 min
+    in-process fallback when Redis is unavailable).
 
     - listings_count: active listings only (status == active)
     - dealers_count:  verified dealers only
     - cities_count:   distinct cities across active listings
     - users_count:    active (non-banned, non-deleted) users
     """
+    # 1. Try Redis first (cross-worker shared cache).
+    redis_hit = await cache_get(_REDIS_CACHE_KEY)
+    if redis_hit is not None:
+        return ApiResponse(success=True, data=MarketplaceStats(**redis_hit), message="")
+
+    # 2. Fall back to in-process cache.
     now = time.monotonic()
     if _stats_cache.get("ts") and (now - _stats_cache["ts"]) < _STATS_CACHE_TTL:
         return ApiResponse(success=True, data=_stats_cache["data"], message="")
 
+    # 3. Query the database.
     listings_count: int = (
         db.query(func.count(Listing.id))
         .filter(Listing.status == ListingStatus.active, Listing.is_active == True)
@@ -76,6 +91,9 @@ def get_stats(db: Session = Depends(get_db)) -> ApiResponse[MarketplaceStats]:
         cities_count=cities_count,
         users_count=users_count,
     )
+
+    # Populate both caches.
+    await cache_set(_REDIS_CACHE_KEY, data.model_dump(), _REDIS_CACHE_TTL)
     _stats_cache["data"] = data
     _stats_cache["ts"] = now
 
