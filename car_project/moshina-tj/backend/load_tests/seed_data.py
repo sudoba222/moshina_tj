@@ -21,6 +21,7 @@ import argparse
 import os
 import random
 import sys
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -207,6 +208,7 @@ def _make_listing(user: User, active: bool, index: int) -> Listing:
 
     status = ListingStatus.active if active else ListingStatus.pending
     return Listing(
+        id=uuid.uuid4(),   # pre-assign so bulk_save_objects doesn't leave id=None
         user_id=user.id,
         type=ListingType.sale,
         brand=brand,
@@ -234,6 +236,7 @@ def _make_listing(user: User, active: bool, index: int) -> Listing:
 def _make_image(listing_id, index: int) -> ListingImage:
     """Attach a placeholder image so joinedload queries have data to return."""
     return ListingImage(
+        id=uuid.uuid4(),   # pre-assign so bulk_save_objects doesn't leave id=None
         listing_id=listing_id,
         url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
         cloudinary_id=None,
