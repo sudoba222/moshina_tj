@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import logging
 import math
 import time
@@ -12,7 +13,7 @@ from sqlalchemy import func, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user, get_current_user_optional
-from app.redis_client import cache_get, cache_set, cache_delete
+from app.redis_client import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.services import image_service
 from app.services.ranking import compute_ranking_score
 from app.services.telegram_notifier import send_telegram_notification, notify_admin_new_listing
@@ -27,6 +28,19 @@ _FEATURED_REDIS_TTL = 300   # 5 minutes
 _FEATURED_CACHE_TTL = 120   # 2 minutes (in-memory fallback)
 # (serialized_list, monotonic_ts) | None
 _featured_snapshot: tuple | None = None
+
+# Listing list cache — shared across all workers via Redis.
+# Short TTL (90s) so approved/created listings surface quickly.
+# Key pattern: "listings:list:<md5 of sorted query params>"
+# Invalidated whenever a listing is created, updated, deleted, approved, or rejected.
+_LIST_CACHE_PREFIX = "listings:list:"
+_LIST_CACHE_TTL = 90  # seconds
+
+
+def _list_cache_key(**params) -> str:
+    """Build a stable, collision-resistant cache key from query params."""
+    parts = sorted(f"{k}={v}" for k, v in params.items() if v is not None)
+    return _LIST_CACHE_PREFIX + hashlib.md5("&".join(parts).encode()).hexdigest()
 from app.database import SessionLocal, get_db
 from app.models import AvailabilityStatus, BodyType, Category, Currency, Dealer, DealerSubscription, Favorite, FuelType, Listing, ListingImage, ListingLog, ListingStatus, ListingType, Notification, NotificationType, TransmissionType, User, UserRole
 from app.schemas import (
@@ -176,7 +190,7 @@ def _assert_owner_or_admin(listing: Listing, current_user: User) -> None:
 
 @router.get("", response_model=ApiResponse[ListingListResponse])
 @limiter.limit("120/minute")
-def list_listings(
+async def list_listings(
     request: Request,
     db: Session = Depends(get_db),
     type: Optional[ListingType] = None,
@@ -200,6 +214,19 @@ def list_listings(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=_MAX_LIMIT),
 ):
+    cache_key = _list_cache_key(
+        type=type, city=city, brand=brand, model=model,
+        min_price=min_price, max_price=max_price,
+        min_year=min_year, max_year=max_year, max_mileage=max_mileage,
+        color=color, installment=installment, fuel=fuel,
+        transmission=transmission, body_type=body_type,
+        availability=availability, currency=currency,
+        category_slug=category_slug, sort=sort, page=page, limit=limit,
+    )
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return ApiResponse(success=True, data=cached, message="Listings fetched")
+
     query = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
@@ -269,16 +296,15 @@ def list_listings(
         .all()
     )
 
-    return ApiResponse(
-        success=True,
-        data=ListingListResponse(
-            items=[ListingResponse.model_validate(item) for item in items],
-            total=total,
-            page=page,
-            pages=pages,
-        ),
-        message="Listings fetched",
+    response_data = ListingListResponse(
+        items=[ListingResponse.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        pages=pages,
     )
+    await cache_set(cache_key, response_data.model_dump(), _LIST_CACHE_TTL)
+
+    return ApiResponse(success=True, data=response_data, message="Listings fetched")
 
 
 @router.get("/featured", response_model=ApiResponse[list[ListingResponse]])
@@ -529,6 +555,7 @@ def create_listing(
             listing.currency.value,
         )
 
+    background_tasks.add_task(cache_delete_pattern, _LIST_CACHE_PREFIX + "*")
     return ApiResponse(
         success=True,
         data=ListingResponse.model_validate(listing),
@@ -542,6 +569,7 @@ def update_listing(
     request: Request,
     listing_id: str,
     payload: ListingUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -650,6 +678,7 @@ def update_listing(
     db.commit()
     db.refresh(listing)
 
+    background_tasks.add_task(cache_delete_pattern, _LIST_CACHE_PREFIX + "*")
     return ApiResponse(
         success=True,
         data=ListingResponse.model_validate(listing),
@@ -676,6 +705,7 @@ async def activate_listing(
     _featured_snapshot = None
     await cache_delete(_FEATURED_REDIS_KEY)
     await cache_delete("stats:marketplace")
+    await cache_delete_pattern(_LIST_CACHE_PREFIX + "*")
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing activated")
 
@@ -699,6 +729,7 @@ async def deactivate_listing(
     _featured_snapshot = None
     await cache_delete(_FEATURED_REDIS_KEY)
     await cache_delete("stats:marketplace")
+    await cache_delete_pattern(_LIST_CACHE_PREFIX + "*")
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing deactivated")
 
@@ -736,6 +767,7 @@ async def delete_listing(
     _featured_snapshot = None
     await cache_delete(_FEATURED_REDIS_KEY)
     await cache_delete("stats:marketplace")
+    await cache_delete_pattern(_LIST_CACHE_PREFIX + "*")
 
     # Delete images from storage in the background — don't block the response
     if cloudinary_ids:

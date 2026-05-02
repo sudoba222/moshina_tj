@@ -126,12 +126,12 @@ export interface User {
   is_banned: boolean
   ban_reason?: string | null
   whatsapp_number: string | null
+  email_verified: boolean
+  phone_verified: boolean
   created_at: string
 }
 
 export interface NewUserEntry extends User {
-  phone_verified: boolean
-  email_verified: boolean
   listing_count: number
   active_listing_count: number
   telegram_linked: boolean
