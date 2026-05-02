@@ -213,6 +213,68 @@ export interface AuditLog {
   created_at: string
 }
 
+// ─── Chat / Conversations ────────────────────────────────────────────────────
+
+export interface ConversationItem {
+  id: string
+  type: 'direct' | 'support'
+  other_participant: { id: string; name: string | null; avatar_url: string | null } | null
+  listing: {
+    id: string
+    brand: string
+    model: string
+    year: number
+    price: number
+    currency: string
+    image_url: string | null
+  } | null
+  last_message: {
+    content: string
+    created_at: string
+    is_mine: boolean
+  } | null
+  unread_count: number
+  updated_at: string
+}
+
+export interface ChatMessage {
+  id: string
+  conversation_id: string
+  sender_id: string
+  sender_name: string | null
+  content: string
+  is_read: boolean
+  created_at: string
+}
+
+export interface NotificationItem {
+  id: string
+  type: 'message' | 'price_drop' | 'dealer_post' | 'system'
+  title: string
+  body: string
+  link: string | null
+  is_read: boolean
+  created_at: string
+}
+
+export interface SupportLastMsg {
+  content: string
+  sender_id: string
+  created_at: string
+}
+
+export interface SupportTicket {
+  id: string
+  type: 'direct' | 'support'
+  participant: { id: string; name: string | null; avatar_url: string | null } | null
+  assignee: { id: string; name: string | null; avatar_url: string | null } | null
+  last_message: SupportLastMsg | null
+  unread_count: number
+  is_closed: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface ManagerStatsPeriod {
   new_users: number
   new_listings: number

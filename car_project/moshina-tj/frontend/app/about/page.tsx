@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     'TAJCAR.TJ — главный онлайн-авторынок Таджикистана. Тысячи объявлений о продаже и покупке автомобилей в Душанбе, Худжанде и по всей стране. Верифицированные дилеры, бесплатные объявления, модерация каждого лота.',
   keywords: [
     'tajcar.tj о сайте',
+    'тачкар', 'тач кар', 'таджкар', 'tachkar', 'tajcar', 'tajkar',
     'авторынок таджикистана',
     'купить машину таджикистан',
     'продать авто таджикистан',
@@ -355,6 +356,13 @@ export default async function AboutPage() {
               </p>
             </div>
           </section>
+
+          {/* sr-only: helps search engines match brand name variants — not visible to users */}
+          <p className="sr-only">
+            TAJCAR.TJ также известен как ТачКар, Тач Кар, ТаджКар, TachKar, Tajkar, тачкар.тж —
+            главный авторынок Таджикистана. Агар шумо Тачкар, Тач Кар ё Таҷкар ҷустуҷӯ мекардед —
+            ин ҳамон сайт аст.
+          </p>
 
           {/* Contact */}
           <section

@@ -22,7 +22,7 @@ class RefineDescriptionRequest(BaseModel):
     brand: str
     model: str
     year: int
-    price: float
+    price: Optional[float] = None
     currency: Literal["USD", "TJS"]
     mileage: Optional[int] = None
     fuel: Optional[str] = None
@@ -91,9 +91,11 @@ def _build_user_message(req: RefineDescriptionRequest) -> str:
 
     language_label = "Russian" if req.language == "ru" else "Tajik"
 
+    price_str = f"price {req.price} {req.currency}, " if req.price is not None else ""
+
     message = (
         f"{full_intro}, located in {req.city}, "
-        f"price {req.price} {req.currency}, type: {req.type}. "
+        f"{price_str}type: {req.type}. "
         f"Existing description to improve: '{req.description or ''}'. "
         f"Language: {language_label}."
     )

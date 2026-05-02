@@ -261,14 +261,22 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
       <main style={{ flex: 1, paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} className="pb-mobile">
 
         {/* ── HERO SECTION ──────────────────────────────────────────────────── */}
-        <section className="hero-section" style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: 'clamp(32px, 6vw, 64px) 16px clamp(28px, 4vw, 48px)' }}>
-          <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+        <section className="hero-section" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: 'clamp(28px,5vw,52px) clamp(16px,3vw,32px) 0' }}>
+          <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+
+            {/* Eyebrow badge */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: '12px', fontWeight: 700, letterSpacing: '.06em', padding: '5px 12px', borderRadius: '9999px', textTransform: 'uppercase', marginBottom: '14px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', animation: 'pulse 2s infinite', flexShrink: 0 }} aria-hidden="true" />
+              {lang === 'ru' ? 'Таджикистан · 15 городов' : 'Тоҷикистон · 15 шаҳр'}
+            </div>
 
             {/* H1 */}
-            <h1 style={{ fontSize: 'clamp(28px, 7vw, 52px)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '12px' }}>
-              {t('hero.title', lang)}
+            <h1 style={{ fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.04em', lineHeight: 1.05, marginBottom: '12px' }}>
+              {lang === 'ru'
+                ? <>Найдите свой <span style={{ color: 'var(--accent)' }}>автомобиль</span></>
+                : <>Мошинаи худро <span style={{ color: 'var(--accent)' }}>ёбед</span></>}
             </h1>
-            <p style={{ fontSize: 'clamp(14px, 2vw, 16px)', color: 'var(--text-secondary)', marginBottom: '28px', lineHeight: 1.6, maxWidth: '520px' }}>
+            <p style={{ fontSize: 'clamp(14px, 1.8vw, 15px)', color: 'var(--muted)', marginBottom: '24px', lineHeight: 1.65, maxWidth: '540px' }}>
               {t('hero.sub', lang)}
             </p>
 
@@ -350,7 +358,15 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
 
             {/* Stats row */}
             <div
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', marginTop: '28px' }}
+              style={{
+                display: 'flex',
+                alignItems: 'stretch',
+                marginTop: '32px',
+                background: 'var(--bg)',
+                border: '1px solid var(--border)',
+                borderRadius: '14px',
+                overflow: 'hidden',
+              }}
               role="list"
               aria-label="Platform statistics"
             >
@@ -359,25 +375,25 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
                   key={i18nKey}
                   role="listitem"
                   style={{
+                    flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '3px',
                     textAlign: 'center',
-                    paddingRight: idx < STATS_KEYS.length - 1 ? '16px' : '0',
-                    marginRight: idx < STATS_KEYS.length - 1 ? '16px' : '0',
+                    padding: '16px 12px',
                     borderRight: idx < STATS_KEYS.length - 1 ? '1px solid var(--border)' : 'none',
                   }}
                 >
                   {statsLoading ? (
-                    <span className="skeleton" style={{ display: 'inline-block', width: '52px', height: '20px', borderRadius: '4px' }} aria-hidden="true" />
+                    <span className="skeleton" style={{ display: 'inline-block', width: '52px', height: '22px', borderRadius: '4px' }} aria-hidden="true" />
                   ) : (
-                    <span style={{ fontSize: 'clamp(20px, 3vw, 28px)', fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>
+                    <span style={{ fontSize: 'clamp(22px, 3.5vw, 30px)', fontWeight: 900, color: 'var(--accent)', lineHeight: 1, letterSpacing: '-0.03em' }}>
                       {stats ? `${formatStatNum(stats[field] as number)}+` : '—'}
                     </span>
                   )}
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500, lineHeight: 1.3 }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500, lineHeight: 1.3, marginTop: '2px' }}>
                     {t(i18nKey, lang)}
                   </span>
                 </div>
@@ -387,16 +403,16 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
         </section>
 
         {/* ── CATEGORIES GRID ───────────────────────────────────────────────── */}
-        <section style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: 'clamp(24px, 4vw, 40px) 16px' }}>
+        <section style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: 'clamp(28px, 4vw, 44px) 16px' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             {/* Section header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: 'clamp(16px, 2.5vw, 22px)', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+              <h2 style={{ fontSize: 'clamp(17px, 2.5vw, 22px)', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>
                 {lang === 'ru' ? 'Категории' : 'Категорияҳо'}
               </h2>
               <Link
                 href="/categories"
-                style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 0', minHeight: '44px' }}
+                style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 0', minHeight: '44px', opacity: 0.9 }}
               >
                 {lang === 'ru' ? 'Все категории' : 'Ҳама категорияҳо'}
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -426,24 +442,24 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
         </section>
 
         {/* ── BRAND LOGOS STRIP ─────────────────────────────────────────────── */}
-        <section style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '0' }}>
+        <section className="brand-strip-section">
           <div style={{ position: 'relative' }}>
-            <div aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '32px', background: 'linear-gradient(to right, var(--surface), transparent)', pointerEvents: 'none', zIndex: 1 }} />
-            <div aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '32px', background: 'linear-gradient(to left, var(--surface), transparent)', pointerEvents: 'none', zIndex: 1 }} />
+            <div aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '40px', background: 'linear-gradient(to right, var(--surface), transparent)', pointerEvents: 'none', zIndex: 1 }} />
+            <div aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '40px', background: 'linear-gradient(to left, var(--surface), transparent)', pointerEvents: 'none', zIndex: 1 }} />
             <div
               className="scrollbar-hide"
-              style={{ display: 'flex', gap: '2px', overflowX: 'auto', padding: '0 8px', WebkitOverflowScrolling: 'touch' }}
+              style={{ display: 'flex', gap: '0', overflowX: 'auto', padding: '0 16px', WebkitOverflowScrolling: 'touch' }}
             >
               {QUICK_BRANDS.map((brand) => (
                 <button
                   key={brand}
                   onClick={() => router.push(`/catalog?brand=${brand}`)}
-                  className="active:scale-95 transition-transform brand-btn"
+                  className="brand-btn"
                   onMouseEnter={(e) => { e.currentTarget.style.borderBottomColor = 'var(--accent)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderBottomColor = 'transparent' }}
                 >
-                  <CarBrandLogo brand={brand} size={32} />
-                  <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                  <CarBrandLogo brand={brand} size={30} />
+                  <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                     {brand}
                   </span>
                 </button>
@@ -480,10 +496,10 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
 
 
         {/* ── FEATURED LISTINGS ─────────────────────────────────────────────── */}
-        <section style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: 'clamp(24px, 4vw, 40px) 16px' }}>
+        <section style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: 'clamp(28px, 4vw, 44px) 16px' }}>
           <div className="max-w-7xl mx-auto">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: 'clamp(16px, 2.5vw, 22px)', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: 'clamp(17px, 2.5vw, 22px)', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>
                 {userPrefs?.brands && userPrefs.brands.length > 0
                   ? t('onboarding.forYou', lang)
                   : t('hero.latestListings', lang)
@@ -563,9 +579,9 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
         </section>
 
         {/* ── TRUST SECTION ─────────────────────────────────────────────────── */}
-        <section style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: 'clamp(28px, 4vw, 48px) 16px' }}>
+        <section style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: 'clamp(32px, 4vw, 56px) 16px' }}>
           <div className="max-w-7xl mx-auto">
-            <h2 style={{ fontSize: 'clamp(16px, 2.5vw, 22px)', fontWeight: 800, color: 'var(--text)', marginBottom: '24px', textAlign: 'center' }}>
+            <h2 style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', marginBottom: '28px', textAlign: 'center' }}>
               {t('trust.title', lang)}
             </h2>
             <div className="trust-grid">
@@ -625,37 +641,42 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
           display: flex;
           align-items: center;
           gap: 10px;
-          height: 52px;
+          height: 54px;
           background: var(--card);
           border: 1.5px solid var(--border);
           border-radius: 14px;
           padding: 0 14px;
-          transition: border-color 0.2s;
+          transition: border-color 0.2s, box-shadow 0.2s;
         }
         .hero-search-input-wrap:focus-within {
           border-color: var(--accent);
+          box-shadow: 0 0 0 3px var(--accent-dim);
         }
         .hero-search-divider {
           display: none;
           width: 1px;
           background: var(--border);
           align-self: stretch;
-          margin: 10px 0;
+          margin: 12px 0;
         }
         .hero-search-select-wrap {
           display: flex;
           align-items: center;
           gap: 8px;
-          height: 52px;
+          height: 54px;
           background: var(--card);
           border: 1.5px solid var(--border);
           border-radius: 14px;
           padding: 0 14px;
           flex: 1;
+          transition: border-color 0.2s;
+        }
+        .hero-search-select-wrap:focus-within {
+          border-color: var(--accent);
         }
         .hero-search-btn {
-          height: 52px;
-          padding: 0 22px;
+          height: 54px;
+          padding: 0 24px;
           background: var(--accent);
           color: var(--color-white);
           border: none;
@@ -667,10 +688,14 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
           align-items: center;
           justify-content: center;
           gap: 8px;
-          transition: background 0.15s ease;
+          transition: background 0.15s ease, opacity 0.15s ease;
           white-space: nowrap;
           width: 100%;
           font-family: var(--font);
+          letter-spacing: 0.01em;
+        }
+        .hero-search-btn:hover {
+          background: var(--accent-hover);
         }
         @media (min-width: 640px) {
           .hero-search-bar {
@@ -679,21 +704,28 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
             background: var(--card);
             border: 1.5px solid var(--border);
             border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+            box-shadow: 0 4px 32px rgba(0,0,0,0.08);
             padding: 0;
             overflow: hidden;
             gap: 0;
+            transition: border-color 0.2s, box-shadow 0.2s;
+          }
+          .hero-search-bar:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 4px 32px rgba(0,0,0,0.08), 0 0 0 3px var(--accent-dim);
           }
           .hero-search-input-wrap {
             flex: 2;
             border: none;
             border-radius: 0;
             background: transparent;
-            height: 60px;
+            height: 62px;
             padding: 0 16px;
+            box-shadow: none;
           }
           .hero-search-input-wrap:focus-within {
             border: none;
+            box-shadow: none;
           }
           .hero-search-divider {
             display: block;
@@ -703,13 +735,16 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
             border: none;
             border-radius: 0;
             background: transparent;
-            height: 60px;
+            height: 62px;
             padding: 0 14px;
           }
+          .hero-search-select-wrap:focus-within {
+            border: none;
+          }
           .hero-search-btn {
-            height: 60px;
+            height: 62px;
             border-radius: 0 14px 14px 0;
-            padding: 0 24px;
+            padding: 0 28px;
             width: auto;
             flex-shrink: 0;
           }
@@ -732,41 +767,44 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
           flex-direction: column;
           align-items: center;
           gap: 10px;
-          padding: 18px 12px 14px;
+          padding: 20px 12px 16px;
           background: var(--card);
           border: 1.5px solid var(--border);
           border-radius: 16px;
           cursor: pointer;
-          transition: border-color 0.15s, background 0.15s, transform 0.15s;
+          transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s cubic-bezier(0.16,1,0.3,1);
+          box-shadow: var(--shadow-sm);
         }
         .category-card:hover {
           border-color: var(--accent);
-          background: var(--accent-dim);
-          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(200,56,8,0.12);
+          transform: translateY(-3px);
         }
         .category-card:active {
           transform: translateY(0) scale(0.97);
         }
         .category-icon-wrap {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
           background: var(--accent-dim);
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          transition: background 0.15s;
+          transition: background 0.18s, transform 0.18s;
         }
         .category-card:hover .category-icon-wrap {
-          background: var(--bg);
+          background: rgba(200,56,8,0.14);
+          transform: scale(1.08);
         }
         .category-label {
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 700;
           color: var(--text-secondary);
           text-align: center;
           line-height: 1.3;
+          transition: color 0.15s;
         }
         .category-card:hover .category-label {
           color: var(--accent);
@@ -780,42 +818,52 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
           padding: 8px 10px 6px;
           background: none;
           border: none;
-          border-bottom: 2px solid transparent;
+          border-bottom: 2.5px solid transparent;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           gap: 5px;
           cursor: pointer;
-          transition: border-color 0.15s, transform 0.1s;
+          transition: border-color 0.15s, transform 0.15s;
         }
-
-        /* ── How it works grid ── */
-        .how-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
-        }
-        @media (min-width: 640px) {
-          .how-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        }
-        .how-card {
-          background: var(--card);
-          border: 1px solid var(--border);
-          border-left: 3px solid var(--accent);
-          border-radius: 12px;
-          padding: clamp(16px, 3vw, 22px);
+        .brand-btn:hover {
+          transform: translateY(-1px);
         }
 
         /* ── Sell banner ── */
         .sell-banner {
-          background: var(--accent);
+          background: linear-gradient(135deg, var(--accent) 0%, #8b1a00 100%);
           border-radius: 20px;
-          padding: clamp(24px, 4vw, 40px) clamp(20px, 4vw, 40px);
+          padding: clamp(24px, 4vw, 44px) clamp(20px, 4vw, 44px);
           display: flex;
           flex-direction: column;
           gap: 24px;
           align-items: flex-start;
+          position: relative;
+          overflow: hidden;
+        }
+        .sell-banner::before {
+          content: '';
+          position: absolute;
+          top: -60px;
+          right: -60px;
+          width: 200px;
+          height: 200px;
+          background: rgba(255,255,255,0.06);
+          border-radius: 50%;
+          pointer-events: none;
+        }
+        .sell-banner::after {
+          content: '';
+          position: absolute;
+          bottom: -80px;
+          right: 80px;
+          width: 280px;
+          height: 280px;
+          background: rgba(255,255,255,0.04);
+          border-radius: 50%;
+          pointer-events: none;
         }
         @media (min-width: 640px) {
           .sell-banner {
@@ -826,10 +874,14 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
         }
         .sell-banner-left {
           flex: 1;
+          position: relative;
+          z-index: 1;
         }
         .sell-banner-right {
           flex-shrink: 0;
           width: 100%;
+          position: relative;
+          z-index: 1;
         }
         @media (min-width: 640px) {
           .sell-banner-right { width: auto; }
@@ -843,15 +895,20 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
           color: var(--accent);
           border: none;
           border-radius: 12px;
-          padding: 14px 24px;
+          padding: 14px 28px;
           font-size: 15px;
           font-weight: 800;
           cursor: pointer;
           text-decoration: none;
-          transition: background 0.15s;
+          transition: background 0.15s, transform 0.15s;
           white-space: nowrap;
           width: 100%;
           font-family: var(--font);
+          letter-spacing: 0.01em;
+        }
+        .sell-banner-btn:hover {
+          background: rgba(255,255,255,0.9);
+          transform: translateY(-1px);
         }
         @media (min-width: 640px) {
           .sell-banner-btn { width: auto; }
@@ -861,42 +918,47 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
         .listings-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 10px;
+          gap: 12px;
         }
         @media (min-width: 480px) {
-          .listings-grid { grid-template-columns: repeat(2, 1fr); }
+          .listings-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
         }
         @media (min-width: 768px) {
-          .listings-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+          .listings-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; }
         }
         @media (min-width: 1200px) {
-          .listings-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; }
+          .listings-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; }
         }
 
         /* ── Trust section ── */
         .trust-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 12px;
+          gap: 14px;
         }
         @media (min-width: 640px) {
-          .trust-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+          .trust-grid { grid-template-columns: repeat(3, 1fr); gap: 18px; }
         }
         .trust-card {
           background: var(--card);
           border: 1px solid var(--border);
-          border-top: 3px solid var(--accent);
-          border-radius: 16px;
-          padding: clamp(18px, 3vw, 28px);
+          border-radius: 18px;
+          padding: clamp(20px, 3vw, 32px);
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 14px;
+          transition: box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.16,1,0.3,1);
+          box-shadow: var(--shadow-sm);
+        }
+        .trust-card:hover {
+          box-shadow: var(--shadow-md);
+          transform: translateY(-2px);
         }
         .trust-icon {
-          width: 56px;
-          height: 56px;
+          width: 52px;
+          height: 52px;
           background: var(--accent-dim);
-          border-radius: 16px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -904,14 +966,15 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
         }
         .trust-card-title {
           font-size: 16px;
-          font-weight: 700;
+          font-weight: 800;
           color: var(--text);
+          letter-spacing: -0.01em;
           margin: 0;
         }
         .trust-card-desc {
-          font-size: 13px;
-          color: var(--text-muted);
-          line-height: 1.6;
+          font-size: 14px;
+          color: var(--text-secondary);
+          line-height: 1.65;
           margin: 0;
         }
       `}</style>
@@ -922,20 +985,27 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
 function SkeletonCard() {
   return (
     <div
-      style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}
+      style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}
       aria-hidden="true"
     >
       <div className="skeleton card-image-wrap" style={{ borderRadius: 0 }} />
-      <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div className="skeleton" style={{ height: '13px', width: '65%', borderRadius: '4px' }} />
-        <div className="skeleton" style={{ height: '24px', width: '50%', borderRadius: '4px' }} />
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <div className="skeleton" style={{ height: '22px', width: '60px', borderRadius: '10px' }} />
-          <div className="skeleton" style={{ height: '22px', width: '72px', borderRadius: '10px' }} />
+      <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Brand + model line */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="skeleton" style={{ height: '20px', width: '20px', borderRadius: '50%', flexShrink: 0 }} />
+          <div className="skeleton" style={{ height: '13px', width: '60%', borderRadius: '4px' }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <div className="skeleton" style={{ height: '11px', width: '40%', borderRadius: '4px' }} />
-          <div className="skeleton" style={{ height: '11px', width: '25%', borderRadius: '4px' }} />
+        {/* Price */}
+        <div className="skeleton" style={{ height: '22px', width: '48%', borderRadius: '4px' }} />
+        {/* Chips */}
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <div className="skeleton" style={{ height: '22px', width: '64px', borderRadius: '20px' }} />
+          <div className="skeleton" style={{ height: '22px', width: '76px', borderRadius: '20px' }} />
+        </div>
+        {/* Location + date */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '9px', borderTop: '1px solid var(--border)', marginTop: '1px' }}>
+          <div className="skeleton" style={{ height: '11px', width: '38%', borderRadius: '4px' }} />
+          <div className="skeleton" style={{ height: '11px', width: '22%', borderRadius: '4px' }} />
         </div>
       </div>
     </div>
@@ -945,12 +1015,17 @@ function SkeletonCard() {
 function EmptyState({ lang }: { lang: Lang }) {
   return (
     <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)' }}>
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ margin: '0 auto 12px', display: 'block' }} aria-hidden="true">
-        <path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h1l2-3h10l2 3h1a2 2 0 012 2v6a2 2 0 01-2 2h-2"/>
-        <circle cx="7.5" cy="17" r="2.5"/>
-        <circle cx="16.5" cy="17" r="2.5"/>
-      </svg>
-      <p style={{ fontSize: '15px' }}>{t('catalog.noResults', lang)}</p>
+      <div style={{ width: '72px', height: '72px', borderRadius: '20px', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" aria-hidden="true">
+          <path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h1l2-3h10l2 3h1a2 2 0 012 2v6a2 2 0 01-2 2h-2"/>
+          <circle cx="7.5" cy="17" r="2.5"/>
+          <circle cx="16.5" cy="17" r="2.5"/>
+        </svg>
+      </div>
+      <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}>{t('catalog.noResults', lang)}</p>
+      <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+        {lang === 'ru' ? 'Попробуйте изменить параметры поиска' : 'Параметрҳои ҷустуҷӯро тағйир диҳед'}
+      </p>
     </div>
   )
 }

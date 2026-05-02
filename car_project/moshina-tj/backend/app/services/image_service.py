@@ -113,7 +113,7 @@ def _upload_to_cloudinary(contents: bytes, content_type: str) -> ImageUploadResu
     cl = _get_cloudinary()
     result = cl.uploader.upload(
         io.BytesIO(contents),
-        folder="moshina",
+        folder="tajcar",
         resource_type="image",
         quality="auto",
         fetch_format="auto",

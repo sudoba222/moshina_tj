@@ -1,5 +1,26 @@
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// Extracts a human-readable error message from a DioException response body.
+String _serverMessage(Object e) {
+  if (e is DioException) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic>) {
+      final msg = data['message'] ?? data['detail'] ?? data['error'];
+      if (msg is String && msg.isNotEmpty) return msg;
+      if (msg is List && msg.isNotEmpty) {
+        final first = msg.first;
+        if (first is Map) return first['msg']?.toString() ?? e.message ?? 'Ошибка';
+      }
+    }
+    if (e.response?.statusCode == 401) return 'Неверный код или сессия истекла';
+    if (e.response?.statusCode == 429) return 'Слишком много запросов. Подождите.';
+    if (e.response?.statusCode == 404) return 'Не найдено';
+    if (e.response?.statusCode != null && e.response!.statusCode! >= 500) return 'Ошибка сервера. Попробуйте позже.';
+  }
+  return 'Нет соединения с сервером';
+}
 
 class ApiService {
   static const String baseUrl = 'https://api.tajcar.tj/api/v1';
@@ -60,21 +81,29 @@ class ApiService {
   }
 
   Future<dynamic> getRaw(String path, {Map<String, dynamic>? queryParams}) async {
-    final response = await _dio.get(path, queryParameters: queryParams);
-    final data = response.data;
-    if (data is Map<String, dynamic> && data.containsKey('success')) {
-      return data['data'];
+    try {
+      final response = await _dio.get(path, queryParameters: queryParams);
+      final data = response.data;
+      if (data is Map<String, dynamic> && data.containsKey('success')) {
+        return data['data'];
+      }
+      return data;
+    } on DioException catch (e) {
+      throw Exception(_serverMessage(e));
     }
-    return data;
   }
 
   Future<dynamic> postRaw(String path, {required Map<String, dynamic> body}) async {
-    final response = await _dio.post(path, data: body);
-    final data = response.data;
-    if (data is Map<String, dynamic> && data.containsKey('success')) {
-      return data['data'];
+    try {
+      final response = await _dio.post(path, data: body);
+      final data = response.data;
+      if (data is Map<String, dynamic> && data.containsKey('success')) {
+        return data['data'];
+      }
+      return data;
+    } on DioException catch (e) {
+      throw Exception(_serverMessage(e));
     }
-    return data;
   }
 
   // ── Chat ──────────────────────────────────────────────────────────────────
@@ -94,12 +123,16 @@ class ApiService {
       await _dio.put('/chat/$convId/read');
 
   Future<dynamic> putRaw(String path, {required Map<String, dynamic> body}) async {
-    final response = await _dio.put(path, data: body);
-    final data = response.data;
-    if (data is Map<String, dynamic> && data.containsKey('success')) {
-      return data['data'];
+    try {
+      final response = await _dio.put(path, data: body);
+      final data = response.data;
+      if (data is Map<String, dynamic> && data.containsKey('success')) {
+        return data['data'];
+      }
+      return data;
+    } on DioException catch (e) {
+      throw Exception(_serverMessage(e));
     }
-    return data;
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -210,6 +243,32 @@ class ApiService {
     final data = await postRaw('/support/tickets', body: {});
     if (data is Map<String, dynamic>) return data;
     return {};
+  }
+
+  // ── Upload ────────────────────────────────────────────────────────────────
+
+  Future<String> uploadImage(XFile file) async {
+    try {
+      final mimeType = file.mimeType ?? 'image/jpeg';
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: file.name,
+          contentType: DioMediaType.parse(mimeType),
+        ),
+      });
+      final response = await _dio.post('/upload/image', data: formData);
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final inner = data['data'];
+        if (inner is Map<String, dynamic>) {
+          return inner['url'] as String? ?? '';
+        }
+      }
+      return '';
+    } on DioException catch (e) {
+      throw Exception(_serverMessage(e));
+    }
   }
 
   // ── Search ────────────────────────────────────────────────────────────────

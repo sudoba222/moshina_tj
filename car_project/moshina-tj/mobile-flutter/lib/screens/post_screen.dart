@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
@@ -41,6 +44,12 @@ class _PostScreenState extends State<PostScreen> {
   final _colorCtrl = TextEditingController();
   final _engineCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+
+  // Step 3 — Photos
+  final _picker = ImagePicker();
+  final List<XFile> _selectedFiles = [];
+  final List<String> _uploadedUrls = [];
+  final List<bool> _uploadingFlags = [];
 
   // Step 4
   late TextEditingController _contactCtrl;
@@ -90,7 +99,7 @@ class _PostScreenState extends State<PostScreen> {
         'contact_phone': _contactCtrl.text.trim(),
         'contact_method': _contactMethod,
         'availability': 'in_stock',
-        'image_urls': <String>[],
+        'image_urls': _uploadedUrls,
       };
       if (_mileageCtrl.text.trim().isNotEmpty) {
         body['mileage'] = int.tryParse(_mileageCtrl.text.trim());
@@ -214,6 +223,7 @@ class _PostScreenState extends State<PostScreen> {
               child: [
                 _buildStep1(c, lang),
                 _buildStep2(c, lang),
+                _buildPhotosStep(c, lang),
                 _buildStep3(c, lang),
                 _buildStep4(c, lang),
               ][_step],
@@ -372,6 +382,221 @@ class _PostScreenState extends State<PostScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Photos step ───────────────────────────────────────────────────────────
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    if (_selectedFiles.length >= 10) {
+      if (mounted) {
+        final lang = context.read<LanguageProvider>().lang;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('post.maxPhotos', lang))),
+        );
+      }
+      return;
+    }
+    try {
+      final file = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1920,
+      );
+      if (file == null || !mounted) return;
+      final index = _selectedFiles.length;
+      setState(() {
+        _selectedFiles.add(file);
+        _uploadedUrls.add('');
+        _uploadingFlags.add(true);
+      });
+      try {
+        final api = context.read<ApiService>();
+        final url = await api.uploadImage(file);
+        if (mounted) {
+          setState(() {
+            _uploadedUrls[index] = url;
+            _uploadingFlags[index] = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _selectedFiles.removeAt(index);
+            _uploadedUrls.removeAt(index);
+            _uploadingFlags.removeAt(index);
+          });
+          final lang = context.read<LanguageProvider>().lang;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(t('error.generic', lang)),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _removePhoto(int index) {
+    setState(() {
+      _selectedFiles.removeAt(index);
+      _uploadedUrls.removeAt(index);
+      _uploadingFlags.removeAt(index);
+    });
+  }
+
+  Widget _buildPhotosStep(AppColors c, String lang) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle(t('post.photos', lang), c),
+        const SizedBox(height: 6),
+        Text(
+          t('post.photoHint', lang),
+          style: TextStyle(color: c.textMuted, fontSize: 13),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 1,
+          ),
+          itemCount: _selectedFiles.length < 10
+              ? _selectedFiles.length + 1
+              : _selectedFiles.length,
+          itemBuilder: (context, i) {
+            if (i == _selectedFiles.length) {
+              return _buildAddTile(c, lang);
+            }
+            return _buildPhotoTile(c, lang, i);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddTile(AppColors c, String lang) {
+    return GestureDetector(
+      onTap: () => _showPickerSheet(c, lang),
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.border, width: 1.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_photo_alternate_outlined, color: c.accent, size: 32),
+            const SizedBox(height: 6),
+            Text(
+              t('post.addPhoto', lang),
+              style: TextStyle(color: c.accent, fontSize: 11, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoTile(AppColors c, String lang, int i) {
+    final isUploading = _uploadingFlags[i];
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            File(_selectedFiles[i].path),
+            fit: BoxFit.cover,
+          ),
+        ),
+        if (i == 0)
+          Positioned(
+            bottom: 4,
+            left: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: c.accent,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                t('post.photoMain', lang),
+                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        if (isUploading)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            ),
+          ),
+        if (!isUploading)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: () => _removePhoto(i),
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 14),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showPickerSheet(AppColors c, String lang) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: c.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_library_outlined, color: c.accent),
+                title: Text(t('post.photoFromGallery', lang), style: TextStyle(color: c.text)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickPhoto(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt_outlined, color: c.accent),
+                title: Text(t('post.photoFromCamera', lang), style: TextStyle(color: c.text)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickPhoto(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -580,7 +805,7 @@ class _PostScreenState extends State<PostScreen> {
               child: _submitting
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : Text(
-                      _step < 3 ? t('post.next', lang) : t('post.publish', lang),
+                      _step < 4 ? t('post.next', lang) : t('post.publish', lang),
                       style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 15),
                     ),
             ),
@@ -591,12 +816,22 @@ class _PostScreenState extends State<PostScreen> {
   }
 
   void _onNext() {
+    final lang = context.read<LanguageProvider>().lang;
     if (_step == 0) {
       if (_step1Key.currentState!.validate()) setState(() => _step = 1);
     } else if (_step == 1) {
       if (_step2Key.currentState!.validate()) setState(() => _step = 2);
     } else if (_step == 2) {
+      // Photos step — block navigation while any upload is still in progress
+      if (_uploadingFlags.any((f) => f)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('post.uploading', lang))),
+        );
+        return;
+      }
       setState(() => _step = 3);
+    } else if (_step == 3) {
+      setState(() => _step = 4);
     } else {
       _submit();
     }
@@ -669,6 +904,7 @@ class _StepIndicator extends StatelessWidget {
     final steps = [
       t('post.step1', lang),
       t('post.step2', lang),
+      t('post.photos', lang),
       t('post.step3', lang),
       t('post.step4', lang),
     ];

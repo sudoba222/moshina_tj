@@ -49,52 +49,105 @@ class DashboardScreen extends StatelessWidget {
       ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Illustrative icon in a large circle
               Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(color: c.border, shape: BoxShape.circle),
-                child: Icon(Icons.person_outline, size: 44, color: c.textMuted),
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      c.accent.withValues(alpha: 0.15),
+                      c.accent.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  border: Border.all(color: c.accent.withValues(alpha: 0.2)),
+                ),
+                child: Icon(Icons.person_outline_rounded,
+                    size: 48, color: c.accent),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Text(
-                t('auth.login', lang),
-                style: GoogleFonts.outfit(color: c.text, fontWeight: FontWeight.w700, fontSize: 20),
+                lang == 'ru'
+                    ? 'Войдите в аккаунт'
+                    : 'Ба аккаунт ворид шавед',
+                style: GoogleFonts.outfit(
+                    color: c.text, fontWeight: FontWeight.w800, fontSize: 22),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
                 t('post.loginRequired', lang),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: c.textSecondary, fontSize: 14),
+                style: GoogleFonts.outfit(
+                    color: c.textSecondary, fontSize: 14, height: 1.5),
               ),
-              const SizedBox(height: 28),
-              SizedBox(
+              const SizedBox(height: 32),
+              // Card with login + register
+              Container(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => context.push('/login'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: c.accent,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(t('auth.login', lang),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: c.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () => context.push('/register'),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: c.accent),
-                  foregroundColor: c.accent,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  minimumSize: const Size(double.infinity, 0),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.push('/login'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: c.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          t('auth.login', lang),
+                          style: GoogleFonts.outfit(
+                              color: Colors.white, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => context.push('/register'),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: c.accent),
+                          foregroundColor: c.accent,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text(
+                          t('auth.register', lang),
+                          style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Text(t('auth.register', lang), style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -189,21 +242,33 @@ class _ProfileCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 64,
-                height: 64,
+                width: 70,
+                height: 70,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [c.accent.withValues(alpha: 0.15), c.accent.withValues(alpha: 0.08)],
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      c.accent,
+                      Color.lerp(c.accent, const Color(0xFF7A1A04), 0.4)!,
+                    ],
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: c.accent.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Center(
                   child: Text(
                     user.initials,
                     style: GoogleFonts.outfit(
-                      color: c.accent,
+                      color: Colors.white,
                       fontWeight: FontWeight.w800,
-                      fontSize: 22,
+                      fontSize: 24,
                     ),
                   ),
                 ),
@@ -419,7 +484,7 @@ class _SettingRow extends StatelessWidget {
             Expanded(
               child: Text(label, style: TextStyle(color: labelColor ?? c.text, fontSize: 15)),
             ),
-            if (trailing != null) trailing!,
+            ?trailing,
           ],
         ),
       ),

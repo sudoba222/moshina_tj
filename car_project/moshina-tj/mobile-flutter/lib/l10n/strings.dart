@@ -204,6 +204,8 @@ const Map<String, Map<String, String>> appStrings = {
   'auth.telegramPhone': {'ru': 'Введите номер телефона', 'tj': 'Рақами телефонро ворид кунед'},
   'auth.sendCode': {'ru': 'Отправить', 'tj': 'Фиристодан'},
   'auth.or': {'ru': 'или', 'tj': 'ё'},
+  'auth.telegramHint': {'ru': '+992 900 000 000', 'tj': '+992 900 000 000'},
+  'auth.emailOtpSent': {'ru': 'Код отправлен на email', 'tj': 'Код ба email фиристода шуд'},
   'notifications.title': {'ru': 'Уведомления', 'tj': 'Огоҳиномаҳо'},
   'notifications.empty': {'ru': 'Нет уведомлений', 'tj': 'Огоҳиномае нест'},
   'notifications.markAllRead': {'ru': 'Прочитать все', 'tj': 'Ҳамаро хондан'},
@@ -217,6 +219,14 @@ const Map<String, Map<String, String>> appStrings = {
   'support.title': {'ru': 'Поддержка', 'tj': 'Дастгирӣ'},
   'support.open': {'ru': 'Написать в поддержку', 'tj': 'Ба дастгирӣ нависед'},
   'search.suggestions': {'ru': 'Подсказки', 'tj': 'Пешниҳодҳо'},
+  'post.photos': {'ru': 'Фото', 'tj': 'Акс'},
+  'post.addPhoto': {'ru': 'Добавить фото', 'tj': 'Акс илова кунед'},
+  'post.photoHint': {'ru': 'До 10 фото · первое — главное', 'tj': 'То 10 акс · аввалӣ — асосӣ'},
+  'post.maxPhotos': {'ru': 'Максимум 10 фото', 'tj': 'Ҳадди аксар 10 акс'},
+  'post.uploading': {'ru': 'Загрузка...', 'tj': 'Бор кардан...'},
+  'post.photoFromGallery': {'ru': 'Из галереи', 'tj': 'Аз галерея'},
+  'post.photoFromCamera': {'ru': 'Сфотографировать', 'tj': 'Аккос гирифтан'},
+  'post.photoMain': {'ru': 'Главное', 'tj': 'Асосӣ'},
 };
 
 String t(String key, String lang) {

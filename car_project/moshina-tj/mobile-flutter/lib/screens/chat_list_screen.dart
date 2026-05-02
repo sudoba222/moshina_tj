@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -47,6 +47,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
         centerTitle: false,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(color: c.border, height: 1),
+        ),
       ),
       body: RefreshIndicator(
         color: c.accent,
@@ -75,8 +79,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
               itemBuilder: (context, i) {
                 final conv = items[i] as Map<String, dynamic>;
+                final myUserId =
+                    context.read<AuthProvider>().user?.id ?? '';
                 return _ConversationTile(
                   conv: conv,
+                  myUserId: myUserId,
                   lang: lang,
                   c: c,
                   onTap: () => context.push(
@@ -97,12 +104,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
 class _ConversationTile extends StatelessWidget {
   final Map<String, dynamic> conv;
+  final String myUserId;
   final String lang;
   final AppColors c;
   final VoidCallback onTap;
 
   const _ConversationTile({
     required this.conv,
+    required this.myUserId,
     required this.lang,
     required this.c,
     required this.onTap,
@@ -117,90 +126,164 @@ class _ConversationTile extends StatelessWidget {
 
     final brand = listing['brand'] as String? ?? '';
     final model = listing['model'] as String? ?? '';
-    final images = listing['images'] as List<dynamic>? ?? [];
-    final imageUrl = images.isNotEmpty
-        ? (images.first as Map<String, dynamic>)['url'] as String? ?? ''
-        : '';
     final userName = otherUser['full_name'] as String? ?? '';
     final lastContent = lastMsg?['content'] as String? ?? '';
     final createdAt = lastMsg?['created_at'] as String?;
+    final lastSenderId = lastMsg?['sender_id'] as String?;
+    final isLastMine = lastSenderId == myUserId;
 
-    return Material(
-      color: c.card,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Thumbnail + unread badge
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  _CarThumbnail(imageUrl: imageUrl, c: c),
-                  if (unread > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: _UnreadBadge(count: unread, c: c),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 12),
-              // Title + subtitle
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    // Initials from user's full name
+    final initials = userName.isNotEmpty
+        ? userName.trim().split(' ').take(2).map((w) => w[0].toUpperCase()).join()
+        : '?';
+
+    // A stable color based on initials — picks from accent variants
+    final avatarBg = c.accent.withValues(alpha: 0.15);
+
+    return Dismissible(
+      key: ValueKey(conv['id']),
+      direction: DismissDirection.endToStart,
+      // Swipe is visual only — no destructive action
+      confirmDismiss: (_) async => false,
+      background: Container(
+        color: c.accent.withValues(alpha: 0.08),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        child: Icon(Icons.archive_outlined, color: c.accent),
+      ),
+      child: Material(
+        color: c.card,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Avatar: initials circle + small car badge
+                Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    Text(
-                      '$brand $model',
-                      style: AppTextStyles.bodyLg(
-                        color: c.text,
-                        weight: FontWeight.w600,
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: avatarBg,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      child: Center(
+                        child: Text(
+                          initials,
+                          style: AppTextStyles.bodyLg(
+                            color: c.accent,
+                            weight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                     ),
-                    if (userName.isNotEmpty) ...[
-                      const SizedBox(height: 1),
-                      Text(
-                        userName,
-                        style: AppTextStyles.caption(color: c.textSecondary),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    // Car badge at bottom-right
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: c.border, width: 1.5),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.directions_car_rounded,
+                            size: 11,
+                            color: c.textMuted,
+                          ),
+                        ),
                       ),
-                    ],
-                    if (lastContent.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        lastContent,
-                        style: AppTextStyles.bodySm(color: c.textMuted),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              // Time + unread count
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (createdAt != null)
-                    Text(
-                      _formatTime(createdAt, lang),
-                      style: AppTextStyles.caption(color: c.textMuted),
-                    ),
-                  if (unread > 0) ...[
-                    const SizedBox(height: 4),
-                    _UnreadBadge(count: unread, c: c),
-                  ],
-                ],
-              ),
-            ],
+                const SizedBox(width: 12),
+                // Text column
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Name row + time
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              userName.isNotEmpty
+                                  ? userName
+                                  : '$brand $model',
+                              style: AppTextStyles.bodyLg(
+                                color: c.text,
+                                weight: unread > 0
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (createdAt != null)
+                            Text(
+                              _formatTime(createdAt, lang),
+                              style: AppTextStyles.caption(
+                                color: unread > 0 ? c.accent : c.textMuted,
+                                weight: unread > 0
+                                    ? FontWeight.w700
+                                    : FontWeight.w400,
+                              ),
+                            ),
+                        ],
+                      ),
+                      // Car name subtitle
+                      if (userName.isNotEmpty && brand.isNotEmpty)
+                        Text(
+                          '$brand $model',
+                          style: AppTextStyles.caption(
+                              color: c.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      const SizedBox(height: 2),
+                      // Last message preview row + unread badge
+                      Row(
+                        children: [
+                          Expanded(
+                            child: lastContent.isNotEmpty
+                                ? Text(
+                                    isLastMine
+                                        ? 'Вы: $lastContent'
+                                        : lastContent,
+                                    style: AppTextStyles.bodySm(
+                                      color: unread > 0
+                                          ? c.text
+                                          : c.textMuted,
+                                      weight: unread > 0
+                                          ? FontWeight.w500
+                                          : FontWeight.w400,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                          if (unread > 0) ...[
+                            const SizedBox(width: 6),
+                            _UnreadBadge(count: unread, c: c),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -223,45 +306,6 @@ class _ConversationTile extends StatelessWidget {
   }
 }
 
-class _CarThumbnail extends StatelessWidget {
-  final String imageUrl;
-  final AppColors c;
-
-  const _CarThumbnail({required this.imageUrl, required this.c});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
-        width: 52,
-        height: 52,
-        child: imageUrl.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(color: c.border),
-                errorWidget: (_, __, ___) => _PlaceholderIcon(c: c),
-              )
-            : _PlaceholderIcon(c: c),
-      ),
-    );
-  }
-}
-
-class _PlaceholderIcon extends StatelessWidget {
-  final AppColors c;
-  const _PlaceholderIcon({required this.c});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: c.tagBg,
-      child: Icon(Icons.directions_car_outlined, size: 24, color: c.textMuted),
-    );
-  }
-}
-
 class _UnreadBadge extends StatelessWidget {
   final int count;
   final AppColors c;
@@ -271,11 +315,11 @@ class _UnreadBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         color: c.accent,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Center(
         child: Text(
@@ -319,19 +363,27 @@ class _ShimmerList extends StatelessWidget {
                 height: 52,
                 decoration: BoxDecoration(
                   color: c.card,
-                  borderRadius: BorderRadius.circular(10),
+                  shape: BoxShape.circle,
                 ),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(width: 140, height: 14, color: c.card),
-                  const SizedBox(height: 6),
-                  Container(width: 90, height: 12, color: c.card),
-                  const SizedBox(height: 6),
-                  Container(width: 180, height: 12, color: c.card),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(width: 130, height: 14, color: c.card),
+                        const Spacer(),
+                        Container(width: 32, height: 10, color: c.card),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Container(width: 90, height: 11, color: c.card),
+                    const SizedBox(height: 5),
+                    Container(width: 180, height: 11, color: c.card),
+                  ],
+                ),
               ),
             ],
           ),
@@ -358,9 +410,17 @@ class _EmptyState extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.chat_bubble_outline,
-                    size: 64, color: c.accentDim),
-                const SizedBox(height: 16),
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: c.tagBg,
+                  ),
+                  child: Icon(Icons.chat_bubble_outline_rounded,
+                      size: 44, color: c.accentDim),
+                ),
+                const SizedBox(height: 20),
                 Text(
                   t('chat.empty', lang),
                   style: AppTextStyles.h3(color: c.text),
@@ -389,7 +449,8 @@ class _ErrorState extends StatelessWidget {
   final AppColors c;
   final String lang;
   final VoidCallback onRetry;
-  const _ErrorState({required this.c, required this.lang, required this.onRetry});
+  const _ErrorState(
+      {required this.c, required this.lang, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {

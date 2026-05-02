@@ -19,11 +19,40 @@ dependencies:
   url_launcher: ^6.2.6
   shared_preferences: ^2.2.2
   web_socket_channel: ^2.4.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.6
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  web:
+    generate: false
+  windows:
+    generate: false
+  macos:
+    generate: false
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  color_dark: "#111318"
+  image: assets/images/splash_logo.png
+  image_dark: assets/images/splash_logo.png
+  android: true
+  ios: true
+  android_12:
+    color: "#FFFFFF"
+    color_dark: "#111318"
+    image: assets/images/app_icon.png
+    image_dark: assets/images/app_icon.png
 
 flutter:
   uses-material-design: true

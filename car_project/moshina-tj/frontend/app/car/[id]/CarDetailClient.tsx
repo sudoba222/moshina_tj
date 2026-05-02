@@ -7,12 +7,12 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import ImageLightbox from '@/components/ImageLightbox'
-import { listingsApi, usersApi, searchApi, favoritesApi, adminApi } from '@/lib/api'
+import { listingsApi, usersApi, searchApi, favoritesApi, adminApi, chatApi } from '@/lib/api'
 import { useLang } from '@/lib/LanguageContext'
 import { useAuth } from '@/lib/AuthContext'
 import { t } from '@/lib/i18n'
 import StaffStatusRibbon from '@/components/StaffStatusRibbon'
-import type { Listing, UserPublicProfile, RentalRules } from '@/types'
+import type { Listing, UserPublicProfile, RentalRules, ChatMessage } from '@/types'
 
 // ─── Spec Row (no emoji) ─────────────────────────────────────────────────────
 interface SpecRowProps {
@@ -26,17 +26,19 @@ function SpecRow({ icon, label, value }: SpecRowProps) {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '4px',
+      gap: '6px',
       background: 'var(--surface)',
       border: '1px solid var(--border)',
-      borderRadius: '12px',
-      padding: '14px',
+      borderRadius: '14px',
+      padding: '14px 16px',
     }}>
-      <span style={{ color: 'var(--text-muted)' }}>{icon}</span>
-      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {label}
-      </span>
-      <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)' }}>{value}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span style={{ color: 'var(--accent)', opacity: 0.8 }}>{icon}</span>
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          {label}
+        </span>
+      </div>
+      <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em' }}>{value}</span>
     </div>
   )
 }
@@ -541,6 +543,7 @@ export default function CarDetailClient() {
   const [staffRejectOpen, setStaffRejectOpen] = useState(false)
   const [staffRejectReason, setStaffRejectReason] = useState('')
   const [staffActionLoading, setStaffActionLoading] = useState(false)
+  const [chatLoading, setChatLoading] = useState(false)
   // Swipe tracking for the main gallery on mobile
   const touchStartX = useRef<number | null>(null)
 
@@ -559,6 +562,29 @@ export default function CarDetailClient() {
     }
   }, [])
 
+  async function handleChat() {
+    if (!user) {
+      router.push(`/auth/login?redirect=/car/${id}`)
+      return
+    }
+    if (!listing || chatLoading) return
+    if (listing.user_id === user.id) {
+      router.push('/dashboard?tab=messages')
+      return
+    }
+    setChatLoading(true)
+    try {
+      const res = await chatApi.createOrGet({
+        listing_id: listing.id,
+        participant_id: listing.user_id,
+      })
+      router.push(`/dashboard?tab=messages&conv=${res.data.data.id}`)
+    } catch (err) {
+      console.error('Chat error:', err)
+    } finally {
+      setChatLoading(false)
+    }
+  }
   async function handleFavoriteToggle() {
     if (!user) {
       router.push('/auth/login')
@@ -653,8 +679,38 @@ export default function CarDetailClient() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Navbar />
-        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <p style={{ color: 'var(--text-muted)' }}>{t('common.loading', lang)}</p>
+        <main style={{ flex: 1 }}>
+          <div className="max-w-7xl mx-auto px-4 md:px-6" style={{ paddingTop: '28px', paddingBottom: '60px' }}>
+            {/* Back skeleton */}
+            <div className="skeleton" style={{ height: '14px', width: '60px', borderRadius: '4px', marginBottom: '24px' }} aria-hidden="true" />
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* Left col skeleton */}
+              <div style={{ flex: '1 1 60%' }}>
+                <div className="skeleton" style={{ height: 'clamp(220px, 50vw, 400px)', borderRadius: '16px' }} aria-hidden="true" />
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  {[72, 72, 72, 72].map((w, i) => (
+                    <div key={i} className="skeleton" style={{ width: `${w}px`, height: '54px', borderRadius: '8px', flexShrink: 0 }} aria-hidden="true" />
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" style={{ marginTop: '28px' }}>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="skeleton" style={{ height: '80px', borderRadius: '12px' }} aria-hidden="true" />
+                  ))}
+                </div>
+              </div>
+              {/* Right col skeleton */}
+              <div style={{ flex: '0 0 320px', maxWidth: '100%' }}>
+                <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div className="skeleton" style={{ height: '28px', width: '70%', borderRadius: '4px' }} aria-hidden="true" />
+                  <div className="skeleton" style={{ height: '14px', width: '40%', borderRadius: '4px' }} aria-hidden="true" />
+                  <div className="skeleton" style={{ height: '36px', width: '55%', borderRadius: '4px' }} aria-hidden="true" />
+                  <div className="skeleton" style={{ height: '50px', borderRadius: '12px' }} aria-hidden="true" />
+                  <div className="skeleton" style={{ height: '50px', borderRadius: '12px' }} aria-hidden="true" />
+                  <div className="skeleton" style={{ height: '50px', borderRadius: '12px' }} aria-hidden="true" />
+                </div>
+              </div>
+            </div>
+          </div>
         </main>
         <Footer />
       </div>
@@ -718,8 +774,13 @@ export default function CarDetailClient() {
           {/* Back */}
           <button
             onClick={() => router.back()}
-            style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginBottom: '24px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0', transition: 'color 0.15s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)' }}
           >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10 3L5 8l5 5"/>
+            </svg>
             {t('common.back', lang)}
           </button>
 
@@ -728,7 +789,7 @@ export default function CarDetailClient() {
             <div style={{ flex: '1 1 60%', minWidth: 0 }}>
               {/* Main image — supports swipe on mobile */}
               <div
-                style={{ position: 'relative', height: 'clamp(220px, 50vw, 400px)', borderRadius: '16px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)', cursor: images ? 'zoom-in' : 'default', touchAction: 'pan-y' }}
+                style={{ position: 'relative', height: 'clamp(240px, 52vw, 440px)', borderRadius: '18px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)', cursor: images ? 'zoom-in' : 'default', touchAction: 'pan-y', boxShadow: 'var(--shadow-sm)' }}
                 onClick={() => {
                   if (images) {
                     setLightboxIndex(activeImage)
@@ -890,11 +951,11 @@ export default function CarDetailClient() {
 
               {/* Description — collapsible on mobile (3-line preview) */}
               {listing.description && (
-                <div style={{ marginTop: '28px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px' }}>
+                <div style={{ marginTop: '32px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em', marginBottom: '12px' }}>
                     {t('carDetail.description', lang)}
                   </h3>
-                  <div style={{ position: 'relative', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
+                  <div style={{ position: 'relative', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px 20px' }}>
                     <p style={{
                       fontSize: '15px',
                       color: 'var(--text-muted)',
@@ -976,7 +1037,7 @@ export default function CarDetailClient() {
 
             {/* Right: price + actions */}
             <div style={{ flex: '0 0 320px', maxWidth: '100%' }}>
-              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', position: 'sticky', top: '110px' }}>
+              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', position: 'sticky', top: '80px', boxShadow: 'var(--shadow-md)' }}>
                 {/* Badges */}
                 <div className="flex gap-2 flex-wrap mb-4">
                   <span style={{
@@ -1024,7 +1085,7 @@ export default function CarDetailClient() {
                   )}
                 </div>
 
-                <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text)', marginBottom: '6px', lineHeight: 1.2 }}>
+                <h1 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, color: 'var(--text)', marginBottom: '6px', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
                   {(() => {
                     const CAT_PREFIX: Record<string, { ru: string; tj: string }> = {
                       truck: { ru: 'Грузовик', tj: 'Боркаш' }, bus: { ru: 'Автобус', tj: 'Автобус' },
@@ -1036,11 +1097,12 @@ export default function CarDetailClient() {
                   })()}
                   {listing.brand} {listing.model}
                 </h1>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-                  {listing.year}{listing.city ? ` · ${listing.city}` : ''}
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>{listing.year}</span>
+                  {listing.city && <><span style={{ color: 'var(--border-strong)' }}>&middot;</span><span>{listing.city}</span></>}
                 </p>
 
-                <p style={{ fontSize: '32px', fontWeight: 800, color: 'var(--accent)', marginBottom: listing.prepayment_amount ? '4px' : '24px' }}>
+                <p style={{ fontSize: 'clamp(28px, 4vw, 34px)', fontWeight: 900, color: 'var(--accent)', letterSpacing: '-0.03em', lineHeight: 1, marginBottom: listing.prepayment_amount ? '6px' : '24px' }}>
                   {formatPrice(listing.price, listing.currency)}
                 </p>
 
@@ -1052,29 +1114,57 @@ export default function CarDetailClient() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {/* Contact seller */}
-                  <button
-                    onClick={() => setContactOpen(true)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      background: 'var(--accent)',
-                      color: 'var(--color-white)',
-                      fontWeight: 700,
-                      fontSize: '15px',
-                      padding: '13px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'background 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-hover)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent)' }}
-                  >
-                    <PhoneIcon />
-                    {t('carDetail.contact', lang)}
-                  </button>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <button
+                      onClick={() => setContactOpen(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        background: 'var(--accent)',
+                        color: 'var(--color-white)',
+                        fontWeight: 700,
+                        fontSize: '15px',
+                        padding: '13px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-hover)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent)' }}
+                    >
+                      <PhoneIcon />
+                      {t('carDetail.contact', lang)}
+                    </button>
+
+                    <button
+                      onClick={handleChat}
+                      disabled={chatLoading}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        background: 'var(--accent-dim)',
+                        color: 'var(--accent)',
+                        fontWeight: 700,
+                        fontSize: '15px',
+                        padding: '13px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--accent)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        opacity: chatLoading ? 0.7 : 1,
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                      </svg>
+                      {chatLoading ? '...' : t('chat.writeMessage', lang)}
+                    </button>
+                  </div>
 
                   {/* Favorite */}
                   <button
@@ -1166,9 +1256,9 @@ export default function CarDetailClient() {
 
           {/* Seller's other listings */}
           {sellerListings.length > 0 && (
-            <section style={{ marginTop: '52px' }}>
+            <section style={{ marginTop: '56px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>
                   {t('carDetail.sellerListings', lang)}
                 </h2>
                 <Link
@@ -1191,8 +1281,8 @@ export default function CarDetailClient() {
 
           {/* Related listings */}
           {related.length > 0 && (
-            <section style={{ marginTop: '52px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '20px' }}>
+            <section style={{ marginTop: '56px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', marginBottom: '20px' }}>
                 {t('carDetail.related', lang)}
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
@@ -1225,6 +1315,29 @@ export default function CarDetailClient() {
             boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
           }}
         >
+          {/* Chat button */}
+          <button
+            onClick={handleChat}
+            disabled={chatLoading}
+            style={{
+              width: '52px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'var(--accent-dim)',
+              color: 'var(--accent)',
+              border: '1px solid var(--accent)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              cursor: 'pointer',
+              opacity: chatLoading ? 0.7 : 1,
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+            </svg>
+          </button>
           {/* Call button */}
           {(listing.contact_phone || sellerProfile?.phone) && (
             <a

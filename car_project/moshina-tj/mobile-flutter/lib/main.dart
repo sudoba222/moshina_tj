@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/favorites_provider.dart';
@@ -13,7 +14,9 @@ import 'theme/app_theme.dart';
 import 'router/app_router.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -23,6 +26,7 @@ Future<void> main() async {
   final apiService = ApiService();
   await apiService.init();
 
+  FlutterNativeSplash.remove();
   runApp(TajcarApp(apiService: apiService));
 }
 

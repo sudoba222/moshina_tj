@@ -407,7 +407,7 @@ function PostPage() {
     try {
       const res = await api.post<{ data: string }>('/ai/refine-description', {
         brand: form.brand, model: form.model, year: Number(form.year),
-        price: Number(form.price) || undefined, currency: form.currency,
+        price: form.price ? Number(form.price) : undefined, currency: form.currency,
         mileage: form.mileage ? Number(form.mileage) : undefined,
         fuel: form.fuel || undefined, transmission: form.transmission || undefined,
         color: form.color || undefined, city: form.city || undefined,

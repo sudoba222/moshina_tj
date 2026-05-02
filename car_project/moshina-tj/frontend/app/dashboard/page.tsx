@@ -10,9 +10,10 @@ import { useAuth } from '@/lib/AuthContext'
 import { useLang } from '@/lib/LanguageContext'
 import { t } from '@/lib/i18n'
 import CarCard from '@/components/CarCard'
+import ChatView from '@/components/ChatView'
 import type { Dealer, Listing } from '@/types'
 
-type Tab = 'profile' | 'listings' | 'favorites' | 'settings' | 'dealership'
+type Tab = 'profile' | 'listings' | 'favorites' | 'settings' | 'dealership' | 'messages'
 
 // ─── SearchParams reader (must be inside Suspense) ────────────────────────────
 function SearchParamsReader({ onParams }: { onParams: (tab: Tab | null) => void }) {
@@ -309,10 +310,11 @@ export default function DashboardPage() {
 
           {/* Tabs */}
           <div className="scrollbar-hide" style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '28px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-            {(['profile', 'listings', 'favorites', 'settings', ...(user.role === 'dealer' ? ['dealership'] : [])] as Tab[]).map((tabKey) => {
+            {(['profile', 'listings', 'messages', 'favorites', 'settings', ...(user.role === 'dealer' ? ['dealership'] : [])] as Tab[]).map((tabKey) => {
               const labelMap: Record<Tab, string> = {
                 profile: t('dashboard.profile', lang),
                 listings: t('dashboard.myListings', lang),
+                messages: t('chat.messages', lang),
                 favorites: t('favorites.title', lang),
                 settings: t('dashboard.settings', lang),
                 dealership: t('dashboard.dealershipTab', lang),
@@ -597,6 +599,13 @@ export default function DashboardPage() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── Messages tab ── */}
+          {tab === 'messages' && (
+            <div className="animate-fade-in">
+              <ChatView />
             </div>
           )}
 

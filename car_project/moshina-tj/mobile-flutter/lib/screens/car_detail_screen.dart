@@ -737,35 +737,31 @@ class _SellerCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          // Contact buttons
+          const SizedBox(height: 16),
+          // Primary call button — full width, prominent
+          _LargeContactBtn(
+            label: t('detail.call', lang),
+            icon: Icons.phone_rounded,
+            color: AppColors.colorSuccess,
+            onTap: onCall,
+          ),
+          const SizedBox(height: 8),
+          // Secondary row: WhatsApp + Chat
           Row(
             children: [
               Expanded(
-                child: _ContactBtn(
-                  label: t('detail.call', lang),
-                  icon: Icons.phone_rounded,
-                  filled: true,
-                  color: c.accent,
-                  onTap: onCall,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ContactBtn(
+                child: _OutlineContactBtn(
                   label: 'WhatsApp',
                   icon: Icons.chat_rounded,
-                  filled: true,
                   color: AppColors.whatsapp,
                   onTap: onWhatsApp,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _ContactBtn(
+                child: _OutlineContactBtn(
                   label: t('chat.openChat', lang),
                   icon: Icons.message_outlined,
-                  filled: false,
                   color: c.accent,
                   onTap: onChat,
                 ),
@@ -778,17 +774,15 @@ class _SellerCard extends StatelessWidget {
   }
 }
 
-class _ContactBtn extends StatelessWidget {
+class _LargeContactBtn extends StatelessWidget {
   final String label;
   final IconData icon;
-  final bool filled;
   final Color color;
   final VoidCallback onTap;
 
-  const _ContactBtn({
+  const _LargeContactBtn({
     required this.label,
     required this.icon,
-    required this.filled,
     required this.color,
     required this.onTap,
   });
@@ -798,29 +792,73 @@ class _ContactBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 48,
+        width: double.infinity,
+        height: 52,
         decoration: BoxDecoration(
-          color: filled ? color : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color),
+          color: color,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.28),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Column(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon,
-                size: 16,
-                color: filled ? Colors.white : color),
-            const SizedBox(height: 2),
+            Icon(icon, size: 20, color: Colors.white),
+            const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(
-                color: filled ? Colors.white : color,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+              style: AppTextStyles.bodyLg(
+                  color: Colors.white, weight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OutlineContactBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _OutlineContactBtn({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 46,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: AppTextStyles.bodySm(
+                    color: color, weight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

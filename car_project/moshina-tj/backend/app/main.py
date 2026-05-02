@@ -126,7 +126,7 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="MOSHINA.TJ API",
+    title="TAJCAR.TJ API",
     version="1.0.0",
     description="Car marketplace API for Tajikistan",
     docs_url=None if _IS_PRODUCTION else "/docs",
@@ -221,8 +221,42 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 # ---------------------------------------------------------------------------
-# Health check
+# Health check — used by Coolify / load-balancer probes.
+# Checks DB connectivity (SELECT 1) and Redis connectivity (PING).
+# Returns HTTP 200 with individual component statuses so ops can diagnose
+# partial failures without taking traffic away from healthy workers.
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["meta"])
-def health():
-    return {"status": "ok"}
+async def health():
+    import asyncio
+    from app.redis_client import get_redis as _get_redis
+
+    # --- Database ---
+    db_status = "ok"
+    try:
+        from sqlalchemy import text as _text
+        db = SessionLocal()
+        try:
+            db.execute(_text("SELECT 1"))
+        finally:
+            db.close()
+    except Exception as exc:
+        _log.warning("Health check: DB failed: %s", exc)
+        db_status = "error"
+
+    # --- Redis ---
+    redis_status = "ok"
+    try:
+        client = await _get_redis()
+        if client is None:
+            redis_status = "unavailable"
+        else:
+            pong = await asyncio.wait_for(client.ping(), timeout=2.0)
+            if not pong:
+                redis_status = "error"
+    except Exception as exc:
+        _log.warning("Health check: Redis failed: %s", exc)
+        redis_status = "error"
+
+    overall = "ok" if db_status == "ok" else "degraded"
+    return {"status": overall, "db": db_status, "redis": redis_status}

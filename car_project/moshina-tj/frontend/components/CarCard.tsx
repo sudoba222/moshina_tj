@@ -163,12 +163,13 @@ export default function CarCard({
         style={{
           background: 'var(--card)',
           border: '1px solid var(--border)',
-          borderRadius: '16px',
+          borderRadius: 'var(--r-lg)',
           overflow: 'hidden',
           cursor: 'pointer',
-          boxShadow: hovered ? 'var(--shadow-md)' : 'var(--shadow-sm)',
-          transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
-          transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+          boxShadow: hovered ? 'var(--sh-md)' : 'var(--sh-card)',
+          transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+          transition: 'box-shadow 0.2s cubic-bezier(0.16,1,0.3,1), transform 0.2s cubic-bezier(0.16,1,0.3,1), border-color 0.2s ease',
+          borderColor: hovered ? 'var(--border-strong)' : 'var(--border)',
           WebkitTapHighlightColor: 'transparent',
           touchAction: 'manipulation',
           ...(stripeColor ? { borderLeft: `4px solid ${stripeColor}` } : {}),
@@ -179,10 +180,10 @@ export default function CarCard({
           className="card-image-outer"
           style={{ position: 'relative', overflow: 'hidden', borderRadius: '16px 16px 0 0' }}
         >
-          {/* Mobile: 16:9 via padding-bottom trick */}
+          {/* Image: 16:10 default, 4:3 on mobile ≤480px (via CSS class) */}
           <div
             className="card-image-wrap"
-            style={{ position: 'relative', background: 'var(--bg)' }}
+            style={{ position: 'relative', background: 'linear-gradient(145deg, var(--border) 0%, var(--tag-bg) 100%)' }}
           >
             {primaryImage ? (
               <>
@@ -199,11 +200,12 @@ export default function CarCard({
                   fill
                   priority={priority}
                   loading={priority ? 'eager' : 'lazy'}
-                  sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  sizes="(max-width: 480px) 50vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   style={{
                     objectFit: 'cover',
                     opacity: imgLoaded ? 1 : 0,
-                    transition: 'opacity 0.3s ease',
+                    transition: 'opacity 0.3s ease, transform 0.3s ease',
+                    transform: hovered ? 'scale(1.03)' : 'scale(1)',
                   }}
                   onLoad={() => setImgLoaded(true)}
                 />
@@ -333,7 +335,7 @@ export default function CarCard({
               </div>
             )}
 
-            {/* Favorite button — top right circle, 40x40, hidden in moderator mode */}
+            {/* Favorite button — top right circle, 34x34, backdrop-blur, hidden in moderator mode */}
             {!moderatorMode && (
               <button
                 onClick={handleFavoriteClick}
@@ -342,10 +344,12 @@ export default function CarCard({
                   position: 'absolute',
                   top: '8px',
                   right: '8px',
-                  width: '40px',
-                  height: '40px',
+                  width: '34px',
+                  height: '34px',
                   borderRadius: '50%',
                   background: 'rgba(255,255,255,0.92)',
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
                   border: 'none',
                   cursor: 'pointer',
                   display: 'flex',
@@ -390,15 +394,15 @@ export default function CarCard({
         </div>
 
         {/* Card content */}
-        <div style={{ padding: '12px 14px 14px' }}>
+        <div style={{ padding: 'clamp(10px,1.5vw,14px)' }}>
           {/* Brand + Model + Year on one line */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '4px', minWidth: 0 }}>
-            <CarBrandLogo brand={listing.brand} size={22} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px', minWidth: 0 }}>
+            <CarBrandLogo brand={listing.brand} size={20} />
             <p
               style={{
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 600,
-                color: 'var(--text-secondary)',
+                color: 'var(--muted)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -414,7 +418,7 @@ export default function CarCard({
                 return <>{prefix ? <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{prefix} </span> : null}{listing.brand} {listing.model}</>
               })()}
               {listing.year ? (
-                <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
                   {' '}&middot;{' '}{listing.year}
                 </span>
               ) : null}
@@ -422,23 +426,25 @@ export default function CarCard({
           </div>
 
           {/* Price — large, bold, accent */}
-          <p
-            style={{
-              fontSize: '19px',
-              fontWeight: 900,
-              color: 'var(--accent)',
-              marginBottom: '8px',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.15,
-            }}
-          >
-            {formatPrice(Number(listing.price), listing.currency, lang)}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '9px', flexWrap: 'wrap' }}>
+            <p
+              style={{
+                fontSize: 'clamp(16px,2vw,19px)',
+                fontWeight: 900,
+                color: 'var(--accent)',
+                letterSpacing: '-0.03em',
+                lineHeight: 1.1,
+                margin: 0,
+              }}
+            >
+              {formatPrice(Number(listing.price), listing.currency, lang)}
+            </p>
             {listing.is_negotiable && (
-              <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '1px 5px', borderRadius: '4px', marginLeft: '6px', verticalAlign: 'middle' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '2px 6px', borderRadius: '6px', letterSpacing: '0.02em' }}>
                 {t('common.negotiable', lang)}
               </span>
             )}
-          </p>
+          </div>
 
           {/* Spec chips */}
           <div
@@ -446,21 +452,21 @@ export default function CarCard({
               display: 'flex',
               flexWrap: 'wrap',
               gap: '4px',
-              marginBottom: '8px',
+              marginBottom: '9px',
             }}
           >
             {listing.transmission && (
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--tag-bg)', padding: '3px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text2)', background: 'var(--tag-bg)', border: '1px solid var(--border)', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
                 {listing.transmission}
               </span>
             )}
             {listing.fuel && (
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--tag-bg)', padding: '3px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text2)', background: 'var(--tag-bg)', border: '1px solid var(--border)', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
                 {listing.fuel}
               </span>
             )}
             {listing.mileage != null && (
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--tag-bg)', padding: '3px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text2)', background: 'var(--tag-bg)', border: '1px solid var(--border)', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
                 {formatMileage(listing.mileage)}
               </span>
             )}
@@ -473,6 +479,8 @@ export default function CarCard({
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '8px',
+              paddingTop: '9px',
+              borderTop: '1px solid var(--border)',
             }}
           >
             {listing.city ? (
@@ -482,7 +490,7 @@ export default function CarCard({
                   height="10"
                   viewBox="0 0 12 12"
                   fill="none"
-                  stroke="var(--text-muted)"
+                  stroke="var(--muted)"
                   strokeWidth="1.5"
                   style={{ flexShrink: 0 }}
                   aria-hidden="true"
@@ -493,7 +501,7 @@ export default function CarCard({
                 <span
                   style={{
                     fontSize: '11px',
-                    color: 'var(--text-muted)',
+                    color: 'var(--muted)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -505,7 +513,7 @@ export default function CarCard({
             ) : (
               <span />
             )}
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
+            <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>
               {formatDate(listing.created_at, lang)}
             </span>
           </div>

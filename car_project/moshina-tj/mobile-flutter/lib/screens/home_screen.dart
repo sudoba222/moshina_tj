@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import '../providers/auth_provider.dart';
 import '../providers/listing_provider.dart';
 import '../providers/language_provider.dart';
 import '../theme/app_theme.dart';
@@ -115,6 +116,12 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final isAuthenticated = auth.isAuthenticated;
+    final initials = isAuthenticated && auth.user != null
+        ? auth.user!.initials
+        : '';
+
     return Container(
       decoration: BoxDecoration(
         color: c.navBg,
@@ -161,10 +168,41 @@ class _Header extends StatelessWidget {
             onTap: () => context.push('/notifications'),
           ),
           const SizedBox(width: 8),
-          _IconCircle(
-            icon: Icons.person_outline_rounded,
-            colors: c,
-            onTap: () => context.push('/login'),
+          // Profile: initials circle if authenticated, person icon otherwise
+          GestureDetector(
+            onTap: () => isAuthenticated
+                ? context.go('/profile')
+                : context.push('/login'),
+            child: isAuthenticated && initials.isNotEmpty
+                ? Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: c.accent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  )
+                : Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: c.tagBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: c.border),
+                    ),
+                    child: Icon(Icons.person_outline_rounded,
+                        color: c.textSecondary, size: 20),
+                  ),
           ),
         ],
       ),
@@ -809,6 +847,30 @@ class _FreshSliver extends StatelessWidget {
                 child: _FreshShimmerItem(c: c),
               ),
               childCount: 4,
+            ),
+          );
+        }
+        if (provider.freshError != null && provider.fresh.isEmpty) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: hp, vertical: 32),
+              child: Column(
+                children: [
+                  Icon(Icons.cloud_off_outlined, size: 48, color: c.textMuted),
+                  const SizedBox(height: 12),
+                  Text(
+                    lang == 'ru' ? 'Не удалось загрузить объявления' : 'Дархостҳо бор нашуданд',
+                    style: TextStyle(color: c.textSecondary, fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => context.read<ListingProvider>().loadFresh(refresh: true),
+                    style: OutlinedButton.styleFrom(foregroundColor: c.accent, side: BorderSide(color: c.accent)),
+                    child: Text(lang == 'ru' ? 'Повторить' : 'Такроран'),
+                  ),
+                ],
+              ),
             ),
           );
         }

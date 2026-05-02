@@ -156,38 +156,37 @@ function getRoleLink(role: UserRole): { href: string; key: string } | null {
   }
 }
 
-// Pure text/SVG logo — no image file
+// Pure text logo — no icon/mark in the navbar
 function Logo({ size = 'md' }: { size?: 'sm' | 'md' }) {
   const big = size === 'md'
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 0, userSelect: 'none' }}>
-      {/* accent bar */}
-      <span style={{
-        display: 'inline-block',
-        width: big ? '4px' : '3px',
-        height: big ? '22px' : '18px',
-        borderRadius: '2px',
-        background: 'var(--accent)',
-        marginRight: big ? '7px' : '5px',
-        flexShrink: 0,
-      }} />
+    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 0, userSelect: 'none' }}>
       <span style={{
         fontWeight: 900,
         fontSize: big ? '20px' : '17px',
         letterSpacing: '-0.04em',
-        color: 'var(--text)',
         lineHeight: 1,
+        color: 'rgb(39,20,22)',
       }}>
-        TAJ<span style={{ color: 'var(--accent)' }}>CAR</span>
+        Taj
       </span>
       <span style={{
-        fontWeight: 600,
-        fontSize: big ? '11px' : '9px',
-        color: 'var(--text-muted)',
+        fontWeight: 900,
+        fontSize: big ? '20px' : '17px',
+        letterSpacing: '-0.04em',
+        lineHeight: 1,
+        color: 'rgb(216,14,35)',
+      }}>
+        Car
+      </span>
+      <span style={{
+        fontWeight: 700,
+        fontSize: '11px',
+        color: 'var(--muted)',
         letterSpacing: '0.01em',
         alignSelf: 'flex-end',
-        marginBottom: big ? '2px' : '1px',
-        marginLeft: '2px',
+        marginBottom: '1px',
+        marginLeft: '1px',
       }}>
         .TJ
       </span>
@@ -277,11 +276,11 @@ export default function Navbar() {
 
   return (
     <>
-    <header style={{ position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+    <header style={{ position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
 
       {/* ── Main bar ── */}
-      <div style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)' }}>
-        <div className="max-w-7xl mx-auto" style={{ padding: '0 clamp(14px,3vw,28px)', height: '56px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+      <div style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)', boxShadow: '0 1px 0 var(--border), 0 4px 16px rgba(0,0,0,0.04)' }}>
+        <div className="max-w-7xl mx-auto" style={{ padding: '0 clamp(14px,3vw,28px)', height: '58px', display: 'flex', alignItems: 'center', gap: '20px' }}>
 
           {/* Logo */}
           <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
@@ -293,14 +292,14 @@ export default function Navbar() {
             {NAV_LINKS.map(({ href, key }) => (
               <Link key={href} href={href} style={{
                 display: 'inline-flex', alignItems: 'center', height: '36px',
-                padding: '0 12px', borderRadius: '8px', fontSize: '14px',
+                padding: '0 11px', borderRadius: 'var(--r-sm)', fontSize: '13.5px',
                 fontWeight: active(href) ? 700 : 500,
-                color: active(href) ? 'var(--accent)' : 'var(--text-secondary)',
+                color: active(href) ? 'var(--accent)' : 'var(--text2)',
                 background: active(href) ? 'var(--accent-dim)' : 'transparent',
                 textDecoration: 'none', transition: 'all 0.13s', whiteSpace: 'nowrap',
               }}
-              onMouseEnter={(e) => { if (!active(href)) { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--text)' } }}
-              onMouseLeave={(e) => { if (!active(href)) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' } }}
+              onMouseEnter={(e) => { if (!active(href)) { e.currentTarget.style.background = 'var(--tag-bg)'; e.currentTarget.style.color = 'var(--text)' } }}
+              onMouseLeave={(e) => { if (!active(href)) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
               >
                 {t(key, lang)}
               </Link>
@@ -310,16 +309,21 @@ export default function Navbar() {
           {/* Desktop search */}
           <div ref={searchRef} className="hidden md:flex" style={{ flex: 1, maxWidth: '420px', position: 'relative' }}>
             <form onSubmit={onSearch} role="search" style={{ width: '100%' }}>
-              <div style={{ display: 'flex', width: '100%', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid var(--border)', background: 'var(--bg)' }}>
+              <div style={{ display: 'flex', width: '100%', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid var(--border)', background: 'var(--surface)', transition: 'border-color 0.15s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '0 10px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                </div>
                 <input
                   type="search" value={query}
                   onChange={(e) => { setQuery(e.target.value); fetchSuggestions(e.target.value) }}
                   onFocus={() => { if (suggestions.length > 0) setShowSugg(true) }}
                   placeholder={t('hero.searchPlaceholder', lang)}
                   autoComplete="off"
-                  style={{ flex: 1, height: '38px', padding: '0 14px', background: 'transparent', border: 'none', fontSize: '14px', color: 'var(--text)', outline: 'none' }}
+                  style={{ flex: 1, height: '38px', padding: '0 4px 0 0', background: 'transparent', border: 'none', fontSize: '14px', color: 'var(--text)', outline: 'none' }}
                 />
-                <button type="submit" style={{ height: '38px', padding: '0 16px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                <button type="submit" style={{ height: '38px', padding: '0 16px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', border: 'none', cursor: 'pointer', flexShrink: 0, borderRadius: '0 8px 8px 0', letterSpacing: '0.01em' }}>
                   {t('hero.searchBtn', lang)}
                 </button>
               </div>
@@ -443,7 +447,7 @@ export default function Navbar() {
       {/* ── Mobile drawer panel ── */}
       {mobileOpen && (
         <div id="mobile-nav-drawer" role="dialog" aria-modal="true" className="md:hidden"
-          style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '300px', maxWidth: 'calc(100vw - 40px)', background: 'var(--nav-bg)', borderLeft: '1px solid var(--border)', boxShadow: '-4px 0 40px rgba(0,0,0,0.18)', zIndex: 9999, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '300px', maxWidth: 'calc(100vw - 40px)', background: 'var(--surface)', borderLeft: '1px solid var(--border)', boxShadow: '-4px 0 40px rgba(0,0,0,0.18)', zIndex: 9999, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
           {/* Drawer header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 16px', borderBottom: '1px solid var(--border)' }}>

@@ -3,22 +3,43 @@
 @tailwind utilities;
 
 :root {
-  --bg: #f2f4f7;
-  --surface: #ffffff;
-  --card: #ffffff;
-  --border: #e4e8ef;
-  --border-strong: #cdd3de;
-  --text: #191f28;
-  --text-secondary: #4b5668;
-  --text-muted: #8a95a8;
+  --bg: #f0f2f5;
+  --surface: #fff;
+  --card: #fff;
+  --nav-bg: rgba(255,255,255,0.95);
+  --footer-bg: #0f1623;
+  --tag-bg: #edf0f4;
+  --border: #e2e7ef;
+  --border-strong: #c8d0de;
+  --text: #141b27;
+  --text2: #44546a;
+  --muted: #8494aa;
   --accent: #c83808;
-  --accent-hover: #a82e06;
-  --accent-dim: rgba(200, 56, 8, 0.08);
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
-  --nav-bg: #ffffff;
+  --accent-h: #a82e06;
+  --accent-dim: rgba(200,56,8,0.09);
+  /* shadow tokens */
+  --sh-sm: 0 1px 3px rgba(0,0,0,.05),0 1px 8px rgba(0,0,0,.04);
+  --sh-md: 0 4px 16px rgba(0,0,0,.09),0 1px 4px rgba(0,0,0,.05);
+  --sh-lg: 0 12px 40px rgba(0,0,0,.13),0 4px 12px rgba(0,0,0,.07);
+  --sh-card: 0 2px 8px rgba(0,0,0,.06);
+  /* legacy shadow aliases (keep for backward compat) */
+  --shadow-sm: var(--sh-sm);
+  --shadow-md: var(--sh-md);
+  --shadow-lg: var(--sh-lg);
+  --nav-h: 58px;
+  --mobnav-h: 64px;
+  /* radius tokens */
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 18px; --r-2xl: 22px;
+  /* legacy radius aliases */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  /* backward compat aliases */
   --nav-bg-rgb: 255, 255, 255;
-  --tag-bg: #f2f4f7;
+  --text-secondary: var(--text2);
+  --text-muted: var(--muted);
+  --accent-hover: var(--accent-h);
   /* Semantic / status colors — same in light and dark */
   --color-white: #ffffff;
   --color-error: #ef4444;
@@ -27,9 +48,9 @@
   --color-success-dim: rgba(22, 163, 74, 0.12);
   --color-info: #2563eb;
   --color-info-dim: rgba(37, 99, 235, 0.1);
-  --color-warning-bg: #fef9c3;
-  --color-warning-border: #fde047;
-  --color-warning-text: #713f12;
+  --color-warning-bg: rgba(234,179,8,0.08);
+  --color-warning-border: rgba(234,179,8,0.4);
+  --color-warning-text: var(--color-warning, #ca8a04);
   --color-telegram: #229ED9;
   --color-whatsapp: #25D366;
   --color-warning: #ca8a04;
@@ -39,27 +60,36 @@
   /* Convenience aliases used in inline styles */
   --font: inherit;
   --danger: var(--color-error);
-  --footer-bg: #111827;
 }
 
 html.dark {
-  --bg: #1c1c1e;
-  --surface: #252528;
-  --card: #2c2c2f;
-  --border: #3a3a3e;
-  --border-strong: #4a4a4f;
-  --text: #f0ede8;
-  --text-secondary: #b0a89c;
-  --text-muted: #7a7470;
+  --bg: #18181b;
+  --surface: #232327;
+  --card: #28282c;
+  --nav-bg: rgba(35,35,39,0.96);
+  --footer-bg: #0d0d10;
+  --tag-bg: #2e2e33;
+  --border: #363640;
+  --border-strong: #46464f;
+  --text: #f2ede8;
+  --text2: #a8a098;
+  --muted: #6e6860;
   --accent: #d94020;
-  --accent-hover: #f05030;
-  --accent-dim: rgba(217, 64, 32, 0.14);
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.35);
-  --nav-bg: #252528;
-  --nav-bg-rgb: 37, 37, 40;
-  --tag-bg: #333336;
-  --footer-bg: #161616;
+  --accent-h: #f05030;
+  --accent-dim: rgba(217,64,32,0.15);
+  /* dark shadow tokens */
+  --sh-sm: 0 1px 4px rgba(0,0,0,.4);
+  --sh-md: 0 4px 20px rgba(0,0,0,.5);
+  --sh-lg: 0 10px 40px rgba(0,0,0,.6);
+  --sh-card: 0 2px 8px rgba(0,0,0,.3);
+  /* legacy aliases in dark */
+  --shadow-sm: var(--sh-sm);
+  --shadow-md: var(--sh-md);
+  --shadow-lg: var(--sh-lg);
+  --nav-bg-rgb: 35, 35, 39;
+  --text-secondary: var(--text2);
+  --text-muted: var(--muted);
+  --accent-hover: var(--accent-h);
 }
 
 *,
@@ -82,11 +112,13 @@ body {
   color: var(--text);
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
   /* bottom padding so content never hides behind mobile bottom nav */
   padding-bottom: 0;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-rendering: optimizeLegibility;
 }
 
 @media (max-width: 767px) {
@@ -114,7 +146,7 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--text-muted);
+  color: var(--muted);
   opacity: 1;
 }
 
@@ -224,23 +256,77 @@ main { animation: pageIn 0.25s ease; }
 
 /* ── Card hover lift ────────────────────────────────────────────────── */
 .card-hover {
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .card-hover:hover {
   transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--sh-md);
   border-color: var(--border-strong) !important;
+}
+
+/* ── Pulsing dot for eyebrow badge ──────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ── Section header utility ─────────────────────────────────────────── */
+.section-title {
+  font-size: clamp(17px, 2.5vw, 22px);
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* ── Tag chip ───────────────────────────────────────────────────────── */
+.spec-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  background: var(--tag-bg);
+  border: 1px solid var(--border);
+  padding: 3px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* ── Divider ────────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+}
+
+/* ── Price display ──────────────────────────────────────────────────── */
+.price-display {
+  font-size: clamp(22px, 4vw, 30px);
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: -0.03em;
+  line-height: 1;
 }
 
 /* ── Skeleton shimmer (enhanced) ────────────────────────────────────── */
 @keyframes shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position:  400px 0; }
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
 }
 .skeleton {
-  background: linear-gradient(90deg, var(--surface) 25%, var(--border) 50%, var(--surface) 75%);
-  background-size: 800px 100%;
-  animation: shimmer 1.4s infinite linear;
+  background: linear-gradient(
+    90deg,
+    var(--surface) 0%,
+    var(--surface) 25%,
+    var(--border) 50%,
+    var(--surface) 75%,
+    var(--surface) 100%
+  );
+  background-size: 1200px 100%;
+  animation: shimmer 1.6s infinite linear;
   border-radius: 6px;
 }
 
@@ -272,6 +358,27 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px var(--accent-dim);
   border-color: var(--accent) !important;
   transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+/* Override: inputs inside hero search bar or navbar search get no individual ring */
+.hero-search-bar input:focus,
+.hero-search-bar select:focus {
+  box-shadow: none;
+  border-color: transparent !important;
+}
+
+/* ── Brand strip section ─────────────────────────────────────────────── */
+.brand-strip-section {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+}
+
+/* ── Stat card inner highlight ──────────────────────────────────────── */
+.stat-highlight {
+  background: linear-gradient(135deg, var(--accent-dim) 0%, transparent 80%);
+  border-radius: inherit;
 }
 
 /* ── Image fade-in on load ──────────────────────────────────────────── */
@@ -320,11 +427,6 @@ img { transition: opacity 0.3s ease; }
     font-size: 16px !important;
   }
 
-  /* CarCard image: 16:9 aspect ratio on mobile */
-  .card-image-wrap {
-    aspect-ratio: 16 / 9;
-  }
-
   /* Ensure all interactive elements have minimum 44px tap target */
   button, [role="button"] {
     min-height: 44px;
@@ -337,16 +439,57 @@ img { transition: opacity 0.3s ease; }
   }
 }
 
-/* ── CarCard image height on desktop ────────────────────────────────── */
+/* ── CarCard image aspect ratios ────────────────────────────────────── */
+/* Default: 16:10 */
+.card-image-wrap {
+  aspect-ratio: 16 / 10;
+}
+@media (max-width: 480px) {
+  .card-image-wrap {
+    aspect-ratio: 4 / 3;
+  }
+}
 @media (min-width: 768px) and (max-width: 1023px) {
   .card-image-wrap {
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 16 / 10;
   }
 }
 @media (min-width: 1024px) {
   .card-image-wrap {
-    height: 176px;
+    aspect-ratio: 16 / 10;
   }
+}
+
+/* ── 2-column card grid on mobile ──────────────────────────────────── */
+@media (max-width: 480px) {
+  .cards-grid-mobile {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+}
+
+/* ── Polished section container ─────────────────────────────────────── */
+.section-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: clamp(14px, 3vw, 28px);
+  padding-right: clamp(14px, 3vw, 28px);
+}
+
+/* ── View all link ──────────────────────────────────────────────────── */
+.view-all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 6px 0;
+  transition: opacity 0.15s;
+}
+.view-all-link:hover {
+  opacity: 0.75;
 }
 
 /* ── Hero section ───────────────────────────────────────────────────── */
@@ -411,7 +554,7 @@ img { transition: opacity 0.3s ease; }
 .hero-stat-label {
   font-size: 11px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--muted);
   letter-spacing: 0.01em;
 }
 .hero-stat-skeleton {
@@ -441,6 +584,13 @@ img { transition: opacity 0.3s ease; }
   .hero-stat-num { font-size: 26px; }
   .hero-stat-skeleton { width: 72px; height: 26px; }
   .hero-stat-label { font-size: 12px; }
+}
+
+/* ── Hero section background gradient ───────────────────────────────── */
+.hero-section {
+  background: var(--surface) !important;
+  background-image: radial-gradient(ellipse 80% 60% at 50% -20%, var(--accent-dim) 0%, transparent 70%) !important;
+  position: relative;
 }
 
 /* ── Static promo banner ────────────────────────────────────────────── */

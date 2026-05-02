@@ -33,9 +33,8 @@ class _LoginScreenState extends State<LoginScreen>
   // Email tab
   final _emailFormKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-  bool _obscure = true;
   bool _emailLoading = false;
+  String? _emailError;
 
   // Telegram OTP inline
   bool _showTelegramPhoneField = false;
@@ -63,7 +62,6 @@ class _LoginScreenState extends State<LoginScreen>
     _tabCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
-    _passCtrl.dispose();
     _tgPhoneCtrl.dispose();
     _fadeCtrl.dispose();
     super.dispose();
@@ -96,15 +94,21 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _submitEmail() async {
     if (!_emailFormKey.currentState!.validate()) return;
-    setState(() => _emailLoading = true);
-    final auth = context.read<AuthProvider>();
-    final ok = await auth.loginWithEmail(
-      _emailCtrl.text.trim(),
-      _passCtrl.text,
-    );
-    if (mounted) {
-      setState(() => _emailLoading = false);
-      if (ok) context.go('/');
+    setState(() {
+      _emailLoading = true;
+      _emailError = null;
+    });
+    try {
+      final api = context.read<ApiService>();
+      await api.registerEmail(_emailCtrl.text.trim(), '');
+      if (mounted) {
+        final encoded = Uri.encodeComponent(_emailCtrl.text.trim());
+        context.push('/otp?email=$encoded&mode=email');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _emailError = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _emailLoading = false);
     }
   }
 
@@ -217,12 +221,8 @@ class _LoginScreenState extends State<LoginScreen>
                           onSendPhoneOtp: _sendPhoneOtp,
                           emailFormKey: _emailFormKey,
                           emailCtrl: _emailCtrl,
-                          passCtrl: _passCtrl,
-                          obscure: _obscure,
-                          onToggleObscure: () =>
-                              setState(() => _obscure = !_obscure),
                           emailLoading: _emailLoading,
-                          emailError: authError,
+                          emailError: _emailError ?? authError,
                           onSubmitEmail: _submitEmail,
                           showTelegramField: _showTelegramPhoneField,
                           onShowTelegramField: () =>
@@ -264,9 +264,6 @@ class _FormCard extends StatelessWidget {
   final VoidCallback onSendPhoneOtp;
   final GlobalKey<FormState> emailFormKey;
   final TextEditingController emailCtrl;
-  final TextEditingController passCtrl;
-  final bool obscure;
-  final VoidCallback onToggleObscure;
   final bool emailLoading;
   final String? emailError;
   final VoidCallback onSubmitEmail;
@@ -288,9 +285,6 @@ class _FormCard extends StatelessWidget {
     required this.onSendPhoneOtp,
     required this.emailFormKey,
     required this.emailCtrl,
-    required this.passCtrl,
-    required this.obscure,
-    required this.onToggleObscure,
     required this.emailLoading,
     required this.emailError,
     required this.onSubmitEmail,
@@ -365,9 +359,6 @@ class _FormCard extends StatelessWidget {
                   lang: lang,
                   formKey: emailFormKey,
                   emailCtrl: emailCtrl,
-                  passCtrl: passCtrl,
-                  obscure: obscure,
-                  onToggleObscure: onToggleObscure,
                   loading: emailLoading,
                   error: emailError,
                   onSubmit: onSubmitEmail,
@@ -568,9 +559,6 @@ class _EmailTab extends StatelessWidget {
   final String lang;
   final GlobalKey<FormState> formKey;
   final TextEditingController emailCtrl;
-  final TextEditingController passCtrl;
-  final bool obscure;
-  final VoidCallback onToggleObscure;
   final bool loading;
   final String? error;
   final VoidCallback onSubmit;
@@ -580,9 +568,6 @@ class _EmailTab extends StatelessWidget {
     required this.lang,
     required this.formKey,
     required this.emailCtrl,
-    required this.passCtrl,
-    required this.obscure,
-    required this.onToggleObscure,
     required this.loading,
     required this.error,
     required this.onSubmit,
@@ -595,6 +580,7 @@ class _EmailTab extends StatelessWidget {
       child: Form(
         key: formKey,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (error != null) ...[
               AuthErrorBanner(message: error!),
@@ -607,38 +593,21 @@ class _EmailTab extends StatelessWidget {
               keyboardType: TextInputType.emailAddress,
               c: c,
               validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Введите email';
-                }
+                if (v == null || !v.contains('@')) return 'Введите корректный email';
                 return null;
               },
             ),
-            const SizedBox(height: 10),
-            AuthField(
-              controller: passCtrl,
-              label: t('auth.password', lang),
-              prefixIcon: Icons.lock_outline_rounded,
-              obscureText: obscure,
-              c: c,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  obscure
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: c.textMuted,
-                  size: 20,
-                ),
-                onPressed: onToggleObscure,
-              ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Введите пароль';
-                return null;
-              },
+            const SizedBox(height: 8),
+            Text(
+              lang == 'ru'
+                  ? 'Отправим код подтверждения на email'
+                  : 'Коди тасдиқро ба email мефиристем',
+              style: TextStyle(color: c.textMuted, fontSize: 12),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             AuthPrimaryButton(
               loading: loading,
-              label: t('auth.login', lang),
+              label: t('auth.getCode', lang),
               onPressed: onSubmit,
               c: c,
             ),

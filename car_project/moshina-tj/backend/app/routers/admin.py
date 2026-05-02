@@ -235,13 +235,28 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_admin))
         cast(User.created_at, SADate) == today,
     ).count()
 
-    total_listings = db.query(Listing).filter(Listing.is_deleted == False).count()
-    active_listings = db.query(Listing).filter(Listing.status == ListingStatus.active, Listing.is_deleted == False).count()
-    pending_listings = db.query(Listing).filter(Listing.status == ListingStatus.pending, Listing.is_deleted == False).count()
-    rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.rejected, Listing.is_deleted == False).count()
+    # Single GROUP BY query replaces 4 separate COUNT queries
+    _listing_status_rows = (
+        db.query(Listing.status, func.count(Listing.id).label("cnt"))
+        .filter(Listing.is_deleted == False)
+        .group_by(Listing.status)
+        .all()
+    )
+    _listing_status_map = {row.status: row.cnt for row in _listing_status_rows}
+    total_listings = sum(_listing_status_map.values())
+    active_listings = _listing_status_map.get(ListingStatus.active, 0)
+    pending_listings = _listing_status_map.get(ListingStatus.pending, 0)
+    rejected_listings = _listing_status_map.get(ListingStatus.rejected, 0)
 
-    total_dealers = db.query(Dealer).count()
-    verified_dealers = db.query(Dealer).filter(Dealer.verified == True).count()
+    # Single query for dealer counts
+    _dealer_rows = (
+        db.query(Dealer.verified, func.count(Dealer.id).label("cnt"))
+        .group_by(Dealer.verified)
+        .all()
+    )
+    _dealer_map = {row.verified: row.cnt for row in _dealer_rows}
+    total_dealers = sum(_dealer_map.values())
+    verified_dealers = _dealer_map.get(True, 0)
 
     # Growth series — last 30 days (one row per day, missing days fill to 0)
     thirty_days_ago = today - timedelta(days=29)
@@ -1338,12 +1353,13 @@ def pending_listings(
 
 
 @router.put("/moderation/{listing_id}/approve", response_model=ApiResponse[ListingResponse])
-def approve_listing(
+async def approve_listing(
     listing_id: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
 ):
+    from app.redis_client import cache_delete as _cache_delete
     listing = db.query(Listing).options(joinedload(Listing.user), joinedload(Listing.images)).filter(Listing.id == listing_id, Listing.is_deleted == False).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
@@ -1379,6 +1395,11 @@ def approve_listing(
     db.commit()
     db.refresh(listing)
 
+    # Invalidate featured and stats caches — a newly approved listing may
+    # enter the featured feed and will change the active listings count.
+    await _cache_delete("listings:featured")
+    await _cache_delete("stats:marketplace")
+
     car_name = f"{listing.brand} {listing.model} {listing.year}"
     listing_url = f"https://tajcar.tj/car/{listing.id}"
 
@@ -1404,13 +1425,14 @@ def approve_listing(
 
 
 @router.put("/moderation/{listing_id}/reject", response_model=ApiResponse[ListingResponse])
-def reject_listing(
+async def reject_listing(
     listing_id: str,
     payload: RejectPayload,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
 ):
+    from app.redis_client import cache_delete as _cache_delete
     listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id, Listing.is_deleted == False).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
@@ -1444,6 +1466,11 @@ def reject_listing(
     ))
     db.commit()
     db.refresh(listing)
+
+    # Invalidate featured and stats caches — a rejected listing must leave
+    # the featured feed and reduce the active listings count.
+    await _cache_delete("listings:featured")
+    await _cache_delete("stats:marketplace")
 
     car_name = f"{listing.brand} {listing.model} {listing.year}"
     edit_url = f"https://tajcar.tj/post?edit={listing.id}"

@@ -53,22 +53,37 @@ class ListingProvider extends ChangeNotifier {
 
   ListingProvider(this._api);
 
+  // Safely convert any API response (Map, List, or null) into PaginatedListings.
+  PaginatedListings _toPaginated(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      return PaginatedListings.fromJson(data);
+    }
+    if (data is List) {
+      return PaginatedListings(
+        items: data
+            .whereType<Map<String, dynamic>>()
+            .map((e) => Listing.fromJson(e))
+            .toList(),
+        total: data.length,
+        page: 1,
+        pages: 1,
+      );
+    }
+    return const PaginatedListings(items: [], total: 0, page: 1, pages: 1);
+  }
+
   Future<void> loadFeatured() async {
     if (_featuredLoading) return;
     _featuredLoading = true;
     _featuredError = null;
     notifyListeners();
     try {
-      final data = await _api.getRaw('/listings/featured');
-      if (data is List) {
-        _featured = data
-            .map((e) => Listing.fromJson(e as Map<String, dynamic>))
-            .toList();
-      } else if (data is Map && data.containsKey('items')) {
-        _featured = (data['items'] as List)
-            .map((e) => Listing.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
+      final data = await _api.getRaw(
+        '/catalog',
+        queryParams: {'is_featured': 'true', 'limit': 10, 'status': 'active'},
+      );
+      final paginated = _toPaginated(data);
+      _featured = paginated.items;
     } catch (_) {
       _featuredError = 'Ошибка загрузки';
     } finally {
@@ -88,18 +103,22 @@ class ListingProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final data = await _api.getRaw(
-        '/listings',
-        queryParams: {'page': _freshPage, 'limit': 20},
+        '/catalog',
+        queryParams: {
+          'page': _freshPage,
+          'limit': 20,
+          'status': 'active',
+          'sort': 'newest',
+        },
       );
-      final paginated =
-          PaginatedListings.fromJson(data as Map<String, dynamic>);
+      final paginated = _toPaginated(data);
       if (refresh) {
         _fresh = paginated.items;
       } else {
         _fresh.addAll(paginated.items);
       }
       _freshTotalPages = paginated.pages;
-    } catch (_) {
+    } catch (e) {
       _freshError = 'Ошибка загрузки объявлений';
     } finally {
       _freshLoading = false;
@@ -114,11 +133,15 @@ class ListingProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final data = await _api.getRaw(
-        '/listings',
-        queryParams: {'page': _freshPage, 'limit': 20},
+        '/catalog',
+        queryParams: {
+          'page': _freshPage,
+          'limit': 20,
+          'status': 'active',
+          'sort': 'newest',
+        },
       );
-      final paginated =
-          PaginatedListings.fromJson(data as Map<String, dynamic>);
+      final paginated = _toPaginated(data);
       _fresh.addAll(paginated.items);
       _freshTotalPages = paginated.pages;
     } catch (_) {
@@ -166,15 +189,14 @@ class ListingProvider extends ChangeNotifier {
         ..._catalogFilters,
       };
       final data = await _api.getRaw('/catalog', queryParams: params);
-      final paginated =
-          PaginatedListings.fromJson(data as Map<String, dynamic>);
+      final paginated = _toPaginated(data);
       if (refresh) {
         _catalogItems = paginated.items;
       } else {
         _catalogItems.addAll(paginated.items);
       }
       _catalogTotalPages = paginated.pages;
-    } catch (_) {
+    } catch (e) {
       _catalogError = 'Ошибка загрузки каталога';
     } finally {
       _catalogLoading = false;
@@ -194,8 +216,7 @@ class ListingProvider extends ChangeNotifier {
         ..._catalogFilters,
       };
       final data = await _api.getRaw('/catalog', queryParams: params);
-      final paginated =
-          PaginatedListings.fromJson(data as Map<String, dynamic>);
+      final paginated = _toPaginated(data);
       _catalogItems.addAll(paginated.items);
       _catalogTotalPages = paginated.pages;
     } catch (_) {
