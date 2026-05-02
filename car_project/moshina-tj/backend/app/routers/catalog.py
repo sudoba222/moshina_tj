@@ -35,6 +35,51 @@ _banners_cache: Dict[str, Any] = {}
 
 from app.redis_client import cache_get, cache_set, cache_delete_pattern
 
+# ── Admin catalog schemas ─────────────────────────────────────────────────────
+
+class BrandCreate(BaseModel):
+    name: str
+    slug: str
+    logo_url: Optional[str] = None
+    country: Optional[str] = None
+    is_popular: bool = False
+    is_active: bool = True
+
+class BrandUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    logo_url: Optional[str] = None
+    country: Optional[str] = None
+    is_popular: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+class ModelCreate(BaseModel):
+    name: str
+
+class CategoryCreate(BaseModel):
+    name_ru: str
+    name_tj: str
+    slug: str
+    parent_id: Optional[str] = None
+    icon_url: Optional[str] = None
+    description_ru: Optional[str] = None
+    description_tj: Optional[str] = None
+    filter_config: Optional[Dict[str, Any]] = None
+    display_order: int = 0
+    is_active: bool = True
+
+class CategoryUpdate(BaseModel):
+    name_ru: Optional[str] = None
+    name_tj: Optional[str] = None
+    slug: Optional[str] = None
+    parent_id: Optional[str] = None
+    icon_url: Optional[str] = None
+    description_ru: Optional[str] = None
+    description_tj: Optional[str] = None
+    filter_config: Optional[Dict[str, Any]] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
 async def _get_cached_catalog(key: str, store: Dict[str, Any]) -> Any | None:
     # 1. Try Redis first
     redis_hit = await cache_get(key)
