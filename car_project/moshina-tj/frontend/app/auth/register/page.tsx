@@ -251,7 +251,7 @@ function PhoneTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
         marginBottom: '4px',
         lineHeight: '1.4'
       }}>
-        ⚠️ У нас сейчас не работает SMS OTP. Пожалуйста, используйте кнопку "Продолжить через Telegram" ниже, чтобы получить код.
+        ⚠️ У нас сейчас не работает SMS OTP. Пожалуйста, используйте кнопку &quot;Продолжить через Telegram&quot; ниже, чтобы получить код.
       </div>
       <div>
         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
