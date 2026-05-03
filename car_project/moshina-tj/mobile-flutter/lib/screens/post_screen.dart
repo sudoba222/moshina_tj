@@ -60,6 +60,22 @@ class _PostScreenState extends State<PostScreen> {
   final _step2Key = GlobalKey<FormState>();
   final _step4Key = GlobalKey<FormState>();
 
+  // FocusNodes for required fields — used to focus + highlight on error
+  final _brandFocus = FocusNode();
+  final _modelFocus = FocusNode();
+  final _yearFocus = FocusNode();
+  final _priceFocus = FocusNode();
+  final _cityFocus = FocusNode();
+  final _contactFocus = FocusNode();
+
+  // GlobalKeys for required fields — used by Scrollable.ensureVisible
+  final _brandFieldKey = GlobalKey();
+  final _modelFieldKey = GlobalKey();
+  final _yearFieldKey = GlobalKey();
+  final _priceFieldKey = GlobalKey();
+  final _cityFieldKey = GlobalKey();
+  final _contactFieldKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -79,6 +95,12 @@ class _PostScreenState extends State<PostScreen> {
     _engineCtrl.dispose();
     _descCtrl.dispose();
     _contactCtrl.dispose();
+    _brandFocus.dispose();
+    _modelFocus.dispose();
+    _yearFocus.dispose();
+    _priceFocus.dispose();
+    _cityFocus.dispose();
+    _contactFocus.dispose();
     super.dispose();
   }
 
@@ -92,6 +114,10 @@ class _PostScreenState extends State<PostScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
+      final v = _contactCtrl.text.trim();
+      if (v.isEmpty || v.replaceAll(RegExp(r'\D'), '').length < 7) {
+        _scrollToField(_contactFieldKey, _contactFocus);
+      }
       return;
     }
     setState(() => _submitting = true);
@@ -316,15 +342,17 @@ class _PostScreenState extends State<PostScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _field(controller: _brandCtrl, label: t('post.brand', lang), icon: Icons.directions_car_outlined, c: c,
+          _field(fieldKey: _brandFieldKey, focusNode: _brandFocus, controller: _brandCtrl, label: t('post.brand', lang), icon: Icons.directions_car_outlined, c: c,
               isRequired: true,
               validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.brand', lang) : null),
           const SizedBox(height: 14),
-          _field(controller: _modelCtrl, label: t('post.model', lang), icon: Icons.drive_eta_outlined, c: c,
+          _field(fieldKey: _modelFieldKey, focusNode: _modelFocus, controller: _modelCtrl, label: t('post.model', lang), icon: Icons.drive_eta_outlined, c: c,
               isRequired: true,
               validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.model', lang) : null),
           const SizedBox(height: 14),
           _field(
+            fieldKey: _yearFieldKey,
+            focusNode: _yearFocus,
             controller: _yearCtrl,
             label: t('post.year', lang),
             icon: Icons.calendar_today_outlined,
@@ -355,6 +383,8 @@ class _PostScreenState extends State<PostScreen> {
             children: [
               Expanded(
                 child: _field(
+                  fieldKey: _priceFieldKey,
+                  focusNode: _priceFocus,
                   controller: _priceCtrl,
                   label: t('post.price', lang),
                   icon: Icons.attach_money,
@@ -377,7 +407,7 @@ class _PostScreenState extends State<PostScreen> {
             c: c,
           ),
           const SizedBox(height: 14),
-          _field(controller: _cityCtrl, label: t('post.city', lang), icon: Icons.location_city_outlined, c: c,
+          _field(fieldKey: _cityFieldKey, focusNode: _cityFocus, controller: _cityCtrl, label: t('post.city', lang), icon: Icons.location_city_outlined, c: c,
               isRequired: true,
               validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.city', lang) : null),
           const SizedBox(height: 14),
@@ -714,6 +744,8 @@ class _PostScreenState extends State<PostScreen> {
           _sectionTitle(t('post.step4', lang), c),
           const SizedBox(height: 16),
           _field(
+            fieldKey: _contactFieldKey,
+            focusNode: _contactFocus,
             controller: _contactCtrl,
             label: t('post.contactPhone', lang),
             icon: Icons.phone_outlined,
@@ -849,6 +881,16 @@ class _PostScreenState extends State<PostScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
+        if (_brandCtrl.text.trim().isEmpty) {
+          _scrollToField(_brandFieldKey, _brandFocus);
+        } else if (_modelCtrl.text.trim().isEmpty) {
+          _scrollToField(_modelFieldKey, _modelFocus);
+        } else {
+          final y = int.tryParse(_yearCtrl.text.trim());
+          if (y == null || y < 1900 || y > 2026) {
+            _scrollToField(_yearFieldKey, _yearFocus);
+          }
+        }
         return;
       }
       setState(() => _step = 1);
@@ -861,6 +903,11 @@ class _PostScreenState extends State<PostScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
+        if (_priceCtrl.text.trim().isEmpty) {
+          _scrollToField(_priceFieldKey, _priceFocus);
+        } else if (_cityCtrl.text.trim().isEmpty) {
+          _scrollToField(_cityFieldKey, _cityFocus);
+        }
         return;
       }
       setState(() => _step = 2);
@@ -890,12 +937,27 @@ class _PostScreenState extends State<PostScreen> {
     }
   }
 
+  void _scrollToField(GlobalKey key, FocusNode focusNode) {
+    focusNode.requestFocus();
+    final ctx = key.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+        alignment: 0.3,
+      );
+    }
+  }
+
   Widget _field({
+    Key? fieldKey,
     required TextEditingController controller,
     required String label,
     required IconData icon,
     required AppColors c,
     bool isRequired = false,
+    FocusNode? focusNode,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
@@ -915,6 +977,8 @@ class _PostScreenState extends State<PostScreen> {
           )
         : null;
     return TextFormField(
+      key: fieldKey,
+      focusNode: focusNode,
       controller: controller,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
