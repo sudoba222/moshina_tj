@@ -7,6 +7,7 @@ import '../models/listing.dart';
 import '../providers/listing_provider.dart';
 import '../providers/language_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../l10n/strings.dart';
@@ -55,11 +56,13 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
         setState(() {
           _listing = listing;
           _loading = false;
-          if (listing == null) _error = t('error.loading', 'ru');
+          if (listing == null) _error = t('error.loading', context.read<LanguageProvider>().lang);
         });
         if (listing != null) {
-          final related =
-              await provider.getRelatedListings(widget.listingId);
+          final related = await provider.getRelatedListings(
+            widget.listingId,
+            brand: listing.brand,
+          );
           if (mounted) setState(() => _related = related);
         }
       }
@@ -67,7 +70,7 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = t('error.loading', 'ru');
+          _error = t('error.loading', context.read<LanguageProvider>().lang);
         });
       }
     }
@@ -90,14 +93,27 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
     }
   }
 
-  void _openChat() {
-    final isLoggedIn =
-        context.read<AuthProvider>().isAuthenticated;
+  Future<void> _openChat() async {
+    final isLoggedIn = context.read<AuthProvider>().isAuthenticated;
     if (!isLoggedIn) {
       context.push('/login');
       return;
     }
-    context.push('/chat/new/${_listing!.id}');
+    try {
+      final api = context.read<ApiService>();
+      final conv = await api.createOrGetConversation(_listing!.id);
+      if (!mounted) return;
+      final convId = conv['id'] as String?;
+      if (convId != null) {
+        context.push('/chat/$convId', extra: conv);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      final lang = context.read<LanguageProvider>().lang;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t('error.generic', lang))),
+      );
+    }
   }
 
   @override
@@ -366,7 +382,7 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
       (Icons.location_on_outlined, t('detail.city', lang), listing.city),
       if (listing.customsCleared != null)
         (Icons.fact_check_outlined, t('detail.customs', lang),
-            listing.customsCleared! ? 'Да' : 'Нет'),
+            listing.customsCleared! ? t('common.yes', lang) : t('common.no', lang)),
     ];
 
     return GridView.builder(

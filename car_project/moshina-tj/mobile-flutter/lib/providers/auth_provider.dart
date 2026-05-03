@@ -17,11 +17,19 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _status == AuthStatus.authenticated;
 
   AuthProvider(this._authService) {
+    // Wire the 401 interceptor so any revoked token immediately logs out.
+    _authService.api.setUnauthorizedHandler(_onForceLogout);
     _init();
   }
 
+  void _onForceLogout() {
+    _user = null;
+    _status = AuthStatus.unauthenticated;
+    notifyListeners();
+  }
+
   Future<void> _init() async {
-    // Show cached user instantly, then verify with server
+    // Show cached user instantly, then verify with server.
     final cached = await _authService.getCachedUser();
     if (cached != null) {
       _user = cached;
@@ -29,10 +37,12 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
     final live = await _authService.getCurrentUser();
+    // Always trust the live result — null means expired, revoked, or offline.
     if (live != null) {
       _user = live;
       _status = AuthStatus.authenticated;
-    } else if (cached == null) {
+    } else {
+      _user = null;
       _status = AuthStatus.unauthenticated;
     }
     notifyListeners();

@@ -106,9 +106,7 @@ class _SupportScreenState extends State<SupportScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    lang == 'ru'
-                        ? 'Мы поможем с любым вопросом'
-                        : 'Мо бо ҳар саволе кӯмак мекунем',
+                    t('support.helpText', lang),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: c.textSecondary, fontSize: 14, height: 1.5),
                   ),
@@ -125,7 +123,7 @@ class _SupportScreenState extends State<SupportScreen> {
                             )
                           : const Icon(Icons.chat_bubble_outline_rounded, size: 18),
                       label: Text(
-                        lang == 'ru' ? 'Начать чат' : 'Чат оғоз кунед',
+                        t('support.startChat', lang),
                         style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 15),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -144,7 +142,7 @@ class _SupportScreenState extends State<SupportScreen> {
 
             // ── FAQ section ──────────────────────────────────────────────────
             Text(
-              lang == 'ru' ? 'Частые вопросы' : 'Саволҳои маъмул',
+              t('support.faq', lang),
               style: GoogleFonts.outfit(color: c.text, fontSize: 17, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),

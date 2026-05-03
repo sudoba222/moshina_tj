@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_service.dart';
 import '../models/user.dart';
 
@@ -7,7 +7,14 @@ class AuthService {
   final ApiService _api;
   static const String _userKey = 'cached_user';
 
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
+
   AuthService(this._api);
+
+  ApiService get api => _api;
 
   Future<AppUser> login({required String phone, required String password}) async {
     final data = await _api.postRaw('/auth/login', body: {'phone': phone, 'password': password});
@@ -54,9 +61,29 @@ class AuthService {
     return null;
   }
 
+  // Returns true if the JWT is expired or expiring within 60 seconds.
+  bool _isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      ) as Map<String, dynamic>;
+      final exp = (payload['exp'] as num?)?.toInt();
+      if (exp == null) return false;
+      return DateTime.now().millisecondsSinceEpoch ~/ 1000 > exp - 60;
+    } catch (_) {
+      return true;
+    }
+  }
+
   Future<AppUser?> getCurrentUser() async {
     final token = await _api.getToken();
     if (token == null) return null;
+    if (_isTokenExpired(token)) {
+      await _api.clearToken();
+      return null;
+    }
     try {
       final data = await _api.getRaw('/auth/me');
       if (data is Map<String, dynamic>) {
@@ -72,8 +99,7 @@ class AuthService {
   }
 
   Future<AppUser?> getCachedUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_userKey);
+    final raw = await _secureStorage.read(key: _userKey);
     if (raw == null) return null;
     try {
       return AppUser.fromJson(jsonDecode(raw) as Map<String, dynamic>);
@@ -84,8 +110,7 @@ class AuthService {
 
   Future<void> logout() async {
     await _api.clearToken();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_userKey);
+    await _secureStorage.delete(key: _userKey);
   }
 
   Future<bool> isLoggedIn() async => (await _api.getToken()) != null;
@@ -140,7 +165,6 @@ class AuthService {
   }
 
   Future<void> _cacheUser(AppUser user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userKey, jsonEncode(user.toJson()));
+    await _secureStorage.write(key: _userKey, value: jsonEncode(user.toJson()));
   }
 }

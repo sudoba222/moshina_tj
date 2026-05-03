@@ -72,7 +72,7 @@ class _DealersScreenState extends State<DealersScreen> {
       setState(() {
         _loading = false;
         _loadingMore = false;
-        _error = 'Ошибка загрузки дилеров';
+        _error = t('error.loadDealers', context.read<LanguageProvider>().lang);
       });
     }
   }

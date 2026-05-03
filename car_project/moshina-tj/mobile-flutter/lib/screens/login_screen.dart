@@ -70,7 +70,8 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _sendPhoneOtp() async {
     final phone = _phoneCtrl.text.trim();
     if (phone.isEmpty) {
-      setState(() => _phoneError = 'Введите номер телефона');
+      final lang = context.read<LanguageProvider>().lang;
+      setState(() => _phoneError = t('error.enterPhone', lang));
       return;
     }
     setState(() {
@@ -79,13 +80,15 @@ class _LoginScreenState extends State<LoginScreen>
     });
     try {
       final api = context.read<ApiService>();
-      await api.sendPhoneOtp(_selectedCountry.dialCode + phone);
+      final fullPhone = _selectedCountry.dialCode + phone;
+      await api.sendPhoneOtp(fullPhone);
       if (mounted) {
-        context.push('/otp?phone=${Uri.encodeComponent(_selectedCountry.dialCode + phone)}&mode=login');
+        context.push('/otp', extra: {'phone': fullPhone, 'mode': 'login'});
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _phoneError = 'Ошибка отправки кода. Проверьте номер.');
+        final lang = context.read<LanguageProvider>().lang;
+        setState(() => _phoneError = t('error.sendCodeFailed', lang));
       }
     } finally {
       if (mounted) setState(() => _phoneLoading = false);
@@ -102,8 +105,7 @@ class _LoginScreenState extends State<LoginScreen>
       final api = context.read<ApiService>();
       await api.registerEmail(_emailCtrl.text.trim(), '');
       if (mounted) {
-        final encoded = Uri.encodeComponent(_emailCtrl.text.trim());
-        context.push('/otp?email=$encoded&mode=email');
+        context.push('/otp', extra: {'email': _emailCtrl.text.trim(), 'mode': 'email'});
       }
     } catch (e) {
       if (mounted) setState(() => _emailError = e.toString().replaceFirst('Exception: ', ''));
@@ -125,10 +127,14 @@ class _LoginScreenState extends State<LoginScreen>
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         }
       }
+      if (mounted) {
+        context.push('/otp', extra: {'phone': phone, 'mode': 'login'});
+      }
     } catch (_) {
       if (mounted) {
+        final lang = context.read<LanguageProvider>().lang;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ошибка отправки через Telegram')),
+          SnackBar(content: Text(t('error.telegramFailed', lang))),
         );
       }
     } finally {
@@ -371,7 +377,7 @@ class _FormCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: Column(
               children: [
-                _DividerRow(c: c),
+                _DividerRow(c: c, lang: lang),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: () => launchUrl(
@@ -593,7 +599,7 @@ class _EmailTab extends StatelessWidget {
               keyboardType: TextInputType.emailAddress,
               c: c,
               validator: (v) {
-                if (v == null || !v.contains('@')) return 'Введите корректный email';
+                if (v == null || !v.contains('@')) return t('error.invalidEmail', lang);
                 return null;
               },
             ),
@@ -620,7 +626,8 @@ class _EmailTab extends StatelessWidget {
 
 class _DividerRow extends StatelessWidget {
   final AppColors c;
-  const _DividerRow({required this.c});
+  final String lang;
+  const _DividerRow({required this.c, required this.lang});
 
   @override
   Widget build(BuildContext context) {
@@ -630,7 +637,7 @@ class _DividerRow extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
-            'или',
+            t('auth.or', lang),
             style: TextStyle(color: c.textMuted, fontSize: 13),
           ),
         ),

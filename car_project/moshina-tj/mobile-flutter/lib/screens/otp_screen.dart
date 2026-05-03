@@ -127,7 +127,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   Future<void> _submit() async {
     final code = _code;
-    if (code.length < 6) return;
+    if (code.length < 6 || _loading) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -151,7 +151,7 @@ class _OtpScreenState extends State<OtpScreen> {
     }
     if (mounted && ok) context.go('/');
     if (mounted && !ok && _error == null) {
-      setState(() => _error = auth.error ?? 'Неверный код');
+      setState(() => _error = auth.error ?? t('error.invalidCode', context.read<LanguageProvider>().lang));
     }
   }
 

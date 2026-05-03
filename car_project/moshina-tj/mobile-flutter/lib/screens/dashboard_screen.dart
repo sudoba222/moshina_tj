@@ -293,7 +293,7 @@ class _ProfileCard extends StatelessWidget {
                         children: [
                           Icon(Icons.verified_rounded, size: 14, color: c.accent),
                           const SizedBox(width: 4),
-                          Text('Verified',
+                          Text(t('common.verified', lang),
                               style: TextStyle(color: c.accent, fontSize: 12, fontWeight: FontWeight.w600)),
                         ],
                       ),
@@ -390,6 +390,14 @@ class _SettingsCard extends StatelessWidget {
             onTap: () => context.push('/support'),
             trailing: Icon(Icons.chevron_right_rounded, color: c.textMuted, size: 20),
           ),
+          Divider(color: c.border, height: 1),
+          _SettingRow(
+            icon: Icons.shield_outlined,
+            label: t('settings.privacy', lang),
+            c: c,
+            onTap: () => context.push('/privacy'),
+            trailing: Icon(Icons.chevron_right_rounded, color: c.textMuted, size: 20),
+          ),
         ],
       ),
     );
@@ -431,12 +439,12 @@ class _DangerCard extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: Text(t('auth.logout', lang),
             style: GoogleFonts.outfit(color: c.text, fontWeight: FontWeight.w700)),
-        content: Text('Вы уверены, что хотите выйти?',
+        content: Text(t('auth.logoutConfirm', lang),
             style: TextStyle(color: c.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Отмена', style: TextStyle(color: c.textMuted)),
+            child: Text(t('common.cancel', lang), style: TextStyle(color: c.textMuted)),
           ),
           TextButton(
             onPressed: () {
@@ -517,7 +525,7 @@ class _MyListingsState extends State<_MyListings> {
     setState(() => _loading = true);
     try {
       final api = context.read<ApiService>();
-      final raw = await api.getMyListings(widget.userId);
+      final raw = await api.getMyListings();
       if (mounted) {
         setState(() {
           _listings = raw
@@ -542,13 +550,13 @@ class _MyListingsState extends State<_MyListings> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Отмена', style: TextStyle(color: widget.c.textMuted)),
+            child: Text(t('common.cancel', widget.lang), style: TextStyle(color: widget.c.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Удалить',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+            child: Text(
+              t('common.delete', widget.lang),
+              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
             ),
           ),
         ],

@@ -17,16 +17,37 @@ import '../screens/dealer_detail_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/edit_listing_screen.dart';
 import '../screens/support_screen.dart';
+import '../screens/privacy_policy_screen.dart';
 import '../l10n/strings.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-final appRouter = GoRouter(
+// Routes that require an authenticated user.
+const _protectedPaths = [
+  '/post',
+  '/profile',
+  '/chat',
+  '/notifications',
+  '/edit-profile',
+  '/change-password',
+  '/edit-listing',
+];
+
+GoRouter makeAppRouter(AuthProvider auth) => GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
+  refreshListenable: auth,
+  redirect: (context, state) {
+    if (auth.status == AuthStatus.unknown) return null;
+    final loc = state.matchedLocation;
+    final isProtected = _protectedPaths.any((p) => loc.startsWith(p));
+    if (isProtected && !auth.isAuthenticated) return '/login';
+    return null;
+  },
   routes: [
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
@@ -108,12 +129,13 @@ final appRouter = GoRouter(
       path: '/otp',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final p = state.uri.queryParameters;
+        // Data passed via extra (never in query string) to avoid PII in logs.
+        final p = state.extra as Map<String, dynamic>? ?? {};
         return OtpScreen(
-          phone: p['phone'],
-          email: p['email'],
-          mode: p['mode'] ?? 'login',
-          name: p['name'],
+          phone: p['phone'] as String?,
+          email: p['email'] as String?,
+          mode: p['mode'] as String? ?? 'login',
+          name: p['name'] as String?,
         );
       },
     ),
@@ -148,6 +170,11 @@ final appRouter = GoRouter(
       path: '/support',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const SupportScreen(),
+    ),
+    GoRoute(
+      path: '/privacy',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const PrivacyPolicyScreen(),
     ),
   ],
 );

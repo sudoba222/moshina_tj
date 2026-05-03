@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
@@ -68,7 +69,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     final name = _phoneNameCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
     if (phone.isEmpty) {
-      setState(() => _phoneError = 'Введите номер телефона');
+      final lang = context.read<LanguageProvider>().lang;
+      setState(() => _phoneError = t('error.enterPhone', lang));
       return;
     }
     setState(() {
@@ -80,13 +82,16 @@ class _RegisterScreenState extends State<RegisterScreen>
       final fullPhone = _country.dialCode + phone;
       await api.sendPhoneOtp(fullPhone);
       if (mounted) {
-        final encodedPhone = Uri.encodeComponent(fullPhone);
-        final encodedName = Uri.encodeComponent(name.isEmpty ? '' : name);
-        context.push('/otp?phone=$encodedPhone&mode=register&name=$encodedName');
+        context.push('/otp', extra: {
+          'phone': fullPhone,
+          'mode': 'register',
+          if (name.isNotEmpty) 'name': name,
+        });
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _phoneError = 'Ошибка отправки кода. Проверьте номер.');
+        final lang = context.read<LanguageProvider>().lang;
+        setState(() => _phoneError = t('error.sendCodeFailed', lang));
       }
     } finally {
       if (mounted) setState(() => _phoneLoading = false);
@@ -104,8 +109,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (mounted) {
       setState(() => _emailLoading = false);
       if (ok) {
-        final encodedEmail = Uri.encodeComponent(_emailCtrl.text.trim());
-        context.push('/otp?email=$encodedEmail&mode=email');
+        context.push('/otp', extra: {'email': _emailCtrl.text.trim(), 'mode': 'email'});
       }
     }
   }
@@ -263,6 +267,49 @@ class _RegisterScreenState extends State<RegisterScreen>
                         ),
                       ),
                       const SizedBox(height: 24),
+                      // Social auth
+                      Container(
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: c.border),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 4))],
+                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                        child: Column(
+                          children: [
+                            _RegisterDividerRow(c: c, lang: lang),
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: () => launchUrl(
+                                Uri.parse('https://tajcar.tj/auth/login'),
+                                mode: LaunchMode.externalApplication,
+                              ),
+                              icon: Icon(Icons.g_mobiledata_rounded, size: 22, color: c.accent),
+                              label: Text(t('auth.continueGoogle', lang)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: c.text,
+                                side: BorderSide(color: c.border),
+                                minimumSize: const Size(double.infinity, 48),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            OutlinedButton.icon(
+                              onPressed: () => context.push('/login'),
+                              icon: Icon(Icons.send_rounded, size: 18, color: c.accent),
+                              label: Text(t('auth.continueTelegram', lang)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: c.text,
+                                side: BorderSide(color: c.border),
+                                minimumSize: const Size(double.infinity, 48),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       AuthBottomLink(
                         prefix: t('auth.hasAccount', lang),
                         linkText: t('auth.login', lang),
@@ -380,7 +427,7 @@ class _EmailTab extends StatelessWidget {
             prefixIcon: Icons.badge_outlined,
             c: c,
             validator: (v) {
-              if (v == null || v.trim().length < 2) return 'Минимум 2 символа';
+              if (v == null || v.trim().length < 2) return t('auth.nameMinLength', lang);
               return null;
             },
           ),
@@ -392,7 +439,7 @@ class _EmailTab extends StatelessWidget {
             c: c,
             keyboardType: TextInputType.emailAddress,
             validator: (v) {
-              if (v == null || !v.contains('@')) return 'Введите корректный email';
+              if (v == null || !v.contains('@')) return t('error.invalidEmail', lang);
               return null;
             },
           ),
@@ -405,6 +452,26 @@ class _EmailTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RegisterDividerRow extends StatelessWidget {
+  final AppColors c;
+  final String lang;
+  const _RegisterDividerRow({required this.c, required this.lang});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: c.border, thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(t('auth.or', lang), style: TextStyle(color: c.textMuted, fontSize: 13)),
+        ),
+        Expanded(child: Divider(color: c.border, thickness: 1)),
+      ],
     );
   }
 }

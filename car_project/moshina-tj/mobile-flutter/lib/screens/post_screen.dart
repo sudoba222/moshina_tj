@@ -25,6 +25,7 @@ class _PostScreenState extends State<PostScreen> {
 
   // Step 1
   String _type = 'sale';
+  bool _installmentAvailable = false;
   final _brandCtrl = TextEditingController();
   final _modelCtrl = TextEditingController();
   final _yearCtrl = TextEditingController();
@@ -82,12 +83,23 @@ class _PostScreenState extends State<PostScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_step4Key.currentState!.validate()) return;
+    final lang = context.read<LanguageProvider>().lang;
+    if (!_step4Key.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t('post.required.fields', lang)),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     setState(() => _submitting = true);
     try {
       final api = context.read<ApiService>();
       final body = <String, dynamic>{
-        'type': _type,
+        'type': _type == 'installment' ? 'sale' : _type,
+        'installment_available': _installmentAvailable,
         'brand': _brandCtrl.text.trim(),
         'model': _modelCtrl.text.trim(),
         'year': int.tryParse(_yearCtrl.text.trim()) ?? 2020,
@@ -296,30 +308,33 @@ class _PostScreenState extends State<PostScreen> {
           // Type selector
           Row(
             children: [
-              Expanded(child: _TypeChip(label: t('post.typeSale', lang), value: 'sale', selected: _type, onTap: (v) => setState(() => _type = v), c: c)),
+              Expanded(child: _TypeChip(label: t('post.typeSale', lang), value: 'sale', selected: _installmentAvailable ? '__none__' : _type, onTap: (v) => setState(() { _type = v; _installmentAvailable = false; }), c: c)),
               const SizedBox(width: 8),
-              Expanded(child: _TypeChip(label: t('post.typeRent', lang), value: 'rent', selected: _type, onTap: (v) => setState(() => _type = v), c: c)),
+              Expanded(child: _TypeChip(label: t('post.typeRent', lang), value: 'rent', selected: _installmentAvailable ? '__none__' : _type, onTap: (v) => setState(() { _type = v; _installmentAvailable = false; }), c: c)),
               const SizedBox(width: 8),
-              Expanded(child: _TypeChip(label: t('post.typeInstallment', lang), value: 'installment', selected: _type, onTap: (v) => setState(() => _type = v), c: c)),
+              Expanded(child: _TypeChip(label: t('post.typeInstallment', lang), value: 'installment', selected: _installmentAvailable ? 'installment' : '__none__', onTap: (_) => setState(() { _type = 'sale'; _installmentAvailable = true; }), c: c)),
             ],
           ),
           const SizedBox(height: 16),
           _field(controller: _brandCtrl, label: t('post.brand', lang), icon: Icons.directions_car_outlined, c: c,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите марку' : null),
+              isRequired: true,
+              validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.brand', lang) : null),
           const SizedBox(height: 14),
           _field(controller: _modelCtrl, label: t('post.model', lang), icon: Icons.drive_eta_outlined, c: c,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите модель' : null),
+              isRequired: true,
+              validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.model', lang) : null),
           const SizedBox(height: 14),
           _field(
             controller: _yearCtrl,
             label: t('post.year', lang),
             icon: Icons.calendar_today_outlined,
             c: c,
+            isRequired: true,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             validator: (v) {
               final y = int.tryParse(v ?? '');
-              if (y == null || y < 1900 || y > 2026) return '1900–2026';
+              if (y == null || y < 1900 || y > 2026) return t('post.required.year', lang);
               return null;
             },
           ),
@@ -344,9 +359,10 @@ class _PostScreenState extends State<PostScreen> {
                   label: t('post.price', lang),
                   icon: Icons.attach_money,
                   c: c,
+                  isRequired: true,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите цену' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.price', lang) : null,
                 ),
               ),
               const SizedBox(width: 10),
@@ -362,7 +378,8 @@ class _PostScreenState extends State<PostScreen> {
           ),
           const SizedBox(height: 14),
           _field(controller: _cityCtrl, label: t('post.city', lang), icon: Icons.location_city_outlined, c: c,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите город' : null),
+              isRequired: true,
+              validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.city', lang) : null),
           const SizedBox(height: 14),
           _field(
             controller: _mileageCtrl,
@@ -701,8 +718,14 @@ class _PostScreenState extends State<PostScreen> {
             label: t('post.contactPhone', lang),
             icon: Icons.phone_outlined,
             c: c,
+            isRequired: true,
             keyboardType: TextInputType.phone,
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите телефон' : null,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return t('post.required.phone', lang);
+              final digits = v.replaceAll(RegExp(r'\D'), '');
+              if (digits.length < 7) return t('post.required.phone_format', lang);
+              return null;
+            },
           ),
           const SizedBox(height: 14),
           Container(
@@ -715,10 +738,10 @@ class _PostScreenState extends State<PostScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Способ связи', style: TextStyle(color: c.textMuted, fontSize: 13)),
+                Text(t('post.contactMethod', lang), style: TextStyle(color: c.textMuted, fontSize: 13)),
                 const SizedBox(height: 10),
                 _ContactMethodRow(
-                  label: 'Телефон и чат',
+                  label: t('post.contactPhoneAndChat', lang),
                   value: 'phone_and_chat',
                   selected: _contactMethod,
                   onTap: (v) => setState(() => _contactMethod = v),
@@ -726,7 +749,7 @@ class _PostScreenState extends State<PostScreen> {
                 ),
                 const SizedBox(height: 6),
                 _ContactMethodRow(
-                  label: 'Только телефон',
+                  label: t('post.contactPhoneOnly', lang),
                   value: 'phone_only',
                   selected: _contactMethod,
                   onTap: (v) => setState(() => _contactMethod = v),
@@ -734,7 +757,7 @@ class _PostScreenState extends State<PostScreen> {
                 ),
                 const SizedBox(height: 6),
                 _ContactMethodRow(
-                  label: 'Только чат',
+                  label: t('post.contactChatOnly', lang),
                   value: 'chat_only',
                   selected: _contactMethod,
                   onTap: (v) => setState(() => _contactMethod = v),
@@ -757,7 +780,7 @@ class _PostScreenState extends State<PostScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'После публикации объявление пройдет модерацию и появится в каталоге.',
+                    t('post.moderationHint', lang),
                     style: TextStyle(color: c.accent, fontSize: 13, height: 1.4),
                   ),
                 ),
@@ -818,14 +841,44 @@ class _PostScreenState extends State<PostScreen> {
   void _onNext() {
     final lang = context.read<LanguageProvider>().lang;
     if (_step == 0) {
-      if (_step1Key.currentState!.validate()) setState(() => _step = 1);
+      if (!_step1Key.currentState!.validate()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(t('post.required.fields', lang)),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      setState(() => _step = 1);
     } else if (_step == 1) {
-      if (_step2Key.currentState!.validate()) setState(() => _step = 2);
+      if (!_step2Key.currentState!.validate()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(t('post.required.fields', lang)),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      setState(() => _step = 2);
     } else if (_step == 2) {
       // Photos step — block navigation while any upload is still in progress
       if (_uploadingFlags.any((f) => f)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(t('post.uploading', lang))),
+        );
+        return;
+      }
+      if (_uploadedUrls.isEmpty && _selectedFiles.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(t('post.required.photo', lang)),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
         );
         return;
       }
@@ -842,10 +895,25 @@ class _PostScreenState extends State<PostScreen> {
     required String label,
     required IconData icon,
     required AppColors c,
+    bool isRequired = false,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
+    final labelWidget = isRequired
+        ? RichText(
+            text: TextSpan(
+              text: label,
+              style: TextStyle(color: c.textMuted, fontSize: 14),
+              children: const [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          )
+        : null;
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
@@ -853,7 +921,8 @@ class _PostScreenState extends State<PostScreen> {
       style: TextStyle(color: c.text),
       validator: validator,
       decoration: InputDecoration(
-        labelText: label,
+        label: labelWidget,
+        labelText: isRequired ? null : label,
         labelStyle: TextStyle(color: c.textMuted),
         prefixIcon: Icon(icon, color: c.textMuted, size: 20),
         enabledBorder: OutlineInputBorder(

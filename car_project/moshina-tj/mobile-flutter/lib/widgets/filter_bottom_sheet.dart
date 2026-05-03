@@ -50,11 +50,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   void initState() {
     super.initState();
     _filters = Map.from(widget.initialFilters);
-    _yearFromCtrl.text = _filters['year_from'] ?? '';
-    _yearToCtrl.text = _filters['year_to'] ?? '';
-    _priceMinCtrl.text = _filters['price_min'] ?? '';
-    _priceMaxCtrl.text = _filters['price_max'] ?? '';
-    _mileageMaxCtrl.text = _filters['mileage_max'] ?? '';
+    _yearFromCtrl.text = _filters['min_year'] ?? '';
+    _yearToCtrl.text = _filters['max_year'] ?? '';
+    _priceMinCtrl.text = _filters['min_price'] ?? '';
+    _priceMaxCtrl.text = _filters['max_price'] ?? '';
+    _mileageMaxCtrl.text = _filters['max_mileage'] ?? '';
   }
 
   @override
@@ -81,29 +81,29 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   void _apply() {
     // Sync text field values
     if (_yearFromCtrl.text.isNotEmpty) {
-      _filters['year_from'] = _yearFromCtrl.text;
+      _filters['min_year'] = _yearFromCtrl.text;
     } else {
-      _filters.remove('year_from');
+      _filters.remove('min_year');
     }
     if (_yearToCtrl.text.isNotEmpty) {
-      _filters['year_to'] = _yearToCtrl.text;
+      _filters['max_year'] = _yearToCtrl.text;
     } else {
-      _filters.remove('year_to');
+      _filters.remove('max_year');
     }
     if (_priceMinCtrl.text.isNotEmpty) {
-      _filters['price_min'] = _priceMinCtrl.text;
+      _filters['min_price'] = _priceMinCtrl.text;
     } else {
-      _filters.remove('price_min');
+      _filters.remove('min_price');
     }
     if (_priceMaxCtrl.text.isNotEmpty) {
-      _filters['price_max'] = _priceMaxCtrl.text;
+      _filters['max_price'] = _priceMaxCtrl.text;
     } else {
-      _filters.remove('price_max');
+      _filters.remove('max_price');
     }
     if (_mileageMaxCtrl.text.isNotEmpty) {
-      _filters['mileage_max'] = _mileageMaxCtrl.text;
+      _filters['max_mileage'] = _mileageMaxCtrl.text;
     } else {
-      _filters.remove('mileage_max');
+      _filters.remove('max_mileage');
     }
     widget.onApply(_filters);
     Navigator.of(context).pop();
@@ -167,7 +167,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _FilterDropdown(
-                    label: 'Марка',
+                    label: t('post.brand', lang),
                     value: _filters['brand'],
                     items: _brands,
                     colors: c,
@@ -181,7 +181,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   ),
                   const SizedBox(height: 14),
                   _FilterDropdown(
-                    label: 'Город',
+                    label: t('post.city', lang),
                     value: _filters['city'],
                     items: _cities,
                     colors: c,
@@ -195,7 +195,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   ),
                   const SizedBox(height: 14),
                   _FilterDropdown(
-                    label: 'Топливо',
+                    label: t('detail.fuel', lang),
                     value: _filters['fuel'],
                     items: _fuels,
                     colors: c,
@@ -209,7 +209,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   ),
                   const SizedBox(height: 14),
                   _FilterDropdown(
-                    label: 'КПП',
+                    label: t('detail.transmission', lang),
                     value: _filters['transmission'],
                     items: _transmissions,
                     colors: c,
@@ -223,7 +223,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   ),
                   const SizedBox(height: 14),
                   _FilterDropdown(
-                    label: 'Кузов',
+                    label: t('detail.body', lang),
                     value: _filters['body_type'],
                     items: _bodyTypes,
                     colors: c,
@@ -237,31 +237,31 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   ),
                   const SizedBox(height: 14),
                   _RangeRow(
-                    label: 'Год выпуска',
+                    label: t('filter.yearRange', lang),
                     fromCtrl: _yearFromCtrl,
                     toCtrl: _yearToCtrl,
-                    fromHint: 'от',
-                    toHint: 'до',
+                    fromHint: t('filter.from', lang),
+                    toHint: t('filter.to', lang),
                     colors: c,
                   ),
                   const SizedBox(height: 14),
                   _RangeRow(
-                    label: 'Цена (\$)',
+                    label: t('filter.priceRange', lang),
                     fromCtrl: _priceMinCtrl,
                     toCtrl: _priceMaxCtrl,
-                    fromHint: 'от',
-                    toHint: 'до',
+                    fromHint: t('filter.from', lang),
+                    toHint: t('filter.to', lang),
                     colors: c,
                   ),
                   const SizedBox(height: 14),
-                  _FilterLabel(label: 'Пробег макс. (км)', colors: c),
+                  _FilterLabel(label: t('filter.mileageMax', lang), colors: c),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _mileageMaxCtrl,
                     keyboardType: TextInputType.number,
                     style: TextStyle(color: c.text),
                     decoration: InputDecoration(
-                      hintText: 'например, 150000',
+                      hintText: t('filter.mileageHint', lang),
                       hintStyle: TextStyle(color: c.textMuted, fontSize: 14),
                     ),
                   ),

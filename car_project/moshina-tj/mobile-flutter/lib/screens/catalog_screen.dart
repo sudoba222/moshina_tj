@@ -73,7 +73,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
       filters['q'] = _searchCtrl.text.trim();
     }
     if (_listingType.isNotEmpty) {
-      filters['listing_type'] = _listingType;
+      filters['type'] = _listingType;
     }
     context
         .read<ListingProvider>()

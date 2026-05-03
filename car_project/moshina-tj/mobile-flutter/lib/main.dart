@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:flutter_windowmanager/flutter_windowmanager.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/favorites_provider.dart';
@@ -22,7 +25,12 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Load token once at startup — eliminates SharedPreferences hit on every request
+  // Prevent screenshots and app-switcher capture of sensitive screens (Android only).
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
+  }
+
+  // Load token once at startup — eliminates secure storage hit on every request.
   final apiService = ApiService();
   await apiService.init();
 
@@ -47,11 +55,14 @@ class _TajcarAppState extends State<TajcarApp> {
   late final ThemeProvider _themeProvider;
   late final FavoritesProvider _favoritesProvider;
 
+  late final GoRouter _router;
+
   @override
   void initState() {
     super.initState();
     _authService = AuthService(widget.apiService);
     _authProvider = AuthProvider(_authService);
+    _router = makeAppRouter(_authProvider);
     _listingProvider = ListingProvider(widget.apiService);
     _languageProvider = LanguageProvider();
     _themeProvider = ThemeProvider();
@@ -76,7 +87,7 @@ class _TajcarAppState extends State<TajcarApp> {
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: themeProvider.mode,
-          routerConfig: appRouter,
+          routerConfig: _router,
         ),
       ),
     );

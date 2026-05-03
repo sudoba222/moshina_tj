@@ -29,10 +29,14 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keyProperties["keyAlias"] as String
-            keyPassword = keyProperties["keyPassword"] as String
-            storeFile = file(keyProperties["storeFile"] as String)
-            storePassword = keyProperties["storePassword"] as String
+            keyAlias = (keyProperties["keyAlias"] as? String)
+                ?: error("key.properties is missing 'keyAlias' — see README for signing setup")
+            keyPassword = (keyProperties["keyPassword"] as? String)
+                ?: error("key.properties is missing 'keyPassword'")
+            storeFile = file((keyProperties["storeFile"] as? String)
+                ?: error("key.properties is missing 'storeFile'"))
+            storePassword = (keyProperties["storePassword"] as? String)
+                ?: error("key.properties is missing 'storePassword'")
         }
     }
 

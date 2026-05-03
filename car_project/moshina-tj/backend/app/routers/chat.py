@@ -649,7 +649,7 @@ def mark_conversation_read(
 # ---------------------------------------------------------------------------
 
 async def _ws_authenticate(websocket: WebSocket) -> Optional[str]:
-    """Extract and validate a JWT from the HttpOnly auth cookie.
+    """Extract and validate a JWT from the HttpOnly auth cookie or Authorization header.
 
     Performs a full DB check — verifies token_version (revocation) and
     ban status — so that a logged-out or banned user cannot keep a WS
@@ -658,8 +658,14 @@ async def _ws_authenticate(websocket: WebSocket) -> Optional[str]:
     Returns user_id (str) or None on failure.
     Token in URL query params is intentionally not supported — it would
     expose the JWT in server access logs.
+    Authorization header is accepted for native mobile clients that cannot
+    set cookies on WebSocket connections.
     """
     token: Optional[str] = websocket.cookies.get("token")
+    if not token:
+        auth_header = websocket.headers.get("authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            token = auth_header[7:]
     if not token:
         return None
     try:

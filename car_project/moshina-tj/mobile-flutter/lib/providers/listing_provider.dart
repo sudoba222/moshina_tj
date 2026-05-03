@@ -78,10 +78,7 @@ class ListingProvider extends ChangeNotifier {
     _featuredError = null;
     notifyListeners();
     try {
-      final data = await _api.getRaw(
-        '/catalog',
-        queryParams: {'is_featured': 'true', 'limit': 10, 'status': 'active'},
-      );
+      final data = await _api.getRaw('/listings/featured');
       final paginated = _toPaginated(data);
       _featured = paginated.items;
     } catch (_) {
@@ -103,13 +100,8 @@ class ListingProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final data = await _api.getRaw(
-        '/catalog',
-        queryParams: {
-          'page': _freshPage,
-          'limit': 20,
-          'status': 'active',
-          'sort': 'newest',
-        },
+        '/listings',
+        queryParams: {'page': _freshPage, 'limit': 20, 'sort': 'newest'},
       );
       final paginated = _toPaginated(data);
       if (refresh) {
@@ -133,13 +125,8 @@ class ListingProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final data = await _api.getRaw(
-        '/catalog',
-        queryParams: {
-          'page': _freshPage,
-          'limit': 20,
-          'status': 'active',
-          'sort': 'newest',
-        },
+        '/listings',
+        queryParams: {'page': _freshPage, 'limit': 20, 'sort': 'newest'},
       );
       final paginated = _toPaginated(data);
       _fresh.addAll(paginated.items);
@@ -183,19 +170,27 @@ class ListingProvider extends ChangeNotifier {
     _catalogError = null;
     notifyListeners();
     try {
-      final params = <String, dynamic>{
-        'page': _catalogPage,
-        'limit': 20,
-        ..._catalogFilters,
-      };
-      final data = await _api.getRaw('/catalog', queryParams: params);
+      final q = _catalogFilters['q'];
+      final dynamic data;
+      if (q != null && q.isNotEmpty) {
+        // Text search — use /search endpoint (returns all results, no pagination)
+        data = await _api.getRaw('/search', queryParams: {'q': q, 'limit': 50});
+        _catalogTotalPages = 1;
+      } else {
+        final params = <String, dynamic>{
+          'page': _catalogPage,
+          'limit': 20,
+          ..._catalogFilters,
+        };
+        data = await _api.getRaw('/listings', queryParams: params);
+      }
       final paginated = _toPaginated(data);
       if (refresh) {
         _catalogItems = paginated.items;
       } else {
         _catalogItems.addAll(paginated.items);
       }
-      _catalogTotalPages = paginated.pages;
+      if (q == null || q.isEmpty) _catalogTotalPages = paginated.pages;
     } catch (e) {
       _catalogError = 'Ошибка загрузки каталога';
     } finally {
@@ -205,6 +200,8 @@ class ListingProvider extends ChangeNotifier {
   }
 
   Future<void> loadMoreCatalog() async {
+    // No pagination for text search results
+    if (_catalogFilters.containsKey('q') && _catalogFilters['q']!.isNotEmpty) return;
     if (_catalogLoadingMore || !hasMoreCatalog) return;
     _catalogLoadingMore = true;
     _catalogPage++;
@@ -215,7 +212,7 @@ class ListingProvider extends ChangeNotifier {
         'limit': 20,
         ..._catalogFilters,
       };
-      final data = await _api.getRaw('/catalog', queryParams: params);
+      final data = await _api.getRaw('/listings', queryParams: params);
       final paginated = _toPaginated(data);
       _catalogItems.addAll(paginated.items);
       _catalogTotalPages = paginated.pages;
@@ -236,14 +233,12 @@ class ListingProvider extends ChangeNotifier {
     }
   }
 
-  Future<List<Listing>> getRelatedListings(String id) async {
+  Future<List<Listing>> getRelatedListings(String id, {String? brand}) async {
+    if (brand == null || brand.isEmpty) return [];
     try {
-      final data = await _api.getRaw('/listings/$id/related');
-      if (data is List) {
-        return data
-            .map((e) => Listing.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
+      final data = await _api.getRaw('/listings', queryParams: {'brand': brand, 'limit': 7});
+      final paginated = _toPaginated(data);
+      return paginated.items.where((l) => l.id != id).take(5).toList();
     } catch (_) {}
     return [];
   }

@@ -25,6 +25,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
 
   // Step 1
   String _type = 'sale';
+  bool _installmentAvailable = false;
   final _brandCtrl = TextEditingController();
   final _modelCtrl = TextEditingController();
   final _yearCtrl = TextEditingController();
@@ -92,6 +93,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
 
   void _prefill(Map<String, dynamic> d) {
     _type = d['type'] as String? ?? _type;
+    _installmentAvailable = d['installment_available'] as bool? ?? false;
     _brandCtrl.text = d['brand'] as String? ?? '';
     _modelCtrl.text = d['model'] as String? ?? '';
     _yearCtrl.text = d['year']?.toString() ?? '';
@@ -117,7 +119,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
     try {
       final api = context.read<ApiService>();
       final body = <String, dynamic>{
-        'type': _type,
+        'type': _type == 'installment' ? 'sale' : _type,
+        'installment_available': _installmentAvailable,
         'brand': _brandCtrl.text.trim(),
         'model': _modelCtrl.text.trim(),
         'year': int.tryParse(_yearCtrl.text.trim()) ?? 2020,
@@ -234,19 +237,19 @@ class _EditListingScreenState extends State<EditListingScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _TypeChip(label: t('post.typeSale', lang), value: 'sale', selected: _type, onTap: (v) => setState(() => _type = v), c: c)),
+              Expanded(child: _TypeChip(label: t('post.typeSale', lang), value: 'sale', selected: _installmentAvailable ? '__none__' : _type, onTap: (v) => setState(() { _type = v; _installmentAvailable = false; }), c: c)),
               const SizedBox(width: 8),
-              Expanded(child: _TypeChip(label: t('post.typeRent', lang), value: 'rent', selected: _type, onTap: (v) => setState(() => _type = v), c: c)),
+              Expanded(child: _TypeChip(label: t('post.typeRent', lang), value: 'rent', selected: _installmentAvailable ? '__none__' : _type, onTap: (v) => setState(() { _type = v; _installmentAvailable = false; }), c: c)),
               const SizedBox(width: 8),
-              Expanded(child: _TypeChip(label: t('post.typeInstallment', lang), value: 'installment', selected: _type, onTap: (v) => setState(() => _type = v), c: c)),
+              Expanded(child: _TypeChip(label: t('post.typeInstallment', lang), value: 'installment', selected: _installmentAvailable ? 'installment' : '__none__', onTap: (_) => setState(() { _type = 'sale'; _installmentAvailable = true; }), c: c)),
             ],
           ),
           const SizedBox(height: 16),
           _field(controller: _brandCtrl, label: t('post.brand', lang), icon: Icons.directions_car_outlined, c: c,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите марку' : null),
+              validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.brand', lang) : null),
           const SizedBox(height: 14),
           _field(controller: _modelCtrl, label: t('post.model', lang), icon: Icons.drive_eta_outlined, c: c,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите модель' : null),
+              validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.model', lang) : null),
           const SizedBox(height: 14),
           _field(
             controller: _yearCtrl,
@@ -284,7 +287,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                   c: c,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите цену' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.price', lang) : null,
                 ),
               ),
               const SizedBox(width: 10),
@@ -300,7 +303,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
           ),
           const SizedBox(height: 14),
           _field(controller: _cityCtrl, label: t('post.city', lang), icon: Icons.location_city_outlined, c: c,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите город' : null),
+              validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.city', lang) : null),
           const SizedBox(height: 14),
           _field(
             controller: _mileageCtrl,
@@ -424,7 +427,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
             icon: Icons.phone_outlined,
             c: c,
             keyboardType: TextInputType.phone,
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Укажите телефон' : null,
+            validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.phone', lang) : null,
           ),
           const SizedBox(height: 14),
           Container(
@@ -437,20 +440,20 @@ class _EditListingScreenState extends State<EditListingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Способ связи', style: TextStyle(color: c.textMuted, fontSize: 13)),
+                Text(t('post.contactMethod', lang), style: TextStyle(color: c.textMuted, fontSize: 13)),
                 const SizedBox(height: 10),
                 _ContactMethodRow(
-                  label: 'Телефон и чат', value: 'phone_and_chat',
+                  label: t('post.contactPhoneAndChat', lang), value: 'phone_and_chat',
                   selected: _contactMethod, onTap: (v) => setState(() => _contactMethod = v), c: c,
                 ),
                 const SizedBox(height: 6),
                 _ContactMethodRow(
-                  label: 'Только телефон', value: 'phone_only',
+                  label: t('post.contactPhoneOnly', lang), value: 'phone_only',
                   selected: _contactMethod, onTap: (v) => setState(() => _contactMethod = v), c: c,
                 ),
                 const SizedBox(height: 6),
                 _ContactMethodRow(
-                  label: 'Только чат', value: 'chat_only',
+                  label: t('post.contactChatOnly', lang), value: 'chat_only',
                   selected: _contactMethod, onTap: (v) => setState(() => _contactMethod = v), c: c,
                 ),
               ],

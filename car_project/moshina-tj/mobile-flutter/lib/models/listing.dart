@@ -106,9 +106,12 @@ class Listing {
       transmission: json['transmission'] as String?,
       bodyType: json['body_type'] as String?,
       color: json['color'] as String?,
-      engineVolume: (json['engine_volume'] as num?)?.toDouble(),
+      engineVolume: json['engine_volume'] != null
+          ? double.tryParse(json['engine_volume'].toString())
+          : null,
       driveType: json['drive_type'] as String?,
-      customsCleared: json['customs_cleared'] as bool?,
+      customsCleared: json['is_customs_cleared'] as bool? ??
+          json['customs_cleared'] as bool?,
       description: json['description'] as String?,
       isFeatured: json['is_featured'] as bool? ?? false,
       isNegotiable: json['is_negotiable'] as bool? ?? false,
@@ -121,11 +124,15 @@ class Listing {
           ? DateTime.tryParse(json['created_at'] as String) ?? DateTime.now()
           : DateTime.now(),
       images: imagesList,
-      viewsCount: (json['views_count'] as num?)?.toInt() ?? 0,
+      viewsCount: (json['views'] as num?)?.toInt() ??
+          (json['views_count'] as num?)?.toInt() ?? 0,
       userId: json['user_id']?.toString(),
-      sellerPhone: json['seller_phone'] as String? ??
+      sellerPhone: json['contact_phone'] as String? ??
+          json['seller_phone'] as String? ??
           userMap?['phone'] as String?,
-      sellerName: json['seller_name'] as String? ??
+      sellerName: json['contact_name'] as String? ??
+          json['user_name'] as String? ??
+          json['seller_name'] as String? ??
           userMap?['full_name'] as String?,
     );
   }

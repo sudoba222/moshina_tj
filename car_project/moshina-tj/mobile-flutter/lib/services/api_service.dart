@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 // Extracts a human-readable error message from a DioException response body.
 String _serverMessage(Object e) {
@@ -26,7 +28,23 @@ class ApiService {
   static const String baseUrl = 'https://api.tajcar.tj/api/v1';
   static const String _tokenKey = 'auth_token';
 
+  // Derives the WSS base from baseUrl so they always stay in sync.
+  static String get wsBase =>
+      baseUrl.replaceFirst('https://', 'wss://').replaceFirst('/api/v1', '/ws');
+
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
+
   late final Dio _dio;
+
+  // Called when the server returns 401 — wired by AuthProvider.
+  VoidCallback? _onUnauthorized;
+
+  void setUnauthorizedHandler(VoidCallback handler) {
+    _onUnauthorized = handler;
+  }
 
   ApiService() {
     _dio = Dio(BaseOptions(
@@ -43,7 +61,11 @@ class ApiService {
         }
         handler.next(options);
       },
-      onError: (error, handler) {
+      onError: (DioException error, ErrorInterceptorHandler handler) async {
+        if (error.response?.statusCode == 401) {
+          await clearToken();
+          _onUnauthorized?.call();
+        }
         handler.next(error);
       },
     ));
@@ -54,29 +76,22 @@ class ApiService {
 
   /// Call once in main() before runApp to warm the token cache.
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    _cachedToken = prefs.getString(_tokenKey);
+    _cachedToken = await _secureStorage.read(key: _tokenKey);
   }
-
-  /// Synchronous accessor for the token; null until init() has completed.
-  String? get cachedToken => _cachedToken;
 
   Future<void> saveToken(String token) async {
     _cachedToken = token;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    await _secureStorage.write(key: _tokenKey, value: token);
   }
 
   Future<void> clearToken() async {
     _cachedToken = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
+    await _secureStorage.delete(key: _tokenKey);
   }
 
   Future<String?> getToken() async {
     if (_cachedToken != null) return _cachedToken;
-    final prefs = await SharedPreferences.getInstance();
-    _cachedToken = prefs.getString(_tokenKey);
+    _cachedToken = await _secureStorage.read(key: _tokenKey);
     return _cachedToken;
   }
 
@@ -109,18 +124,18 @@ class ApiService {
   // ── Chat ──────────────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getConversations() async =>
-      (await getRaw('/chat/conversations') as List<dynamic>?) ?? [];
+      (await getRaw('/conversations') as List<dynamic>?) ?? [];
 
   Future<Map<String, dynamic>> createOrGetConversation(String listingId) async =>
-      await postRaw('/chat/conversations', body: {'listing_id': listingId});
+      await postRaw('/conversations', body: {'listing_id': listingId});
 
   Future<List<dynamic>> getMessages(String convId, {int page = 1}) async =>
-      (await getRaw('/chat/$convId/messages',
+      (await getRaw('/conversations/$convId/messages',
               queryParams: {'page': page}) as List<dynamic>?) ??
           [];
 
   Future<void> markConversationRead(String convId) async =>
-      await _dio.put('/chat/$convId/read');
+      await _dio.put('/conversations/$convId/read');
 
   Future<dynamic> putRaw(String path, {required Map<String, dynamic> body}) async {
     try {
@@ -182,15 +197,10 @@ class ApiService {
 
   // ── Listings ──────────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getMyListings(String userId,
-      {int page = 1, String? status}) async {
-    final params = <String, dynamic>{
-      'user_id': userId,
-      'page': page,
-      'limit': 20,
-    };
+  Future<List<dynamic>> getMyListings({int page = 1, String? status}) async {
+    final params = <String, dynamic>{'page': page, 'limit': 20};
     if (status != null) params['status'] = status;
-    final data = await getRaw('/listings', queryParams: params);
+    final data = await getRaw('/users/me/listings', queryParams: params);
     if (data is Map<String, dynamic> && data.containsKey('items')) {
       return data['items'] as List<dynamic>? ?? [];
     }
@@ -248,6 +258,14 @@ class ApiService {
   // ── Upload ────────────────────────────────────────────────────────────────
 
   Future<String> uploadImage(XFile file) async {
+    final ext = file.path.split('.').last.toLowerCase();
+    if (!{'jpg', 'jpeg', 'png', 'webp'}.contains(ext)) {
+      throw Exception('Неподдерживаемый формат изображения');
+    }
+    final fileSize = await File(file.path).length();
+    if (fileSize > 10 * 1024 * 1024) {
+      throw Exception('Файл слишком большой (максимум 10 МБ)');
+    }
     try {
       final mimeType = file.mimeType ?? 'image/jpeg';
       final formData = FormData.fromMap({

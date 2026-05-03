@@ -120,13 +120,13 @@ class _ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final listing = conv['listing'] as Map<String, dynamic>? ?? {};
-    final otherUser = conv['other_user'] as Map<String, dynamic>? ?? {};
+    final otherUser = conv['other_participant'] as Map<String, dynamic>? ?? {};
     final lastMsg = conv['last_message'] as Map<String, dynamic>?;
     final unread = (conv['unread_count'] as int?) ?? 0;
 
     final brand = listing['brand'] as String? ?? '';
     final model = listing['model'] as String? ?? '';
-    final userName = otherUser['full_name'] as String? ?? '';
+    final userName = otherUser['name'] as String? ?? '';
     final lastContent = lastMsg?['content'] as String? ?? '';
     final createdAt = lastMsg?['created_at'] as String?;
     final lastSenderId = lastMsg?['sender_id'] as String?;
@@ -258,7 +258,7 @@ class _ConversationTile extends StatelessWidget {
                             child: lastContent.isNotEmpty
                                 ? Text(
                                     isLastMine
-                                        ? 'Вы: $lastContent'
+                                        ? '${t('chat.you', lang)}: $lastContent'
                                         : lastContent,
                                     style: AppTextStyles.bodySm(
                                       color: unread > 0

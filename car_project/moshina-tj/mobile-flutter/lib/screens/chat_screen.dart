@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/io.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
@@ -27,7 +28,8 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  static const _wsBase = 'wss://api.tajcar.tj/api/v1/chat/ws';
+  // Derived from ApiService.wsBase so it stays in sync with the REST base URL.
+  static String get _wsUrl => '${ApiService.wsBase}/chat';
   static const _maxReconnects = 3;
   static const _reconnectDelay = Duration(seconds: 2);
   static const _nearBottomThreshold = 200.0;
@@ -160,9 +162,12 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _connectWs() async {
     final token = await context.read<ApiService>().getToken();
     if (!mounted) return;
-    final uri = Uri.parse('$_wsBase/${widget.convId}?token=$token');
+    final uri = Uri.parse(_wsUrl);
     try {
-      _channel = WebSocketChannel.connect(uri);
+      _channel = IOWebSocketChannel.connect(
+        uri,
+        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
+      );
       setState(() => _wsStatus = _WsStatus.connected);
       _sub = _channel!.stream.listen(
         _onWsMessage,
@@ -178,8 +183,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _onWsMessage(dynamic raw) {
     try {
       final payload = jsonDecode(raw as String) as Map<String, dynamic>;
-      if (payload['type'] == 'message') {
-        final msg = payload['data'] as Map<String, dynamic>;
+      if (payload['event'] == 'new_message') {
+        final msg = payload['message'] as Map<String, dynamic>;
         if (!mounted) return;
         final nearBottom = !_scrollCtrl.hasClients ||
             _scrollCtrl.position.pixels <= _nearBottomThreshold;
@@ -216,7 +221,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _ctrl.text.trim();
     if (text.isEmpty || _channel == null) return;
     HapticFeedback.lightImpact();
-    _channel!.sink.add(jsonEncode({'type': 'message', 'content': text}));
+    _channel!.sink.add(jsonEncode({'conversation_id': widget.convId, 'content': text}));
     _ctrl.clear();
   }
 
@@ -227,14 +232,11 @@ class _ChatScreenState extends State<ChatScreen> {
     final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
     final listing = widget.convData['listing'] as Map<String, dynamic>? ?? {};
-    final otherUser = widget.convData['other_user'] as Map<String, dynamic>? ?? {};
+    final otherUser = widget.convData['other_participant'] as Map<String, dynamic>? ?? {};
     final brand = listing['brand'] as String? ?? '';
     final model = listing['model'] as String? ?? '';
-    final images = listing['images'] as List<dynamic>? ?? [];
-    final imageUrl = images.isNotEmpty
-        ? (images.first as Map<String, dynamic>)['url'] as String? ?? ''
-        : '';
-    final otherName = otherUser['full_name'] as String? ?? '';
+    final imageUrl = listing['image_url'] as String? ?? '';
+    final otherName = otherUser['name'] as String? ?? '';
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -363,8 +365,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     Text(
                       _wsStatus == _WsStatus.connected
-                          ? 'Online'
-                          : t('chat.connecting', 'ru'),
+                          ? t('chat.connected', lang)
+                          : t('chat.connecting', lang),
                       style: AppTextStyles.caption(color: c.textSecondary),
                     ),
                   ],

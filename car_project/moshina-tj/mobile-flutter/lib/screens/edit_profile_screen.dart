@@ -132,7 +132,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 icon: Icons.badge_outlined,
                 c: c,
                 validator: (v) {
-                  if (v == null || v.trim().length < 2) return 'Минимум 2 символа';
+                  if (v == null || v.trim().length < 2) return t('auth.nameMinLength', lang);
                   return null;
                 },
               ),
