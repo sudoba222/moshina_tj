@@ -95,7 +95,7 @@ class Listing {
       brand: json['brand'] as String? ?? '',
       model: json['model'] as String? ?? '',
       year: (json['year'] as num?)?.toInt() ?? 0,
-      price: (json['price'] as num?)?.toDouble() ?? 0,
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? (json['price'] as num?)?.toDouble() ?? 0,
       currency: json['currency'] as String? ?? 'USD',
       listingType: json['listing_type'] as String? ??
           json['type'] as String? ??

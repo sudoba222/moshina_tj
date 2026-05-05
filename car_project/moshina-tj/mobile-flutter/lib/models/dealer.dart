@@ -1,5 +1,5 @@
 class Dealer {
-  final int id;
+  final String id;
   final String name;
   final String? logoUrl;
   final String? city;
@@ -21,7 +21,7 @@ class Dealer {
 
   factory Dealer.fromJson(Map<String, dynamic> json) {
     return Dealer(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      id: json['id']?.toString() ?? '',
       name: json['name'] as String? ?? '',
       logoUrl: json['logo_url'] as String?,
       city: json['city'] as String?,
