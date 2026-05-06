@@ -27,16 +27,14 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
-    signingConfigs {
-        create("release") {
-            keyAlias = (keyProperties["keyAlias"] as? String)
-                ?: error("key.properties is missing 'keyAlias' — see README for signing setup")
-            keyPassword = (keyProperties["keyPassword"] as? String)
-                ?: error("key.properties is missing 'keyPassword'")
-            storeFile = file((keyProperties["storeFile"] as? String)
-                ?: error("key.properties is missing 'storeFile'"))
-            storePassword = (keyProperties["storePassword"] as? String)
-                ?: error("key.properties is missing 'storePassword'")
+    if (keyPropertiesFile.exists()) {
+        signingConfigs {
+            create("release") {
+                keyAlias = keyProperties["keyAlias"] as String
+                keyPassword = keyProperties["keyPassword"] as String
+                storeFile = file(keyProperties["storeFile"] as String)
+                storePassword = keyProperties["storePassword"] as String
+            }
         }
     }
 
@@ -50,7 +48,9 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            if (keyPropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

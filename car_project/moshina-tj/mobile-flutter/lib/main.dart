@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
@@ -25,16 +23,18 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Prevent screenshots and app-switcher capture of sensitive screens (Android only).
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
-  }
+  // FLAG_SECURE is applied by MainActivity.onCreate on Android.
+  // The channel below is available for runtime toggle if needed in the future.
 
   // Load token once at startup — eliminates secure storage hit on every request.
   final apiService = ApiService();
-  await apiService.init();
-
-  FlutterNativeSplash.remove();
+  try {
+    await apiService.init();
+  } catch (_) {
+    // Secure storage unavailable on this device; continue without cached token.
+  } finally {
+    FlutterNativeSplash.remove();
+  }
   runApp(TajcarApp(apiService: apiService));
 }
 

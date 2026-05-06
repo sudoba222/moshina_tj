@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/listing.dart';
+import '../providers/favorites_provider.dart';
 import '../providers/listing_provider.dart';
 import '../providers/language_provider.dart';
 import '../providers/auth_provider.dart';
@@ -182,6 +183,20 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
               style: TextStyle(
                   color: c.text, fontSize: 16, fontWeight: FontWeight.w700),
             ),
+            actions: [
+              Consumer<FavoritesProvider>(
+                builder: (_, favs, __) {
+                  final isFav = favs.isFavorite(listing.id);
+                  return IconButton(
+                    icon: Icon(
+                      isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                      color: isFav ? Colors.redAccent : c.text,
+                    ),
+                    onPressed: () => favs.toggleFavorite(listing.id),
+                  );
+                },
+              ),
+            ],
           ),
 
           // Gallery

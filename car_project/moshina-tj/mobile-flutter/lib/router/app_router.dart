@@ -10,6 +10,7 @@ import '../screens/dealers_screen.dart';
 import '../screens/post_screen.dart';
 import '../screens/chat_list_screen.dart';
 import '../screens/chat_screen.dart';
+import '../screens/favorites_screen.dart';
 import '../screens/otp_screen.dart';
 import '../screens/edit_profile_screen.dart';
 import '../screens/change_password_screen.dart';
@@ -44,6 +45,9 @@ GoRouter makeAppRouter(AuthProvider auth) => GoRouter(
   redirect: (context, state) {
     if (auth.status == AuthStatus.unknown) return null;
     final loc = state.matchedLocation;
+    if (auth.isAuthenticated && (loc == '/login' || loc == '/register' || loc == '/otp')) {
+      return '/';
+    }
     final isProtected = _protectedPaths.any((p) => loc.startsWith(p));
     if (isProtected && !auth.isAuthenticated) return '/login';
     return null;
@@ -91,9 +95,9 @@ GoRouter makeAppRouter(AuthProvider auth) => GoRouter(
           ),
         ),
         GoRoute(
-          path: '/chat',
+          path: '/favorites',
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: ChatListScreen(),
+            child: FavoritesScreen(),
           ),
         ),
       ],
@@ -105,6 +109,11 @@ GoRouter makeAppRouter(AuthProvider auth) => GoRouter(
         final id = state.pathParameters['id'] ?? '';
         return CarDetailScreen(listingId: id);
       },
+    ),
+    GoRoute(
+      path: '/chat',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ChatListScreen(),
     ),
     GoRoute(
       path: '/chat/:id',
@@ -192,7 +201,7 @@ class MainScaffold extends StatelessWidget {
   int _currentIndex(String loc) {
     if (loc.startsWith('/catalog')) return 1;
     if (loc.startsWith('/post')) return 2;
-    if (loc.startsWith('/chat')) return 3;
+    if (loc.startsWith('/favorites')) return 3;
     if (loc.startsWith('/profile')) return 4;
     return 0;
   }
@@ -226,7 +235,7 @@ class _BottomNav extends StatelessWidget {
           case 2:
             context.go('/post');
           case 3:
-            context.go('/chat');
+            context.go('/favorites');
           case 4:
             context.go('/profile');
         }
@@ -248,9 +257,9 @@ class _BottomNav extends StatelessWidget {
           label: t('nav.post', lang),
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.chat_bubble_outline),
-          activeIcon: const Icon(Icons.chat_bubble),
-          label: t('nav.chat', lang),
+          icon: const Icon(Icons.favorite_border_rounded),
+          activeIcon: const Icon(Icons.favorite_rounded),
+          label: t('nav.favorites', lang),
         ),
         BottomNavigationBarItem(
           icon: const Icon(Icons.person_outline),

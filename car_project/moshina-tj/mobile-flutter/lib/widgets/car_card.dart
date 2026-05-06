@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/listing.dart';
+import '../providers/favorites_provider.dart';
 import '../providers/language_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -115,12 +116,12 @@ class _ImageSection extends StatelessWidget {
           left: 8,
           child: _BadgeRow(listing: listing),
         ),
-        // Top-right: favourite placeholder (48x48 touch target)
+        // Top-right: favourite button
         if (!compact)
           Positioned(
             top: 4,
             right: 4,
-            child: _FavButton(colors: colors),
+            child: _FavButton(colors: colors, listingId: listing.id),
           ),
         // Bottom-left: negotiable badge
         if (listing.isNegotiable)
@@ -159,27 +160,36 @@ class _NoImage extends StatelessWidget {
 
 class _FavButton extends StatelessWidget {
   final AppColors colors;
-  const _FavButton({required this.colors});
+  final String listingId;
+
+  const _FavButton({required this.colors, required this.listingId});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      margin: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    final isFav = context.watch<FavoritesProvider>().isFavorite(listingId);
+    return GestureDetector(
+      onTap: () => context.read<FavoritesProvider>().toggleFavorite(listingId),
+      child: Container(
+        width: 36,
+        height: 36,
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.9),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          color: isFav ? Colors.redAccent : Colors.black54,
+          size: 18,
+        ),
       ),
-      child: const Icon(Icons.favorite_border_rounded,
-          color: Colors.black54, size: 18),
     );
   }
 }

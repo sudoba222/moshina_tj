@@ -93,15 +93,17 @@ class AuthService {
         return user;
       }
     } catch (_) {
-      await _api.clearToken();
+      // Don't clear the token here — the Dio interceptor already handles 401s
+      // (calls clearToken + _onUnauthorized). Clearing here would log the user
+      // out on any network timeout or server error.
     }
     return null;
   }
 
   Future<AppUser?> getCachedUser() async {
-    final raw = await _secureStorage.read(key: _userKey);
-    if (raw == null) return null;
     try {
+      final raw = await _secureStorage.read(key: _userKey);
+      if (raw == null) return null;
       return AppUser.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     } catch (_) {
       return null;

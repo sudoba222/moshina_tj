@@ -37,14 +37,15 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
     final live = await _authService.getCurrentUser();
-    // Always trust the live result — null means expired, revoked, or offline.
     if (live != null) {
       _user = live;
       _status = AuthStatus.authenticated;
-    } else {
-      _user = null;
+    } else if (cached == null) {
+      // No cached user AND server returned null → definitely not logged in.
       _status = AuthStatus.unauthenticated;
     }
+    // If cached != null but live == null, the network may be down.
+    // Keep the authenticated state; the 401 interceptor handles actual revocation.
     notifyListeners();
   }
 

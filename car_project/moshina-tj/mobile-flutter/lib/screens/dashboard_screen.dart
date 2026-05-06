@@ -384,6 +384,14 @@ class _SettingsCard extends StatelessWidget {
           ),
           Divider(color: c.border, height: 1),
           _SettingRow(
+            icon: Icons.chat_bubble_outline_rounded,
+            label: t('chat.title', lang),
+            c: c,
+            onTap: () => context.push('/chat'),
+            trailing: Icon(Icons.chevron_right_rounded, color: c.textMuted, size: 20),
+          ),
+          Divider(color: c.border, height: 1),
+          _SettingRow(
             icon: Icons.support_agent_outlined,
             label: t('support.title', lang),
             c: c,

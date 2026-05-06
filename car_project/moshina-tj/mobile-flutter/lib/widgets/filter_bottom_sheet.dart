@@ -11,7 +11,7 @@ const _fuels = ['Бензин', 'Дизель', 'Газ', 'Электро', 'Г�
 const _transmissions = ['Автомат', 'Механика', 'Вариатор'];
 const _bodyTypes = [
   'sedan', 'suv', 'hatchback', 'minivan', 'pickup',
-  'coupe', 'wagon', 'crossover', 'convertible', 'van',
+  'coupe', 'wagon', 'crossover', 'convertible', 'van', 'bus',
 ];
 const _brands = [
   'Toyota', 'Chevrolet', 'Hyundai', 'Kia', 'Honda', 'BMW',
@@ -20,6 +20,8 @@ const _brands = [
   'Mitsubishi', 'Mazda', 'Opel', 'Ford', 'Peugeot', 'Renault',
   'Subaru', 'Suzuki', 'Isuzu', 'ВАЗ', 'ГАЗ', 'УАЗ',
 ];
+const _colors = ['Белый', 'Чёрный', 'Серый', 'Серебристый', 'Синий', 'Красный', 'Зелёный', 'Жёлтый', 'Коричневый'];
+const _sortOptions = ['newest', 'price_asc', 'price_desc'];
 
 class FilterBottomSheet extends StatefulWidget {
   final String lang;
@@ -45,6 +47,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   final _priceMinCtrl = TextEditingController();
   final _priceMaxCtrl = TextEditingController();
   final _mileageMaxCtrl = TextEditingController();
+  final _modelCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -55,6 +58,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     _priceMinCtrl.text = _filters['min_price'] ?? '';
     _priceMaxCtrl.text = _filters['max_price'] ?? '';
     _mileageMaxCtrl.text = _filters['max_mileage'] ?? '';
+    _modelCtrl.text = _filters['model'] ?? '';
   }
 
   @override
@@ -64,6 +68,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     _priceMinCtrl.dispose();
     _priceMaxCtrl.dispose();
     _mileageMaxCtrl.dispose();
+    _modelCtrl.dispose();
     super.dispose();
   }
 
@@ -75,6 +80,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       _priceMinCtrl.clear();
       _priceMaxCtrl.clear();
       _mileageMaxCtrl.clear();
+      _modelCtrl.clear();
     });
   }
 
@@ -104,6 +110,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       _filters['max_mileage'] = _mileageMaxCtrl.text;
     } else {
       _filters.remove('max_mileage');
+    }
+    if (_modelCtrl.text.isNotEmpty) {
+      _filters['model'] = _modelCtrl.text;
+    } else {
+      _filters.remove('model');
     }
     widget.onApply(_filters);
     Navigator.of(context).pop();

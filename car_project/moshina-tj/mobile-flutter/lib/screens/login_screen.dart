@@ -18,7 +18,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabCtrl;
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
