@@ -398,6 +398,9 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
       if (listing.customsCleared != null)
         (Icons.fact_check_outlined, t('detail.customs', lang),
             listing.customsCleared! ? t('common.yes', lang) : t('common.no', lang)),
+      if (listing.viewsCount > 0)
+        (Icons.visibility_outlined, t('detail.views', lang),
+            listing.viewsCount.toString()),
     ];
 
     return GridView.builder(

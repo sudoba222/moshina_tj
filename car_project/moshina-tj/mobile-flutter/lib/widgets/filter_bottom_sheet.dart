@@ -191,6 +191,17 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     }),
                   ),
                   const SizedBox(height: 14),
+                  _FilterLabel(label: t('post.model', lang), colors: c),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _modelCtrl,
+                    style: TextStyle(color: c.text),
+                    decoration: InputDecoration(
+                      hintText: t('post.model', lang),
+                      hintStyle: TextStyle(color: c.textMuted, fontSize: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   _FilterDropdown(
                     label: t('post.city', lang),
                     value: _filters['city'],
@@ -247,6 +258,20 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     }),
                   ),
                   const SizedBox(height: 14),
+                  _FilterDropdown(
+                    label: t('detail.color', lang),
+                    value: _filters['color'],
+                    items: _colors,
+                    colors: c,
+                    onChanged: (v) => setState(() {
+                      if (v == null) {
+                        _filters.remove('color');
+                      } else {
+                        _filters['color'] = v;
+                      }
+                    }),
+                  ),
+                  const SizedBox(height: 14),
                   _RangeRow(
                     label: t('filter.yearRange', lang),
                     fromCtrl: _yearFromCtrl,
@@ -275,6 +300,20 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       hintText: t('filter.mileageHint', lang),
                       hintStyle: TextStyle(color: c.textMuted, fontSize: 14),
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  _FilterDropdown(
+                    label: t('filter.sortBy', lang),
+                    value: _filters['sort_by'],
+                    items: _sortOptions,
+                    colors: c,
+                    onChanged: (v) => setState(() {
+                      if (v == null) {
+                        _filters.remove('sort_by');
+                      } else {
+                        _filters['sort_by'] = v;
+                      }
+                    }),
                   ),
                   const SizedBox(height: 24),
                 ],

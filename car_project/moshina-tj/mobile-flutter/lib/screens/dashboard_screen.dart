@@ -384,6 +384,14 @@ class _SettingsCard extends StatelessWidget {
           ),
           Divider(color: c.border, height: 1),
           _SettingRow(
+            icon: Icons.lock_reset_outlined,
+            label: t('auth.forgotPassword', lang),
+            c: c,
+            onTap: () => context.push('/forgot-password'),
+            trailing: Icon(Icons.chevron_right_rounded, color: c.textMuted, size: 20),
+          ),
+          Divider(color: c.border, height: 1),
+          _SettingRow(
             icon: Icons.chat_bubble_outline_rounded,
             label: t('chat.title', lang),
             c: c,

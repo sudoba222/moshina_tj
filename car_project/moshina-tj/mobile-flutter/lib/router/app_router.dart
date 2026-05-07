@@ -18,6 +18,7 @@ import '../screens/dealer_detail_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/edit_listing_screen.dart';
 import '../screens/support_screen.dart';
+import '../screens/forgot_password_screen.dart';
 import '../screens/privacy_policy_screen.dart';
 import '../l10n/strings.dart';
 import 'package:provider/provider.dart';
@@ -179,6 +180,11 @@ GoRouter makeAppRouter(AuthProvider auth) => GoRouter(
       path: '/support',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const SupportScreen(),
+    ),
+    GoRoute(
+      path: '/forgot-password',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ForgotPasswordScreen(),
     ),
     GoRoute(
       path: '/privacy',
