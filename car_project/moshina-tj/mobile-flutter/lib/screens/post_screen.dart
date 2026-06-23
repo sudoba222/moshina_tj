@@ -362,7 +362,7 @@ class _PostScreenState extends State<PostScreen> {
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             validator: (v) {
               final y = int.tryParse(v ?? '');
-              if (y == null || y < 1900 || y > 2026) return t('post.required.year', lang);
+              if (y == null || y < 1900 || y > DateTime.now().year + 1) return t('post.required.year', lang);
               return null;
             },
           ),
@@ -483,8 +483,16 @@ class _PostScreenState extends State<PostScreen> {
           );
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not pick photo: $e')),
+        );
+      }
+    }
   }
+
+  bool get _anyUploading => _uploadingFlags.any((f) => f == true);
 
   void _removePhoto(int index) {
     setState(() {
@@ -529,22 +537,23 @@ class _PostScreenState extends State<PostScreen> {
   }
 
   Widget _buildAddTile(AppColors c, String lang) {
+    final disabled = _anyUploading;
     return GestureDetector(
-      onTap: () => _showPickerSheet(c, lang),
+      onTap: disabled ? null : () => _showPickerSheet(c, lang),
       child: Container(
         decoration: BoxDecoration(
           color: c.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: c.border, width: 1.5),
+          border: Border.all(color: disabled ? c.border.withValues(alpha: 0.5) : c.border, width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_photo_alternate_outlined, color: c.accent, size: 32),
+            Icon(Icons.add_photo_alternate_outlined, color: disabled ? c.textMuted : c.accent, size: 32),
             const SizedBox(height: 6),
             Text(
               t('post.addPhoto', lang),
-              style: TextStyle(color: c.accent, fontSize: 11, fontWeight: FontWeight.w600),
+              style: TextStyle(color: disabled ? c.textMuted : c.accent, fontSize: 11, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ],
@@ -887,7 +896,7 @@ class _PostScreenState extends State<PostScreen> {
           _scrollToField(_modelFieldKey, _modelFocus);
         } else {
           final y = int.tryParse(_yearCtrl.text.trim());
-          if (y == null || y < 1900 || y > 2026) {
+          if (y == null || y < 1900 || y > DateTime.now().year + 1) {
             _scrollToField(_yearFieldKey, _yearFocus);
           }
         }

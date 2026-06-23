@@ -12,9 +12,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
-from app.database import SessionLocal
+from app.database import get_db
 from app.models import Notification, NotificationType, User
 from app.schemas import ApiResponse
 
@@ -71,25 +72,21 @@ def list_notifications(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        base = (
-            db.query(Notification)
-            .filter(Notification.user_id == current_user.id)
-            .order_by(Notification.created_at.desc())
-        )
-        total = base.count()
-        pages = math.ceil(total / limit) if total > 0 else 1
-        items = base.offset((page - 1) * limit).limit(limit).all()
-        out = [_notification_to_out(n) for n in items]
-        total_val, pages_val = total, pages
-    finally:
-        db.close()
+    base = (
+        db.query(Notification)
+        .filter(Notification.user_id == current_user.id)
+        .order_by(Notification.created_at.desc())
+    )
+    total = base.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    items = base.offset((page - 1) * limit).limit(limit).all()
+    out = [_notification_to_out(n) for n in items]
 
     return ApiResponse(
         success=True,
-        data=NotificationPageOut(items=out, total=total_val, page=page, pages=pages_val),
+        data=NotificationPageOut(items=out, total=total, page=page, pages=pages),
         message="Notifications fetched",
     )
 
@@ -99,19 +96,18 @@ def list_notifications(
 # ---------------------------------------------------------------------------
 
 @router.get("/unread-count", response_model=ApiResponse[UnreadCountOut])
-def unread_count(current_user: User = Depends(get_current_user)):
-    db = SessionLocal()
-    try:
-        count = (
-            db.query(Notification)
-            .filter(
-                Notification.user_id == current_user.id,
-                Notification.is_read == False,  # noqa: E712
-            )
-            .count()
+def unread_count(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    count = (
+        db.query(Notification)
+        .filter(
+            Notification.user_id == current_user.id,
+            Notification.is_read == False,  # noqa: E712
         )
-    finally:
-        db.close()
+        .count()
+    )
     return ApiResponse(success=True, data=UnreadCountOut(count=count), message="Unread count")
 
 
@@ -121,16 +117,15 @@ def unread_count(current_user: User = Depends(get_current_user)):
 # ---------------------------------------------------------------------------
 
 @router.put("/read-all", response_model=ApiResponse[None])
-def mark_all_read(current_user: User = Depends(get_current_user)):
-    db = SessionLocal()
-    try:
-        db.query(Notification).filter(
-            Notification.user_id == current_user.id,
-            Notification.is_read == False,  # noqa: E712
-        ).update({"is_read": True}, synchronize_session=False)
-        db.commit()
-    finally:
-        db.close()
+def mark_all_read(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    db.query(Notification).filter(
+        Notification.user_id == current_user.id,
+        Notification.is_read == False,  # noqa: E712
+    ).update({"is_read": True}, synchronize_session=False)
+    db.commit()
     return ApiResponse(success=True, data=None, message="All notifications marked as read")
 
 
@@ -142,21 +137,18 @@ def mark_all_read(current_user: User = Depends(get_current_user)):
 def mark_one_read(
     notification_id: str,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        n = (
-            db.query(Notification)
-            .filter(
-                Notification.id == notification_id,
-                Notification.user_id == current_user.id,
-            )
-            .first()
+    n = (
+        db.query(Notification)
+        .filter(
+            Notification.id == notification_id,
+            Notification.user_id == current_user.id,
         )
-        if not n:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
-        n.is_read = True
-        db.commit()
-    finally:
-        db.close()
+        .first()
+    )
+    if not n:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
+    n.is_read = True
+    db.commit()
     return ApiResponse(success=True, data=None, message="Notification marked as read")

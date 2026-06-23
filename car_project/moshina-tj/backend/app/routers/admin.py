@@ -770,18 +770,16 @@ def admin_listings(
     _: User = Depends(_require_staff),
 ):
     import uuid as _uuid
-    query = (
-        db.query(Listing)
-        .options(joinedload(Listing.images), joinedload(Listing.user))
-    )
+    # Build filter query WITHOUT joinedload so count() is accurate
+    count_query = db.query(Listing)
 
     if not include_deleted:
-        query = query.filter(Listing.is_deleted == False)
+        count_query = count_query.filter(Listing.is_deleted == False)
 
     if status and status != "all":
         try:
             status_enum = ListingStatus(status)
-            query = query.filter(Listing.status == status_enum)
+            count_query = count_query.filter(Listing.status == status_enum)
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid status value: {status}")
 
@@ -791,10 +789,10 @@ def admin_listings(
         # UUID → search by exact listing ID
         try:
             lid_val = _uuid.UUID(stripped_search)
-            query = query.filter(Listing.id == lid_val)
+            count_query = count_query.filter(Listing.id == lid_val)
         except ValueError:
             ilike_search = f"%{stripped_search}%"
-            query = query.filter(
+            count_query = count_query.filter(
                 or_(
                     Listing.brand.ilike(ilike_search),
                     Listing.model.ilike(ilike_search),
@@ -807,14 +805,16 @@ def admin_listings(
             uid = _uuid.UUID(user_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid user_id UUID")
-        query = query.filter(Listing.user_id == uid)
+        count_query = count_query.filter(Listing.user_id == uid)
     if brand:
-        query = query.filter(Listing.brand.ilike(f"%{brand}%"))
+        count_query = count_query.filter(Listing.brand.ilike(f"%{brand}%"))
     if city:
-        query = query.filter(Listing.city.ilike(f"%{city}%"))
+        count_query = count_query.filter(Listing.city.ilike(f"%{city}%"))
 
-    total = query.count()
+    total = count_query.count()
     pages = math.ceil(total / limit) if total > 0 else 1
+    # Now add joinedload for the actual data fetch
+    query = count_query.options(joinedload(Listing.images), joinedload(Listing.user))
     items = query.order_by(Listing.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
 
     # Fetch latest log for each listing in a single query to avoid N+1
@@ -1027,41 +1027,41 @@ def staff_search_listings(
     """Advanced staff search — includes ALL statuses (pending, active, rejected, draft)."""
     import uuid as _uuid
 
-    query = (
-        db.query(Listing)
-        .options(joinedload(Listing.images), joinedload(Listing.user))
-    )
+    # Build filter query WITHOUT joinedload so count() is accurate
+    count_query = db.query(Listing)
 
     if listing_id:
         try:
             lid = _uuid.UUID(listing_id)
-            query = query.filter(Listing.id == lid)
+            count_query = count_query.filter(Listing.id == lid)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid listing_id UUID")
 
     if status and status != "all":
         try:
             status_enum = ListingStatus(status)
-            query = query.filter(Listing.status == status_enum)
+            count_query = count_query.filter(Listing.status == status_enum)
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
 
     if moderator_id:
         try:
             mid = _uuid.UUID(moderator_id)
-            query = query.filter(Listing.moderated_by == mid)
+            count_query = count_query.filter(Listing.moderated_by == mid)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid moderator_id UUID")
 
     if user_phone or user_name:
-        query = query.join(User, Listing.user_id == User.id)
+        count_query = count_query.join(User, Listing.user_id == User.id)
         if user_phone:
-            query = query.filter(User.phone.ilike(f"%{user_phone}%"))
+            count_query = count_query.filter(User.phone.ilike(f"%{user_phone}%"))
         if user_name:
-            query = query.filter(User.name.ilike(f"%{user_name}%"))
+            count_query = count_query.filter(User.name.ilike(f"%{user_name}%"))
 
-    total = query.count()
+    total = count_query.count()
     pages = math.ceil(total / limit) if total > 0 else 1
+    # Now add joinedload for the actual data fetch
+    query = count_query.options(joinedload(Listing.images), joinedload(Listing.user))
     items = query.order_by(Listing.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
 
     result_items = []
@@ -1363,8 +1363,8 @@ async def approve_listing(
     listing = db.query(Listing).options(joinedload(Listing.user), joinedload(Listing.images)).filter(Listing.id == listing_id, Listing.is_deleted == False).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
-    if listing.user_id == current_user.id and current_user.role != UserRole.admin:
-        raise HTTPException(status_code=403, detail="Moderators cannot approve their own listings")
+    if listing.user_id == current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot approve your own listing")
     if listing.status == ListingStatus.active:
         return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing is already active")
     old_status = listing.status.value if listing.status else None
@@ -1941,7 +1941,7 @@ def moderator_logs(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ):
     """Admin-only: full chronological listing-log history for a specific staff member."""
     import uuid as _uuid
@@ -2178,7 +2178,7 @@ def bulk_reject_listings(
                 action="rejected",
                 from_status=old_status,
                 to_status="rejected",
-                note=payload.reason,
+                reason=payload.reason,
             ))
             rejected += 1
     if active_session:

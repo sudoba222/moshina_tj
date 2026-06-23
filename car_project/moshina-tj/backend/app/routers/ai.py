@@ -1,3 +1,4 @@
+import logging
 from typing import Literal, Optional
 
 import anthropic
@@ -10,6 +11,8 @@ from app.config import settings
 from app.limiter import limiter
 from app.models import User
 from app.schemas import ApiResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -145,9 +148,10 @@ def refine_description(
         except Exception as e:
             # If Anthropic is not configured, we'll error out here, otherwise we try Anthropic
             if not settings.anthropic_api_key:
+                logger.error("AI error (Groq): %s", e)
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail=f"AI service error (Groq): {str(e)}",
+                    detail="AI service temporarily unavailable",
                 )
 
     # 2. Try Anthropic (Fallback)
@@ -163,9 +167,10 @@ def refine_description(
             refined_text = response.content[0].text.strip()
             return ApiResponse(success=True, data=refined_text, message="Description refined via Anthropic")
         except Exception as e:
+            logger.error("AI error (Anthropic): %s", e)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"AI service error (Anthropic): {str(e)}",
+                detail="AI service temporarily unavailable",
             )
 
     # 3. Neither configured

@@ -39,6 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
+  Timer? _reconnectTimer;
   _WsStatus _wsStatus = _WsStatus.connecting;
   int _reconnectAttempts = 0;
 
@@ -68,6 +69,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _ctrl.dispose();
     _scrollCtrl.dispose();
     _sub?.cancel();
+    _reconnectTimer?.cancel();
     _channel?.sink.close();
     super.dispose();
   }
@@ -94,6 +96,10 @@ class _ChatScreenState extends State<ChatScreen> {
         _loadingHistory = false;
       });
       if (refresh) _scrollToBottom();
+      // Mark conversation as read after loading; ignore failures.
+      try {
+        await context.read<ApiService>().markConversationRead(widget.convId);
+      } catch (_) {}
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingHistory = false);
@@ -162,12 +168,19 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _connectWs() async {
     final token = await context.read<ApiService>().getToken();
     if (!mounted) return;
-    final uri = Uri.parse(_wsUrl);
+    // Pass token as query param — iOS strips custom HTTP headers during the
+    // WebSocket upgrade handshake, so header-only auth fails on iOS.
+    final baseUri = Uri.parse(_wsUrl);
+    final uri = token != null
+        ? baseUri.replace(
+            queryParameters: {
+              ...baseUri.queryParameters,
+              'token': token,
+            },
+          )
+        : baseUri;
     try {
-      _channel = IOWebSocketChannel.connect(
-        uri,
-        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
-      );
+      _channel = IOWebSocketChannel.connect(uri);
       setState(() => _wsStatus = _WsStatus.connected);
       _sub = _channel!.stream.listen(
         _onWsMessage,
@@ -183,7 +196,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _onWsMessage(dynamic raw) {
     try {
       final payload = jsonDecode(raw as String) as Map<String, dynamic>;
-      if (payload['event'] == 'new_message') {
+      if (payload['event'] == 'new_message' &&
+          payload['conversation_id'].toString() == widget.convId.toString()) {
         final msg = payload['message'] as Map<String, dynamic>;
         if (!mounted) return;
         final nearBottom = !_scrollCtrl.hasClients ||
@@ -212,7 +226,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _scheduleReconnect() {
     if (_reconnectAttempts >= _maxReconnects) return;
     _reconnectAttempts++;
-    Future.delayed(_reconnectDelay, () {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(_reconnectDelay, () {
       if (mounted) _connectWs();
     });
   }

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
-from app.database import SessionLocal
+from app.database import get_db
 from app.models import Conversation, ConversationType, Message, User, UserRole
 from app.schemas import ApiResponse
 
@@ -110,23 +110,22 @@ def _conv_to_ticket(conv: Conversation, agent_id: Optional[_uuid.UUID] = None) -
 # ---------------------------------------------------------------------------
 
 @router.get("/tickets", response_model=ApiResponse[list[SupportTicketOut]])
-def list_support_tickets(current_user: User = Depends(_require_support)):
-    db = SessionLocal()
-    try:
-        convs = (
-            db.query(Conversation)
-            .options(
-                joinedload(Conversation.participant1),
-                joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
-            )
-            .filter(Conversation.type == ConversationType.support)
-            .order_by(Conversation.updated_at.desc())
-            .all()
+def list_support_tickets(
+    current_user: User = Depends(_require_support),
+    db: Session = Depends(get_db),
+):
+    convs = (
+        db.query(Conversation)
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.messages),
         )
-        data = [_conv_to_ticket(c, current_user.id) for c in convs]
-    finally:
-        db.close()
+        .filter(Conversation.type == ConversationType.support)
+        .order_by(Conversation.updated_at.desc())
+        .all()
+    )
+    data = [_conv_to_ticket(c, current_user.id) for c in convs]
     return ApiResponse(success=True, data=data, message="Support tickets fetched")
 
 
@@ -135,49 +134,48 @@ def list_support_tickets(current_user: User = Depends(_require_support)):
 # ---------------------------------------------------------------------------
 
 @router.post("/tickets", response_model=ApiResponse[SupportTicketOut], status_code=status.HTTP_201_CREATED)
-def create_support_ticket(current_user: User = Depends(get_current_user)):
-    db = SessionLocal()
-    try:
-        # Reuse existing open ticket if user already has one
-        existing = (
-            db.query(Conversation)
-            .options(
-                joinedload(Conversation.participant1),
-                joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
-            )
-            .filter(
-                Conversation.type == ConversationType.support,
-                Conversation.participant1_id == current_user.id,
-            )
-            .order_by(Conversation.created_at.desc())
-            .first()
+def create_support_ticket(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Reuse existing open ticket if user already has one
+    existing = (
+        db.query(Conversation)
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.messages),
         )
-        if existing:
-            return ApiResponse(success=True, data=_conv_to_ticket(existing), message="Existing support ticket returned")
+        .filter(
+            Conversation.type == ConversationType.support,
+            Conversation.participant1_id == current_user.id,
+        )
+        .order_by(Conversation.created_at.desc())
+        .first()
+    )
+    if existing:
+        return ApiResponse(success=True, data=_conv_to_ticket(existing), message="Existing support ticket returned")
 
-        conv = Conversation(
-            type=ConversationType.support,
-            participant1_id=current_user.id,
-            participant2_id=None,
-            listing_id=None,
+    conv = Conversation(
+        type=ConversationType.support,
+        participant1_id=current_user.id,
+        participant2_id=None,
+        listing_id=None,
+    )
+    db.add(conv)
+    db.commit()
+    db.refresh(conv)
+    conv = (
+        db.query(Conversation)
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.messages),
         )
-        db.add(conv)
-        db.commit()
-        db.refresh(conv)
-        conv = (
-            db.query(Conversation)
-            .options(
-                joinedload(Conversation.participant1),
-                joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
-            )
-            .filter(Conversation.id == conv.id)
-            .first()
-        )
-        data = _conv_to_ticket(conv)
-    finally:
-        db.close()
+        .filter(Conversation.id == conv.id)
+        .first()
+    )
+    data = _conv_to_ticket(conv)
     return ApiResponse(success=True, data=data, message="Support ticket created")
 
 
@@ -186,39 +184,39 @@ def create_support_ticket(current_user: User = Depends(get_current_user)):
 # ---------------------------------------------------------------------------
 
 @router.post("/assign/{conv_id}", response_model=ApiResponse[SupportTicketOut])
-def assign_ticket(conv_id: str, current_user: User = Depends(_require_support)):
-    db = SessionLocal()
-    try:
-        conv = (
-            db.query(Conversation)
-            .options(
-                joinedload(Conversation.participant1),
-                joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
-            )
-            .filter(
-                Conversation.id == conv_id,
-                Conversation.type == ConversationType.support,
-            )
-            .first()
+def assign_ticket(
+    conv_id: str,
+    current_user: User = Depends(_require_support),
+    db: Session = Depends(get_db),
+):
+    conv = (
+        db.query(Conversation)
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.messages),
         )
-        if not conv:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found")
-        conv.participant2_id = current_user.id
-        db.commit()
-        conv = (
-            db.query(Conversation)
-            .options(
-                joinedload(Conversation.participant1),
-                joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
-            )
-            .filter(Conversation.id == conv_id)
-            .first()
+        .filter(
+            Conversation.id == conv_id,
+            Conversation.type == ConversationType.support,
         )
-        data = _conv_to_ticket(conv, current_user.id)
-    finally:
-        db.close()
+        .first()
+    )
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found")
+    conv.participant2_id = current_user.id
+    db.commit()
+    conv = (
+        db.query(Conversation)
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.messages),
+        )
+        .filter(Conversation.id == conv_id)
+        .first()
+    )
+    data = _conv_to_ticket(conv, current_user.id)
     return ApiResponse(success=True, data=data, message="Ticket assigned")
 
 
@@ -227,43 +225,43 @@ def assign_ticket(conv_id: str, current_user: User = Depends(_require_support)):
 # ---------------------------------------------------------------------------
 
 @router.put("/close/{conv_id}", response_model=ApiResponse[SupportTicketOut])
-def close_ticket(conv_id: str, current_user: User = Depends(_require_support)):
+def close_ticket(
+    conv_id: str,
+    current_user: User = Depends(_require_support),
+    db: Session = Depends(get_db),
+):
     """Mark all messages as read and ensure ticket is assigned to current agent."""
-    db = SessionLocal()
-    try:
-        conv = (
-            db.query(Conversation)
-            .options(
-                joinedload(Conversation.participant1),
-                joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
-            )
-            .filter(
-                Conversation.id == conv_id,
-                Conversation.type == ConversationType.support,
-            )
-            .first()
+    conv = (
+        db.query(Conversation)
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.messages),
         )
-        if not conv:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found")
-        if not conv.participant2_id:
-            conv.participant2_id = current_user.id
-        db.query(Message).filter(
-            Message.conversation_id == conv_id,
-            Message.is_read == False,  # noqa: E712
-        ).update({"is_read": True}, synchronize_session=False)
-        db.commit()
-        conv = (
-            db.query(Conversation)
-            .options(
-                joinedload(Conversation.participant1),
-                joinedload(Conversation.participant2),
-                joinedload(Conversation.messages),
-            )
-            .filter(Conversation.id == conv_id)
-            .first()
+        .filter(
+            Conversation.id == conv_id,
+            Conversation.type == ConversationType.support,
         )
-        data = _conv_to_ticket(conv, current_user.id)
-    finally:
-        db.close()
+        .first()
+    )
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found")
+    if not conv.participant2_id:
+        conv.participant2_id = current_user.id
+    db.query(Message).filter(
+        Message.conversation_id == conv_id,
+        Message.is_read == False,  # noqa: E712
+    ).update({"is_read": True}, synchronize_session=False)
+    db.commit()
+    conv = (
+        db.query(Conversation)
+        .options(
+            joinedload(Conversation.participant1),
+            joinedload(Conversation.participant2),
+            joinedload(Conversation.messages),
+        )
+        .filter(Conversation.id == conv_id)
+        .first()
+    )
+    data = _conv_to_ticket(conv, current_user.id)
     return ApiResponse(success=True, data=data, message="Ticket closed")

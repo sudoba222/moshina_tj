@@ -125,18 +125,18 @@ const icons: Record<string, React.ReactNode> = {
 }
 
 const CATEGORIES = [
-  { id: 'car',        descRu: 'Легковые, хэтчбеки, кроссоверы',       descTj: 'Мошинаҳои сабук, хэтчбек, кроссовер' },
-  { id: 'suv',        descRu: 'Полноприводные и проходимые авто',       descTj: 'Мошинаҳои полноприводӣ ва гузаранда' },
-  { id: 'minivan',    descRu: 'Семейные и пассажирские минивэны',       descTj: 'Минивэнҳои оилавӣ ва мусофирбар' },
-  { id: 'pickup',     descRu: 'Пикапы для работы и отдыха',            descTj: 'Пикапҳо барои кор ва истироҳат' },
-  { id: 'truck',      descRu: 'Бортовые, самосвалы, рефрижераторы',    descTj: 'Борӣ, самосвал, рефрижератор' },
-  { id: 'bus',        descRu: 'Городские, межгородские и школьные',    descTj: 'Шаҳрӣ, байнишаҳрӣ ва мактабӣ' },
-  { id: 'motorcycle', descRu: 'Мотоциклы, скутеры, эндуро',            descTj: 'Мотосикл, скутер, эндуро' },
-  { id: 'special',    descRu: 'Экскаваторы, краны, бульдозеры',        descTj: 'Экскаватор, кран, бульдозер' },
-  { id: 'parts',      descRu: 'Запчасти, аксессуары, шины, диски',     descTj: 'Эҳтиётқисм, аксессуар, шина, диск' },
-  { id: 'commercial', descRu: 'Газели, микроавтобусы, фургоны',        descTj: 'Газель, микроавтобус, фургон' },
-  { id: 'electric',   descRu: 'Электрокары и гибриды',                 descTj: 'Мошинаҳои барқӣ ва гибридӣ' },
-  { id: 'other',      descRu: 'Прочий транспорт',                       descTj: 'Нақлиёти дигар' },
+  { id: 'car' },
+  { id: 'suv' },
+  { id: 'minivan' },
+  { id: 'pickup' },
+  { id: 'truck' },
+  { id: 'bus' },
+  { id: 'motorcycle' },
+  { id: 'special' },
+  { id: 'parts' },
+  { id: 'commercial' },
+  { id: 'electric' },
+  { id: 'other' },
 ]
 
 export default function CategoriesPage() {
@@ -201,7 +201,7 @@ export default function CategoriesPage() {
                     {t(`categories.${cat.id}` as Parameters<typeof t>[0], lang)}
                   </h2>
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                    {lang === 'ru' ? cat.descRu : cat.descTj}
+                    {t(`categories.${cat.id}_desc` as Parameters<typeof t>[0], lang)}
                   </p>
                 </div>
 
@@ -220,6 +220,7 @@ export default function CategoriesPage() {
                   </Link>
                   <Link
                     href={`/post?category=${cat.id}`}
+                    aria-label={t('categories.postInCategory', lang)}
                     style={{
                       padding: '10px 14px', borderRadius: '10px', fontSize: '13px',
                       fontWeight: 700, border: '1.5px solid var(--border)',

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
-from app.database import SessionLocal
+from app.database import get_db
 from app.limiter import limiter
 from app.models import Dealer, DealerSubscription, Listing, ListingStatus, User
 from app.schemas import ApiResponse, DealerResponse, ListingListResponse, ListingResponse
@@ -58,40 +58,37 @@ def toggle_subscribe(
     request: Request,
     dealer_id: str,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        _get_dealer_or_404(dealer_id, db)
+    _get_dealer_or_404(dealer_id, db)
 
-        existing = (
-            db.query(DealerSubscription)
-            .filter(
-                DealerSubscription.user_id == current_user.id,
-                DealerSubscription.dealer_id == dealer_id,
-            )
-            .first()
+    existing = (
+        db.query(DealerSubscription)
+        .filter(
+            DealerSubscription.user_id == current_user.id,
+            DealerSubscription.dealer_id == dealer_id,
         )
+        .first()
+    )
 
-        if existing:
-            db.delete(existing)
-            db.commit()
-            subscribed = False
-        else:
-            sub = DealerSubscription(
-                user_id=current_user.id,
-                dealer_id=_uuid.UUID(dealer_id),
-            )
-            db.add(sub)
-            db.commit()
-            subscribed = True
-
-        count = (
-            db.query(DealerSubscription)
-            .filter(DealerSubscription.dealer_id == dealer_id)
-            .count()
+    if existing:
+        db.delete(existing)
+        db.commit()
+        subscribed = False
+    else:
+        sub = DealerSubscription(
+            user_id=current_user.id,
+            dealer_id=_uuid.UUID(dealer_id),
         )
-    finally:
-        db.close()
+        db.add(sub)
+        db.commit()
+        subscribed = True
+
+    count = (
+        db.query(DealerSubscription)
+        .filter(DealerSubscription.dealer_id == dealer_id)
+        .count()
+    )
 
     msg = "Subscribed" if subscribed else "Unsubscribed"
     return ApiResponse(
@@ -112,22 +109,19 @@ def toggle_subscribe(
 def check_subscription(
     dealer_id: str,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        _get_dealer_or_404(dealer_id, db)
+    _get_dealer_or_404(dealer_id, db)
 
-        exists = (
-            db.query(DealerSubscription)
-            .filter(
-                DealerSubscription.user_id == current_user.id,
-                DealerSubscription.dealer_id == dealer_id,
-            )
-            .first()
+    exists = (
+        db.query(DealerSubscription)
+        .filter(
+            DealerSubscription.user_id == current_user.id,
+            DealerSubscription.dealer_id == dealer_id,
         )
-        subscribed = exists is not None
-    finally:
-        db.close()
+        .first()
+    )
+    subscribed = exists is not None
 
     return ApiResponse(
         success=True,
@@ -148,56 +142,53 @@ def subscription_feed(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        # Find all dealer_ids this user follows
-        subs = (
-            db.query(DealerSubscription.dealer_id)
-            .filter(DealerSubscription.user_id == current_user.id)
-            .all()
-        )
-        dealer_ids = [row.dealer_id for row in subs]
+    # Find all dealer_ids this user follows
+    subs = (
+        db.query(DealerSubscription.dealer_id)
+        .filter(DealerSubscription.user_id == current_user.id)
+        .all()
+    )
+    dealer_ids = [row.dealer_id for row in subs]
 
-        if not dealer_ids:
-            return ApiResponse(
-                success=True,
-                data=ListingListResponse(items=[], total=0, page=page, pages=1),
-                message="No subscriptions",
-            )
-
-        # Find user_ids that own those dealer profiles
-        dealer_user_ids = (
-            db.query(Dealer.user_id)
-            .filter(Dealer.id.in_(dealer_ids))
-            .all()
-        )
-        user_ids = [row.user_id for row in dealer_user_ids]
-
-        base = (
-            db.query(Listing)
-            .options(joinedload(Listing.images), joinedload(Listing.user))
-            .filter(
-                Listing.user_id.in_(user_ids),
-                Listing.status == ListingStatus.active,
-                Listing.is_active == True,
-                Listing.is_deleted == False,
-            )
-            .order_by(Listing.created_at.desc())
+    if not dealer_ids:
+        return ApiResponse(
+            success=True,
+            data=ListingListResponse(items=[], total=0, page=page, pages=1),
+            message="No subscriptions",
         )
 
-        total = base.count()
-        pages = math.ceil(total / limit) if total > 0 else 1
-        items = base.offset((page - 1) * limit).limit(limit).all()
+    # Find user_ids that own those dealer profiles
+    dealer_user_ids = (
+        db.query(Dealer.user_id)
+        .filter(Dealer.id.in_(dealer_ids))
+        .all()
+    )
+    user_ids = [row.user_id for row in dealer_user_ids]
 
-        data = ListingListResponse(
-            items=[ListingResponse.model_validate(l) for l in items],
-            total=total,
-            page=page,
-            pages=pages,
+    base = (
+        db.query(Listing)
+        .options(joinedload(Listing.images), joinedload(Listing.user))
+        .filter(
+            Listing.user_id.in_(user_ids),
+            Listing.status == ListingStatus.active,
+            Listing.is_active == True,
+            Listing.is_deleted == False,
         )
-    finally:
-        db.close()
+        .order_by(Listing.created_at.desc())
+    )
+
+    total = base.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+    items = base.offset((page - 1) * limit).limit(limit).all()
+
+    data = ListingListResponse(
+        items=[ListingResponse.model_validate(l) for l in items],
+        total=total,
+        page=page,
+        pages=pages,
+    )
 
     return ApiResponse(success=True, data=data, message="Feed fetched")
 
@@ -210,18 +201,17 @@ def subscription_feed(
     "/subscriptions/dealers",
     response_model=ApiResponse[list[DealerResponse]],
 )
-def list_followed_dealers(current_user: User = Depends(get_current_user)):
-    db = SessionLocal()
-    try:
-        subs = (
-            db.query(DealerSubscription)
-            .options(joinedload(DealerSubscription.dealer))
-            .filter(DealerSubscription.user_id == current_user.id)
-            .order_by(DealerSubscription.created_at.desc())
-            .all()
-        )
-        dealers = [DealerResponse.model_validate(s.dealer) for s in subs if s.dealer]
-    finally:
-        db.close()
+def list_followed_dealers(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    subs = (
+        db.query(DealerSubscription)
+        .options(joinedload(DealerSubscription.dealer))
+        .filter(DealerSubscription.user_id == current_user.id)
+        .order_by(DealerSubscription.created_at.desc())
+        .all()
+    )
+    dealers = [DealerResponse.model_validate(s.dealer) for s in subs if s.dealer]
 
     return ApiResponse(success=True, data=dealers, message="Followed dealers fetched")

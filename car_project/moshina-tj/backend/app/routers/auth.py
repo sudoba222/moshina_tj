@@ -337,23 +337,30 @@ def register(request: Request, response: Response, payload: UserCreate, backgrou
     "/login",
     response_model=ApiResponse[AuthResponse],
 )
-@limiter.limit("20/minute")
+@limiter.limit("10/15minutes")
 def login(request: Request, response: Response, payload: LoginPayload, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User with this phone number not found",
+            detail="Invalid credentials",
         )
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password",
+            detail="Invalid credentials",
         )
     if user.is_banned:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is suspended",
+        )
+
+    _STAFF_ROLES_PHONE = {UserRole.admin, UserRole.moderator, UserRole.manager, UserRole.support, UserRole.dealer}
+    if not user.phone_verified and user.role not in _STAFF_ROLES_PHONE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Phone not verified",
         )
 
     user.last_login_at = datetime.now(timezone.utc)
@@ -797,10 +804,10 @@ def login_email(request: Request, response: Response, payload: EmailLoginPayload
     user = db.query(User).filter(User.email == payload.email, User.is_deleted == False).first()
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account with this email not found")
-    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
     if not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     if user.is_banned:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is suspended")
@@ -1278,8 +1285,8 @@ def apple_auth(
     # 1. Look up by apple_id
     user = db.query(User).filter(User.apple_id == apple_sub, User.is_deleted == False).first()
 
-    # 2. Fall back to email match
-    if not user and email:
+    # 2. Fall back to email match — only if Apple has verified the email
+    if not user and email and claims.get("email_verified", False):
         user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
         if user:
             user.apple_id = apple_sub

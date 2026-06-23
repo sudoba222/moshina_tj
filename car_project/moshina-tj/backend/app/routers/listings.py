@@ -227,9 +227,9 @@ async def list_listings(
     if cached is not None:
         return ApiResponse(success=True, data=cached, message="Listings fetched")
 
-    query = (
+    # Build filter query WITHOUT joinedload so count() is accurate
+    count_query = (
         db.query(Listing)
-        .options(joinedload(Listing.images), joinedload(Listing.user))
         .filter(
             Listing.status == ListingStatus.active,
             Listing.is_active == True,
@@ -238,43 +238,47 @@ async def list_listings(
     )
 
     if type:
-        query = query.filter(Listing.type == type)
+        count_query = count_query.filter(Listing.type == type)
     if availability:
-        query = query.filter(Listing.availability == availability)
+        count_query = count_query.filter(Listing.availability == availability)
     if city:
-        query = query.filter(Listing.city.ilike(f"%{city}%"))
+        count_query = count_query.filter(Listing.city.ilike(f"%{city}%"))
     if brand:
-        query = query.filter(Listing.brand.ilike(f"%{brand}%"))
+        count_query = count_query.filter(Listing.brand.ilike(f"%{brand}%"))
     if model:
-        query = query.filter(Listing.model.ilike(f"%{model}%"))
+        count_query = count_query.filter(Listing.model.ilike(f"%{model}%"))
     if min_price is not None:
-        query = query.filter(Listing.price >= min_price)
+        count_query = count_query.filter(Listing.price >= min_price)
     if max_price is not None:
-        query = query.filter(Listing.price <= max_price)
+        count_query = count_query.filter(Listing.price <= max_price)
     if min_year is not None:
-        query = query.filter(Listing.year >= min_year)
+        count_query = count_query.filter(Listing.year >= min_year)
     if max_year is not None:
-        query = query.filter(Listing.year <= max_year)
+        count_query = count_query.filter(Listing.year <= max_year)
     if max_mileage is not None:
-        query = query.filter(Listing.mileage <= max_mileage)
+        count_query = count_query.filter(Listing.mileage <= max_mileage)
     if color:
-        query = query.filter(Listing.color.ilike(f"%{color}%"))
+        count_query = count_query.filter(Listing.color.ilike(f"%{color}%"))
     if installment is not None:
-        query = query.filter(Listing.installment_available == installment)
+        count_query = count_query.filter(Listing.installment_available == installment)
     if fuel:
-        query = query.filter(Listing.fuel == fuel)
+        count_query = count_query.filter(Listing.fuel == fuel)
     if transmission:
-        query = query.filter(Listing.transmission == transmission)
+        count_query = count_query.filter(Listing.transmission == transmission)
     if body_type:
-        query = query.filter(Listing.body_type == body_type)
+        count_query = count_query.filter(Listing.body_type == body_type)
     if currency:
-        query = query.filter(Listing.currency == currency)
+        count_query = count_query.filter(Listing.currency == currency)
     if category_slug:
         cat = db.query(Category).filter(Category.slug == category_slug).first()
         if cat:
-            query = query.filter(Listing.category_id == cat.id)
+            count_query = count_query.filter(Listing.category_id == cat.id)
 
-    # Sorting
+    total = count_query.count()
+    pages = math.ceil(total / limit) if total > 0 else 1
+
+    # Now add joinedload and sorting for the actual data fetch
+    query = count_query.options(joinedload(Listing.images), joinedload(Listing.user))
     if sort == "price_asc":
         query = query.order_by(Listing.price.asc(), Listing.ranking_score.desc())
     elif sort == "price_desc":
@@ -287,8 +291,6 @@ async def list_listings(
         # Default: ranking score (featured + quality + freshness + engagement)
         query = query.order_by(Listing.ranking_score.desc(), Listing.created_at.desc())
 
-    total = query.count()
-    pages = math.ceil(total / limit) if total > 0 else 1
     items = (
         query
         .offset((page - 1) * limit)
@@ -754,7 +756,7 @@ async def delete_listing(
     prev_status = listing.status.value if listing.status else None
     listing.is_deleted = True
     listing.is_active = False
-    listing.status = ListingStatus.rejected  # Remove from all public feeds immediately
+    # Do not change listing.status — preserve the original status for audit trail
     db.add(ListingLog(
         listing_id=listing.id,
         actor_id=current_user.id,

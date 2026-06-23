@@ -19,6 +19,8 @@ export default function robots(): MetadataRoute.Robots {
           '/terms',
           '/privacy',
           '/electric',
+          '/categories',
+          '/users/',
           '/dushanbe',
           '/khujand',
           '/bokhtar',

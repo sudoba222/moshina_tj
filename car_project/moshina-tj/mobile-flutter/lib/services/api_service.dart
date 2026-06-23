@@ -280,10 +280,14 @@ class ApiService {
       if (data is Map<String, dynamic>) {
         final inner = data['data'];
         if (inner is Map<String, dynamic>) {
-          return inner['url'] as String? ?? '';
+          final url = inner['url'] as String? ?? inner['image_url'] as String?;
+          if (url == null || url.isEmpty) {
+            throw Exception('Image upload failed: no URL returned');
+          }
+          return url;
         }
       }
-      return '';
+      throw Exception('Image upload failed: unexpected response format');
     } on DioException catch (e) {
       throw Exception(_serverMessage(e));
     }
