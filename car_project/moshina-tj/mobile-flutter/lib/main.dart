@@ -1,8 +1,10 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/badge_provider.dart';
 import 'providers/favorites_provider.dart';
@@ -12,12 +14,17 @@ import 'providers/theme_provider.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/favorites_service.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
 
 Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: binding);
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -59,6 +66,10 @@ class _TajcarAppState extends State<TajcarApp> {
 
   late final GoRouter _router;
 
+  /// Tracks whether NotificationService has been initialized for the current
+  /// authenticated session so we only call it once per login.
+  bool _notificationsInitialized = false;
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +91,16 @@ class _TajcarAppState extends State<TajcarApp> {
       _badgeProvider.start(widget.apiService);
     } else {
       _badgeProvider.stop();
+      // Reset so notifications re-register on the next login.
+      _notificationsInitialized = false;
+    }
+  }
+
+  /// Called from build() so we have a valid [BuildContext] for navigation.
+  void _maybeInitNotifications(BuildContext context) {
+    if (!_notificationsInitialized && _authProvider.isAuthenticated) {
+      _notificationsInitialized = true;
+      NotificationService.initialize(widget.apiService, context);
     }
   }
 
@@ -102,15 +123,24 @@ class _TajcarAppState extends State<TajcarApp> {
         ChangeNotifierProvider<ThemeProvider>.value(value: _themeProvider),
         ChangeNotifierProvider<FavoritesProvider>.value(value: _favoritesProvider),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) => MaterialApp.router(
-          title: 'TajCar',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
-          themeMode: themeProvider.mode,
-          routerConfig: _router,
-        ),
+      child: Consumer2<ThemeProvider, AuthProvider>(
+        builder: (context, themeProvider, authProvider, _) {
+          // Initialize push notifications once per authenticated session.
+          // Uses addPostFrameCallback to avoid calling during build.
+          if (authProvider.isAuthenticated && !_notificationsInitialized) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _maybeInitNotifications(context);
+            });
+          }
+          return MaterialApp.router(
+            title: 'TajCar',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: themeProvider.mode,
+            routerConfig: _router,
+          );
+        },
       ),
     );
   }
