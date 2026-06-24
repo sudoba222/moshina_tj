@@ -2,6 +2,7 @@ import math
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user, get_current_user_optional
@@ -10,6 +11,29 @@ from app.models import Favorite, Listing, ListingStatus, User, UserRole
 from app.schemas import ApiResponse, ListingListResponse, ListingResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+class FCMTokenPayload(BaseModel):
+    token: str
+    platform: str = "android"
+
+    @field_validator("token")
+    @classmethod
+    def token_not_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Token must not be empty")
+        if len(v) > 500:
+            raise ValueError("Token too long (max 500 chars)")
+        return v
+
+    @field_validator("platform")
+    @classmethod
+    def platform_valid(cls, v: str) -> str:
+        v = v.strip().lower()
+        if v not in ("android", "ios"):
+            raise ValueError("platform must be 'android' or 'ios'")
+        return v
 
 _STAFF_ROLES = {UserRole.admin, UserRole.moderator, UserRole.manager, UserRole.support}
 
@@ -106,6 +130,23 @@ def get_my_favorites(
         ),
         message="Favorites fetched",
     )
+
+
+@router.post("/me/fcm-token", response_model=ApiResponse[None])
+def update_fcm_token(
+    payload: FCMTokenPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Register or update the FCM device token for push notifications.
+
+    The token is stored on the authenticated user record.  Call this endpoint
+    after every app launch so the token stays fresh — FCM tokens rotate when
+    the user reinstalls the app or clears app data.
+    """
+    current_user.fcm_token = payload.token
+    db.commit()
+    return ApiResponse(success=True, data=None, message="FCM token updated")
 
 
 # ---------------------------------------------------------------------------

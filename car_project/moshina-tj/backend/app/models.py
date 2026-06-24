@@ -133,6 +133,7 @@ class User(Base):
     deleted_at = Column(TIMESTAMP(timezone=True), nullable=True)
     token_version = Column(Integer, nullable=False, default=0, server_default="0")
     last_login_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    fcm_token = Column(String(500), nullable=True)   # Firebase Cloud Messaging token for push notifications
     created_at = Column(
         TIMESTAMP(timezone=True),
         nullable=False,

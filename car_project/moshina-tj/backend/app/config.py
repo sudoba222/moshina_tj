@@ -62,6 +62,14 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------------------------
     redis_url: str = "redis://localhost:6379"
 
+    # ---------------------------------------------------------------------------
+    # Firebase Cloud Messaging — optional; FCM push notifications for mobile.
+    # Set FIREBASE_CREDENTIALS_JSON to the contents of your service account JSON
+    # (the entire JSON as a single-line string).  If left empty, send_push() is
+    # a no-op and no error is raised — the feature degrades gracefully.
+    # ---------------------------------------------------------------------------
+    firebase_credentials_json: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @model_validator(mode="after")

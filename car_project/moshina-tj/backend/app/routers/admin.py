@@ -1421,6 +1421,17 @@ async def approve_listing(
             {"car_name": car_name, "listing_id": str(listing.id)},
         )
 
+    # FCM push notification
+    if listing.user and listing.user.fcm_token:
+        from app.firebase import send_push as _send_push
+        background_tasks.add_task(
+            _send_push,
+            listing.user.fcm_token,
+            title="Объявление одобрено",
+            body=f"{car_name} — опубликовано",
+            data={"type": "listing", "listing_id": str(listing.id)},
+        )
+
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing approved")
 
 
@@ -1492,6 +1503,17 @@ async def reject_listing(
             listing.user_id,
             "listing_rejected",
             {"car_name": car_name, "listing_id": str(listing.id), "reason": payload.reason or ""},
+        )
+
+    # FCM push notification
+    if listing.user and listing.user.fcm_token:
+        from app.firebase import send_push as _send_push
+        background_tasks.add_task(
+            _send_push,
+            listing.user.fcm_token,
+            title="Объявление отклонено",
+            body=payload.reason[:100] if payload.reason else "Требует доработки",
+            data={"type": "listing", "listing_id": str(listing.id)},
         )
 
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing rejected")

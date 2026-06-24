@@ -508,6 +508,32 @@ def _notify_offline_recipient(recipient_email: Optional[str], sender_name: Optio
     )
 
 
+def _send_new_message_push(
+    recipient_id_str: str,
+    sender_name: Optional[str],
+    msg_content: str,
+    conversation_id_str: str,
+) -> None:
+    """Background task: send an FCM push notification to the offline DM recipient."""
+    from app.firebase import send_push
+
+    db = SessionLocal()
+    try:
+        recipient = db.query(User).filter(User.id == _uuid.UUID(recipient_id_str)).first()
+        if not recipient or not recipient.fcm_token:
+            return
+        send_push(
+            recipient.fcm_token,
+            title=f"Новое сообщение от {sender_name or 'пользователя'}",
+            body=msg_content[:100] if msg_content else "Сообщение",
+            data={"type": "chat", "conversation_id": conversation_id_str},
+        )
+    except Exception:
+        logger.exception("Failed to send new-message push to user %s", recipient_id_str)
+    finally:
+        db.close()
+
+
 @router.post("/{conv_id}/messages", response_model=ApiResponse[MessageOut], status_code=status.HTTP_201_CREATED)
 @limiter.limit("60/minute")
 def send_message(
@@ -604,6 +630,14 @@ def send_message(
             # Create a DB notification for the offline recipient in the background
             background_tasks.add_task(
                 _create_message_notification,
+                recipient_id_str,
+                sender_name,
+                msg_content,
+                str(msg_conv_id),
+            )
+            # FCM push notification for mobile
+            background_tasks.add_task(
+                _send_new_message_push,
                 recipient_id_str,
                 sender_name,
                 msg_content,

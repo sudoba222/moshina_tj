@@ -115,10 +115,23 @@ def _seed_staff_accounts() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Run startup tasks then yield control to the application."""
+    import asyncio as _asyncio
+    from app.tasks import expire_old_drafts as _expire_drafts
+
     _check_production_config()
     _seed_staff_accounts()
+
+    # Schedule background tasks — they run for the lifetime of the process.
+    _draft_task = _asyncio.create_task(_expire_drafts())
+
     yield
-    # Shutdown hooks can go here if needed in the future
+
+    # Cancel background tasks on shutdown so they don't linger.
+    _draft_task.cancel()
+    try:
+        await _draft_task
+    except _asyncio.CancelledError:
+        pass
 
 
 # ---------------------------------------------------------------------------
