@@ -392,10 +392,10 @@ class _SettingsCard extends StatelessWidget {
           ),
           Divider(color: c.border, height: 1),
           _SettingRow(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: t('chat.title', lang),
+            icon: Icons.favorite_border_rounded,
+            label: t('nav.favorites', lang),
             c: c,
-            onTap: () => context.push('/chat'),
+            onTap: () => context.push('/favorites'),
             trailing: Icon(Icons.chevron_right_rounded, color: c.textMuted, size: 20),
           ),
           Divider(color: c.border, height: 1),

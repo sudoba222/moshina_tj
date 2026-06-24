@@ -23,6 +23,7 @@ import '../screens/privacy_policy_screen.dart';
 import '../l10n/strings.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/badge_provider.dart';
 import '../providers/language_provider.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -101,6 +102,12 @@ GoRouter makeAppRouter(AuthProvider auth) => GoRouter(
             child: FavoritesScreen(),
           ),
         ),
+        GoRoute(
+          path: '/chat',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: ChatListScreen(),
+          ),
+        ),
       ],
     ),
     GoRoute(
@@ -110,11 +117,6 @@ GoRouter makeAppRouter(AuthProvider auth) => GoRouter(
         final id = state.pathParameters['id'] ?? '';
         return CarDetailScreen(listingId: id);
       },
-    ),
-    GoRoute(
-      path: '/chat',
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const ChatListScreen(),
     ),
     GoRoute(
       path: '/chat/:id',
@@ -207,7 +209,7 @@ class MainScaffold extends StatelessWidget {
   int _currentIndex(String loc) {
     if (loc.startsWith('/catalog')) return 1;
     if (loc.startsWith('/post')) return 2;
-    if (loc.startsWith('/favorites')) return 3;
+    if (loc.startsWith('/chat')) return 3;
     if (loc.startsWith('/profile')) return 4;
     return 0;
   }
@@ -230,6 +232,7 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>().lang;
+    final badges = context.watch<BadgeProvider>();
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: (i) {
@@ -241,7 +244,7 @@ class _BottomNav extends StatelessWidget {
           case 2:
             context.go('/post');
           case 3:
-            context.go('/favorites');
+            context.go('/chat');
           case 4:
             context.go('/profile');
         }
@@ -263,13 +266,29 @@ class _BottomNav extends StatelessWidget {
           label: t('nav.post', lang),
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.favorite_border_rounded),
-          activeIcon: const Icon(Icons.favorite_rounded),
-          label: t('nav.favorites', lang),
+          icon: Badge(
+            isLabelVisible: badges.unreadMessages > 0,
+            label: Text(badges.unreadMessages > 99 ? '99+' : '${badges.unreadMessages}'),
+            child: const Icon(Icons.chat_bubble_outline),
+          ),
+          activeIcon: Badge(
+            isLabelVisible: badges.unreadMessages > 0,
+            label: Text(badges.unreadMessages > 99 ? '99+' : '${badges.unreadMessages}'),
+            child: const Icon(Icons.chat_bubble),
+          ),
+          label: t('nav.chat', lang),
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.person_outline),
-          activeIcon: const Icon(Icons.person),
+          icon: Badge(
+            isLabelVisible: badges.unreadNotifications > 0,
+            label: Text(badges.unreadNotifications > 99 ? '99+' : '${badges.unreadNotifications}'),
+            child: const Icon(Icons.person_outline),
+          ),
+          activeIcon: Badge(
+            isLabelVisible: badges.unreadNotifications > 0,
+            label: Text(badges.unreadNotifications > 99 ? '99+' : '${badges.unreadNotifications}'),
+            child: const Icon(Icons.person),
+          ),
           label: t('nav.profile', lang),
         ),
       ],

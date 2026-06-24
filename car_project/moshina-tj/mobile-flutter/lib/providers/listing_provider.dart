@@ -226,7 +226,8 @@ class ListingProvider extends ChangeNotifier {
 
   Future<Listing?> getListingById(String id) async {
     try {
-      final data = await _api.getRaw('/listings/$id');
+      final cleanId = id.trim().replaceAll(RegExp(r'[/\\]+$'), '');
+      final data = await _api.getRaw('/listings/$cleanId');
       return Listing.fromJson(data as Map<String, dynamic>);
     } catch (_) {
       return null;

@@ -166,6 +166,11 @@ def _notify_dealer_subscribers(
 
 
 def _get_listing_or_404(listing_id: str, db: Session) -> Listing:
+    import uuid as _uuid
+    try:
+        _uuid.UUID(listing_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
     listing = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))

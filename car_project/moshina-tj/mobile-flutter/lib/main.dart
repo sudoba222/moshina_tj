@@ -4,6 +4,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/badge_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/listing_provider.dart';
@@ -50,6 +51,7 @@ class TajcarApp extends StatefulWidget {
 class _TajcarAppState extends State<TajcarApp> {
   late final AuthService _authService;
   late final AuthProvider _authProvider;
+  late final BadgeProvider _badgeProvider;
   late final ListingProvider _listingProvider;
   late final LanguageProvider _languageProvider;
   late final ThemeProvider _themeProvider;
@@ -62,11 +64,30 @@ class _TajcarAppState extends State<TajcarApp> {
     super.initState();
     _authService = AuthService(widget.apiService);
     _authProvider = AuthProvider(_authService);
+    _badgeProvider = BadgeProvider();
     _router = makeAppRouter(_authProvider);
     _listingProvider = ListingProvider(widget.apiService);
     _languageProvider = LanguageProvider();
     _themeProvider = ThemeProvider();
     _favoritesProvider = FavoritesProvider(FavoritesService());
+
+    // Start/stop badge polling when authentication state changes.
+    _authProvider.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    if (_authProvider.isAuthenticated) {
+      _badgeProvider.start(widget.apiService);
+    } else {
+      _badgeProvider.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _authProvider.removeListener(_onAuthChanged);
+    _badgeProvider.dispose();
+    super.dispose();
   }
 
   @override
@@ -75,6 +96,7 @@ class _TajcarAppState extends State<TajcarApp> {
       providers: [
         Provider<ApiService>.value(value: widget.apiService),
         ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
+        ChangeNotifierProvider<BadgeProvider>.value(value: _badgeProvider),
         ChangeNotifierProvider<ListingProvider>.value(value: _listingProvider),
         ChangeNotifierProvider<LanguageProvider>.value(value: _languageProvider),
         ChangeNotifierProvider<ThemeProvider>.value(value: _themeProvider),
