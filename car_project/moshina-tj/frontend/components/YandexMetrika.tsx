@@ -16,7 +16,12 @@ declare global {
 
 const METRIKA_ID = process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID
 
-export default function YandexMetrika() {
+interface YandexMetrikaProps {
+  /** Per-request nonce from middleware CSP. Passed to the inline <Script> tag. */
+  nonce?: string
+}
+
+export default function YandexMetrika({ nonce }: YandexMetrikaProps) {
   const pathname = usePathname()
 
   useEffect(() => {
@@ -30,7 +35,7 @@ export default function YandexMetrika() {
 
   return (
     <>
-      <Script id="yandex-metrika" strategy="afterInteractive">
+      <Script id="yandex-metrika" strategy="afterInteractive" nonce={nonce}>
         {`(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
 m[i].l=1*new Date();
 for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}

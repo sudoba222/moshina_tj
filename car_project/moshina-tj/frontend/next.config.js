@@ -1,9 +1,4 @@
 /** @type {import('next').NextConfig} */
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
-const apiOrigin = apiUrl ? new URL(apiUrl).origin : ''
-// Derive WebSocket origin from API origin (https: → wss:, http: → ws:)
-const wsOrigin = apiOrigin ? apiOrigin.replace(/^http/, 'ws') : ''
-const isDev = process.env.NODE_ENV !== 'production'
 
 const nextConfig = {
   // ── Performance ───────────────────────────────────────────────────────────
@@ -28,6 +23,9 @@ const nextConfig = {
   },
 
   // ── HTTP Headers ──────────────────────────────────────────────────────────
+  // NOTE: Content-Security-Policy is intentionally omitted here.
+  // It is set per-request in middleware.ts using a per-request nonce so that
+  // 'unsafe-inline' is no longer needed on script-src.
   async headers() {
     return [
       // /_next/static — Vercel handles immutable caching automatically; no override needed.
@@ -38,7 +36,7 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' },
         ],
       },
-      // Security headers for every response
+      // Security headers for every response (CSP handled by middleware.ts)
       {
         source: '/(.*)',
         headers: [
@@ -47,18 +45,6 @@ const nextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://cdn.jsdelivr.net https://raw.githubusercontent.com https://mc.yandex.ru",
-              `connect-src 'self' https://mc.yandex.ru${isDev ? ' http://localhost:8000 ws://localhost:8000' : ''}${apiOrigin ? ` ${apiOrigin}` : ''}${wsOrigin ? ` ${wsOrigin}` : ''}`,
-              "frame-ancestors 'none'",
-            ].join('; '),
-          },
         ],
       },
     ]

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Outfit } from 'next/font/google'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import './globals.css'
 import { LanguageProvider } from '@/lib/LanguageContext'
 import { AuthProvider } from '@/lib/AuthContext'
@@ -193,7 +193,7 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   verification: {
-    google: 'row6KBizdW8jJmvkL5Ec-f_miqcHf6RAl7HgZFX4USU',
+    google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION ?? 'row6KBizdW8jJmvkL5Ec-f_miqcHf6RAl7HgZFX4USU',
     ...(process.env.NEXT_PUBLIC_YANDEX_VERIFICATION
       ? { yandex: process.env.NEXT_PUBLIC_YANDEX_VERIFICATION }
       : {}),
@@ -284,6 +284,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const langCookie = cookieStore.get('lang')?.value
   const lang = langCookie === 'tj' ? 'tj' : 'ru'
 
+  // Read the per-request nonce injected by middleware.ts.
+  // Passed to inline <Script> components so they are allowed by the nonce-based CSP.
+  const headerStore = await headers()
+  const nonce = headerStore.get('x-nonce') ?? ''
+
   return (
     <html lang={lang} suppressHydrationWarning>
       <body className={outfit.className}>
@@ -301,7 +306,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </AuthProvider>
         </ThemeProvider>
 
-        <YandexMetrika />
+        <YandexMetrika nonce={nonce} />
       </body>
     </html>
   )
