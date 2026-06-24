@@ -1,6 +1,8 @@
 import enum
+import uuid as _uuid_mod
 from datetime import datetime, timezone
-from typing import Optional
+from decimal import Decimal
+from typing import Any, Optional
 
 from sqlalchemy import (
     BigInteger,
@@ -544,6 +546,23 @@ class Banner(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
 
 
+def _json_safe(obj: Any) -> Any:
+    """Recursively convert non-JSON-serializable types so audit log details never crash."""
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, _uuid_mod.UUID):
+        return str(obj)
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, enum.Enum):
+        return obj.value
+    return obj
+
+
 def log_audit(db, actor_id, action: str, target_type: str = None, target_id=None, details: dict = None):
     """Helper to record an admin/moderator action in the audit log."""
     entry = AuditLog(
@@ -551,7 +570,7 @@ def log_audit(db, actor_id, action: str, target_type: str = None, target_id=None
         action=action,
         target_type=target_type,
         target_id=target_id,
-        details=details,
+        details=_json_safe(details) if details is not None else None,
         created_at=datetime.now(timezone.utc),  # explicit — DB column may lack DEFAULT
     )
     db.add(entry)
