@@ -60,19 +60,20 @@ def my_listings(
     db: Session = Depends(get_db),
 ):
     """Return all listings belonging to the current user across all statuses."""
-    query = (
-        db.query(Listing)
-        .options(joinedload(Listing.images), joinedload(Listing.user))
-        .filter(Listing.user_id == current_user.id, Listing.is_deleted == False)
-    )
+    base_filters = [Listing.user_id == current_user.id, Listing.is_deleted == False]
     if status_filter and status_filter != "all":
         try:
             status_enum = ListingStatus(status_filter)
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid status value: {status_filter}")
-        query = query.filter(Listing.status == status_enum)
+        base_filters.append(Listing.status == status_enum)
 
-    total = query.count()
+    total = db.query(Listing).filter(*base_filters).count()
+    query = (
+        db.query(Listing)
+        .options(joinedload(Listing.images), joinedload(Listing.user))
+        .filter(*base_filters)
+    )
     pages = math.ceil(total / limit) if total > 0 else 1
     items = (
         query.order_by(Listing.created_at.desc())
@@ -101,17 +102,20 @@ def get_my_favorites(
     current_user: User = Depends(get_current_user),
 ):
     """Return paginated list of listings the current user has favorited."""
+    fav_filters = [Favorite.user_id == current_user.id, Listing.is_deleted == False]
+    total = (
+        db.query(Listing)
+        .join(Favorite, Favorite.listing_id == Listing.id)
+        .filter(*fav_filters)
+        .count()
+    )
     query = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
         .join(Favorite, Favorite.listing_id == Listing.id)
-        .filter(
-            Favorite.user_id == current_user.id,
-            Listing.is_deleted == False,
-        )
+        .filter(*fav_filters)
         .order_by(Favorite.created_at.desc())
     )
-    total = query.count()
     pages = math.ceil(total / limit) if total > 0 else 1
     items = (
         query

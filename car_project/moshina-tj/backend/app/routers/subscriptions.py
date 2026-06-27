@@ -167,19 +167,19 @@ def subscription_feed(
     )
     user_ids = [row.user_id for row in dealer_user_ids]
 
+    feed_filters = [
+        Listing.user_id.in_(user_ids),
+        Listing.status == ListingStatus.active,
+        Listing.is_active == True,
+        Listing.is_deleted == False,
+    ]
+    total = db.query(Listing).filter(*feed_filters).count()
     base = (
         db.query(Listing)
         .options(joinedload(Listing.images), joinedload(Listing.user))
-        .filter(
-            Listing.user_id.in_(user_ids),
-            Listing.status == ListingStatus.active,
-            Listing.is_active == True,
-            Listing.is_deleted == False,
-        )
+        .filter(*feed_filters)
         .order_by(Listing.created_at.desc())
     )
-
-    total = base.count()
     pages = math.ceil(total / limit) if total > 0 else 1
     items = base.offset((page - 1) * limit).limit(limit).all()
 

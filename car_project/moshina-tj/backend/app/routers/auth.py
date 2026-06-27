@@ -294,7 +294,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 )
 @limiter.limit("3/hour")
 def register(request: Request, response: Response, payload: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.phone == payload.phone).first()
+    existing = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -337,7 +337,7 @@ def register(request: Request, response: Response, payload: UserCreate, backgrou
     "/login",
     response_model=ApiResponse[AuthResponse],
 )
-@limiter.limit("10/15minutes")
+@limiter.limit("5/15minutes")
 def login(request: Request, response: Response, payload: LoginPayload, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone, User.is_deleted == False).first()
     if not user:
@@ -1286,7 +1286,7 @@ def apple_auth(
     user = db.query(User).filter(User.apple_id == apple_sub, User.is_deleted == False).first()
 
     # 2. Fall back to email match — only if Apple has verified the email
-    if not user and email and claims.get("email_verified", False):
+    if not user and email and claims.get("email_verified") in (True, "true"):
         user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
         if user:
             user.apple_id = apple_sub

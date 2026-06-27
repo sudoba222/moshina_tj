@@ -10,6 +10,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
@@ -56,20 +57,35 @@ class SupportTicketOut(BaseModel):
     updated_at: str
 
 
-def _conv_to_ticket(conv: Conversation, agent_id: Optional[_uuid.UUID] = None) -> SupportTicketOut:
+def _conv_to_ticket(
+    conv: Conversation,
+    agent_id: Optional[_uuid.UUID] = None,
+    last_by_conv: Optional[dict] = None,
+    unread_by_conv: Optional[dict] = None,
+) -> SupportTicketOut:
     p1 = conv.participant1
     p2 = conv.participant2
 
-    participant_out = (
-        ParticipantOut(id=p1.id, name=p1.name, avatar_url=p1.avatar_url) if p1 else None
-    )
-    assignee_out = (
-        ParticipantOut(id=p2.id, name=p2.name, avatar_url=p2.avatar_url) if p2 else None
-    )
+    participant_out = ParticipantOut(id=p1.id, name=p1.name, avatar_url=p1.avatar_url) if p1 else None
+    assignee_out = ParticipantOut(id=p2.id, name=p2.name, avatar_url=p2.avatar_url) if p2 else None
 
     last_msg_out: Optional[LastMsgOut] = None
     unread_count = 0
-    if conv.messages:
+    is_closed = False
+
+    if last_by_conv is not None:
+        # Batched path — no conv.messages access
+        last = last_by_conv.get(conv.id)
+        if last:
+            last_msg_out = LastMsgOut(
+                content=last.content[:200],
+                sender_id=last.sender_id,
+                created_at=last.created_at.isoformat(),
+            )
+            is_closed = bool(p2 and last.sender_id == p2.id)
+        unread_count = (unread_by_conv or {}).get(conv.id, 0)
+    elif conv.messages:
+        # Fallback: messages already loaded (single-ticket endpoints)
         sorted_msgs = sorted(conv.messages, key=lambda m: m.created_at)
         last = sorted_msgs[-1]
         last_msg_out = LastMsgOut(
@@ -77,20 +93,12 @@ def _conv_to_ticket(conv: Conversation, agent_id: Optional[_uuid.UUID] = None) -
             sender_id=last.sender_id,
             created_at=last.created_at.isoformat(),
         )
-        # Unread = messages NOT sent by the support agent
         if agent_id:
-            unread_count = sum(
-                1 for m in sorted_msgs
-                if not m.is_read and m.sender_id != agent_id
-            )
+            unread_count = sum(1 for m in sorted_msgs if not m.is_read and m.sender_id != agent_id)
         else:
             unread_count = sum(1 for m in sorted_msgs if not m.is_read)
-
-    # "Closed" heuristic: assigned + last message is from support (not user)
-    is_closed = False
-    if p2 and conv.messages:
-        last_msg = sorted(conv.messages, key=lambda m: m.created_at)[-1]
-        is_closed = last_msg.sender_id == p2.id
+        if p2:
+            is_closed = sorted_msgs[-1].sender_id == p2.id
 
     return SupportTicketOut(
         id=conv.id,
@@ -119,13 +127,52 @@ def list_support_tickets(
         .options(
             joinedload(Conversation.participant1),
             joinedload(Conversation.participant2),
-            joinedload(Conversation.messages),
         )
         .filter(Conversation.type == ConversationType.support)
         .order_by(Conversation.updated_at.desc())
         .all()
     )
-    data = [_conv_to_ticket(c, current_user.id) for c in convs]
+
+    conv_ids = [c.id for c in convs]
+    last_by_conv: dict = {}
+    unread_by_conv: dict = {}
+
+    if conv_ids:
+        # Last message per conversation — one query via subquery
+        subq = (
+            db.query(
+                Message.conversation_id,
+                func.max(Message.created_at).label("max_ts"),
+            )
+            .filter(Message.conversation_id.in_(conv_ids))
+            .group_by(Message.conversation_id)
+            .subquery()
+        )
+        last_msgs = (
+            db.query(Message)
+            .join(
+                subq,
+                (Message.conversation_id == subq.c.conversation_id)
+                & (Message.created_at == subq.c.max_ts),
+            )
+            .all()
+        )
+        last_by_conv = {m.conversation_id: m for m in last_msgs}
+
+        # Unread count per conversation — one query
+        unread_rows = (
+            db.query(Message.conversation_id, func.count().label("cnt"))
+            .filter(
+                Message.conversation_id.in_(conv_ids),
+                Message.is_read == False,
+                Message.sender_id != current_user.id,
+            )
+            .group_by(Message.conversation_id)
+            .all()
+        )
+        unread_by_conv = {r.conversation_id: r.cnt for r in unread_rows}
+
+    data = [_conv_to_ticket(c, current_user.id, last_by_conv, unread_by_conv) for c in convs]
     return ApiResponse(success=True, data=data, message="Support tickets fetched")
 
 

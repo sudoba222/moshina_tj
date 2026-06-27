@@ -269,7 +269,7 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_admin))
     )
     listing_rows = (
         db.query(cast(Listing.created_at, SADate).label("day"), func.count().label("cnt"))
-        .filter(cast(Listing.created_at, SADate) >= thirty_days_ago)
+        .filter(Listing.is_deleted == False, cast(Listing.created_at, SADate) >= thirty_days_ago)
         .group_by(cast(Listing.created_at, SADate))
         .all()
     )
@@ -602,12 +602,13 @@ def delete_user(user_id: str, db: Session = Depends(get_db), current_user: User 
     # Anonymize unique fields so the same email/phone/google_id can be re-registered.
     # The DB has UNIQUE constraints on these columns; soft-delete alone doesn't free them.
     uid = str(user.id)
+    original_phone = user.phone
     user.email = f"deleted_{uid}@deleted" if user.email else None
     user.phone = f"deleted_{uid}"
     user.google_id = None
     user.apple_id = None
     user.telegram_chat_id = None
-    log_audit(db, current_user.id, "delete_user", "user", user.id, {"name": user.name, "phone": user.phone})
+    log_audit(db, current_user.id, "delete_user", "user", user.id, {"name": user.name, "phone": original_phone})
     db.commit()
     return ApiResponse(success=True, data=None, message="User deleted")
 
@@ -681,7 +682,7 @@ def _require_staff(current_user: User = Depends(get_current_user)) -> User:
 class AdminListingUserInfo(BaseModel):
     id: uuid.UUID
     name: Optional[str] = None
-    phone: str
+    phone: Optional[str] = None
     email: Optional[str] = None
     created_at: Optional[datetime] = None
 
@@ -1106,8 +1107,11 @@ def staff_search_listings(
 
 
 @router.put("/listings/{listing_id}/activate", response_model=ApiResponse[ListingResponse])
-def activate_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
-    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id).first()
+async def activate_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    from app.redis_client import cache_delete as _cache_delete, cache_delete_pattern as _cache_delete_pattern
+    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(
+        Listing.id == listing_id, Listing.is_deleted == False
+    ).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     old_status = listing.status.value if listing.status else None
@@ -1126,12 +1130,18 @@ def activate_listing(listing_id: str, db: Session = Depends(get_db), current_use
     ))
     db.commit()
     db.refresh(listing)
+    await _cache_delete("listings:featured")
+    await _cache_delete("stats:marketplace")
+    await _cache_delete_pattern("listings:list:*")
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing activated")
 
 
 @router.put("/listings/{listing_id}/deactivate", response_model=ApiResponse[ListingResponse])
-def deactivate_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
-    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id).first()
+async def deactivate_listing(listing_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    from app.redis_client import cache_delete as _cache_delete, cache_delete_pattern as _cache_delete_pattern
+    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(
+        Listing.id == listing_id, Listing.is_deleted == False
+    ).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     old_status = listing.status.value if listing.status else None
@@ -1148,6 +1158,9 @@ def deactivate_listing(listing_id: str, db: Session = Depends(get_db), current_u
     ))
     db.commit()
     db.refresh(listing)
+    await _cache_delete("listings:featured")
+    await _cache_delete("stats:marketplace")
+    await _cache_delete_pattern("listings:list:*")
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing deactivated")
 
 
@@ -1158,7 +1171,9 @@ def admin_edit_listing(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(Listing.id == listing_id).first()
+    listing = db.query(Listing).options(joinedload(Listing.images), joinedload(Listing.user)).filter(
+        Listing.id == listing_id, Listing.is_deleted == False
+    ).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     fields = payload.model_dump(exclude_none=True)
@@ -1293,33 +1308,33 @@ def pending_listings(
         ModerationSession.is_active == True,
     ).first()
 
+    base_filters = [
+        Listing.status == ListingStatus.pending,
+        Listing.is_deleted == False,
+        or_(
+            Listing.locked_by == None,
+            Listing.locked_by == current_user.id,
+            Listing.locked_at < lock_cutoff,
+        ),
+    ]
+    if active_session:
+        if active_session.filter_date_from:
+            base_filters.append(Listing.created_at >= active_session.filter_date_from)
+        if active_session.filter_date_to:
+            base_filters.append(Listing.created_at <= active_session.filter_date_to)
+        if active_session.filter_type:
+            base_filters.append(Listing.type == active_session.filter_type)
+        if active_session.filter_city:
+            base_filters.append(Listing.city.ilike(f"%{active_session.filter_city}%"))
+        if active_session.filter_brand:
+            base_filters.append(Listing.brand.ilike(f"%{active_session.filter_brand}%"))
+
+    total = db.query(Listing).filter(*base_filters).count()
     query = (
         db.query(Listing)
         .options(joinedload(Listing.user), joinedload(Listing.images))
-        .filter(
-            Listing.status == ListingStatus.pending,
-            Listing.is_deleted == False,
-            or_(
-                Listing.locked_by == None,
-                Listing.locked_by == current_user.id,
-                Listing.locked_at < lock_cutoff,
-            ),
-        )
+        .filter(*base_filters)
     )
-
-    if active_session:
-        if active_session.filter_date_from:
-            query = query.filter(Listing.created_at >= active_session.filter_date_from)
-        if active_session.filter_date_to:
-            query = query.filter(Listing.created_at <= active_session.filter_date_to)
-        if active_session.filter_type:
-            query = query.filter(Listing.type == active_session.filter_type)
-        if active_session.filter_city:
-            query = query.filter(Listing.city.ilike(f"%{active_session.filter_city}%"))
-        if active_session.filter_brand:
-            query = query.filter(Listing.brand.ilike(f"%{active_session.filter_brand}%"))
-
-    total = query.count()
     pages = math.ceil(total / limit) if total > 0 else 1
     items = query.order_by(Listing.created_at.asc()).offset((page - 1) * limit).limit(limit).all()
 
@@ -1872,25 +1887,35 @@ def moderator_activity(db: Session = Depends(get_db), current_user: User = Depen
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     moderators = db.query(User).filter(User.role == UserRole.moderator, User.is_deleted == False).all()
+    mod_ids = [m.id for m in moderators]
+
+    # Batch-fetch all today's sessions and active sessions — 2 queries total
+    all_today_sessions = (
+        db.query(ModerationSession)
+        .filter(ModerationSession.moderator_id.in_(mod_ids), ModerationSession.started_at >= today_start)
+        .all()
+    ) if mod_ids else []
+    active_sessions_list = (
+        db.query(ModerationSession)
+        .filter(ModerationSession.moderator_id.in_(mod_ids), ModerationSession.is_active == True)
+        .all()
+    ) if mod_ids else []
+
+    from collections import defaultdict
+    today_by_mod: dict = defaultdict(list)
+    for s in all_today_sessions:
+        today_by_mod[s.moderator_id].append(s)
+    active_by_mod = {s.moderator_id: s for s in active_sessions_list}
+
     result = []
     for mod in moderators:
-        sessions_today = db.query(ModerationSession).filter(
-            ModerationSession.moderator_id == mod.id,
-            ModerationSession.started_at >= today_start,
-        ).all()
-
+        sessions_today = today_by_mod[mod.id]
         posts_today = sum(s.posts_approved + s.posts_rejected + s.posts_skipped for s in sessions_today)
-
-        recent_sessions = db.query(ModerationSession).filter(
-            ModerationSession.moderator_id == mod.id,
-            ModerationSession.started_at >= thirty_min_ago,
-        ).all()
-        posts_last_30min = sum(s.posts_approved + s.posts_rejected + s.posts_skipped for s in recent_sessions)
-
-        active_session = db.query(ModerationSession).filter(
-            ModerationSession.moderator_id == mod.id,
-            ModerationSession.is_active == True,
-        ).first()
+        posts_last_30min = sum(
+            s.posts_approved + s.posts_rejected + s.posts_skipped
+            for s in sessions_today if s.started_at >= thirty_min_ago
+        )
+        active_session = active_by_mod.get(mod.id)
 
         result.append({
             "moderator_id": str(mod.id),
@@ -2132,7 +2157,7 @@ def add_moderator_note(
 # ---------------------------------------------------------------------------
 
 @router.post("/moderation/bulk-approve", response_model=ApiResponse[dict])
-def bulk_approve_listings(
+async def bulk_approve_listings(
     payload: BulkApprovePayload,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
@@ -2167,11 +2192,15 @@ def bulk_approve_listings(
     if active_session:
         active_session.posts_approved += approved
     db.commit()
+    from app.redis_client import cache_delete as _cache_delete, cache_delete_pattern as _cache_delete_pattern
+    await _cache_delete("listings:featured")
+    await _cache_delete("stats:marketplace")
+    await _cache_delete_pattern("listings:list:*")
     return ApiResponse(success=True, data={"approved": approved}, message=f"{approved} listings approved")
 
 
 @router.post("/moderation/bulk-reject", response_model=ApiResponse[dict])
-def bulk_reject_listings(
+async def bulk_reject_listings(
     payload: BulkRejectPayload,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_moderator),
@@ -2206,6 +2235,10 @@ def bulk_reject_listings(
     if active_session:
         active_session.posts_rejected += rejected
     db.commit()
+    from app.redis_client import cache_delete as _cache_delete, cache_delete_pattern as _cache_delete_pattern
+    await _cache_delete("listings:featured")
+    await _cache_delete("stats:marketplace")
+    await _cache_delete_pattern("listings:list:*")
     return ApiResponse(success=True, data={"rejected": rejected}, message=f"{rejected} listings rejected")
 
 
