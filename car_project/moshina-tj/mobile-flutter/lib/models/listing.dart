@@ -1,5 +1,5 @@
 class ListingImage {
-  final int id;
+  final String id;
   final String url;
   final bool isPrimary;
 
@@ -11,7 +11,7 @@ class ListingImage {
 
   factory ListingImage.fromJson(Map<String, dynamic> json) {
     return ListingImage(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      id: json['id']?.toString() ?? '',
       url: json['url'] as String? ?? '',
       isPrimary: json['is_primary'] as bool? ?? false,
     );

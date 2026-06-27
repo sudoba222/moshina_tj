@@ -657,7 +657,7 @@ class _FeaturedSection extends StatelessWidget {
               _FeaturedEmptyState(c: c, lang: lang, hp: hp)
             else ...[
               SizedBox(
-                height: 290,
+                height: 340,
                 child: PageView.builder(
                   controller: pageCtrl,
                   padEnds: false,
