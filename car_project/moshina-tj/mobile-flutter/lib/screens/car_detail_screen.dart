@@ -554,8 +554,7 @@ class _Gallery extends StatelessWidget {
               bottom: 12,
               right: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(12),
@@ -563,12 +562,42 @@ class _Gallery extends StatelessWidget {
                 child: Text(
                   '${currentIndex + 1}/${listing.images.length}',
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600),
+                      color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
+            // ← Left arrow
+            if (listing.images.length > 1 && currentIndex > 0)
+              Positioned(
+                left: 10,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _GalleryArrow(
+                    icon: Icons.chevron_left_rounded,
+                    onTap: () => controller.previousPage(
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeInOut,
+                    ),
+                  ),
+                ),
+              ),
+            // → Right arrow
+            if (listing.images.length > 1 && currentIndex < listing.images.length - 1)
+              Positioned(
+                right: 10,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _GalleryArrow(
+                    icon: Icons.chevron_right_rounded,
+                    onTap: () => controller.nextPage(
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeInOut,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
         // Thumbnail strip
@@ -1031,11 +1060,44 @@ class _StickyBar extends StatelessWidget {
 }
 
 TextStyle GoogleFontsPrice(AppColors c) {
-  // Helper — avoids importing google_fonts directly in this method
   return TextStyle(
     color: c.accent,
     fontSize: 22,
     fontWeight: FontWeight.w900,
     letterSpacing: -0.4,
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gallery navigation arrow button
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _GalleryArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _GalleryArrow({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.88),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 24, color: const Color(0xFF1A1A1A)),
+      ),
+    );
+  }
 }
