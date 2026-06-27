@@ -656,27 +656,64 @@ class _FeaturedSection extends StatelessWidget {
             else if (provider.featured.isEmpty)
               _FeaturedEmptyState(c: c, lang: lang, hp: hp)
             else ...[
-              SizedBox(
-                height: 340,
-                child: PageView.builder(
-                  controller: pageCtrl,
-                  padEnds: false,
-                  itemCount: provider.featured.length,
-                  onPageChanged: onPageChanged,
-                  itemBuilder: (ctx2, i) {
-                    final listing = provider.featured[i];
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        left: i == 0 ? hp : 6,
-                        right: i == provider.featured.length - 1 ? hp : 6,
+              Stack(
+                children: [
+                  SizedBox(
+                    height: 350,
+                    child: PageView.builder(
+                      controller: pageCtrl,
+                      padEnds: false,
+                      itemCount: provider.featured.length,
+                      onPageChanged: onPageChanged,
+                      itemBuilder: (ctx2, i) {
+                        final listing = provider.featured[i];
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            left: i == 0 ? hp : 6,
+                            right: i == provider.featured.length - 1 ? hp : 6,
+                          ),
+                          child: CarCard(
+                            listing: listing,
+                            onTap: () => ctx2.push('/car/${listing.id}'),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // ← Left arrow
+                  if (provider.featured.length > 1 && currentPage > 0)
+                    Positioned(
+                      left: hp - 2,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _PageArrow(
+                          icon: Icons.chevron_left_rounded,
+                          onTap: () => pageCtrl.previousPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          ),
+                        ),
                       ),
-                      child: CarCard(
-                        listing: listing,
-                        onTap: () => ctx2.push('/car/${listing.id}'),
+                    ),
+                  // → Right arrow
+                  if (provider.featured.length > 1 &&
+                      currentPage < provider.featured.length - 1)
+                    Positioned(
+                      right: hp - 2,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _PageArrow(
+                          icon: Icons.chevron_right_rounded,
+                          onTap: () => pageCtrl.nextPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          ),
+                        ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                ],
               ),
               const SizedBox(height: 10),
               if (provider.featured.length > 1)
@@ -732,6 +769,40 @@ class _FeaturedEmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PageView arrow button
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PageArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _PageArrow({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 22, color: const Color(0xFF1A1A1A)),
       ),
     );
   }
@@ -843,8 +914,8 @@ class _FreshSliver extends StatelessWidget {
           return SliverList(
             delegate: SliverChildBuilderDelegate(
               (ctx2, i) => Padding(
-                padding: EdgeInsets.symmetric(horizontal: hp, vertical: 6),
-                child: _FreshShimmerItem(c: c),
+                padding: EdgeInsets.symmetric(horizontal: hp, vertical: 5),
+                child: CarCardShimmer(horizontal: true),
               ),
               childCount: 4,
             ),
@@ -887,9 +958,10 @@ class _FreshSliver extends StatelessWidget {
             (ctx2, i) {
               final listing = provider.fresh[i];
               return Padding(
-                padding: EdgeInsets.symmetric(horizontal: hp, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: hp, vertical: 5),
                 child: CarCard(
                   listing: listing,
+                  horizontal: true,
                   onTap: () => ctx2.push('/car/${listing.id}'),
                 ),
               );
@@ -898,26 +970,6 @@ class _FreshSliver extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _FreshShimmerItem extends StatelessWidget {
-  final AppColors c;
-  const _FreshShimmerItem({required this.c});
-
-  @override
-  Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: c.border,
-      highlightColor: c.surface,
-      child: Container(
-        height: 112,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
     );
   }
 }

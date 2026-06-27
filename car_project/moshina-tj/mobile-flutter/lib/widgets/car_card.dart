@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/listing.dart';
@@ -7,24 +8,26 @@ import '../providers/favorites_provider.dart';
 import '../providers/language_provider.dart';
 import '../theme/app_theme.dart';
 
-// Standard card shadow used across the app
 BoxShadow get _cardShadow => BoxShadow(
-      color: Colors.black.withValues(alpha: 0.07),
-      blurRadius: 16,
+      color: Colors.black.withValues(alpha: 0.08),
+      blurRadius: 20,
+      spreadRadius: 0,
       offset: const Offset(0, 6),
     );
 
 class CarCard extends StatelessWidget {
   final Listing listing;
   final VoidCallback? onTap;
-  /// When true renders a compact 2-col grid variant (image-only top, minimal info bottom).
   final bool compact;
+  /// Horizontal layout: image left, info right — used in list views
+  final bool horizontal;
 
   const CarCard({
     super.key,
     required this.listing,
     this.onTap,
     this.compact = false,
+    this.horizontal = false,
   });
 
   @override
@@ -32,12 +35,16 @@ class CarCard extends StatelessWidget {
     final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
 
+    if (horizontal) {
+      return _HorizontalCard(listing: listing, c: c, lang: lang, onTap: onTap);
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: c.card,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [_cardShadow],
         ),
         clipBehavior: Clip.hardEdge,
@@ -45,10 +52,10 @@ class CarCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            _ImageSection(listing: listing, colors: c, compact: compact),
+            _VerticalImageSection(listing: listing, colors: c, compact: compact),
             compact
                 ? _CompactContent(listing: listing, colors: c, lang: lang)
-                : _ContentSection(listing: listing, colors: c, lang: lang),
+                : _VerticalContent(listing: listing, colors: c, lang: lang),
           ],
         ),
       ),
@@ -56,16 +63,269 @@ class CarCard extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Image section
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// HORIZONTAL CARD — professional list card (image left, info right)
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _ImageSection extends StatelessWidget {
+class _HorizontalCard extends StatelessWidget {
+  final Listing listing;
+  final AppColors c;
+  final String lang;
+  final VoidCallback? onTap;
+
+  const _HorizontalCard({
+    required this.listing,
+    required this.c,
+    required this.lang,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = listing.firstImageUrl;
+    final isFav = context.watch<FavoritesProvider>().isFavorite(listing.id);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 128,
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [_cardShadow],
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Image (left) ─────────────────────────────────────────────────
+            SizedBox(
+              width: 138,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (ctx, url) => Shimmer.fromColors(
+                            baseColor: c.border,
+                            highlightColor: c.surface,
+                            child: Container(color: c.card),
+                          ),
+                          errorWidget: (ctx, url, err) => _NoImage(colors: c),
+                        )
+                      : _NoImage(colors: c),
+                  // Gradient right edge blend
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 24,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [Colors.transparent, c.card.withValues(alpha: 0.3)],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Top-left badges
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: _BadgeRow(listing: listing),
+                  ),
+                  // Photo count indicator
+                  if (listing.images.length > 1)
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.photo_library_outlined, color: Colors.white, size: 9),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${listing.images.length}',
+                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // ── Info (right) ─────────────────────────────────────────────────
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title + fav
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${listing.brand} ${listing.model}',
+                            style: GoogleFonts.outfit(
+                              color: c.text,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                              letterSpacing: -0.2,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        _SmallFavBtn(colors: c, listingId: listing.id, isFav: isFav),
+                      ],
+                    ),
+
+                    const Spacer(),
+
+                    // Price
+                    Text(
+                      listing.formattedPrice(lang),
+                      style: GoogleFonts.outfit(
+                        color: c.accent,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                        height: 1,
+                      ),
+                    ),
+
+                    const SizedBox(height: 7),
+
+                    // Spec chips
+                    _HorizontalChips(listing: listing, colors: c),
+
+                    const SizedBox(height: 7),
+
+                    // City + date
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 11, color: c.textMuted),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            '${listing.city} · ${listing.formattedDate(lang)}',
+                            style: GoogleFonts.outfit(
+                              color: c.textMuted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SmallFavBtn extends StatelessWidget {
+  final AppColors colors;
+  final String listingId;
+  final bool isFav;
+
+  const _SmallFavBtn({required this.colors, required this.listingId, required this.isFav});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.read<FavoritesProvider>().toggleFavorite(listingId),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: Icon(
+          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          color: isFav ? colors.accent : colors.textMuted,
+          size: 18,
+        ),
+      ),
+    );
+  }
+}
+
+class _HorizontalChips extends StatelessWidget {
+  final Listing listing;
+  final AppColors colors;
+
+  const _HorizontalChips({required this.listing, required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <String>[];
+    chips.add(listing.year.toString());
+    if (listing.mileage != null) chips.add(listing.formattedMileage);
+    if (listing.transmission != null) chips.add(listing.transmission!);
+    if (listing.fuel != null && chips.length < 4) chips.add(listing.fuel!);
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    return SizedBox(
+      height: 20,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: chips.length,
+        physics: const NeverScrollableScrollPhysics(),
+        separatorBuilder: (_, __) => const SizedBox(width: 4),
+        itemBuilder: (_, i) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: colors.tagBg,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: colors.border, width: 0.5),
+          ),
+          child: Text(
+            chips[i],
+            style: GoogleFonts.outfit(
+              color: colors.textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VERTICAL CARD — featured / compact (existing style, enhanced)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _VerticalImageSection extends StatelessWidget {
   final Listing listing;
   final AppColors colors;
   final bool compact;
 
-  const _ImageSection({
+  const _VerticalImageSection({
     required this.listing,
     required this.colors,
     required this.compact,
@@ -74,7 +334,7 @@ class _ImageSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = listing.firstImageUrl;
-    final imageHeight = compact ? 120.0 : 200.0;
+    final imageHeight = compact ? 130.0 : 210.0;
 
     return Stack(
       children: [
@@ -94,48 +354,71 @@ class _ImageSection extends StatelessWidget {
                 )
               : _NoImage(colors: colors),
         ),
-        // Gradient overlay (bottom of image, for badge legibility)
+        // Bottom gradient
         Positioned(
           bottom: 0,
           left: 0,
           right: 0,
           child: Container(
-            height: imageHeight * 0.45,
+            height: imageHeight * 0.5,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black45],
+                colors: [Colors.transparent, Colors.black54],
               ),
             ),
           ),
         ),
         // Top-left badges
         Positioned(
-          top: 8,
-          left: 8,
+          top: 10,
+          left: 10,
           child: _BadgeRow(listing: listing),
         ),
-        // Top-right: favourite button
+        // Fav button
         if (!compact)
           Positioned(
-            top: 4,
-            right: 4,
+            top: 6,
+            right: 6,
             child: _FavButton(colors: colors, listingId: listing.id),
           ),
-        // Bottom-left: negotiable badge
+        // Bottom: negotiable + dealer
         if (listing.isNegotiable)
           Positioned(
-            bottom: 8,
-            left: 8,
+            bottom: 10,
+            left: 10,
             child: _NegotiableBadge(),
           ),
-        // Bottom-right: dealer badge
         if (listing.isDealerListing)
           Positioned(
-            bottom: 8,
-            right: 8,
+            bottom: 10,
+            right: 10,
             child: _DealerBadge(),
+          ),
+        // Photo count
+        if (listing.images.length > 1 && !compact)
+          Positioned(
+            bottom: 10,
+            right: listing.isDealerListing ? 70 : 10,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.photo_library_outlined, color: Colors.white, size: 11),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${listing.images.length}',
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
           ),
       ],
     );
@@ -148,11 +431,10 @@ class _NoImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
+    return Container(
       color: colors.border,
       child: Center(
-        child: Icon(Icons.directions_car_outlined,
-            size: 40, color: colors.textMuted),
+        child: Icon(Icons.directions_car_outlined, size: 36, color: colors.textMuted),
       ),
     );
   }
@@ -170,23 +452,23 @@ class _FavButton extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.read<FavoritesProvider>().toggleFavorite(listingId),
       child: Container(
-        width: 36,
-        height: 36,
+        width: 38,
+        height: 38,
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.9),
+          color: Colors.white.withValues(alpha: 0.92),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 6,
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Icon(
           isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          color: isFav ? Colors.redAccent : Colors.black54,
+          color: isFav ? const Color(0xFFEF4444) : Colors.black54,
           size: 18,
         ),
       ),
@@ -198,18 +480,14 @@ class _NegotiableBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.colorSuccess,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: const Text(
         'Торг',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
+        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -219,24 +497,17 @@ class _DealerBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: const [
-          Icon(Icons.store_rounded, size: 10, color: Colors.white),
-          SizedBox(width: 3),
-          Text(
-            'Дилер',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Icon(Icons.store_rounded, size: 11, color: Colors.white),
+          SizedBox(width: 4),
+          Text('Дилер', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -250,27 +521,18 @@ class _BadgeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final badges = <Widget>[];
-
     if (listing.isFeatured) {
       badges.add(const _Badge(
         label: 'Топ',
-        gradient: LinearGradient(
-          colors: [Color(0xFFD4AF37), Color(0xFFC83808)],
-        ),
+        gradient: LinearGradient(colors: [Color(0xFFD4AF37), Color(0xFFC83808)]),
       ));
     }
-    if (listing.listingType == 'rent') {
-      badges.add(const _Badge(label: 'Аренда', color: Color(0xFF2563EB)));
-    }
+    if (listing.listingType == 'rent') badges.add(const _Badge(label: 'Аренда', color: Color(0xFF2563EB)));
     if (listing.listingType == 'installment' || listing.installmentAvailable) {
       badges.add(const _Badge(label: 'Рассрочка', color: Color(0xFFC83808)));
     }
-    if (listing.availability == 'on_order') {
-      badges.add(const _Badge(label: 'На заказ', color: Color(0xFFF59E0B)));
-    }
-
+    if (listing.availability == 'on_order') badges.add(const _Badge(label: 'На заказ', color: Color(0xFFF59E0B)));
     if (badges.isEmpty) return const SizedBox.shrink();
-
     return Wrap(spacing: 4, runSpacing: 4, children: badges);
   }
 }
@@ -285,106 +547,93 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: gradient == null ? color : null,
         gradient: gradient,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
+        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Full-size content section
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Vertical content section
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _ContentSection extends StatelessWidget {
+class _VerticalContent extends StatelessWidget {
   final Listing listing;
   final AppColors colors;
   final String lang;
 
-  const _ContentSection({
-    required this.listing,
-    required this.colors,
-    required this.lang,
-  });
+  const _VerticalContent({required this.listing, required this.colors, required this.lang});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title: brand + model
+          // Title
           Text(
             '${listing.brand} ${listing.model}',
-            style: TextStyle(
+            style: GoogleFonts.outfit(
               color: colors.text,
-              fontSize: 16,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
               height: 1.2,
+              letterSpacing: -0.3,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
-          // Year + mileage chips
+          const SizedBox(height: 8),
+
+          // Spec chips
           if (_hasChips) ...[
             _ChipRow(listing: listing, colors: colors),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
           ],
-          // Price row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                listing.formattedPrice(lang),
-                style: TextStyle(
-                  color: colors.accent,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
+
+          // Price
+          Text(
+            listing.formattedPrice(lang),
+            style: GoogleFonts.outfit(
+              color: colors.accent,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+              height: 1,
+            ),
           ),
-          const SizedBox(height: 8),
-          // Bottom row: city · date
+          const SizedBox(height: 10),
+
+          // City + date
           Row(
             children: [
-              Icon(Icons.location_on_outlined,
-                  size: 12, color: colors.textMuted),
-              const SizedBox(width: 2),
+              Icon(Icons.location_on_outlined, size: 12, color: colors.textMuted),
+              const SizedBox(width: 3),
               Expanded(
                 child: Text(
                   listing.city,
-                  style: TextStyle(color: colors.textMuted, fontSize: 12),
+                  style: GoogleFonts.outfit(color: colors.textMuted, fontSize: 12),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               Container(
-                width: 3,
-                height: 3,
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-                decoration: BoxDecoration(
-                  color: colors.textMuted,
-                  shape: BoxShape.circle,
-                ),
+                width: 3, height: 3,
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: BoxDecoration(color: colors.textMuted, shape: BoxShape.circle),
               ),
               Text(
                 listing.formattedDate(lang),
-                style: TextStyle(color: colors.textMuted, fontSize: 12),
+                style: GoogleFonts.outfit(color: colors.textMuted, fontSize: 12),
               ),
             ],
           ),
@@ -394,51 +643,37 @@ class _ContentSection extends StatelessWidget {
   }
 
   bool get _hasChips =>
-      listing.transmission != null ||
-      listing.fuel != null ||
-      listing.mileage != null;
+      listing.transmission != null || listing.fuel != null || listing.mileage != null;
 }
 
-// ---------------------------------------------------------------------------
-// Compact content section (grid mode)
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Compact content (grid mode)
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _CompactContent extends StatelessWidget {
   final Listing listing;
   final AppColors colors;
   final String lang;
 
-  const _CompactContent({
-    required this.listing,
-    required this.colors,
-    required this.lang,
-  });
+  const _CompactContent({required this.listing, required this.colors, required this.lang});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 11),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '${listing.brand} ${listing.model}',
-            style: TextStyle(
-              color: colors.text,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
+            style: GoogleFonts.outfit(color: colors.text, fontSize: 13, fontWeight: FontWeight.w700),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             listing.formattedPrice(lang),
-            style: TextStyle(
-              color: colors.accent,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
+            style: GoogleFonts.outfit(color: colors.accent, fontSize: 15, fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -446,9 +681,9 @@ class _CompactContent extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Year + mileage chip row
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Chip row (vertical card)
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _ChipRow extends StatelessWidget {
   final Listing listing;
@@ -462,16 +697,10 @@ class _ChipRow extends StatelessWidget {
       spacing: 5,
       runSpacing: 4,
       children: [
-        _SpecChip(
-          label: listing.year.toString(),
-          colors: colors,
-        ),
-        if (listing.mileage != null)
-          _SpecChip(label: listing.formattedMileage, colors: colors),
-        if (listing.transmission != null)
-          _SpecChip(label: listing.transmission!, colors: colors),
-        if (listing.fuel != null)
-          _SpecChip(label: listing.fuel!, colors: colors),
+        _SpecChip(label: listing.year.toString(), colors: colors),
+        if (listing.mileage != null) _SpecChip(label: listing.formattedMileage, colors: colors),
+        if (listing.transmission != null) _SpecChip(label: listing.transmission!, colors: colors),
+        if (listing.fuel != null) _SpecChip(label: listing.fuel!, colors: colors),
       ],
     );
   }
@@ -486,7 +715,7 @@ class _SpecChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: colors.tagBg,
         borderRadius: BorderRadius.circular(8),
@@ -494,9 +723,9 @@ class _SpecChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: GoogleFonts.outfit(
           color: colors.textSecondary,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -504,40 +733,74 @@ class _SpecChip extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Shimmer skeleton
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
 class CarCardShimmer extends StatelessWidget {
-  const CarCardShimmer({super.key});
+  final bool horizontal;
+  const CarCardShimmer({super.key, this.horizontal = false});
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    if (horizontal) {
+      return Shimmer.fromColors(
+        baseColor: c.border,
+        highlightColor: c.surface,
+        child: Container(
+          height: 128,
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Row(
+            children: [
+              Container(width: 138, color: Colors.white),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(height: 15, width: 120, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                      const Spacer(),
+                      Container(height: 18, width: 90, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                      const SizedBox(height: 8),
+                      Container(height: 12, width: 160, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                      const SizedBox(height: 8),
+                      Container(height: 11, width: 100, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Shimmer.fromColors(
       baseColor: c.border,
       highlightColor: c.surface,
       child: Container(
-        decoration: BoxDecoration(
-          color: c.card,
-          borderRadius: BorderRadius.circular(16),
-        ),
+        decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(18)),
         clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(height: 200, color: c.card),
+            Container(height: 210, color: c.card),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(height: 16, width: 160, color: Colors.white),
-                  const SizedBox(height: 8),
-                  Container(height: 11, width: 120, color: Colors.white),
-                  const SizedBox(height: 8),
-                  Container(height: 20, width: 90, color: Colors.white),
-                  const SizedBox(height: 8),
+                  Container(height: 17, width: 160, color: Colors.white),
+                  const SizedBox(height: 10),
+                  Container(height: 12, width: 130, color: Colors.white),
+                  const SizedBox(height: 10),
+                  Container(height: 22, width: 100, color: Colors.white),
+                  const SizedBox(height: 10),
                   Container(height: 12, width: 180, color: Colors.white),
                 ],
               ),
