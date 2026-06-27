@@ -123,24 +123,37 @@ class _PostScreenState extends State<PostScreen> {
     setState(() => _submitting = true);
     try {
       final api = context.read<ApiService>();
+      // Filter out any empty strings left by failed uploads
+      final validUrls = _uploadedUrls.where((u) => u.isNotEmpty).toList();
+      if (validUrls.isEmpty) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(t('post.required.photo', lang)),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
       final body = <String, dynamic>{
         'type': _type == 'installment' ? 'sale' : _type,
         'installment_available': _installmentAvailable,
         'brand': _brandCtrl.text.trim(),
         'model': _modelCtrl.text.trim(),
         'year': int.tryParse(_yearCtrl.text.trim()) ?? 2020,
-        'price': double.tryParse(_priceCtrl.text.trim()) ?? 0,
+        'price': double.tryParse(_priceCtrl.text.trim().replaceAll(' ', '')) ?? 0,
         'currency': _currency,
         'is_negotiable': _negotiable,
         'city': _cityCtrl.text.trim(),
         'condition': _condition,
-        'contact_phone': _contactCtrl.text.trim(),
+        'contact_phone': _contactCtrl.text.trim().isEmpty ? null : _contactCtrl.text.trim(),
         'contact_method': _contactMethod,
         'availability': 'in_stock',
-        'image_urls': _uploadedUrls,
+        'image_urls': validUrls,
       };
       if (_mileageCtrl.text.trim().isNotEmpty) {
-        body['mileage'] = int.tryParse(_mileageCtrl.text.trim());
+        body['mileage'] = int.tryParse(_mileageCtrl.text.trim().replaceAll(' ', ''));
       }
       if (_fuel != null) body['fuel'] = _fuel;
       if (_transmission != null) body['transmission'] = _transmission;
@@ -1083,12 +1096,18 @@ class _StepIndicator extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      steps[i],
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: active ? c.accent : c.textMuted,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                    SizedBox(
+                      width: 52,
+                      child: Text(
+                        steps[i],
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: active ? c.accent : c.textMuted,
+                          fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

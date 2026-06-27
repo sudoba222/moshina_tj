@@ -688,6 +688,7 @@ class _MyListingsState extends State<_MyListings> {
             children: [
               CarCard(
                 listing: listing,
+                horizontal: true,
                 onTap: () => context.push('/car/${listing.id}'),
               ),
               Padding(

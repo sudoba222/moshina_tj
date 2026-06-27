@@ -115,6 +115,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                                     const EdgeInsets.symmetric(vertical: 6),
                                 child: CarCard(
                                   listing: listing,
+                                  horizontal: true,
                                   onTap: () => ctx.push('/car/${listing.id}'),
                                 ),
                               );

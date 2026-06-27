@@ -285,6 +285,7 @@ class _DealerDetailScreenState extends State<DealerDetailScreen> {
                         onTap: () => context.push('/car/${listing.id}'),
                         child: CarCard(
                           listing: listing,
+                          horizontal: true,
                           onTap: () => context.push('/car/${listing.id}'),
                         ),
                       );

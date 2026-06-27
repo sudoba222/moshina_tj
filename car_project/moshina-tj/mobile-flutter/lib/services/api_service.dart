@@ -7,19 +7,35 @@ import 'package:image_picker/image_picker.dart';
 // Extracts a human-readable error message from a DioException response body.
 String _serverMessage(Object e) {
   if (e is DioException) {
+    final code = e.response?.statusCode;
     final data = e.response?.data;
     if (data is Map<String, dynamic>) {
+      // FastAPI envelope: { success: false, message: "..." }
       final msg = data['message'] ?? data['detail'] ?? data['error'];
       if (msg is String && msg.isNotEmpty) return msg;
+      // FastAPI 422 validation errors: { detail: [ { msg: "...", loc: [...] } ] }
       if (msg is List && msg.isNotEmpty) {
-        final first = msg.first;
-        if (first is Map) return first['msg']?.toString() ?? e.message ?? 'Ошибка';
+        final parts = <String>[];
+        for (final item in msg) {
+          if (item is Map) {
+            // Pydantic v2: msg may be "Value error, ..." — strip the prefix
+            final raw = item['msg']?.toString() ?? '';
+            final clean = raw.startsWith('Value error, ') ? raw.substring(13) : raw;
+            if (clean.isNotEmpty) parts.add(clean);
+          }
+        }
+        if (parts.isNotEmpty) return parts.join('. ');
       }
     }
-    if (e.response?.statusCode == 401) return 'Неверный код или сессия истекла';
-    if (e.response?.statusCode == 429) return 'Слишком много запросов. Подождите.';
-    if (e.response?.statusCode == 404) return 'Не найдено';
-    if (e.response?.statusCode != null && e.response!.statusCode! >= 500) return 'Ошибка сервера. Попробуйте позже.';
+    if (code == 401) return 'Сессия истекла. Войдите снова.';
+    if (code == 403) return 'Нет доступа';
+    if (code == 404) return 'Не найдено';
+    if (code == 409) return 'Такое объявление уже существует';
+    if (code == 422) return 'Проверьте правильность заполнения полей';
+    if (code == 429) return 'Слишком много запросов. Подождите немного.';
+    if (code != null && code >= 500) return 'Ошибка сервера. Попробуйте позже.';
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) return 'Сервер не отвечает. Проверьте соединение.';
   }
   return 'Нет соединения с сервером';
 }
