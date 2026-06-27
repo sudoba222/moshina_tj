@@ -203,18 +203,13 @@ class _LoginScreenState extends State<LoginScreen>
                 position: _slideAnim,
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(horizontal: hp, vertical: 8),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight:
-                          screenH - MediaQuery.of(context).padding.top - 16,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SizedBox(height: screenH * 0.07),
+                        SizedBox(height: screenH * 0.06),
                         AuthHeroSection(c: c, lang: lang),
-                        SizedBox(height: screenH * 0.05),
+                        SizedBox(height: screenH * 0.045),
 
                         // Phone error
                         if (_phoneError != null) ...[
@@ -296,6 +291,7 @@ class _LoginScreenState extends State<LoginScreen>
                           expanded: _emailExpanded,
                           onToggle: () => setState(() {
                             _emailExpanded = !_emailExpanded;
+                            if (_emailExpanded) _telegramExpanded = false;
                             if (!_emailExpanded) _emailError = null;
                           }),
                           formKey: _emailFormKey,
@@ -334,8 +330,11 @@ class _LoginScreenState extends State<LoginScreen>
                           lang: lang,
                           c: c,
                           expanded: _telegramExpanded,
-                          onExpand: () =>
-                              setState(() => _telegramExpanded = true),
+                          onExpand: () => setState(() {
+                            _telegramExpanded = true;
+                            _emailExpanded = false;
+                            _emailError = null;
+                          }),
                           tgPhoneCtrl: _tgPhoneCtrl,
                           loading: _tgLoading,
                           onSend: _sendTelegramOtp,
