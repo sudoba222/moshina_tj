@@ -73,13 +73,13 @@ const BODY_TYPES_OPTIONS = [
   { value: 'other',       labelKey: 'options.bodyOther' },
 ]
 const COLORS = [
-  { label: 'Белый',    value: 'Белый',     swatch: '#f5f5f5' },
-  { label: 'Чёрный',   value: 'Черный',    swatch: '#1a1a1a' },
-  { label: 'Серебро',  value: 'Серебро',   swatch: '#c0c0c0' },
-  { label: 'Красный',  value: 'Красный',   swatch: '#c83808' },
-  { label: 'Синий',    value: 'Синий',     swatch: '#2563eb' },
-  { label: 'Зелёный',  value: 'Зелёный',   swatch: '#16a34a' },
-  { label: 'Другой',   value: 'Другой',    swatch: 'linear-gradient(135deg, #f59e0b, #8b5cf6)' },
+  { labelKey: 'colors.white',  value: 'Белый',   swatch: '#f5f5f5' },
+  { labelKey: 'colors.black',  value: 'Черный',  swatch: '#1a1a1a' },
+  { labelKey: 'colors.silver', value: 'Серебро', swatch: '#c0c0c0' },
+  { labelKey: 'colors.red',    value: 'Красный', swatch: '#c83808' },
+  { labelKey: 'colors.blue',   value: 'Синий',   swatch: '#2563eb' },
+  { labelKey: 'colors.green',  value: 'Зелёный', swatch: '#16a34a' },
+  { labelKey: 'colors.other',  value: 'Другой',  swatch: 'linear-gradient(135deg, #f59e0b, #8b5cf6)' },
 ]
 const CATEGORY_OPTIONS = [
   { value: 'car',         labelRu: 'Легковые',          labelTj: 'Мошинаҳои сабук' },
@@ -767,8 +767,8 @@ function CatalogContent() {
               <button
                 key={c.value}
                 onClick={() => setColor(c.value === color ? '' : c.value)}
-                title={c.label}
-                aria-label={c.label}
+                title={t(c.labelKey, lang)}
+                aria-label={t(c.labelKey, lang)}
                 aria-pressed={color === c.value}
                 style={{
                   width: '26px',

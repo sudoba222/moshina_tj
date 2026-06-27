@@ -716,7 +716,7 @@ function PostPage() {
                 )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
-                    {lang === 'ru' ? 'Далее →' : 'Идома →'}
+                    {t('post.next', lang)} →
                   </button>
                 </div>
               </div>
@@ -1274,10 +1274,10 @@ function PostPage() {
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px' }}>
-                    ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+                    ← {t('post.back', lang)}
                   </button>
                   <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
-                    {lang === 'ru' ? 'Далее →' : 'Идома →'}
+                    {t('post.next', lang)} →
                   </button>
                 </div>
               </div>
@@ -1354,10 +1354,10 @@ function PostPage() {
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px' }}>
-                    ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+                    ← {t('post.back', lang)}
                   </button>
                   <button type="button" onClick={goNext} style={{ background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px' }}>
-                    {lang === 'ru' ? 'Далее →' : 'Идома →'}
+                    {t('post.next', lang)} →
                   </button>
                 </div>
               </div>
@@ -1412,7 +1412,7 @@ function PostPage() {
                     placeholder="+992 XX XXX XXXX" style={inp} />
                 </div>
                 <div>
-                  <label style={lbl}>WhatsApp</label>
+                  <label style={lbl}>{t('settings.whatsapp', lang)}</label>
                   <input type="tel" value={form.whatsapp_number}
                     onChange={(e) => setField('whatsapp_number', e.target.value)}
                     placeholder="+992 XX XXX XXXX" style={inp} />
@@ -1489,7 +1489,7 @@ function PostPage() {
             {!isEdit && (
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
                 <button type="button" onClick={goBack} style={{ background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, padding: '13px 24px', borderRadius: '12px', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px', flexShrink: 0 }}>
-                  ← {lang === 'ru' ? 'Назад' : 'Бозгашт'}
+                  ← {t('post.back', lang)}
                 </button>
                 <button
                   type="submit"

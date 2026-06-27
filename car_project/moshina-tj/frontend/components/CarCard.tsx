@@ -19,12 +19,12 @@ interface CarCardProps {
   priority?: boolean
 }
 
-const NON_PASSENGER_CAT_PREFIX: Record<string, { ru: string; tj: string }> = {
-  truck:      { ru: 'Грузовик',        tj: 'Боркаш' },
-  bus:        { ru: 'Автобус',         tj: 'Автобус' },
-  motorcycle: { ru: 'Мотоцикл',        tj: 'Мотосикл' },
-  special:    { ru: 'Спецтехника',     tj: 'Техникаи махсус' },
-  commercial: { ru: 'Коммерческий',    tj: 'Тиҷоратӣ' },
+const NON_PASSENGER_CAT_PREFIX: Record<string, string> = {
+  truck:      'categories.truck',
+  bus:        'categories.bus',
+  motorcycle: 'categories.motorcycle',
+  special:    'categories.special',
+  commercial: 'categories.commercial',
 }
 
 const STATUS_STRIPE: Record<string, string> = {
@@ -41,9 +41,10 @@ const STATUS_I18N_KEY: Record<string, string> = {
   draft: 'dashboard.inactive_badge',
 }
 
-function formatMileage(km: number): string {
-  if (km >= 10000) return Math.round(km / 1000) + ',' + String(km % 1000).padStart(3, '0') + ' км'
-  return km.toLocaleString('ru-RU') + ' км'
+function formatMileage(km: number, lang: Lang): string {
+  const unit = ' ' + t('common.km', lang)
+  if (km >= 10000) return Math.round(km / 1000) + ',' + String(km % 1000).padStart(3, '0') + unit
+  return km.toLocaleString('ru-RU') + unit
 }
 
 function formatDate(iso: string, lang: Lang): string {
@@ -295,8 +296,8 @@ export default function CarCard({
               {listing.is_featured && (
                 <span
                   style={{
-                    background: 'linear-gradient(90deg, #f59e0b, #ef4444)',
-                    color: '#fff',
+                    background: 'linear-gradient(90deg, var(--color-warning-alt), var(--color-error))',
+                    color: 'var(--color-white)',
                     fontSize: '10px',
                     fontWeight: 700,
                     padding: '2px 7px',
@@ -413,8 +414,8 @@ export default function CarCard({
               }}
             >
               {(() => {
-                const prefixEntry = listing.category_slug ? NON_PASSENGER_CAT_PREFIX[listing.category_slug] : null
-                const prefix = prefixEntry ? (lang === 'ru' ? prefixEntry.ru : prefixEntry.tj) : null
+                const prefixKey = listing.category_slug ? NON_PASSENGER_CAT_PREFIX[listing.category_slug] : null
+                const prefix = prefixKey ? t(prefixKey, lang) : null
                 return <>{prefix ? <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{prefix} </span> : null}{listing.brand} {listing.model}</>
               })()}
               {listing.year ? (
@@ -467,7 +468,7 @@ export default function CarCard({
             )}
             {listing.mileage != null && (
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text2)', background: 'var(--tag-bg)', border: '1px solid var(--border)', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
-                {formatMileage(listing.mileage)}
+                {formatMileage(listing.mileage, lang)}
               </span>
             )}
           </div>

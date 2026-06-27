@@ -195,8 +195,8 @@ export default function ModeratorListingsPage() {
           />
           {([
             { label: lang === 'ru' ? 'Все' : 'Ҳама',           val: 'all' },
-            { label: lang === 'ru' ? 'На модерации' : 'Дар навбат', val: 'pending' },
-            { label: lang === 'ru' ? 'Активные' : 'Фаъол',    val: 'active' },
+            { label: t('common.inModeration', lang), val: 'pending' },
+            { label: t('admin.active', lang),        val: 'active' },
             { label: lang === 'ru' ? 'Отклонены' : 'Рад шуд', val: 'rejected' },
           ] as { label: string; val: ListingStatus | 'all' }[]).map(({ label, val }) => (
             <button
@@ -298,10 +298,10 @@ export default function ModeratorListingsPage() {
                       {/* Status */}
                       <td style={{ padding: '14px 16px' }}>
                         <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '100px', background: `${STATUS_COLOR[listing.status]}22`, color: STATUS_COLOR[listing.status], textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {listing.status === 'pending' && (lang === 'ru' ? 'На модерации' : 'Дар навбат')}
-                          {listing.status === 'active' && (lang === 'ru' ? 'Активно' : 'Фаъол')}
-                          {listing.status === 'rejected' && (lang === 'ru' ? 'Отклонено' : 'Рад шуд')}
-                          {listing.status === 'draft' && (lang === 'ru' ? 'Черновик' : 'Лоиҳа')}
+                          {listing.status === 'pending' && t('common.inModeration', lang)}
+                          {listing.status === 'active' && t('admin.active', lang)}
+                          {listing.status === 'rejected' && t('dashboard.rejected_badge', lang)}
+                          {listing.status === 'draft' && t('staff.statusDraft', lang)}
                         </span>
                       </td>
 

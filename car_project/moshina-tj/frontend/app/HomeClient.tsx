@@ -223,7 +223,7 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
 
             {/* H1 */}
             <h1 style={{ fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.04em', lineHeight: 1.05, marginBottom: '12px' }}>
-              {lang === 'ru' ? 'Найдите свой автомобиль' : 'Мошинаи худро ёбед'}
+              {t('hero.title', lang)}
             </h1>
             <p style={{ fontSize: 'clamp(14px, 1.8vw, 15px)', color: 'var(--muted)', marginBottom: '24px', lineHeight: 1.65, maxWidth: '540px' }}>
               {t('hero.sub', lang)}
@@ -340,13 +340,13 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
             {/* Section header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
               <h2 style={{ fontSize: 'clamp(17px, 2.5vw, 22px)', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>
-                {lang === 'ru' ? 'Категории' : 'Категорияҳо'}
+                {t('nav.categories', lang)}
               </h2>
               <Link
                 href="/categories"
                 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 0', minHeight: '44px', opacity: 0.9 }}
               >
-                {lang === 'ru' ? 'Все категории' : 'Ҳама категорияҳо'}
+                {t('categories.pageTitle', lang)}
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                   <path d="M2 7h10M8 3l4 4-4 4"/>
                 </svg>
@@ -747,7 +747,7 @@ function EmptyState({ lang }: { lang: Lang }) {
       </div>
       <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}>{t('catalog.noResults', lang)}</p>
       <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-        {lang === 'ru' ? 'Попробуйте изменить параметры поиска' : 'Параметрҳои ҷустуҷӯро тағйир диҳед'}
+        {t('catalog.adjustFilters', lang)}
       </p>
     </div>
   )

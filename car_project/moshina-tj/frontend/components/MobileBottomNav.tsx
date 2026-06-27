@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useLang } from '@/lib/LanguageContext'
@@ -50,11 +50,18 @@ function FavoritesIcon({ active }: { active: boolean }) {
   )
 }
 
+function SearchParamsReader({ onTab }: { onTab: (tab: string | null) => void }) {
+  const searchParams = useSearchParams()
+  const tab = searchParams.get('tab')
+  useEffect(() => { onTab(tab) }, [tab, onTab])
+  return null
+}
+
 export default function MobileBottomNav() {
   const { lang } = useLang()
   const { user } = useAuth()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const [currentTab, setCurrentTab] = useState<string | null>(null)
   // Pulse the FAB once on first mount, then stop
   const fabPulsedRef = useRef(false)
   const [fabPulse, setFabPulse] = useState(false)
@@ -81,7 +88,6 @@ export default function MobileBottomNav() {
   const isCarDetail = pathname.startsWith('/car/')
   if (isCrmRoute || isCarDetail) return null
 
-  const currentTab = searchParams.get('tab')
   const profileHref = user ? '/dashboard' : '/auth/login'
   const profileActive = (pathname === '/dashboard' && !currentTab) || pathname === '/auth/login'
   const favoritesHref = user ? '/dashboard?tab=favorites' : '/auth/login'
@@ -120,6 +126,9 @@ export default function MobileBottomNav() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
+      <Suspense fallback={null}>
+        <SearchParamsReader onTab={setCurrentTab} />
+      </Suspense>
       <div
         style={{
           display: 'flex',

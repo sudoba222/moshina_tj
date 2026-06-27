@@ -239,7 +239,7 @@ export default function AdminBannersPage() {
               </div>
               <div style={{ flexShrink: 0, padding: '0 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                 <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '100px', background: b.is_active ? 'var(--color-success-dim)' : 'var(--tag-bg)', color: b.is_active ? 'var(--color-success)' : 'var(--text-muted)' }}>
-                  {b.is_active ? (lang === 'ru' ? 'Активен' : 'Фаъол') : (lang === 'ru' ? 'Скрыт' : 'Пинҳон')}
+                  {b.is_active ? t('admin.active', lang) : t('admin.hidden', lang)}
                 </span>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>#{b.display_order}</span>
               </div>
@@ -353,7 +353,7 @@ export default function AdminBannersPage() {
               </FormField>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {lang === 'ru' ? 'Активен' : 'Фаъол'}
+                  {t('admin.active', lang)}
                 </label>
                 <input
                   type="checkbox"

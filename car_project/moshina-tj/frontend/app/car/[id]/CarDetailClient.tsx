@@ -755,14 +755,14 @@ export default function CarDetailClient() {
     ...(listing.color ? [{ icon: <ColorIcon />, label: t('carDetail.color', lang), value: listing.color }] : []),
     { icon: <PinIcon />, label: t('carDetail.city', lang), value: listing.city },
     // Category-specific extra attributes
-    ...(listing.extra_attrs?.moto_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип мотоцикла' : 'Намуди мотосикл', value: listing.extra_attrs.moto_type }] : []),
-    ...(listing.extra_attrs?.engine_cc ? [{ icon: <EngineIcon />, label: lang === 'ru' ? 'Объём (куб. см)' : 'Ҳаҷм (кб. см)', value: `${listing.extra_attrs.engine_cc} cc` }] : []),
-    ...(listing.extra_attrs?.truck_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип грузовика' : 'Намуди боркаш', value: listing.extra_attrs.truck_type }] : []),
-    ...(listing.extra_attrs?.payload_capacity ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Грузоподъёмность' : 'Ҳадди бор', value: `${listing.extra_attrs.payload_capacity} т` }] : []),
-    ...(listing.extra_attrs?.bus_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип автобуса' : 'Намуди автобус', value: listing.extra_attrs.bus_type }] : []),
-    ...(listing.extra_attrs?.seats_count ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Количество мест' : 'Шумораи нишастгоҳ', value: listing.extra_attrs.seats_count }] : []),
-    ...(listing.extra_attrs?.special_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип спецтехники' : 'Намуди техника', value: listing.extra_attrs.special_type }] : []),
-    ...(listing.extra_attrs?.commercial_type ? [{ icon: <RoadIcon />, label: lang === 'ru' ? 'Тип коммерческого' : 'Намуди тиҷоратӣ', value: listing.extra_attrs.commercial_type }] : []),
+    ...(listing.extra_attrs?.moto_type ? [{ icon: <RoadIcon />, label: t('catFields.motoTypeLabel', lang), value: listing.extra_attrs.moto_type }] : []),
+    ...(listing.extra_attrs?.engine_cc ? [{ icon: <EngineIcon />, label: t('catFields.engineCcLabel', lang), value: `${listing.extra_attrs.engine_cc} cc` }] : []),
+    ...(listing.extra_attrs?.truck_type ? [{ icon: <RoadIcon />, label: t('catFields.truckTypeLabel', lang), value: listing.extra_attrs.truck_type }] : []),
+    ...(listing.extra_attrs?.payload_capacity ? [{ icon: <RoadIcon />, label: t('catFields.payloadLabel', lang), value: `${listing.extra_attrs.payload_capacity} т` }] : []),
+    ...(listing.extra_attrs?.bus_type ? [{ icon: <RoadIcon />, label: t('catFields.busTypeLabel', lang), value: listing.extra_attrs.bus_type }] : []),
+    ...(listing.extra_attrs?.seats_count ? [{ icon: <RoadIcon />, label: t('catFields.seatsLabel', lang), value: listing.extra_attrs.seats_count }] : []),
+    ...(listing.extra_attrs?.special_type ? [{ icon: <RoadIcon />, label: t('catFields.specialTypeLabel', lang), value: listing.extra_attrs.special_type }] : []),
+    ...(listing.extra_attrs?.commercial_type ? [{ icon: <RoadIcon />, label: t('catFields.commercialTypeLabel', lang), value: listing.extra_attrs.commercial_type }] : []),
   ]
 
   return (

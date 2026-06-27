@@ -166,7 +166,7 @@ function Logo({ size = 'md' }: { size?: 'sm' | 'md' }) {
         fontSize: big ? '20px' : '17px',
         letterSpacing: '-0.04em',
         lineHeight: 1,
-        color: 'rgb(39,20,22)',
+        color: 'var(--text)',
       }}>
         Taj
       </span>
@@ -320,6 +320,7 @@ export default function Navbar() {
                   onChange={(e) => { setQuery(e.target.value); fetchSuggestions(e.target.value) }}
                   onFocus={() => { if (suggestions.length > 0) setShowSugg(true) }}
                   placeholder={t('hero.searchPlaceholder', lang)}
+                  aria-label={t('hero.searchPlaceholder', lang)}
                   autoComplete="off"
                   style={{ flex: 1, height: '38px', padding: '0 4px 0 0', background: 'transparent', border: 'none', fontSize: '14px', color: 'var(--text)', outline: 'none' }}
                 />
@@ -362,6 +363,9 @@ export default function Navbar() {
             {user ? (
               <div ref={dropRef} className="hidden md:block" style={{ position: 'relative' }}>
                 <button onClick={() => setDropOpen((v) => !v)}
+                  aria-expanded={dropOpen}
+                  aria-haspopup="true"
+                  aria-label={t('nav.dashboard', lang)}
                   style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '5px 10px 5px 5px', cursor: 'pointer', transition: 'border-color 0.13s' }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
@@ -424,7 +428,7 @@ export default function Navbar() {
             </Link>
 
             {/* Hamburger */}
-            <button onClick={() => setMobileOpen((v) => !v)} aria-label="Toggle menu" className="flex md:hidden items-center justify-center"
+            <button onClick={() => setMobileOpen((v) => !v)} aria-label={mobileOpen ? t('admin.navClose', lang) : t('admin.navOpen', lang)} className="flex md:hidden items-center justify-center"
               style={{ width: '44px', height: '44px', background: 'none', border: '1.5px solid var(--border)', borderRadius: '9px', cursor: 'pointer', color: 'var(--text)', flexShrink: 0 }}>
               {mobileOpen ? (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/></svg>
@@ -467,6 +471,7 @@ export default function Navbar() {
                 onChange={(e) => { setQuery(e.target.value); fetchSuggestions(e.target.value) }}
                 onFocus={() => { if (suggestions.length > 0) setShowSugg(true) }}
                 placeholder={t('hero.searchPlaceholder', lang)}
+                aria-label={t('hero.searchPlaceholder', lang)}
                 autoComplete="off"
                 style={{ flex: 1, height: '44px', padding: '0 13px', background: 'var(--bg)', border: 'none', fontSize: '14px', color: 'var(--text)', outline: 'none' }} />
               <button type="submit" style={{ height: '44px', padding: '0 14px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '13px', flexShrink: 0 }}>

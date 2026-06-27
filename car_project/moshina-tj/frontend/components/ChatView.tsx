@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -24,11 +24,9 @@ function relativeTime(dateStr: string, lang: 'ru' | 'tj' = 'ru'): string {
   return `${Math.floor(diff / 86400)}${lang === 'tj' ? 'р' : 'д'}`
 }
 
-export default function ChatView() {
+function ChatViewContent({ initialConvId }: { initialConvId: string | null }) {
   const { lang } = useLang()
   const { user } = useAuth()
-  const searchParams = useSearchParams()
-  const initialConvId = searchParams.get('conv')
 
   const [conversations, setConversations] = useState<ConversationItem[]>([])
   const [selectedConvId, setSelectedConvId] = useState<string | null>(initialConvId)
@@ -62,7 +60,7 @@ export default function ChatView() {
     const socket = new WebSocket(wsUrl)
 
     socket.onopen = () => {
-      console.log('WS connected')
+      // connected
     }
 
     socket.onmessage = (event) => {
@@ -105,7 +103,6 @@ export default function ChatView() {
     }
 
     socket.onclose = () => {
-      console.log('WS closed, reconnecting...')
       socketRef.current = null
       setTimeout(connectSocket, 3000)
     }
@@ -352,5 +349,18 @@ export default function ChatView() {
         )}
       </div>
     </div>
+  )
+}
+
+function ChatViewWithParams() {
+  const searchParams = useSearchParams()
+  return <ChatViewContent initialConvId={searchParams.get('conv')} />
+}
+
+export default function ChatView() {
+  return (
+    <Suspense fallback={null}>
+      <ChatViewWithParams />
+    </Suspense>
   )
 }

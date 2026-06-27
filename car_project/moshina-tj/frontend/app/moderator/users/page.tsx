@@ -282,7 +282,7 @@ export default function ModeratorUsersPage() {
                           </span>
                         ) : (
                           <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '100px', background: 'var(--color-success-dim)', color: 'var(--color-success)' }}>
-                            {lang === 'ru' ? 'Активен' : 'Фаъол'}
+                            {t('admin.active', lang)}
                           </span>
                         )}
                       </td>
