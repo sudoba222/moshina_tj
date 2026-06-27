@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
@@ -20,28 +19,28 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabCtrl;
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  // Phone OTP tab
+  // Shared name field (used for both phone and email registration)
+  final _nameCtrl = TextEditingController();
+
+  // Phone OTP
   CountryCode _country = CountryCode.all.first;
-  final _phoneNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   bool _phoneLoading = false;
   String? _phoneError;
 
-  // Email tab
+  // Email OTP (expandable)
+  bool _emailExpanded = false;
   final _emailFormKey = GlobalKey<FormState>();
-  final _emailNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   bool _emailLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
     _fadeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 520),
@@ -56,20 +55,18 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   void dispose() {
-    _tabCtrl.dispose();
-    _phoneNameCtrl.dispose();
+    _nameCtrl.dispose();
     _phoneCtrl.dispose();
-    _emailNameCtrl.dispose();
     _emailCtrl.dispose();
     _fadeCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _sendPhoneOtp() async {
-    final name = _phoneNameCtrl.text.trim();
+    final name = _nameCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
+    final lang = context.read<LanguageProvider>().lang;
     if (phone.isEmpty) {
-      final lang = context.read<LanguageProvider>().lang;
       setState(() => _phoneError = t('error.enterPhone', lang));
       return;
     }
@@ -90,8 +87,8 @@ class _RegisterScreenState extends State<RegisterScreen>
       }
     } catch (e) {
       if (mounted) {
-        final lang = context.read<LanguageProvider>().lang;
-        setState(() => _phoneError = t('error.sendCodeFailed', lang));
+        setState(() => _phoneError =
+            t('error.sendCodeFailed', context.read<LanguageProvider>().lang));
       }
     } finally {
       if (mounted) setState(() => _phoneLoading = false);
@@ -104,12 +101,13 @@ class _RegisterScreenState extends State<RegisterScreen>
     final auth = context.read<AuthProvider>();
     final ok = await auth.registerWithEmail(
       _emailCtrl.text.trim(),
-      _emailNameCtrl.text.trim(),
+      _nameCtrl.text.trim(),
     );
     if (mounted) {
       setState(() => _emailLoading = false);
       if (ok) {
-        context.push('/otp', extra: {'email': _emailCtrl.text.trim(), 'mode': 'email'});
+        context.push('/otp',
+            extra: {'email': _emailCtrl.text.trim(), 'mode': 'email'});
       }
     }
   }
@@ -118,7 +116,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     final w = MediaQuery.of(context).size.width;
     if (w < 360) return 18;
     if (w < 400) return 22;
-    return 28;
+    return 24;
   }
 
   @override
@@ -132,7 +130,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       backgroundColor: c.bg,
       body: Stack(
         children: [
-          // Subtle gradient backdrop
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -144,7 +141,6 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
             ),
           ),
-          // Decorative blob
           Positioned(
             bottom: 100,
             left: -80,
@@ -165,156 +161,161 @@ class _RegisterScreenState extends State<RegisterScreen>
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(horizontal: hp),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 16),
+
                       // Back button
                       Align(
                         alignment: Alignment.centerLeft,
                         child: GestureDetector(
                           onTap: () => context.pop(),
                           child: Container(
-                            width: 40,
-                            height: 40,
+                            width: 42,
+                            height: 42,
                             decoration: BoxDecoration(
                               color: c.card,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: c.border),
                             ),
-                            child: Icon(Icons.arrow_back_rounded, color: c.text, size: 20),
+                            child: Icon(Icons.arrow_back_rounded,
+                                color: c.text, size: 20),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      AuthHeroSection(c: c, lang: lang),
                       const SizedBox(height: 28),
-                      // Form card
-                      Container(
-                        decoration: BoxDecoration(
-                          color: c.card,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 4)),
-                            BoxShadow(color: c.accent.withValues(alpha: 0.04), blurRadius: 30, offset: const Offset(0, 8)),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            // Tabs
-                            Container(
-                              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                              decoration: BoxDecoration(
-                                color: c.bg,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: TabBar(
-                                controller: _tabCtrl,
-                                indicator: BoxDecoration(
-                                  color: c.accent,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                indicatorSize: TabBarIndicatorSize.tab,
-                                labelColor: Colors.white,
-                                unselectedLabelColor: c.textMuted,
-                                labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14),
-                                unselectedLabelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w500, fontSize: 14),
-                                dividerColor: Colors.transparent,
-                                tabs: [
-                                  Tab(text: t('auth.phoneTab', lang)),
-                                  Tab(text: t('auth.emailTab', lang)),
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                              child: Column(
-                                children: [
-                                  if (authError != null) ...[
-                                    AuthErrorBanner(message: authError),
-                                    const SizedBox(height: 14),
-                                  ],
-                                  SizedBox(
-                                    height: 320,
-                                    child: TabBarView(
-                                      controller: _tabCtrl,
-                                      children: [
-                                        _PhoneTab(
-                                          nameCtrl: _phoneNameCtrl,
-                                          phoneCtrl: _phoneCtrl,
-                                          country: _country,
-                                          onCountryChanged: (cc) => setState(() => _country = cc),
-                                          loading: _phoneLoading,
-                                          error: _phoneError,
-                                          onSubmit: _sendPhoneOtp,
-                                          lang: lang,
-                                          c: c,
-                                        ),
-                                        _EmailTab(
-                                          formKey: _emailFormKey,
-                                          nameCtrl: _emailNameCtrl,
-                                          emailCtrl: _emailCtrl,
-                                          loading: _emailLoading,
-                                          onSubmit: _submitEmail,
-                                          lang: lang,
-                                          c: c,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+
+                      AuthHeroSection(c: c, lang: lang),
+                      const SizedBox(height: 32),
+
+                      // Global auth error
+                      if (authError != null) ...[
+                        AuthErrorBanner(message: authError),
+                        const SizedBox(height: 14),
+                      ],
+
+                      // Name field (shared by phone + email paths)
+                      AuthField(
+                        controller: _nameCtrl,
+                        label: t('auth.fullName', lang),
+                        prefixIcon: Icons.badge_outlined,
+                        c: c,
                       ),
-                      const SizedBox(height: 24),
-                      // Social auth
-                      Container(
-                        decoration: BoxDecoration(
-                          color: c.card,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: c.border),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 4))],
-                        ),
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                        child: Column(
-                          children: [
-                            _RegisterDividerRow(c: c, lang: lang),
-                            const SizedBox(height: 12),
-                            OutlinedButton.icon(
-                              onPressed: () => launchUrl(
-                                Uri.parse('https://tajcar.tj/auth/login'),
-                                mode: LaunchMode.externalApplication,
-                              ),
-                              icon: Icon(Icons.g_mobiledata_rounded, size: 22, color: c.accent),
-                              label: Text(t('auth.continueGoogle', lang)),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: c.text,
-                                side: BorderSide(color: c.border),
-                                minimumSize: const Size(double.infinity, 48),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      const SizedBox(height: 12),
+
+                      // Phone error
+                      if (_phoneError != null) ...[
+                        AuthErrorBanner(message: _phoneError!),
+                        const SizedBox(height: 10),
+                      ],
+
+                      // Phone input row
+                      Row(
+                        children: [
+                          CountryPickerButton(
+                            selected: _country,
+                            onChanged: (cc) => setState(() => _country = cc),
+                            c: c,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SizedBox(
+                              height: 56,
+                              child: TextField(
+                                controller: _phoneCtrl,
+                                keyboardType: TextInputType.phone,
+                                onChanged: (_) {
+                                  if (_phoneError != null) {
+                                    setState(() => _phoneError = null);
+                                  }
+                                },
+                                style: TextStyle(
+                                  color: c.text,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: '900 00 00 00',
+                                  hintStyle: TextStyle(
+                                      color: c.textMuted, fontSize: 15),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 17),
+                                  filled: true,
+                                  fillColor: c.surface,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: c.border, width: 1.2),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: c.border, width: 1.2),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: c.accent, width: 1.8),
+                                  ),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: () => context.push('/login'),
-                              icon: Icon(Icons.send_rounded, size: 18, color: c.accent),
-                              label: Text(t('auth.continueTelegram', lang)),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: c.text,
-                                side: BorderSide(color: c.border),
-                                minimumSize: const Size(double.infinity, 48),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Phone CTA
+                      AuthPrimaryButton(
+                        loading: _phoneLoading,
+                        label: t('auth.getCode', lang),
+                        onPressed: _sendPhoneOtp,
+                        c: c,
                       ),
                       const SizedBox(height: 20),
-                      AuthBottomLink(
-                        prefix: t('auth.hasAccount', lang),
-                        linkText: t('auth.login', lang),
-                        onTap: () => context.pop(),
+
+                      // Expandable email section
+                      _EmailSection(
+                        lang: lang,
                         c: c,
+                        expanded: _emailExpanded,
+                        onToggle: () =>
+                            setState(() => _emailExpanded = !_emailExpanded),
+                        formKey: _emailFormKey,
+                        emailCtrl: _emailCtrl,
+                        loading: _emailLoading,
+                        onSubmit: _submitEmail,
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Divider + Google (Telegram removed from register)
+                      _DividerRow(c: c, lang: lang),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => launchUrl(
+                          Uri.parse('https://tajcar.tj/auth/login'),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                        icon: Icon(Icons.g_mobiledata_rounded,
+                            size: 22, color: c.accent),
+                        label: Text(t('auth.continueGoogle', lang)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: c.text,
+                          side: BorderSide(color: c.border),
+                          minimumSize: const Size(double.infinity, 52),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      Center(
+                        child: AuthBottomLink(
+                          prefix: t('auth.hasAccount', lang),
+                          linkText: t('auth.login', lang),
+                          onTap: () => context.pop(),
+                          c: c,
+                        ),
                       ),
                       const SizedBox(height: 32),
                     ],
@@ -329,137 +330,116 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 }
 
-class _PhoneTab extends StatelessWidget {
-  final TextEditingController nameCtrl;
-  final TextEditingController phoneCtrl;
-  final CountryCode country;
-  final ValueChanged<CountryCode> onCountryChanged;
-  final bool loading;
-  final String? error;
-  final VoidCallback onSubmit;
+// ---------------------------------------------------------------------------
+// Expandable email registration section
+// ---------------------------------------------------------------------------
+
+class _EmailSection extends StatelessWidget {
   final String lang;
   final AppColors c;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final GlobalKey<FormState> formKey;
+  final TextEditingController emailCtrl;
+  final bool loading;
+  final VoidCallback onSubmit;
 
-  const _PhoneTab({
-    required this.nameCtrl,
-    required this.phoneCtrl,
-    required this.country,
-    required this.onCountryChanged,
-    required this.loading,
-    required this.error,
-    required this.onSubmit,
+  const _EmailSection({
     required this.lang,
     required this.c,
+    required this.expanded,
+    required this.onToggle,
+    required this.formKey,
+    required this.emailCtrl,
+    required this.loading,
+    required this.onSubmit,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        AuthField(
-          controller: nameCtrl,
-          label: t('auth.fullName', lang),
-          prefixIcon: Icons.badge_outlined,
-          c: c,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            CountryPickerButton(selected: country, onChanged: onCountryChanged, c: c),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AuthField(
-                controller: phoneCtrl,
-                label: t('auth.phone', lang),
-                prefixIcon: Icons.phone_outlined,
-                c: c,
-                keyboardType: TextInputType.phone,
-                hint: '900 00 00 00',
+        GestureDetector(
+          onTap: onToggle,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              expanded
+                  ? (lang == 'ru'
+                      ? 'Скрыть Email'
+                      : 'Email-ро пинҳон кунед')
+                  : (lang == 'ru'
+                      ? 'или зарегистрироваться через Email'
+                      : 'ё тавассути Email сабт кардан'),
+              style: TextStyle(
+                color: c.accent,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ],
+          ),
         ),
-        if (error != null) ...[
-          const SizedBox(height: 10),
-          AuthErrorBanner(message: error!),
-        ],
-        const Spacer(),
-        AuthPrimaryButton(
-          label: t('auth.getCode', lang),
-          onPressed: loading ? null : onSubmit,
-          loading: loading,
-          c: c,
+        ClipRect(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeInOut,
+            child: expanded
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AuthField(
+                            controller: emailCtrl,
+                            label: 'Email',
+                            prefixIcon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                            c: c,
+                            validator: (v) {
+                              if (v == null || !v.contains('@')) {
+                                return t('error.invalidEmail', lang);
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            lang == 'ru'
+                                ? 'Отправим код на email'
+                                : 'Коди тасдиқро ба email мефиристем',
+                            style: TextStyle(color: c.textMuted, fontSize: 12),
+                          ),
+                          const SizedBox(height: 14),
+                          AuthPrimaryButton(
+                            loading: loading,
+                            label: t('auth.getCode', lang),
+                            onPressed: onSubmit,
+                            c: c,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ),
       ],
     );
   }
 }
 
-class _EmailTab extends StatelessWidget {
-  final GlobalKey<FormState> formKey;
-  final TextEditingController nameCtrl;
-  final TextEditingController emailCtrl;
-  final bool loading;
-  final VoidCallback onSubmit;
-  final String lang;
-  final AppColors c;
+// ---------------------------------------------------------------------------
+// Divider with "или" label
+// ---------------------------------------------------------------------------
 
-  const _EmailTab({
-    required this.formKey,
-    required this.nameCtrl,
-    required this.emailCtrl,
-    required this.loading,
-    required this.onSubmit,
-    required this.lang,
-    required this.c,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Form(
-      key: formKey,
-      child: Column(
-        children: [
-          AuthField(
-            controller: nameCtrl,
-            label: t('auth.fullName', lang),
-            prefixIcon: Icons.badge_outlined,
-            c: c,
-            validator: (v) {
-              if (v == null || v.trim().length < 2) return t('auth.nameMinLength', lang);
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
-          AuthField(
-            controller: emailCtrl,
-            label: 'Email',
-            prefixIcon: Icons.email_outlined,
-            c: c,
-            keyboardType: TextInputType.emailAddress,
-            validator: (v) {
-              if (v == null || !v.contains('@')) return t('error.invalidEmail', lang);
-              return null;
-            },
-          ),
-          const SizedBox(height: 20),
-          AuthPrimaryButton(
-            label: t('auth.getCode', lang),
-            onPressed: loading ? null : onSubmit,
-            loading: loading,
-            c: c,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RegisterDividerRow extends StatelessWidget {
+class _DividerRow extends StatelessWidget {
   final AppColors c;
   final String lang;
-  const _RegisterDividerRow({required this.c, required this.lang});
+  const _DividerRow({required this.c, required this.lang});
 
   @override
   Widget build(BuildContext context) {
@@ -468,7 +448,10 @@ class _RegisterDividerRow extends StatelessWidget {
         Expanded(child: Divider(color: c.border, thickness: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(t('auth.or', lang), style: TextStyle(color: c.textMuted, fontSize: 13)),
+          child: Text(
+            t('auth.or', lang),
+            style: TextStyle(color: c.textMuted, fontSize: 13),
+          ),
         ),
         Expanded(child: Divider(color: c.border, thickness: 1)),
       ],

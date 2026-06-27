@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../l10n/strings.dart';
 
 // ---------------------------------------------------------------------------
 // Hero section: wordmark + subtitle (used on both login and register screens)
@@ -64,7 +65,7 @@ class AuthHeroSection extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'Авторынок Таджикистана',
+          t('auth.subtitle', lang),
           style: GoogleFonts.outfit(
             color: c.textMuted,
             fontSize: 14,

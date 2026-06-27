@@ -46,6 +46,7 @@ const Map<String, Map<String, String>> appStrings = {
   'common.cancel': {'ru': 'Отмена', 'tj': 'Бекор кардан'},
   'common.delete': {'ru': 'Удалить', 'tj': 'Нест кардан'},
   'common.verified': {'ru': 'Верифицирован', 'tj': 'Тасдиқшуда'},
+  'auth.subtitle': {'ru': 'Авторынок Таджикистана', 'tj': 'Бозори мошин Тоҷикистон'},
   'auth.logoutConfirm': {'ru': 'Вы уверены, что хотите выйти?', 'tj': 'Оё мехоҳед баромад кунед?'},
   'filters.all': {'ru': 'Все', 'tj': 'Ҳама'},
   'filters.sale': {'ru': 'Продажа', 'tj': 'Фурӯш'},

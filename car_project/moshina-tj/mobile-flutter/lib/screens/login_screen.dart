@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -18,33 +17,32 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen>
-    with TickerProviderStateMixin {
-  late TabController _tabCtrl;
+    with SingleTickerProviderStateMixin {
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  // Phone tab
+  // Phone
   CountryCode _selectedCountry = CountryCode.all.first;
   final _phoneCtrl = TextEditingController();
   bool _phoneLoading = false;
   String? _phoneError;
 
-  // Email tab
+  // Email (expandable inline)
+  bool _emailExpanded = false;
   final _emailFormKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   bool _emailLoading = false;
   String? _emailError;
 
-  // Telegram OTP inline
-  bool _showTelegramPhoneField = false;
+  // Telegram (expandable inline)
+  bool _telegramExpanded = false;
   final _tgPhoneCtrl = TextEditingController();
   bool _tgLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
     _fadeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 520),
@@ -59,7 +57,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   void dispose() {
-    _tabCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _tgPhoneCtrl.dispose();
@@ -69,8 +66,8 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _sendPhoneOtp() async {
     final phone = _phoneCtrl.text.trim();
+    final lang = context.read<LanguageProvider>().lang;
     if (phone.isEmpty) {
-      final lang = context.read<LanguageProvider>().lang;
       setState(() => _phoneError = t('error.enterPhone', lang));
       return;
     }
@@ -87,8 +84,8 @@ class _LoginScreenState extends State<LoginScreen>
       }
     } catch (e) {
       if (mounted) {
-        final lang = context.read<LanguageProvider>().lang;
-        setState(() => _phoneError = t('error.sendCodeFailed', lang));
+        setState(() =>
+            _phoneError = t('error.sendCodeFailed', context.read<LanguageProvider>().lang));
       }
     } finally {
       if (mounted) setState(() => _phoneLoading = false);
@@ -103,12 +100,16 @@ class _LoginScreenState extends State<LoginScreen>
     });
     try {
       final api = context.read<ApiService>();
+      // registerEmail triggers an OTP flow; backend treats existing accounts as login.
       await api.registerEmail(_emailCtrl.text.trim(), '');
       if (mounted) {
-        context.push('/otp', extra: {'email': _emailCtrl.text.trim(), 'mode': 'email'});
+        context.push('/otp',
+            extra: {'email': _emailCtrl.text.trim(), 'mode': 'email'});
       }
     } catch (e) {
-      if (mounted) setState(() => _emailError = e.toString().replaceFirst('Exception: ', ''));
+      if (mounted) {
+        setState(() => _emailError = e.toString().replaceFirst('Exception: ', ''));
+      }
     } finally {
       if (mounted) setState(() => _emailLoading = false);
     }
@@ -146,14 +147,13 @@ class _LoginScreenState extends State<LoginScreen>
     final w = MediaQuery.of(context).size.width;
     if (w < 360) return 18;
     if (w < 400) return 22;
-    return 28;
+    return 24;
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
-    final authError = context.select((AuthProvider p) => p.error);
     final screenH = MediaQuery.of(context).size.height;
     final hp = _hPad(context);
 
@@ -210,39 +210,145 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SizedBox(height: screenH * 0.06),
+                        SizedBox(height: screenH * 0.07),
                         AuthHeroSection(c: c, lang: lang),
-                        SizedBox(height: screenH * 0.045),
-                        _FormCard(
-                          tabCtrl: _tabCtrl,
+                        SizedBox(height: screenH * 0.05),
+
+                        // Phone error
+                        if (_phoneError != null) ...[
+                          AuthErrorBanner(message: _phoneError!),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // Phone input row
+                        Row(
+                          children: [
+                            CountryPickerButton(
+                              selected: _selectedCountry,
+                              onChanged: (code) =>
+                                  setState(() => _selectedCountry = code),
+                              c: c,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: SizedBox(
+                                height: 56,
+                                child: TextField(
+                                  controller: _phoneCtrl,
+                                  keyboardType: TextInputType.phone,
+                                  onChanged: (_) {
+                                    if (_phoneError != null) {
+                                      setState(() => _phoneError = null);
+                                    }
+                                  },
+                                  style: TextStyle(
+                                    color: c.text,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: '900 00 00 00',
+                                    hintStyle: TextStyle(
+                                        color: c.textMuted, fontSize: 15),
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 17),
+                                    filled: true,
+                                    fillColor: c.surface,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide(
+                                          color: c.border, width: 1.2),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide(
+                                          color: c.border, width: 1.2),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide(
+                                          color: c.accent, width: 1.8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Primary CTA
+                        AuthPrimaryButton(
+                          loading: _phoneLoading,
+                          label: t('auth.getCode', lang),
+                          onPressed: _sendPhoneOtp,
                           c: c,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Expandable email section
+                        _EmailSection(
                           lang: lang,
-                          selectedCountry: _selectedCountry,
-                          onCountryChanged: (code) =>
-                              setState(() => _selectedCountry = code),
-                          phoneCtrl: _phoneCtrl,
-                          phoneLoading: _phoneLoading,
-                          phoneError: _phoneError,
-                          onSendPhoneOtp: _sendPhoneOtp,
-                          emailFormKey: _emailFormKey,
+                          c: c,
+                          expanded: _emailExpanded,
+                          onToggle: () => setState(() {
+                            _emailExpanded = !_emailExpanded;
+                            if (!_emailExpanded) _emailError = null;
+                          }),
+                          formKey: _emailFormKey,
                           emailCtrl: _emailCtrl,
-                          emailLoading: _emailLoading,
-                          emailError: _emailError ?? authError,
-                          onSubmitEmail: _submitEmail,
-                          showTelegramField: _showTelegramPhoneField,
-                          onShowTelegramField: () =>
-                              setState(() => _showTelegramPhoneField = true),
-                          tgPhoneCtrl: _tgPhoneCtrl,
-                          tgLoading: _tgLoading,
-                          onSendTelegramOtp: _sendTelegramOtp,
+                          loading: _emailLoading,
+                          error: _emailError,
+                          onSubmit: _submitEmail,
                         ),
                         const SizedBox(height: 28),
-                        AuthBottomLink(
-                          prefix: t('auth.noAccount', lang),
-                          linkText: t('auth.register', lang),
-                          onTap: () => context.push('/register'),
+
+                        // Divider
+                        _DividerRow(c: c, lang: lang),
+                        const SizedBox(height: 16),
+
+                        // Google button
+                        OutlinedButton.icon(
+                          onPressed: () => launchUrl(
+                            Uri.parse('https://tajcar.tj/auth/login'),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          icon: Icon(Icons.g_mobiledata_rounded,
+                              size: 22, color: c.accent),
+                          label: Text(t('auth.continueGoogle', lang)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: c.text,
+                            side: BorderSide(color: c.border),
+                            minimumSize: const Size(double.infinity, 52),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Telegram section
+                        _TelegramSection(
+                          lang: lang,
                           c: c,
+                          expanded: _telegramExpanded,
+                          onExpand: () =>
+                              setState(() => _telegramExpanded = true),
+                          tgPhoneCtrl: _tgPhoneCtrl,
+                          loading: _tgLoading,
+                          onSend: _sendTelegramOtp,
+                        ),
+                        const SizedBox(height: 36),
+
+                        Center(
+                          child: AuthBottomLink(
+                            prefix: t('auth.noAccount', lang),
+                            linkText: t('auth.register', lang),
+                            onTap: () => context.push('/register'),
+                            c: c,
+                          ),
                         ),
                         const SizedBox(height: 32),
                       ],
@@ -258,320 +364,26 @@ class _LoginScreenState extends State<LoginScreen>
   }
 }
 
-class _FormCard extends StatelessWidget {
-  final TabController tabCtrl;
-  final AppColors c;
+// ---------------------------------------------------------------------------
+// Expandable email login section
+// ---------------------------------------------------------------------------
+
+class _EmailSection extends StatelessWidget {
   final String lang;
-  final CountryCode selectedCountry;
-  final ValueChanged<CountryCode> onCountryChanged;
-  final TextEditingController phoneCtrl;
-  final bool phoneLoading;
-  final String? phoneError;
-  final VoidCallback onSendPhoneOtp;
-  final GlobalKey<FormState> emailFormKey;
-  final TextEditingController emailCtrl;
-  final bool emailLoading;
-  final String? emailError;
-  final VoidCallback onSubmitEmail;
-  final bool showTelegramField;
-  final VoidCallback onShowTelegramField;
-  final TextEditingController tgPhoneCtrl;
-  final bool tgLoading;
-  final VoidCallback onSendTelegramOtp;
-
-  const _FormCard({
-    required this.tabCtrl,
-    required this.c,
-    required this.lang,
-    required this.selectedCountry,
-    required this.onCountryChanged,
-    required this.phoneCtrl,
-    required this.phoneLoading,
-    required this.phoneError,
-    required this.onSendPhoneOtp,
-    required this.emailFormKey,
-    required this.emailCtrl,
-    required this.emailLoading,
-    required this.emailError,
-    required this.onSubmitEmail,
-    required this.showTelegramField,
-    required this.onShowTelegramField,
-    required this.tgPhoneCtrl,
-    required this.tgLoading,
-    required this.onSendTelegramOtp,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 32,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(color: c.border),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // TabBar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: c.bg,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TabBar(
-                controller: tabCtrl,
-                indicator: BoxDecoration(
-                  color: c.accent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: Colors.white,
-                unselectedLabelColor: c.textMuted,
-                dividerColor: Colors.transparent,
-                tabs: [
-                  Tab(text: t('auth.phoneTab', lang)),
-                  Tab(text: t('auth.emailTab', lang)),
-                ],
-              ),
-            ),
-          ),
-          // Tab content
-          SizedBox(
-            height: 220,
-            child: TabBarView(
-              controller: tabCtrl,
-              children: [
-                _PhoneTab(
-                  c: c,
-                  lang: lang,
-                  selectedCountry: selectedCountry,
-                  onCountryChanged: onCountryChanged,
-                  phoneCtrl: phoneCtrl,
-                  loading: phoneLoading,
-                  error: phoneError,
-                  onSend: onSendPhoneOtp,
-                ),
-                _EmailTab(
-                  c: c,
-                  lang: lang,
-                  formKey: emailFormKey,
-                  emailCtrl: emailCtrl,
-                  loading: emailLoading,
-                  error: emailError,
-                  onSubmit: onSubmitEmail,
-                ),
-              ],
-            ),
-          ),
-          // Divider + social buttons
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: Column(
-              children: [
-                _DividerRow(c: c, lang: lang),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => launchUrl(
-                    Uri.parse('https://tajcar.tj/auth/login'),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                  icon: Icon(Icons.g_mobiledata_rounded,
-                      size: 22, color: c.accent),
-                  label: Text(t('auth.continueGoogle', lang)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: c.text,
-                    side: BorderSide(color: c.border),
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (!showTelegramField)
-                  OutlinedButton.icon(
-                    onPressed: onShowTelegramField,
-                    icon: Icon(Icons.send_rounded, size: 18, color: c.accent),
-                    label: Text(t('auth.continueTelegram', lang)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: c.text,
-                      side: BorderSide(color: c.border),
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  )
-                else
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: tgPhoneCtrl,
-                          keyboardType: TextInputType.phone,
-                          style: TextStyle(color: c.text, fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText: t('auth.telegramHint', lang),
-                            hintStyle:
-                                TextStyle(color: c.textMuted, fontSize: 13),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: c.border),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: c.border),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide:
-                                  BorderSide(color: c.accent, width: 1.5),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: tgLoading ? null : onSendTelegramOtp,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: c.accent,
-                            foregroundColor: Colors.white,
-                            minimumSize: Size.zero,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: tgLoading
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2))
-                              : const Icon(Icons.send_rounded, size: 18),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PhoneTab extends StatelessWidget {
   final AppColors c;
-  final String lang;
-  final CountryCode selectedCountry;
-  final ValueChanged<CountryCode> onCountryChanged;
-  final TextEditingController phoneCtrl;
-  final bool loading;
-  final String? error;
-  final VoidCallback onSend;
-
-  const _PhoneTab({
-    required this.c,
-    required this.lang,
-    required this.selectedCountry,
-    required this.onCountryChanged,
-    required this.phoneCtrl,
-    required this.loading,
-    required this.error,
-    required this.onSend,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (error != null) ...[
-            AuthErrorBanner(message: error!),
-            const SizedBox(height: 10),
-          ],
-          Row(
-            children: [
-              CountryPickerButton(
-                selected: selectedCountry,
-                onChanged: onCountryChanged,
-                c: c,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SizedBox(
-                  height: 56,
-                  child: TextField(
-                    controller: phoneCtrl,
-                    keyboardType: TextInputType.phone,
-                    style: TextStyle(
-                        color: c.text,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500),
-                    decoration: InputDecoration(
-                      hintText: '900 00 00 00',
-                      hintStyle: TextStyle(color: c.textMuted, fontSize: 14),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 17),
-                      filled: true,
-                      fillColor: c.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: c.border, width: 1.2),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: c.border, width: 1.2),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: c.accent, width: 1.8),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          AuthPrimaryButton(
-            loading: loading,
-            label: t('auth.getCode', lang),
-            onPressed: onSend,
-            c: c,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmailTab extends StatelessWidget {
-  final AppColors c;
-  final String lang;
+  final bool expanded;
+  final VoidCallback onToggle;
   final GlobalKey<FormState> formKey;
   final TextEditingController emailCtrl;
   final bool loading;
   final String? error;
   final VoidCallback onSubmit;
 
-  const _EmailTab({
-    required this.c,
+  const _EmailSection({
     required this.lang,
+    required this.c,
+    required this.expanded,
+    required this.onToggle,
     required this.formKey,
     required this.emailCtrl,
     required this.loading,
@@ -581,48 +393,210 @@ class _EmailTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (error != null) ...[
-              AuthErrorBanner(message: error!),
-              const SizedBox(height: 10),
-            ],
-            AuthField(
-              controller: emailCtrl,
-              label: 'Email',
-              prefixIcon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              c: c,
-              validator: (v) {
-                if (v == null || !v.contains('@')) return t('error.invalidEmail', lang);
-                return null;
-              },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        GestureDetector(
+          onTap: onToggle,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              expanded
+                  ? (lang == 'ru' ? 'Скрыть Email' : 'Email-ро пинҳон кунед')
+                  : (lang == 'ru'
+                      ? 'или войти через Email'
+                      : 'ё тавассути Email даромад'),
+              style: TextStyle(
+                color: c.accent,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              lang == 'ru'
-                  ? 'Отправим код подтверждения на email'
-                  : 'Коди тасдиқро ба email мефиристем',
-              style: TextStyle(color: c.textMuted, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            AuthPrimaryButton(
-              loading: loading,
-              label: t('auth.getCode', lang),
-              onPressed: onSubmit,
-              c: c,
-            ),
-          ],
+          ),
         ),
-      ),
+        ClipRect(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeInOut,
+            child: expanded
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (error != null) ...[
+                            AuthErrorBanner(message: error!),
+                            const SizedBox(height: 10),
+                          ],
+                          AuthField(
+                            controller: emailCtrl,
+                            label: 'Email',
+                            prefixIcon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                            c: c,
+                            validator: (v) {
+                              if (v == null || !v.contains('@')) {
+                                return t('error.invalidEmail', lang);
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            lang == 'ru'
+                                ? 'Отправим код подтверждения на email'
+                                : 'Коди тасдиқро ба email мефиристем',
+                            style: TextStyle(color: c.textMuted, fontSize: 12),
+                          ),
+                          const SizedBox(height: 14),
+                          AuthPrimaryButton(
+                            loading: loading,
+                            label: t('auth.getCode', lang),
+                            onPressed: onSubmit,
+                            c: c,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+      ],
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Telegram login section (collapse → expand with phone input)
+// ---------------------------------------------------------------------------
+
+class _TelegramSection extends StatelessWidget {
+  final String lang;
+  final AppColors c;
+  final bool expanded;
+  final VoidCallback onExpand;
+  final TextEditingController tgPhoneCtrl;
+  final bool loading;
+  final VoidCallback onSend;
+
+  const _TelegramSection({
+    required this.lang,
+    required this.c,
+    required this.expanded,
+    required this.onExpand,
+    required this.tgPhoneCtrl,
+    required this.loading,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!expanded) {
+      return OutlinedButton.icon(
+        onPressed: onExpand,
+        icon: Icon(Icons.send_rounded, size: 18, color: c.accent),
+        label: Text(t('auth.continueTelegram', lang)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: c.text,
+          side: BorderSide(color: c.border),
+          minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14)),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('auth.telegramPhone', lang),
+          style: TextStyle(
+            color: c.textMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 52,
+                child: TextField(
+                  controller: tgPhoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  autofocus: true,
+                  style: TextStyle(color: c.text, fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: t('auth.telegramHint', lang),
+                    hintStyle:
+                        TextStyle(color: c.textMuted, fontSize: 13),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 14),
+                    filled: true,
+                    fillColor: c.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: c.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: c.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: c.accent, width: 1.8),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: loading ? null : onSend,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: c.accent,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        t('auth.sendCode', lang),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Divider with "или" label
+// ---------------------------------------------------------------------------
 
 class _DividerRow extends StatelessWidget {
   final AppColors c;
