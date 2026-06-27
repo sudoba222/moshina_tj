@@ -196,6 +196,36 @@ class ListingCreate(BaseModel):
     # VIN — optional; validated client-side and stored as-is (uppercase)
     vin: Optional[str] = Field(default=None, min_length=17, max_length=17)
 
+    # Accept both English keys ('petrol', 'diesel' …) and Russian display values ('Бензин', 'Дизель' …)
+    # so mobile clients don't need to know the enum internals.
+    @field_validator("fuel", mode="before")
+    @classmethod
+    def normalize_fuel(cls, v: object) -> object:
+        _fuel_map = {
+            "petrol": "Бензин", "gasoline": "Бензин",
+            "diesel": "Дизель",
+            "gas": "Газ", "lpg": "Газ", "cng": "Газ",
+            "electric": "Электро", "electrical": "Электро", "ev": "Электро",
+            "hybrid": "Гибрид",
+        }
+        if isinstance(v, str):
+            return _fuel_map.get(v.lower(), v)
+        return v
+
+    @field_validator("transmission", mode="before")
+    @classmethod
+    def normalize_transmission(cls, v: object) -> object:
+        _tr_map = {
+            "automatic": "Автомат", "auto": "Автомат",
+            "manual": "Механика", "mechanic": "Механика",
+            "cvt": "Вариатор", "variator": "Вариатор",
+            "robot": "Автомат",  # nearest valid equivalent
+            "robotic": "Автомат",
+        }
+        if isinstance(v, str):
+            return _tr_map.get(v.lower(), v)
+        return v
+
     @field_validator("vin", mode="before")
     @classmethod
     def vin_uppercase(cls, v: Optional[str]) -> Optional[str]:
