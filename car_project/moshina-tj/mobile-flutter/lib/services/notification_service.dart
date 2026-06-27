@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
@@ -21,10 +23,22 @@ class NotificationService {
     importance: Importance.high,
   );
 
+  // Bug #3 fix: store subscriptions so they can be cancelled on re-init.
+  static StreamSubscription<RemoteMessage>? _onMessageSub;
+  static StreamSubscription<RemoteMessage>? _onOpenedSub;
+  static StreamSubscription<String>? _onTokenRefreshSub;
+
   /// Call once after the user is authenticated and a valid [BuildContext] is available.
-  /// Safe to call multiple times — re-registrations are idempotent on the backend.
+  /// Safe to call multiple times — cancels previous listeners before re-subscribing.
   static Future<void> initialize(ApiService api, BuildContext context) async {
     final messaging = FirebaseMessaging.instance;
+
+    // Bug #3 fix: cancel any existing subscriptions before re-subscribing.
+    // Without this, each login stacks an additional listener causing duplicate
+    // notifications and token refreshes.
+    await _onMessageSub?.cancel();
+    await _onOpenedSub?.cancel();
+    await _onTokenRefreshSub?.cancel();
 
     // --- Permission ---
     await messaging.requestPermission(
@@ -49,16 +63,15 @@ class NotificationService {
       },
     );
 
-    // --- Background message handler (must be registered before any other FCM call) ---
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    // Note: FirebaseMessaging.onBackgroundMessage() is registered in main()
+    // before runApp(), as required by Firebase. It must be called before any
+    // other Firebase initialization to work correctly on all platforms.
 
     // --- Foreground messages ---
-    FirebaseMessaging.onMessage.listen((message) {
-      _showLocalNotification(message);
-    });
+    _onMessageSub = FirebaseMessaging.onMessage.listen(_showLocalNotification);
 
     // --- Notification tapped while app was in background (not terminated) ---
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+    _onOpenedSub = FirebaseMessaging.onMessageOpenedApp.listen((message) {
       final route = _routeForMessage(message);
       _handleTap(route, context);
     });
@@ -76,7 +89,9 @@ class NotificationService {
     await _registerToken(api);
 
     // --- Keep token fresh ---
-    messaging.onTokenRefresh.listen((token) => _postToken(api, token));
+    _onTokenRefreshSub = messaging.onTokenRefresh.listen(
+      (token) => _postToken(api, token),
+    );
   }
 
   static Future<void> _registerToken(ApiService api) async {
@@ -92,7 +107,8 @@ class NotificationService {
     try {
       await api.postRaw(
         '/users/me/fcm-token',
-        body: {'token': token, 'platform': 'android'},
+        // Bug #1 fix: send the correct platform string instead of hardcoding 'android'.
+        body: {'token': token, 'platform': Platform.isIOS ? 'ios' : 'android'},
       );
     } catch (_) {
       // Non-critical: FCM will still deliver; retry on next app launch.

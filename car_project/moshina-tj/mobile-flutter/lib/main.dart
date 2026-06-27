@@ -26,6 +26,12 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Bug #2 fix: onBackgroundMessage must be registered immediately after
+  // Firebase.initializeApp(), before the app starts. Registering it inside
+  // NotificationService.initialize() (which runs post-login) is too late —
+  // Firebase silently ignores background handler registration after startup.
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,

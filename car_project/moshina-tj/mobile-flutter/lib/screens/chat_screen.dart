@@ -30,8 +30,10 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   // Derived from ApiService.wsBase so it stays in sync with the REST base URL.
   static String get _wsUrl => '${ApiService.wsBase}/chat';
-  static const _maxReconnects = 3;
-  static const _reconnectDelay = Duration(seconds: 2);
+
+  // Bug #5 fix: exponential backoff delays in seconds (capped at 30s).
+  // Unlimited retries while the screen is open.
+  static const _backoffDelays = [2, 4, 8, 16, 30];
   static const _nearBottomThreshold = 200.0;
 
   final _ctrl = TextEditingController();
@@ -41,6 +43,9 @@ class _ChatScreenState extends State<ChatScreen> {
   StreamSubscription? _sub;
   Timer? _reconnectTimer;
   _WsStatus _wsStatus = _WsStatus.connecting;
+  // Bug #6 fix: separate connected flag — _channel may be non-null but dead
+  // during reconnect, so _channel == null is not a reliable guard for sends.
+  bool _wsConnected = false;
   int _reconnectAttempts = 0;
 
   List<Map<String, dynamic>> _messages = [];
@@ -168,20 +173,21 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _connectWs() async {
     final token = await context.read<ApiService>().getToken();
     if (!mounted) return;
-    // Pass token as query param — iOS strips custom HTTP headers during the
-    // WebSocket upgrade handshake, so header-only auth fails on iOS.
-    final baseUri = Uri.parse(_wsUrl);
-    final uri = token != null
-        ? baseUri.replace(
-            queryParameters: {
-              ...baseUri.queryParameters,
-              'token': token,
-            },
-          )
-        : baseUri;
+
+    // Bug #4 fix: backend _ws_authenticate reads the Authorization header (or
+    // a cookie). It does NOT read ?token= query params. Using the Authorization
+    // header works on both iOS and Android because dart:io's WebSocket sends
+    // HTTP upgrade headers natively — unlike the browser WebSocket API.
+    final uri = Uri.parse(_wsUrl);
     try {
-      _channel = IOWebSocketChannel.connect(uri);
-      setState(() => _wsStatus = _WsStatus.connected);
+      _channel = IOWebSocketChannel.connect(
+        uri,
+        headers: token != null ? {'Authorization': 'Bearer $token'} : {},
+      );
+      setState(() {
+        _wsStatus = _WsStatus.connected;
+        _wsConnected = true;
+      });
       _sub = _channel!.stream.listen(
         _onWsMessage,
         onError: _onWsError,
@@ -213,28 +219,73 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _onWsError(Object error) {
     if (!mounted) return;
-    setState(() => _wsStatus = _WsStatus.connecting);
+    setState(() {
+      _wsStatus = _WsStatus.connecting;
+      _wsConnected = false;
+    });
     _scheduleReconnect();
   }
 
   void _onWsDone() {
     if (!mounted) return;
-    setState(() => _wsStatus = _WsStatus.connecting);
+    setState(() {
+      _wsStatus = _WsStatus.connecting;
+      _wsConnected = false;
+    });
     _scheduleReconnect();
   }
 
+  // Bug #5 fix: exponential backoff with unlimited retries.
+  // Shows a one-time SnackBar with a tap-to-retry action on the first failure.
   void _scheduleReconnect() {
-    if (_reconnectAttempts >= _maxReconnects) return;
     _reconnectAttempts++;
+    final delaySecs = _reconnectAttempts <= _backoffDelays.length
+        ? _backoffDelays[_reconnectAttempts - 1]
+        : _backoffDelays.last;
+
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(_reconnectDelay, () {
+    _reconnectTimer = Timer(Duration(seconds: delaySecs), () {
       if (mounted) _connectWs();
     });
+
+    // Show a SnackBar only on the first failure so the user can retry
+    // immediately instead of waiting for the backoff timer.
+    if (_reconnectAttempts == 1 && mounted) {
+      final lang = context.read<LanguageProvider>().lang;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t('chat.noConnectionRetry', lang)),
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: t('error.retry', lang),
+            onPressed: _retryNow,
+          ),
+        ),
+      );
+    }
   }
 
+  void _retryNow() {
+    _reconnectTimer?.cancel();
+    _reconnectAttempts = 0;
+    _connectWs();
+  }
+
+  // Bug #6 fix: guard send against the dead-channel-during-reconnect case.
+  // _channel may be non-null but stale when _wsConnected is false.
   void _sendMessage() {
     final text = _ctrl.text.trim();
-    if (text.isEmpty || _channel == null) return;
+    if (text.isEmpty) return;
+    if (!_wsConnected) {
+      final lang = context.read<LanguageProvider>().lang;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t('chat.sendDisabled', lang)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
     HapticFeedback.lightImpact();
     _channel!.sink.add(jsonEncode({'conversation_id': widget.convId, 'content': text}));
     _ctrl.clear();

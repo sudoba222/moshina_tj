@@ -22,6 +22,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
   int _step = 0;
   bool _submitting = false;
   bool _loadingData = true;
+  // Bug #10 fix: surface load failures instead of silently showing empty form.
+  String? _loadError;
 
   // Step 1
   String _type = 'sale';
@@ -78,14 +80,20 @@ class _EditListingScreenState extends State<EditListingScreen> {
   }
 
   Future<void> _loadListing() async {
-    setState(() => _loadingData = true);
+    setState(() {
+      _loadingData = true;
+      _loadError = null;
+    });
     try {
       final api = context.read<ApiService>();
       final data = await api.getRaw('/listings/${widget.listingId}');
       if (data is Map<String, dynamic>) {
         _prefill(data);
       }
-    } catch (_) {
+    } catch (e) {
+      // Bug #10 fix: surface the error so the user sees it and can retry,
+      // rather than silently dropping them into an empty form.
+      if (mounted) setState(() => _loadError = e.toString());
     } finally {
       if (mounted) setState(() => _loadingData = false);
     }
@@ -185,6 +193,53 @@ class _EditListingScreenState extends State<EditListingScreen> {
           ),
         ),
         body: Center(child: CircularProgressIndicator(color: c.accent)),
+      );
+    }
+
+    // Bug #10 fix: show an error screen with retry instead of a blank form.
+    if (_loadError != null) {
+      return Scaffold(
+        backgroundColor: c.bg,
+        appBar: AppBar(
+          backgroundColor: c.card,
+          surfaceTintColor: Colors.transparent,
+          title: Text(t('edit.title', lang),
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: c.text)),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: c.text),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline_rounded, size: 56, color: c.textMuted),
+                const SizedBox(height: 16),
+                Text(
+                  t('edit.loadError', lang),
+                  style: GoogleFonts.outfit(
+                      color: c.text, fontWeight: FontWeight.w600, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: _loadListing,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(t('error.retry', lang)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: c.accent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

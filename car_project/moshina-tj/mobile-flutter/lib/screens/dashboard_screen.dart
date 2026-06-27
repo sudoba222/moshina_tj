@@ -11,8 +11,17 @@ import '../theme/app_theme.dart';
 import '../l10n/strings.dart';
 import '../widgets/car_card.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  // Bug #7 fix: a key lets the parent call _load() on _MyListingsState from
+  // the RefreshIndicator callback, which previously was a no-op.
+  final GlobalKey<_MyListingsState> _myListingsKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +172,10 @@ class DashboardScreen extends StatelessWidget {
       backgroundColor: c.bg,
       body: RefreshIndicator(
         color: c.accent,
-        onRefresh: () async {},
+        // Bug #7 fix: delegate refresh to _MyListings via the GlobalKey.
+        onRefresh: () async {
+          await _myListingsKey.currentState?._load();
+        },
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -206,7 +218,7 @@ class DashboardScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  _MyListings(userId: user.id, c: c, lang: lang),
+                  _MyListings(key: _myListingsKey, userId: user.id, c: c, lang: lang),
                   const SizedBox(height: 24),
                 ]),
               ),
@@ -521,7 +533,7 @@ class _MyListings extends StatefulWidget {
   final AppColors c;
   final String lang;
 
-  const _MyListings({required this.userId, required this.c, required this.lang});
+  const _MyListings({super.key, required this.userId, required this.c, required this.lang});
 
   @override
   State<_MyListings> createState() => _MyListingsState();
@@ -700,7 +712,12 @@ class _MyListingsState extends State<_MyListings> {
                     ),
                     const Spacer(),
                     GestureDetector(
-                      onTap: () => context.push('/edit-listing/${listing.id}'),
+                      // Bug #9 fix: await navigation so we can reload the listing
+                      // grid after the user edits and returns to the dashboard.
+                      onTap: () async {
+                        await context.push('/edit-listing/${listing.id}');
+                        if (mounted) _load();
+                      },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(

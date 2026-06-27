@@ -134,8 +134,15 @@ class ApiService {
               queryParams: {'page': page}) as List<dynamic>?) ??
           [];
 
-  Future<void> markConversationRead(String convId) async =>
+  // Bug #11 fix: wrap with error normalization so Dio exceptions surface as
+  // friendly messages instead of raw stack traces.
+  Future<void> markConversationRead(String convId) async {
+    try {
       await _dio.put('/conversations/$convId/read');
+    } on DioException catch (e) {
+      throw Exception(_serverMessage(e));
+    }
+  }
 
   Future<dynamic> putRaw(String path, {required Map<String, dynamic> body}) async {
     try {
@@ -240,11 +247,19 @@ class ApiService {
   }
 
   Future<void> markAllNotificationsRead() async {
-    await _dio.put('/notifications/read-all');
+    try {
+      await _dio.put('/notifications/read-all');
+    } on DioException catch (e) {
+      throw Exception(_serverMessage(e));
+    }
   }
 
   Future<void> markNotificationRead(String id) async {
-    await _dio.put('/notifications/$id/read');
+    try {
+      await _dio.put('/notifications/$id/read');
+    } on DioException catch (e) {
+      throw Exception(_serverMessage(e));
+    }
   }
 
   // ── Support ───────────────────────────────────────────────────────────────

@@ -57,10 +57,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (_) {}
   }
 
-  void _onTap(Map<String, dynamic> item) {
+  Future<void> _onTap(Map<String, dynamic> item) async {
     final id = (item['id'] ?? '').toString();
     _markRead(id);
-    // Mark locally as read
+    // Mark locally as read immediately (optimistic)
     setState(() {
       final idx = _items.indexWhere((i) => (i['id'] ?? '').toString() == id);
       if (idx >= 0) {
@@ -74,9 +74,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final convId = item['conversation_id']?.toString();
 
     if (listingId != null && listingId.isNotEmpty) {
-      context.push('/car/$listingId');
+      if (mounted) context.push('/car/$listingId');
     } else if (convId != null && convId.isNotEmpty) {
-      context.push('/chat/$convId');
+      // Bug #8 fix: fetch convData so ChatScreen can populate the app bar with
+      // the other participant's name and listing details, avoiding "?" initials.
+      Map<String, dynamic> convData = {};
+      try {
+        final api = context.read<ApiService>();
+        final convs = await api.getConversations();
+        final match = convs
+            .map((e) => e as Map<String, dynamic>)
+            .where((c) => c['id']?.toString() == convId)
+            .firstOrNull;
+        if (match != null) convData = match;
+      } catch (_) {
+        // If fetch fails, navigate anyway — ChatScreen degrades gracefully.
+      }
+      if (mounted) context.push('/chat/$convId', extra: convData);
     }
   }
 
