@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../l10n/strings.dart';
-import '../widgets/auth_widgets.dart';
 import '../widgets/country_picker.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,51 +16,15 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _fadeCtrl;
-  late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
-
-  // Phone
-  CountryCode _selectedCountry = CountryCode.all.first;
+class _LoginScreenState extends State<LoginScreen> {
+  CountryCode _country = CountryCode.all.first;
   final _phoneCtrl = TextEditingController();
   bool _phoneLoading = false;
   String? _phoneError;
 
-  // Email (expandable inline)
-  bool _emailExpanded = false;
-  final _emailFormKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
-  bool _emailLoading = false;
-  String? _emailError;
-
-  // Telegram (expandable inline)
-  bool _telegramExpanded = false;
-  final _tgPhoneCtrl = TextEditingController();
-  bool _tgLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _fadeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 520),
-    );
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut));
-    _fadeCtrl.forward();
-  }
-
   @override
   void dispose() {
     _phoneCtrl.dispose();
-    _emailCtrl.dispose();
-    _tgPhoneCtrl.dispose();
-    _fadeCtrl.dispose();
     super.dispose();
   }
 
@@ -71,535 +35,378 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() => _phoneError = t('error.enterPhone', lang));
       return;
     }
-    setState(() {
-      _phoneLoading = true;
-      _phoneError = null;
-    });
+    setState(() { _phoneLoading = true; _phoneError = null; });
     try {
-      final api = context.read<ApiService>();
-      final fullPhone = _selectedCountry.dialCode + phone;
-      await api.sendPhoneOtp(fullPhone);
-      if (mounted) {
-        context.push('/otp', extra: {'phone': fullPhone, 'mode': 'login'});
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() =>
-            _phoneError = t('error.sendCodeFailed', context.read<LanguageProvider>().lang));
-      }
+      final fullPhone = _country.dialCode + phone;
+      await context.read<ApiService>().sendPhoneOtp(fullPhone);
+      if (mounted) context.push('/otp', extra: {'phone': fullPhone, 'mode': 'login'});
+    } catch (_) {
+      if (mounted) setState(() => _phoneError = t('error.sendCodeFailed', context.read<LanguageProvider>().lang));
     } finally {
       if (mounted) setState(() => _phoneLoading = false);
     }
   }
 
-  Future<void> _submitEmail() async {
-    if (!_emailFormKey.currentState!.validate()) return;
-    setState(() {
-      _emailLoading = true;
-      _emailError = null;
-    });
-    try {
-      final api = context.read<ApiService>();
-      // registerEmail triggers an OTP flow; backend treats existing accounts as login.
-      await api.registerEmail(_emailCtrl.text.trim(), '');
-      if (mounted) {
-        context.push('/otp',
-            extra: {'email': _emailCtrl.text.trim(), 'mode': 'email'});
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _emailError = e.toString().replaceFirst('Exception: ', ''));
-      }
-    } finally {
-      if (mounted) setState(() => _emailLoading = false);
-    }
+  void _openTelegramSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TelegramBottomSheet(c: context.colors, lang: context.read<LanguageProvider>().lang),
+    );
   }
 
-  Future<void> _sendTelegramOtp() async {
-    final phone = _tgPhoneCtrl.text.trim();
-    if (phone.isEmpty) return;
-    setState(() => _tgLoading = true);
-    try {
-      final api = context.read<ApiService>();
-      final link = await api.sendTelegramOtp(phone);
-      if (mounted && link.isNotEmpty) {
-        final uri = Uri.parse(link);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
-      }
-      if (mounted) {
-        context.push('/otp', extra: {'phone': phone, 'mode': 'login'});
-      }
-    } catch (_) {
-      if (mounted) {
-        final lang = context.read<LanguageProvider>().lang;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t('error.telegramFailed', lang))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _tgLoading = false);
-    }
-  }
-
-  double _hPad(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    if (w < 360) return 18;
-    if (w < 400) return 22;
-    return 24;
+  void _openEmailSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EmailBottomSheet(c: context.colors, lang: context.read<LanguageProvider>().lang),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
-    final screenH = MediaQuery.of(context).size.height;
-    final hp = _hPad(context);
 
     return Scaffold(
-      backgroundColor: c.bg,
-      body: Stack(
+      backgroundColor: c.accent,
+      resizeToAvoidBottomInset: true,
+      body: Column(
         children: [
-          Positioned.fill(
-            child: DecoratedBox(
+          // ── HERO TOP ────────────────────────────────────────────────────────
+          _HeroTop(c: c, lang: lang),
+
+          // ── FORM CARD ───────────────────────────────────────────────────────
+          Expanded(
+            child: Container(
+              width: double.infinity,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [c.bg, Color.lerp(c.bg, c.accent, 0.04)!],
+                color: c.bg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  24, 28, 24,
+                  MediaQuery.of(context).viewInsets.bottom + 32,
                 ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: -60,
-            right: -60,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: c.accent.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 80,
-            left: -80,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: c.accent.withValues(alpha: 0.04),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: FadeTransition(
-              opacity: _fadeAnim,
-              child: SlideTransition(
-                position: _slideAnim,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: hp, vertical: 8),
-                  child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      lang == 'ru' ? 'Войдите в аккаунт' : 'Ба аккаунт даромадан',
+                      style: GoogleFonts.outfit(
+                        color: c.text,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      lang == 'ru' ? 'Введите номер — пришлём код' : 'Рақам ворид кунед — код мефиристем',
+                      style: GoogleFonts.outfit(color: c.textMuted, fontSize: 14),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Phone row
+                    Row(
                       children: [
-                        SizedBox(height: screenH * 0.06),
-                        AuthHeroSection(c: c, lang: lang),
-                        SizedBox(height: screenH * 0.045),
-
-                        // Phone error
-                        if (_phoneError != null) ...[
-                          AuthErrorBanner(message: _phoneError!),
-                          const SizedBox(height: 12),
-                        ],
-
-                        // Phone input row
-                        Row(
-                          children: [
-                            CountryPickerButton(
-                              selected: _selectedCountry,
-                              onChanged: (code) =>
-                                  setState(() => _selectedCountry = code),
-                              c: c,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: SizedBox(
-                                height: 56,
-                                child: TextField(
-                                  controller: _phoneCtrl,
-                                  keyboardType: TextInputType.phone,
-                                  onChanged: (_) {
-                                    if (_phoneError != null) {
-                                      setState(() => _phoneError = null);
-                                    }
-                                  },
-                                  style: TextStyle(
-                                    color: c.text,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: '900 00 00 00',
-                                    hintStyle: TextStyle(
-                                        color: c.textMuted, fontSize: 15),
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 17),
-                                    filled: true,
-                                    fillColor: c.surface,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                      borderSide: BorderSide(
-                                          color: c.border, width: 1.2),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                      borderSide: BorderSide(
-                                          color: c.border, width: 1.2),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                      borderSide: BorderSide(
-                                          color: c.accent, width: 1.8),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Primary CTA
-                        AuthPrimaryButton(
-                          loading: _phoneLoading,
-                          label: t('auth.getCode', lang),
-                          onPressed: _sendPhoneOtp,
+                        CountryPickerButton(
+                          selected: _country,
+                          onChanged: (cc) => setState(() => _country = cc),
                           c: c,
                         ),
-                        const SizedBox(height: 20),
-
-                        // Expandable email section
-                        _EmailSection(
-                          lang: lang,
-                          c: c,
-                          expanded: _emailExpanded,
-                          onToggle: () => setState(() {
-                            _emailExpanded = !_emailExpanded;
-                            if (_emailExpanded) _telegramExpanded = false;
-                            if (!_emailExpanded) _emailError = null;
-                          }),
-                          formKey: _emailFormKey,
-                          emailCtrl: _emailCtrl,
-                          loading: _emailLoading,
-                          error: _emailError,
-                          onSubmit: _submitEmail,
-                        ),
-                        const SizedBox(height: 28),
-
-                        // Divider
-                        _DividerRow(c: c, lang: lang),
-                        const SizedBox(height: 16),
-
-                        // Google button
-                        OutlinedButton.icon(
-                          onPressed: () => launchUrl(
-                            Uri.parse('https://tajcar.tj/auth/login'),
-                            mode: LaunchMode.externalApplication,
-                          ),
-                          icon: Icon(Icons.g_mobiledata_rounded,
-                              size: 22, color: c.accent),
-                          label: Text(t('auth.continueGoogle', lang)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: c.text,
-                            side: BorderSide(color: c.border),
-                            minimumSize: const Size(double.infinity, 52),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Telegram section
-                        _TelegramSection(
-                          lang: lang,
-                          c: c,
-                          expanded: _telegramExpanded,
-                          onExpand: () => setState(() {
-                            _telegramExpanded = true;
-                            _emailExpanded = false;
-                            _emailError = null;
-                          }),
-                          tgPhoneCtrl: _tgPhoneCtrl,
-                          loading: _tgLoading,
-                          onSend: _sendTelegramOtp,
-                        ),
-                        const SizedBox(height: 36),
-
-                        Center(
-                          child: AuthBottomLink(
-                            prefix: t('auth.noAccount', lang),
-                            linkText: t('auth.register', lang),
-                            onTap: () => context.push('/register'),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _PhoneField(
+                            ctrl: _phoneCtrl,
                             c: c,
+                            lang: lang,
+                            hasError: _phoneError != null,
+                            onChanged: () { if (_phoneError != null) setState(() => _phoneError = null); },
                           ),
                         ),
-                        const SizedBox(height: 32),
                       ],
                     ),
-                  ),
+
+                    if (_phoneError != null) ...[
+                      const SizedBox(height: 8),
+                      _InlineError(message: _phoneError!, c: c),
+                    ],
+                    const SizedBox(height: 20),
+
+                    // Main CTA
+                    _PrimaryBtn(
+                      label: t('auth.getCode', lang),
+                      loading: _phoneLoading,
+                      c: c,
+                      onTap: _sendPhoneOtp,
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Divider
+                    _OrDivider(c: c, lang: lang),
+                    const SizedBox(height: 20),
+
+                    // Social buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _SocialBtn(
+                            icon: Icons.g_mobiledata_rounded,
+                            label: 'Google',
+                            c: c,
+                            onTap: () => launchUrl(
+                              Uri.parse('https://tajcar.tj/auth/login'),
+                              mode: LaunchMode.externalApplication,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _SocialBtn(
+                            icon: Icons.send_rounded,
+                            label: 'Telegram',
+                            c: c,
+                            onTap: _openTelegramSheet,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _SocialBtn(
+                            icon: Icons.mail_outline_rounded,
+                            label: 'Email',
+                            c: c,
+                            onTap: _openEmailSheet,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Register link
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => context.push('/register'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Center(child: RichText(
+                          text: TextSpan(
+                            text: '${t('auth.noAccount', lang)} ',
+                            style: GoogleFonts.outfit(color: c.textMuted, fontSize: 14),
+                            children: [
+                              TextSpan(
+                                text: t('auth.register', lang),
+                                style: GoogleFonts.outfit(
+                                  color: c.accent,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          )),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Expandable email login section
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// HERO — orange top section with logo
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _EmailSection extends StatelessWidget {
-  final String lang;
+class _HeroTop extends StatelessWidget {
   final AppColors c;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final GlobalKey<FormState> formKey;
-  final TextEditingController emailCtrl;
-  final bool loading;
-  final String? error;
-  final VoidCallback onSubmit;
+  final String lang;
 
-  const _EmailSection({
-    required this.lang,
-    required this.c,
-    required this.expanded,
-    required this.onToggle,
-    required this.formKey,
-    required this.emailCtrl,
-    required this.loading,
-    required this.error,
-    required this.onSubmit,
-  });
+  const _HeroTop({required this.c, required this.lang});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        GestureDetector(
-          onTap: onToggle,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Text(
-              expanded
-                  ? (lang == 'ru' ? 'Скрыть Email' : 'Email-ро пинҳон кунед')
-                  : (lang == 'ru'
-                      ? 'или войти через Email'
-                      : 'ё тавассути Email даромад'),
-              style: TextStyle(
-                color: c.accent,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        ClipRect(
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 280),
-            curve: Curves.easeInOut,
-            child: expanded
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 14),
-                    child: Form(
-                      key: formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (error != null) ...[
-                            AuthErrorBanner(message: error!),
-                            const SizedBox(height: 10),
-                          ],
-                          AuthField(
-                            controller: emailCtrl,
-                            label: 'Email',
-                            prefixIcon: Icons.email_outlined,
-                            keyboardType: TextInputType.emailAddress,
-                            c: c,
-                            validator: (v) {
-                              if (v == null || !v.contains('@')) {
-                                return t('error.invalidEmail', lang);
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            lang == 'ru'
-                                ? 'Отправим код подтверждения на email'
-                                : 'Коди тасдиқро ба email мефиристем',
-                            style: TextStyle(color: c.textMuted, fontSize: 12),
-                          ),
-                          const SizedBox(height: 14),
-                          AuthPrimaryButton(
-                            loading: loading,
-                            label: t('auth.getCode', lang),
-                            onPressed: onSubmit,
-                            c: c,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Telegram login section (collapse → expand with phone input)
-// ---------------------------------------------------------------------------
-
-class _TelegramSection extends StatelessWidget {
-  final String lang;
-  final AppColors c;
-  final bool expanded;
-  final VoidCallback onExpand;
-  final TextEditingController tgPhoneCtrl;
-  final bool loading;
-  final VoidCallback onSend;
-
-  const _TelegramSection({
-    required this.lang,
-    required this.c,
-    required this.expanded,
-    required this.onExpand,
-    required this.tgPhoneCtrl,
-    required this.loading,
-    required this.onSend,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (!expanded) {
-      return OutlinedButton.icon(
-        onPressed: onExpand,
-        icon: Icon(Icons.send_rounded, size: 18, color: c.accent),
-        label: Text(t('auth.continueTelegram', lang)),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: c.text,
-          side: BorderSide(color: c.border),
-          minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14)),
-        ),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          t('auth.telegramPhone', lang),
-          style: TextStyle(
-            color: c.textMuted,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 52,
-                child: TextField(
-                  controller: tgPhoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  autofocus: true,
-                  style: TextStyle(color: c.text, fontSize: 15),
-                  decoration: InputDecoration(
-                    hintText: t('auth.telegramHint', lang),
-                    hintStyle:
-                        TextStyle(color: c.textMuted, fontSize: 13),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 14),
-                    filled: true,
-                    fillColor: c.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: c.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: c.border),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: c.accent, width: 1.8),
-                    ),
+    return Container(
+      color: c.accent,
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: 200,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/images/splash_logo.png',
+                  height: 80,
+                  width: 80,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  t('auth.subtitle', lang),
+                  style: GoogleFonts.outfit(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 0.3,
                   ),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(width: 8),
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: loading ? null : onSend,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: c.accent,
-                  foregroundColor: Colors.white,
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
-                child: loading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(
-                        t('auth.sendCode', lang),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                      ),
-              ),
-            ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phone text field
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PhoneField extends StatelessWidget {
+  final TextEditingController ctrl;
+  final AppColors c;
+  final String lang;
+  final bool hasError;
+  final VoidCallback onChanged;
+
+  const _PhoneField({
+    required this.ctrl,
+    required this.c,
+    required this.lang,
+    required this.hasError,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 56,
+      child: TextField(
+        controller: ctrl,
+        keyboardType: TextInputType.phone,
+        onChanged: (_) => onChanged(),
+        style: GoogleFonts.outfit(
+          color: c.text, fontSize: 16, fontWeight: FontWeight.w600,
+        ),
+        decoration: InputDecoration(
+          hintText: '900 00 00 00',
+          hintStyle: GoogleFonts.outfit(color: c.textMuted, fontSize: 15),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+          filled: true,
+          fillColor: c.surface,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: hasError ? AppColors.colorError : c.border, width: 1.2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: hasError ? AppColors.colorError : c.border, width: 1.2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: hasError ? AppColors.colorError : c.accent, width: 1.8),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Inline error text
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _InlineError extends StatelessWidget {
+  final String message;
+  final AppColors c;
+
+  const _InlineError({required this.message, required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.error_outline_rounded, color: AppColors.colorError, size: 15),
+        const SizedBox(width: 6),
+        Text(
+          message,
+          style: GoogleFonts.outfit(color: AppColors.colorError, fontSize: 12.5),
         ),
       ],
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Divider with "или" label
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Primary CTA button
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _DividerRow extends StatelessWidget {
+class _PrimaryBtn extends StatelessWidget {
+  final String label;
+  final bool loading;
+  final AppColors c;
+  final VoidCallback? onTap;
+
+  const _PrimaryBtn({required this.label, required this.loading, required this.c, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: loading ? null : onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: c.accent,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: c.accent.withValues(alpha: 0.5),
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        child: loading
+            ? const SizedBox(
+                width: 22, height: 22,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.outfit(
+                      fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.1,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_forward_rounded, size: 18),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Or divider
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _OrDivider extends StatelessWidget {
   final AppColors c;
   final String lang;
-  const _DividerRow({required this.c, required this.lang});
+
+  const _OrDivider({required this.c, required this.lang});
 
   @override
   Widget build(BuildContext context) {
@@ -607,14 +414,309 @@ class _DividerRow extends StatelessWidget {
       children: [
         Expanded(child: Divider(color: c.border, thickness: 1)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
             t('auth.or', lang),
-            style: TextStyle(color: c.textMuted, fontSize: 13),
+            style: GoogleFonts.outfit(color: c.textMuted, fontSize: 13),
           ),
         ),
         Expanded(child: Divider(color: c.border, thickness: 1)),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Social method button
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SocialBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final AppColors c;
+  final VoidCallback onTap;
+
+  const _SocialBtn({
+    required this.icon,
+    required this.label,
+    required this.c,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: c.border, width: 1.2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: c.accent, size: 20),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                color: c.textSecondary, fontSize: 11, fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Telegram bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TelegramBottomSheet extends StatefulWidget {
+  final AppColors c;
+  final String lang;
+
+  const _TelegramBottomSheet({required this.c, required this.lang});
+
+  @override
+  State<_TelegramBottomSheet> createState() => _TelegramBottomSheetState();
+}
+
+class _TelegramBottomSheetState extends State<_TelegramBottomSheet> {
+  CountryCode _country = CountryCode.all.first;
+  final _phoneCtrl = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _phoneCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final phone = _country.dialCode + _phoneCtrl.text.trim();
+    if (_phoneCtrl.text.trim().isEmpty) return;
+    setState(() => _loading = true);
+    try {
+      final link = await context.read<ApiService>().sendTelegramOtp(phone);
+      if (mounted && link.isNotEmpty) {
+        final uri = Uri.parse(link);
+        if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+      if (mounted) {
+        Navigator.pop(context);
+        context.push('/otp', extra: {'phone': phone, 'mode': 'login'});
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.c;
+    final lang = widget.lang;
+    return Container(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+      decoration: BoxDecoration(
+        color: c.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: c.border, borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: c.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.send_rounded, color: c.accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Telegram', style: GoogleFonts.outfit(
+                    color: c.text, fontSize: 18, fontWeight: FontWeight.w800,
+                  )),
+                  Text(
+                    lang == 'ru' ? 'Введите номер Telegram аккаунта' : 'Рақами Telegram аккаунтро ворид кунед',
+                    style: GoogleFonts.outfit(color: c.textMuted, fontSize: 13),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              CountryPickerButton(selected: _country, onChanged: (cc) => setState(() => _country = cc), c: c),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SizedBox(
+                  height: 56,
+                  child: TextField(
+                    controller: _phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    autofocus: true,
+                    style: GoogleFonts.outfit(color: c.text, fontSize: 16, fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      hintText: '900 00 00 00',
+                      hintStyle: GoogleFonts.outfit(color: c.textMuted),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+                      filled: true,
+                      fillColor: c.surface,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.border)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.accent, width: 1.8)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _PrimaryBtn(
+            label: lang == 'ru' ? 'Отправить код' : 'Код фиристодан',
+            loading: _loading,
+            c: c,
+            onTap: _send,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Email bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EmailBottomSheet extends StatefulWidget {
+  final AppColors c;
+  final String lang;
+
+  const _EmailBottomSheet({required this.c, required this.lang});
+
+  @override
+  State<_EmailBottomSheet> createState() => _EmailBottomSheetState();
+}
+
+class _EmailBottomSheetState extends State<_EmailBottomSheet> {
+  final _emailCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    // OTP screen handles sending the code on load — just navigate
+    Navigator.pop(context);
+    context.push('/otp', extra: {'email': _emailCtrl.text.trim(), 'mode': 'email'});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.c;
+    final lang = widget.lang;
+    return Container(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+      decoration: BoxDecoration(
+        color: c.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: c.accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.mail_outline_rounded, color: c.accent, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Email', style: GoogleFonts.outfit(color: c.text, fontSize: 18, fontWeight: FontWeight.w800)),
+                    Text(
+                      lang == 'ru' ? 'Пришлём код на почту' : 'Коди тасдиқро ба email мефиристем',
+                      style: GoogleFonts.outfit(color: c.textMuted, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            if (_error != null) ...[
+              _InlineError(message: _error!, c: c),
+              const SizedBox(height: 10),
+            ],
+            TextFormField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              autofocus: true,
+              style: GoogleFonts.outfit(color: c.text, fontSize: 16, fontWeight: FontWeight.w500),
+              decoration: InputDecoration(
+                hintText: 'your@email.com',
+                hintStyle: GoogleFonts.outfit(color: c.textMuted),
+                prefixIcon: Icon(Icons.mail_outline_rounded, color: c.textMuted, size: 20),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+                filled: true,
+                fillColor: c.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.accent, width: 1.8)),
+              ),
+              validator: (v) => (v == null || !v.contains('@')) ? t('error.invalidEmail', lang) : null,
+            ),
+            const SizedBox(height: 16),
+            _PrimaryBtn(
+              label: t('auth.getCode', lang),
+              loading: _loading,
+              c: c,
+              onTap: _submit,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
