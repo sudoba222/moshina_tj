@@ -1,5 +1,6 @@
 package tj.tajcar.tajcar
 
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
@@ -12,8 +13,10 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Apply FLAG_SECURE at launch so the app switcher never shows content.
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        val isDebug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (!isDebug) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

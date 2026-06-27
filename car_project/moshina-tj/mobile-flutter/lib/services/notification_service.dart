@@ -90,9 +90,9 @@ class NotificationService {
 
   static Future<void> _postToken(ApiService api, String token) async {
     try {
-      await api.post(
+      await api.postRaw(
         '/users/me/fcm-token',
-        {'token': token, 'platform': 'android'},
+        body: {'token': token, 'platform': 'android'},
       );
     } catch (_) {
       // Non-critical: FCM will still deliver; retry on next app launch.
