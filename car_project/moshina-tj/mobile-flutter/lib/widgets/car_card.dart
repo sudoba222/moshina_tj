@@ -64,10 +64,10 @@ class CarCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HORIZONTAL CARD — professional list card (image left, info right)
+// HORIZONTAL CARD — professional list card with photo carousel
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _HorizontalCard extends StatelessWidget {
+class _HorizontalCard extends StatefulWidget {
   final Listing listing;
   final AppColors c;
   final String lang;
@@ -81,12 +81,53 @@ class _HorizontalCard extends StatelessWidget {
   });
 
   @override
+  State<_HorizontalCard> createState() => _HorizontalCardState();
+}
+
+class _HorizontalCardState extends State<_HorizontalCard> {
+  late final PageController _pageCtrl;
+  int _idx = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageCtrl = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  void _prev() {
+    if (_idx > 0) {
+      _pageCtrl.previousPage(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _next() {
+    if (_idx < widget.listing.images.length - 1) {
+      _pageCtrl.nextPage(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final imageUrl = listing.firstImageUrl;
+    final listing = widget.listing;
+    final c = widget.c;
+    final lang = widget.lang;
     final isFav = context.watch<FavoritesProvider>().isFavorite(listing.id);
+    final hasMany = listing.images.length > 1;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         height: 128,
         decoration: BoxDecoration(
@@ -98,67 +139,91 @@ class _HorizontalCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Image (left) ─────────────────────────────────────────────────
+            // ── Photo carousel (left) ─────────────────────────────────────────
             SizedBox(
-              width: 138,
+              width: 140,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  imageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (ctx, url) => Shimmer.fromColors(
-                            baseColor: c.border,
-                            highlightColor: c.surface,
-                            child: Container(color: c.card),
+                  // PageView with all photos
+                  listing.images.isNotEmpty
+                      ? PageView.builder(
+                          controller: _pageCtrl,
+                          itemCount: listing.images.length,
+                          onPageChanged: (i) => setState(() => _idx = i),
+                          itemBuilder: (_, i) => CachedNetworkImage(
+                            imageUrl: listing.images[i].url,
+                            fit: BoxFit.cover,
+                            placeholder: (ctx, url) => Shimmer.fromColors(
+                              baseColor: c.border,
+                              highlightColor: c.surface,
+                              child: Container(color: c.card),
+                            ),
+                            errorWidget: (ctx, url, err) => _NoImage(colors: c),
                           ),
-                          errorWidget: (ctx, url, err) => _NoImage(colors: c),
                         )
                       : _NoImage(colors: c),
+
                   // Gradient right edge blend
                   Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
+                    right: 0, top: 0, bottom: 0,
                     child: Container(
-                      width: 24,
+                      width: 20,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.centerLeft,
                           end: Alignment.centerRight,
-                          colors: [Colors.transparent, c.card.withValues(alpha: 0.3)],
+                          colors: [Colors.transparent, c.card.withValues(alpha: 0.25)],
                         ),
                       ),
                     ),
                   ),
+
                   // Top-left badges
                   Positioned(
-                    top: 8,
-                    left: 8,
+                    top: 6, left: 6,
                     child: _BadgeRow(listing: listing),
                   ),
-                  // Photo count indicator
-                  if (listing.images.length > 1)
+
+                  // ← Prev arrow
+                  if (hasMany && _idx > 0)
                     Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(8),
+                      left: 3, top: 0, bottom: 0,
+                      child: Center(
+                        child: _MiniArrow(
+                          icon: Icons.chevron_left_rounded,
+                          onTap: _prev,
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.photo_library_outlined, color: Colors.white, size: 9),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${listing.images.length}',
-                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
-                            ),
-                          ],
+                      ),
+                    ),
+
+                  // → Next arrow
+                  if (hasMany && _idx < listing.images.length - 1)
+                    Positioned(
+                      right: 3, top: 0, bottom: 0,
+                      child: Center(
+                        child: _MiniArrow(
+                          icon: Icons.chevron_right_rounded,
+                          onTap: _next,
+                        ),
+                      ),
+                    ),
+
+                  // Photo counter  (1/19)
+                  if (hasMany)
+                    Positioned(
+                      bottom: 5, right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.58),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Text(
+                          '${_idx + 1}/${listing.images.length}',
+                          style: const TextStyle(
+                            color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -242,6 +307,41 @@ class _HorizontalCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mini arrow for card-inline photo nav (small, 28×28)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MiniArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _MiniArrow({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.90),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.20),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 18, color: const Color(0xFF1A1A1A)),
       ),
     );
   }

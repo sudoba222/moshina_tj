@@ -149,7 +149,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   padding: const EdgeInsets.all(16),
                   itemCount: 6,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (_, __) => const CarCardShimmer(),
+                  itemBuilder: (_, __) => const CarCardShimmer(horizontal: true),
                 );
         }
 
@@ -238,9 +238,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         }
                         final listing = provider.catalogItems[i];
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.only(bottom: 10),
                           child: CarCard(
                             listing: listing,
+                            horizontal: true,
                             onTap: () => ctx2.push('/car/${listing.id}'),
                           ),
                         );
