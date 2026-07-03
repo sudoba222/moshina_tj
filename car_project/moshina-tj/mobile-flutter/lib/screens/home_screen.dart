@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +7,7 @@ import 'package:shimmer/shimmer.dart';
 import '../providers/auth_provider.dart';
 import '../providers/listing_provider.dart';
 import '../providers/language_provider.dart';
+import '../providers/recently_viewed_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../l10n/strings.dart';
@@ -81,6 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   currentPage: _featuredPage,
                   onPageChanged: (p) => setState(() => _featuredPage = p),
                 ),
+              ),
+              SliverToBoxAdapter(
+                child: _RecentlyViewedSection(c: c, lang: lang),
               ),
               SliverToBoxAdapter(
                 child: _SectionHeader(
@@ -1184,6 +1189,155 @@ class _SellBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recently Viewed
+
+class _RecentlyViewedSection extends StatelessWidget {
+  final AppColors c;
+  final String lang;
+
+  const _RecentlyViewedSection({required this.c, required this.lang});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = context.watch<RecentlyViewedProvider>().items;
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+          child: Text(
+            t('home.recentlyViewed', lang),
+            style: GoogleFonts.outfit(
+              color: c.text,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 130,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: items.length,
+            itemBuilder: (_, i) => _RecentCard(
+              item: items[i],
+              c: c,
+              lang: lang,
+              onTap: () => context.push('/car/${items[i]['id']}'),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _RecentCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final AppColors c;
+  final String lang;
+  final VoidCallback onTap;
+
+  const _RecentCard({
+    required this.item,
+    required this.c,
+    required this.lang,
+    required this.onTap,
+  });
+
+  String _formatPrice() {
+    final price = (item['price'] as num?)?.toDouble() ?? 0;
+    final currency = item['currency'] as String? ?? 'USD';
+    final val = price.round();
+    final s = val.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+    if (currency == 'USD') return '\$$s';
+    final unit = lang == 'tj' ? 'сомонӣ' : 'сом';
+    return '$s $unit';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = item['imageUrl'] as String? ?? '';
+    final brand = item['brand'] as String? ?? '';
+    final model = item['model'] as String? ?? '';
+    final year = item['year']?.toString() ?? '';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: c.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(13)),
+              child: imageUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      height: 80,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) =>
+                          Container(height: 80, color: c.surface),
+                      errorWidget: (_, __, ___) => Container(
+                        height: 80,
+                        color: c.surface,
+                        child: Icon(Icons.directions_car_rounded,
+                            color: c.textMuted, size: 32),
+                      ),
+                    )
+                  : Container(
+                      height: 80,
+                      color: c.surface,
+                      child: Icon(Icons.directions_car_rounded,
+                          color: c.textMuted, size: 32),
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+              child: Text(
+                '$brand $model',
+                style: TextStyle(
+                  color: c.text,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                '$year · ${_formatPrice()}',
+                style:
+                    TextStyle(color: c.textSecondary, fontSize: 10),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -30,6 +30,7 @@ const Map<String, Map<String, String>> appStrings = {
   'home.featuredTitle': {'ru': 'Топ объявления', 'tj': 'Эълонҳои беҳтарин'},
   'home.noListings': {'ru': 'Объявлений не найдено', 'tj': 'Эълон ёфт нашуд'},
   'home.noFeatured': {'ru': 'Нет топ объявлений', 'tj': 'Эълони топ нест'},
+  'home.recentlyViewed': {'ru': 'Вы смотрели', 'tj': 'Шумо нигоҳ кардед'},
   'home.loadError': {'ru': 'Не удалось загрузить объявления', 'tj': 'Дархостҳо бор нашуданд'},
   'stats.listings': {'ru': 'объявлений', 'tj': 'эълон'},
   'stats.dealers': {'ru': 'дилеров', 'tj': 'намоишгоҳ'},

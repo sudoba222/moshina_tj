@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/listing.dart';
 import '../providers/favorites_provider.dart';
 import '../providers/listing_provider.dart';
 import '../providers/language_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/recently_viewed_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
@@ -60,6 +62,15 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
           if (listing == null) _error = t('error.loading', context.read<LanguageProvider>().lang);
         });
         if (listing != null) {
+          context.read<RecentlyViewedProvider>().add({
+            'id': listing.id,
+            'brand': listing.brand,
+            'model': listing.model,
+            'year': listing.year,
+            'price': listing.price,
+            'currency': listing.currency,
+            'imageUrl': listing.firstImageUrl,
+          });
           final related = await provider.getRelatedListings(
             widget.listingId,
             brand: listing.brand,
@@ -184,12 +195,27 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
                   color: c.text, fontSize: 16, fontWeight: FontWeight.w700),
             ),
             actions: [
+              IconButton(
+                icon: Icon(Icons.share_rounded, color: c.text),
+                onPressed: () {
+                  final url =
+                      'https://tajcar.tj/car/${listing.id}';
+                  SharePlus.instance.share(
+                    ShareParams(
+                      text:
+                          '${listing.brand} ${listing.model} ${listing.year} — $url',
+                    ),
+                  );
+                },
+              ),
               Consumer<FavoritesProvider>(
                 builder: (_, favs, __) {
                   final isFav = favs.isFavorite(listing.id);
                   return IconButton(
                     icon: Icon(
-                      isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                      isFav
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
                       color: isFav ? Colors.redAccent : c.text,
                     ),
                     onPressed: () => favs.toggleFavorite(listing.id),

@@ -11,6 +11,7 @@ import 'providers/badge_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/listing_provider.dart';
+import 'providers/recently_viewed_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
@@ -18,6 +19,7 @@ import 'services/favorites_service.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
+import 'screens/splash_screen.dart';
 
 Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
@@ -70,8 +72,11 @@ class _TajcarAppState extends State<TajcarApp> {
   late final LanguageProvider _languageProvider;
   late final ThemeProvider _themeProvider;
   late final FavoritesProvider _favoritesProvider;
+  late final RecentlyViewedProvider _recentlyViewedProvider;
 
   late final GoRouter _router;
+
+  bool _showSplash = true;
 
   /// Tracks whether NotificationService has been initialized for the current
   /// authenticated session so we only call it once per login.
@@ -88,6 +93,7 @@ class _TajcarAppState extends State<TajcarApp> {
     _languageProvider = LanguageProvider();
     _themeProvider = ThemeProvider();
     _favoritesProvider = FavoritesProvider(FavoritesService());
+    _recentlyViewedProvider = RecentlyViewedProvider();
 
     // Start/stop badge polling when authentication state changes.
     _authProvider.addListener(_onAuthChanged);
@@ -129,6 +135,7 @@ class _TajcarAppState extends State<TajcarApp> {
         ChangeNotifierProvider<LanguageProvider>.value(value: _languageProvider),
         ChangeNotifierProvider<ThemeProvider>.value(value: _themeProvider),
         ChangeNotifierProvider<FavoritesProvider>.value(value: _favoritesProvider),
+        ChangeNotifierProvider<RecentlyViewedProvider>.value(value: _recentlyViewedProvider),
       ],
       child: Consumer2<ThemeProvider, AuthProvider>(
         builder: (context, themeProvider, authProvider, _) {
@@ -146,6 +153,19 @@ class _TajcarAppState extends State<TajcarApp> {
             darkTheme: AppTheme.dark(),
             themeMode: themeProvider.mode,
             routerConfig: _router,
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  child ?? const SizedBox.shrink(),
+                  if (_showSplash)
+                    SplashScreen(
+                      onComplete: () {
+                        if (mounted) setState(() => _showSplash = false);
+                      },
+                    ),
+                ],
+              );
+            },
           );
         },
       ),
