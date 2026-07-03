@@ -353,18 +353,21 @@ class _StatsRow extends StatelessWidget {
                     _StatItem(
                       value: stats != null ? '${_fmt(stats.listingsCount)}+' : '—',
                       label: t('stats.listings', lang),
+                      icon: Icons.directions_car_rounded,
                       c: c,
                     ),
                     _StatDivider(c: c),
                     _StatItem(
                       value: stats != null ? '${stats.dealersCount}+' : '—',
                       label: t('stats.dealers', lang),
+                      icon: Icons.store_rounded,
                       c: c,
                     ),
                     _StatDivider(c: c),
                     _StatItem(
                       value: stats != null ? '${stats.citiesCount}' : '—',
                       label: t('stats.cities', lang),
+                      icon: Icons.location_city_rounded,
                       c: c,
                     ),
                   ],
@@ -426,11 +429,13 @@ class _StatsShimmer extends StatelessWidget {
 class _StatItem extends StatelessWidget {
   final String value;
   final String label;
+  final IconData icon;
   final AppColors c;
 
   const _StatItem({
     required this.value,
     required this.label,
+    required this.icon,
     required this.c,
   });
 
@@ -438,26 +443,29 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(icon, color: c.textMuted, size: 18),
+            const SizedBox(height: 6),
             Text(
               value,
               style: GoogleFonts.outfit(
-                color: c.accent,
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
+                color: c.text,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
                 height: 1,
-                letterSpacing: -0.5,
+                letterSpacing: -0.3,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               label,
               style: GoogleFonts.outfit(
                 color: c.textMuted,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
               ),
               textAlign: TextAlign.center,
             ),
@@ -490,18 +498,14 @@ class _CategoryRow extends StatelessWidget {
   const _CategoryRow({required this.c, required this.lang, required this.hp});
 
   static const List<Map<String, Object>> _cats = [
-    {'slug': 'car', 'icon': Icons.directions_car_rounded, 'key': 'cat.car'},
-    {'slug': 'suv', 'icon': Icons.directions_car_filled_rounded, 'key': 'cat.suv'},
-    {'slug': 'electric', 'icon': Icons.electric_car_rounded, 'key': 'cat.electric'},
-    {'slug': 'motorcycle', 'icon': Icons.two_wheeler_rounded, 'key': 'cat.motorcycle'},
-    {'slug': 'truck', 'icon': Icons.local_shipping_rounded, 'key': 'cat.truck'},
-    {'slug': 'parts', 'icon': Icons.settings_rounded, 'key': 'cat.parts'},
-    {'slug': 'pickup', 'icon': Icons.airport_shuttle_rounded, 'key': 'cat.pickup'},
-    {
-      'slug': 'commercial',
-      'icon': Icons.business_rounded,
-      'key': 'cat.commercial'
-    },
+    {'slug': 'car',        'icon': Icons.directions_car_rounded,        'key': 'cat.car'},
+    {'slug': 'suv',        'icon': Icons.directions_car_filled_rounded,  'key': 'cat.suv'},
+    {'slug': 'electric',   'icon': Icons.electric_car_rounded,           'key': 'cat.electric'},
+    {'slug': 'motorcycle', 'icon': Icons.two_wheeler_rounded,            'key': 'cat.motorcycle'},
+    {'slug': 'truck',      'icon': Icons.local_shipping_rounded,         'key': 'cat.truck'},
+    {'slug': 'parts',      'icon': Icons.build_rounded,                  'key': 'cat.parts'},
+    {'slug': 'pickup',     'icon': Icons.airport_shuttle_rounded,        'key': 'cat.pickup'},
+    {'slug': 'commercial', 'icon': Icons.business_rounded,               'key': 'cat.commercial'},
   ];
 
   @override
@@ -517,7 +521,7 @@ class _CategoryRow extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 88,
+          height: 84,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: hp),
@@ -558,32 +562,20 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => context.go('/catalog?category=$slug'),
-      child: Container(
+      child: SizedBox(
         width: 72,
-        height: 88,
-        decoration: BoxDecoration(
-          color: c.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: c.border, width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
-                color: c.accent.withValues(alpha: 0.09),
-                borderRadius: BorderRadius.circular(10),
+                color: c.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: c.border, width: 1),
               ),
-              child: Icon(icon, color: c.accent, size: 20),
+              child: Icon(icon, color: c.textSecondary, size: 24),
             ),
             const SizedBox(height: 6),
             Text(
@@ -591,7 +583,7 @@ class _CategoryCard extends StatelessWidget {
               style: GoogleFonts.outfit(
                 color: c.textSecondary,
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 height: 1.2,
               ),
               textAlign: TextAlign.center,
@@ -760,7 +752,7 @@ class _FeaturedEmptyState extends StatelessWidget {
             Icon(Icons.star_outline_rounded, color: c.textMuted, size: 28),
             const SizedBox(width: 12),
             Text(
-              lang == 'ru' ? 'Нет топ объявлений' : 'Эълони топ нест',
+              t('home.noFeatured', lang),
               style: GoogleFonts.outfit(
                 color: c.textMuted,
                 fontSize: 14,
@@ -930,7 +922,7 @@ class _FreshSliver extends StatelessWidget {
                   Icon(Icons.cloud_off_outlined, size: 48, color: c.textMuted),
                   const SizedBox(height: 12),
                   Text(
-                    lang == 'ru' ? 'Не удалось загрузить объявления' : 'Дархостҳо бор нашуданд',
+                    t('home.loadError', lang),
                     style: TextStyle(color: c.textSecondary, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
@@ -938,7 +930,7 @@ class _FreshSliver extends StatelessWidget {
                   OutlinedButton(
                     onPressed: () => context.read<ListingProvider>().loadFresh(refresh: true),
                     style: OutlinedButton.styleFrom(foregroundColor: c.accent, side: BorderSide(color: c.accent)),
-                    child: Text(lang == 'ru' ? 'Повторить' : 'Такроран'),
+                    child: Text(t('error.retry', lang)),
                   ),
                 ],
               ),
@@ -1136,9 +1128,7 @@ class _SellBanner extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        lang == 'ru'
-                            ? 'Бесплатно. Тысячи покупателей'
-                            : 'Ройгон. Ҳазорон харидор',
+                        t('sell.subShort', lang),
                         style: GoogleFonts.outfit(
                           color: Colors.white.withValues(alpha: 0.80),
                           fontSize: 13,
@@ -1167,7 +1157,7 @@ class _SellBanner extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                lang == 'ru' ? 'Разместить' : 'Гузоштан',
+                                t('sell.ctaShort', lang),
                                 style: GoogleFonts.outfit(
                                   color: c.accent,
                                   fontSize: 14,

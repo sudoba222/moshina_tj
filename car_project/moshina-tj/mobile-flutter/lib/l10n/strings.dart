@@ -29,6 +29,8 @@ const Map<String, Map<String, String>> appStrings = {
   'home.categories': {'ru': 'Категории', 'tj': 'Категорияҳо'},
   'home.featuredTitle': {'ru': 'Топ объявления', 'tj': 'Эълонҳои беҳтарин'},
   'home.noListings': {'ru': 'Объявлений не найдено', 'tj': 'Эълон ёфт нашуд'},
+  'home.noFeatured': {'ru': 'Нет топ объявлений', 'tj': 'Эълони топ нест'},
+  'home.loadError': {'ru': 'Не удалось загрузить объявления', 'tj': 'Дархостҳо бор нашуданд'},
   'stats.listings': {'ru': 'объявлений', 'tj': 'эълон'},
   'stats.dealers': {'ru': 'дилеров', 'tj': 'намоишгоҳ'},
   'stats.cities': {'ru': 'городов', 'tj': 'шаҳр'},
@@ -84,6 +86,7 @@ const Map<String, Map<String, String>> appStrings = {
   'detail.readMore': {'ru': 'Читать далее', 'tj': 'Бештар хондан'},
   'detail.readLess': {'ru': 'Свернуть', 'tj': 'Пӯшидан'},
   'auth.login': {'ru': 'Войти', 'tj': 'Даромадан'},
+  'auth.loginTitle': {'ru': 'Войдите в аккаунт', 'tj': 'Ба аккаунт ворид шавед'},
   'auth.register': {'ru': 'Регистрация', 'tj': 'Сабт'},
   'auth.phone': {'ru': 'Номер телефона', 'tj': 'Рақами телефон'},
   'auth.password': {'ru': 'Пароль', 'tj': 'Рамз'},
@@ -107,6 +110,8 @@ const Map<String, Map<String, String>> appStrings = {
     'tj': 'Эълонро ройгон гузоред — ҳазорон харидор онро имрӯз мебинанд'
   },
   'sell.cta': {'ru': 'Разместить объявление', 'tj': 'Эълон гузоштан'},
+  'sell.subShort': {'ru': 'Бесплатно. Тысячи покупателей', 'tj': 'Ройгон. Ҳазорон харидор'},
+  'sell.ctaShort': {'ru': 'Разместить', 'tj': 'Гузоштан'},
   'trust.title': {
     'ru': 'Почему выбирают нас',
     'tj': 'Чаро моро интихоб мекунанд'
@@ -203,6 +208,7 @@ const Map<String, Map<String, String>> appStrings = {
   'listing.status.rejected': {'ru': 'Отклонено', 'tj': 'Рад шуд'},
   'listing.status.inactive': {'ru': 'Неактивно', 'tj': 'Ғайрифаъол'},
   'listing.delete': {'ru': 'Удалить', 'tj': 'Нест кардан'},
+  'listing.edit': {'ru': 'Изменить', 'tj': 'Таҳрир'},
   'listing.deleteConfirm': {'ru': 'Удалить это объявление?', 'tj': 'Ин эълонро нест кунед?'},
   'listing.postNew': {'ru': 'Разместить объявление', 'tj': 'Эълон гузоштан'},
   // Post form

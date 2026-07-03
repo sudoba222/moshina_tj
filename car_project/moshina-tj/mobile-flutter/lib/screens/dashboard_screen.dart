@@ -83,9 +83,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                lang == 'ru'
-                    ? 'Войдите в аккаунт'
-                    : 'Ба аккаунт ворид шавед',
+                t('auth.loginTitle', lang),
                 style: GoogleFonts.outfit(
                     color: c.text, fontWeight: FontWeight.w800, fontSize: 22),
               ),
@@ -730,7 +728,7 @@ class _MyListingsState extends State<_MyListings> {
                             Icon(Icons.edit_outlined, color: widget.c.accent, size: 14),
                             const SizedBox(width: 4),
                             Text(
-                              widget.lang == 'ru' ? 'Изменить' : 'Таҳрир',
+                              t('listing.edit', widget.lang),
                               style: TextStyle(color: widget.c.accent, fontSize: 12, fontWeight: FontWeight.w600),
                             ),
                           ],
