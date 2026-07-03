@@ -504,6 +504,23 @@ class _Gallery extends StatelessWidget {
     required this.onPageChanged,
   });
 
+  void _openFullscreen(BuildContext context, Listing listing, int startIndex) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black87,
+        pageBuilder: (_, __, ___) => _FullscreenGallery(
+          images: listing.images.map((e) => e.url).toList(),
+          initialIndex: startIndex,
+          listingId: listing.id,
+        ),
+        transitionDuration: const Duration(milliseconds: 220),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (listing.images.isEmpty) {
@@ -530,19 +547,22 @@ class _Gallery extends StatelessWidget {
                 itemCount: listing.images.length,
                 onPageChanged: onPageChanged,
                 itemBuilder: (_, i) {
-                  return Hero(
-                    tag: 'car_img_${listing.id}_$i',
-                    child: CachedNetworkImage(
-                      imageUrl: listing.images[i].url,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      placeholder: (ctx, url) =>
-                          Container(color: c.border),
-                      errorWidget: (ctx, url, err) => Container(
-                        color: c.border,
-                        child: Center(
-                          child: Icon(Icons.directions_car_outlined,
-                              size: 60, color: c.textMuted),
+                  return GestureDetector(
+                    onTap: () => _openFullscreen(context, listing, i),
+                    child: Hero(
+                      tag: 'car_img_${listing.id}_$i',
+                      child: CachedNetworkImage(
+                        imageUrl: listing.images[i].url,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        placeholder: (ctx, url) =>
+                            Container(color: c.border),
+                        errorWidget: (ctx, url, err) => Container(
+                          color: c.border,
+                          child: Center(
+                            child: Icon(Icons.directions_car_outlined,
+                                size: 60, color: c.textMuted),
+                          ),
                         ),
                       ),
                     ),
@@ -1123,6 +1143,124 @@ class _GalleryArrow extends StatelessWidget {
           ],
         ),
         child: Icon(icon, size: 24, color: const Color(0xFF1A1A1A)),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fullscreen gallery with pinch-to-zoom
+
+class _FullscreenGallery extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+  final String listingId;
+
+  const _FullscreenGallery({
+    required this.images,
+    required this.initialIndex,
+    required this.listingId,
+  });
+
+  @override
+  State<_FullscreenGallery> createState() => _FullscreenGalleryState();
+}
+
+class _FullscreenGalleryState extends State<_FullscreenGallery> {
+  late final PageController _ctrl;
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.initialIndex;
+    _ctrl = PageController(initialPage: _index);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _ctrl,
+            itemCount: widget.images.length,
+            onPageChanged: (i) => setState(() => _index = i),
+            itemBuilder: (_, i) => InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 5.0,
+              child: Hero(
+                tag: 'car_img_${widget.listingId}_$i',
+                child: CachedNetworkImage(
+                  imageUrl: widget.images[i],
+                  fit: BoxFit.contain,
+                  placeholder: (_, __) => const Center(
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white54),
+                  ),
+                  errorWidget: (_, __, ___) => const Center(
+                    child: Icon(Icons.broken_image_rounded,
+                        color: Colors.white38, size: 64),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Close button
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close_rounded,
+                        color: Colors.white, size: 22),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Counter
+          if (widget.images.length > 1)
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${_index + 1}/${widget.images.length}',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
