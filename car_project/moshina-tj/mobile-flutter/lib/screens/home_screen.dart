@@ -1297,9 +1297,9 @@ class _RecentCard extends StatelessWidget {
                       height: 80,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) =>
+                      placeholder: (_, _) =>
                           Container(height: 80, color: c.surface),
-                      errorWidget: (_, __, ___) => Container(
+                      errorWidget: (_, _, _) => Container(
                         height: 80,
                         color: c.surface,
                         child: Icon(Icons.directions_car_rounded,

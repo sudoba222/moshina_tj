@@ -35,7 +35,9 @@ String _serverMessage(Object e) {
     if (code == 429) return 'Слишком много запросов. Подождите немного.';
     if (code != null && code >= 500) return 'Ошибка сервера. Попробуйте позже.';
     if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout) return 'Сервер не отвечает. Проверьте соединение.';
+        e.type == DioExceptionType.receiveTimeout) {
+      return 'Сервер не отвечает. Проверьте соединение.';
+    }
   }
   return 'Нет соединения с сервером';
 }

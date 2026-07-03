@@ -303,14 +303,41 @@ class _DealerDetailScreenState extends State<DealerDetailScreen> {
 
   Widget _buildHeroBg(AppColors c, String? logoUrl, String name) {
     return Container(
-      color: c.card,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            c.accent.withValues(alpha: 0.22),
+            c.accent.withValues(alpha: 0.08),
+            c.card,
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ),
+      ),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 40),
-            _DealerAvatar(logoUrl: logoUrl, name: name, c: c, size: 80),
-            const SizedBox(height: 10),
+            const SizedBox(height: 44),
+            // Logo with subtle elevation ring
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: c.card,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: c.accent.withValues(alpha: 0.25),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: _DealerAvatar(logoUrl: logoUrl, name: name, c: c, size: 76),
+            ),
+            const SizedBox(height: 12),
             Text(
               name,
               style: GoogleFonts.outfit(
@@ -375,7 +402,7 @@ class _DealerAvatar extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.contain,
-          errorWidget: (_, __, ___) => _initials(),
+          errorWidget: (_, _, _) => _initials(),
         ),
       );
     }

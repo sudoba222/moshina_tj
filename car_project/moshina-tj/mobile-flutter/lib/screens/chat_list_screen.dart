@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/auth_provider.dart';
+import '../providers/badge_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -71,7 +72,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             return ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               itemCount: items.length,
-              separatorBuilder: (_, __) => Divider(
+              separatorBuilder: (_, _) => Divider(
                 height: 1,
                 indent: 80,
                 endIndent: 16,
@@ -86,10 +87,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   myUserId: myUserId,
                   lang: lang,
                   c: c,
-                  onTap: () => context.push(
-                    '/chat/${conv['id']}',
-                    extra: conv,
-                  ),
+                  onTap: () {
+                    final badges = context.read<BadgeProvider>();
+                    final api = context.read<ApiService>();
+                    context.push('/chat/${conv['id']}', extra: conv).then((_) {
+                      if (!mounted) return;
+                      _load();
+                      badges.refresh(api);
+                    });
+                  },
                 );
               },
             );
@@ -348,13 +354,13 @@ class _ShimmerList extends StatelessWidget {
       child: ListView.separated(
         physics: const NeverScrollableScrollPhysics(),
         itemCount: 6,
-        separatorBuilder: (_, __) => Divider(
+        separatorBuilder: (_, _) => Divider(
           height: 1,
           indent: 80,
           endIndent: 16,
           color: c.border,
         ),
-        itemBuilder: (_, __) => Padding(
+        itemBuilder: (_, _) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [

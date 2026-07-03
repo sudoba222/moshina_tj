@@ -791,8 +791,8 @@ class _Avatar extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          placeholder: (_, __) => _InitialsCircle(user: user, c: c, size: size),
-          errorWidget: (_, __, ___) =>
+          placeholder: (_, _) => _InitialsCircle(user: user, c: c, size: size),
+          errorWidget: (_, _, _) =>
               _InitialsCircle(user: user, c: c, size: size),
         ),
       );

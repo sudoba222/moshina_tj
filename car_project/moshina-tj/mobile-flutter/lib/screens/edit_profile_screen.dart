@@ -182,14 +182,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     fit: BoxFit.cover,
                                     width: 90,
                                     height: 90,
-                                    placeholder: (_, __) => Container(
+                                    placeholder: (_, _) => Container(
                                       color: c.surface,
                                       child: Center(
                                         child: Icon(Icons.person_rounded,
                                             color: c.textMuted, size: 40),
                                       ),
                                     ),
-                                    errorWidget: (_, __, ___) =>
+                                    errorWidget: (_, _, _) =>
                                         _InitialCircle(user: user, c: c),
                                   )
                                 : _InitialCircle(user: user, c: c),
@@ -244,8 +244,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 icon: Icons.badge_outlined,
                 c: c,
                 validator: (v) {
-                  if (v == null || v.trim().length < 2)
+                  if (v == null || v.trim().length < 2) {
                     return t('auth.nameMinLength', lang);
+                  }
                   return null;
                 },
               ),

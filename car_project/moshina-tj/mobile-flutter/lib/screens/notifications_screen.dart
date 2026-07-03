@@ -173,7 +173,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _items.length,
-        separatorBuilder: (_, __) => Divider(color: c.border, height: 1),
+        separatorBuilder: (_, _) => Divider(color: c.border, height: 1),
         itemBuilder: (ctx, i) {
           final item = _items[i] as Map<String, dynamic>;
           return _NotificationTile(
@@ -194,7 +194,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: ListView.builder(
         padding: const EdgeInsets.all(0),
         itemCount: 6,
-        itemBuilder: (_, __) => Container(
+        itemBuilder: (_, _) => Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           height: 70,
           decoration: BoxDecoration(
@@ -258,8 +258,13 @@ class _NotificationTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        color: isRead ? Colors.transparent : c.accent.withValues(alpha: 0.05),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isRead ? Colors.transparent : c.accent.withValues(alpha: 0.04),
+          border: isRead
+              ? null
+              : Border(left: BorderSide(color: c.accent, width: 3)),
+        ),
+        padding: EdgeInsets.fromLTRB(isRead ? 16 : 13, 14, 16, 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -267,10 +272,16 @@ class _NotificationTile extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: c.accent.withValues(alpha: 0.1),
+                color: isRead
+                    ? c.tagBg
+                    : c.accent.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(_iconForType(type), color: c.accent, size: 20),
+              child: Icon(
+                _iconForType(type),
+                color: isRead ? c.textMuted : c.accent,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -294,15 +305,23 @@ class _NotificationTile extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         _relativeTime(createdAt, lang),
-                        style: TextStyle(color: c.textMuted, fontSize: 11),
+                        style: TextStyle(
+                          color: isRead ? c.textMuted : c.accent,
+                          fontSize: 11,
+                          fontWeight: isRead ? FontWeight.w400 : FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
                   if (body.isNotEmpty) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       body,
-                      style: TextStyle(color: c.textSecondary, fontSize: 13, height: 1.4),
+                      style: TextStyle(
+                        color: c.textSecondary,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),

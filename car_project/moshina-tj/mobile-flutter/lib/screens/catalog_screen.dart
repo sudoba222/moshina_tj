@@ -145,11 +145,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
         if (provider.catalogLoading) {
           return _gridMode
               ? _GridShimmer(c: c)
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
+              : ListView.builder(
+                  padding: EdgeInsets.zero,
                   itemCount: 6,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (_, __) => const CarCardShimmer(horizontal: true),
+                  itemBuilder: (_, _) => const CarCardShimmer(horizontal: true),
                 );
         }
 
@@ -220,7 +219,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.only(bottom: 16),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (ctx2, i) {
@@ -237,13 +236,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           return const SizedBox.shrink();
                         }
                         final listing = provider.catalogItems[i];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: CarCard(
-                            listing: listing,
-                            horizontal: true,
-                            onTap: () => ctx2.push('/car/${listing.id}'),
-                          ),
+                        return CarCard(
+                          listing: listing,
+                          horizontal: true,
+                          onTap: () => ctx2.push('/car/${listing.id}'),
                         );
                       },
                       childCount: provider.catalogItems.length +
@@ -365,6 +361,13 @@ class _PillSearchBarState extends State<_PillSearchBar> {
           color: widget.c.card,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: widget.c.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: TextField(
           controller: widget.controller,
@@ -475,6 +478,7 @@ class _FilterStrip extends StatelessWidget {
               selected: listingType.isEmpty,
               activeColor: c.accent,
               c: c,
+              icon: Icons.grid_view_rounded,
               onTap: () => onTypeChanged(''),
             ),
             const SizedBox(width: 8),
@@ -483,6 +487,7 @@ class _FilterStrip extends StatelessWidget {
               selected: listingType == 'sale',
               activeColor: c.accent,
               c: c,
+              icon: Icons.sell_outlined,
               onTap: () => onTypeChanged('sale'),
             ),
             const SizedBox(width: 8),
@@ -491,6 +496,7 @@ class _FilterStrip extends StatelessWidget {
               selected: listingType == 'rent',
               activeColor: AppColors.colorInfo,
               c: c,
+              icon: Icons.key_outlined,
               onTap: () => onTypeChanged('rent'),
             ),
             const SizedBox(width: 8),
@@ -499,6 +505,7 @@ class _FilterStrip extends StatelessWidget {
               selected: listingType == 'installment',
               activeColor: AppColors.colorWarning,
               c: c,
+              icon: Icons.credit_card_outlined,
               onTap: () => onTypeChanged('installment'),
             ),
             const SizedBox(width: 12),
@@ -577,6 +584,7 @@ class _FilterChip extends StatelessWidget {
   final Color activeColor;
   final AppColors c;
   final VoidCallback onTap;
+  final IconData? icon;
 
   const _FilterChip({
     required this.label,
@@ -584,6 +592,7 @@ class _FilterChip extends StatelessWidget {
     required this.activeColor,
     required this.c,
     required this.onTap,
+    this.icon,
   });
 
   @override
@@ -592,18 +601,27 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: EdgeInsets.symmetric(horizontal: icon != null ? 10 : 14, vertical: 7),
         decoration: BoxDecoration(
           color: selected ? activeColor : c.bg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: selected ? activeColor : c.border),
         ),
-        child: Text(
-          label,
-          style: AppTextStyles.bodySm(
-            color: selected ? Colors.white : c.textSecondary,
-            weight: FontWeight.w500,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: selected ? Colors.white : c.textSecondary),
+              const SizedBox(width: 5),
+            ],
+            Text(
+              label,
+              style: AppTextStyles.bodySm(
+                color: selected ? Colors.white : c.textSecondary,
+                weight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -690,8 +708,8 @@ class _CompactCard extends StatelessWidget {
                   ? CachedNetworkImage(
                       imageUrl: imageUrl,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: c.border),
-                      errorWidget: (_, __, ___) => Container(
+                      placeholder: (_, _) => Container(color: c.border),
+                      errorWidget: (_, _, _) => Container(
                         color: c.tagBg,
                         child: Center(
                           child: Icon(Icons.directions_car_outlined,
@@ -764,7 +782,7 @@ class _GridShimmer extends StatelessWidget {
         childAspectRatio: 0.78,
       ),
       itemCount: 6,
-      itemBuilder: (_, __) => Container(
+      itemBuilder: (_, _) => Container(
         decoration: BoxDecoration(
           color: c.card,
           borderRadius: BorderRadius.circular(12),

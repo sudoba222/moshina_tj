@@ -210,7 +210,7 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
                 },
               ),
               Consumer<FavoritesProvider>(
-                builder: (_, favs, __) {
+                builder: (_, favs, _) {
                   final isFav = favs.isFavorite(listing.id);
                   return IconButton(
                     icon: Icon(
@@ -510,13 +510,13 @@ class _Gallery extends StatelessWidget {
       PageRouteBuilder(
         opaque: false,
         barrierColor: Colors.black87,
-        pageBuilder: (_, __, ___) => _FullscreenGallery(
+        pageBuilder: (_, _, _) => _FullscreenGallery(
           images: listing.images.map((e) => e.url).toList(),
           initialIndex: startIndex,
           listingId: listing.id,
         ),
         transitionDuration: const Duration(milliseconds: 220),
-        transitionsBuilder: (_, animation, __, child) =>
+        transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
     );
@@ -1021,7 +1021,7 @@ class _RelatedListings extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: related.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (ctx, i) {
           final item = related[i];
           return SizedBox(
@@ -1095,7 +1095,7 @@ class _StickyBar extends StatelessWidget {
               children: [
                 Text(
                   listing.formattedPrice(lang),
-                  style: GoogleFontsPrice(c),
+                  style: _priceStyle(c),
                 ),
                 if (listing.isNegotiable)
                   Text(
@@ -1128,7 +1128,7 @@ class _StickyBar extends StatelessWidget {
   }
 }
 
-TextStyle GoogleFontsPrice(AppColors c) {
+TextStyle _priceStyle(AppColors c) {
   return TextStyle(
     color: c.accent,
     fontSize: 22,
@@ -1224,11 +1224,11 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
                 child: CachedNetworkImage(
                   imageUrl: widget.images[i],
                   fit: BoxFit.contain,
-                  placeholder: (_, __) => const Center(
+                  placeholder: (_, _) => const Center(
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white54),
                   ),
-                  errorWidget: (_, __, ___) => const Center(
+                  errorWidget: (_, _, _) => const Center(
                     child: Icon(Icons.broken_image_rounded,
                         color: Colors.white38, size: 64),
                   ),

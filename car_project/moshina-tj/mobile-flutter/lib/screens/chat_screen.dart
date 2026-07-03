@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 import '../providers/auth_provider.dart';
+import '../providers/badge_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -28,11 +29,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  // Derived from ApiService.wsBase so it stays in sync with the REST base URL.
   static String get _wsUrl => '${ApiService.wsBase}/chat';
 
-  // Bug #5 fix: exponential backoff delays in seconds (capped at 30s).
-  // Unlimited retries while the screen is open.
+  // Exponential backoff delays (seconds), capped at 30s.
   static const _backoffDelays = [2, 4, 8, 16, 30];
   static const _nearBottomThreshold = 200.0;
 
@@ -43,8 +42,6 @@ class _ChatScreenState extends State<ChatScreen> {
   StreamSubscription? _sub;
   Timer? _reconnectTimer;
   _WsStatus _wsStatus = _WsStatus.connecting;
-  // Bug #6 fix: separate connected flag — _channel may be non-null but dead
-  // during reconnect, so _channel == null is not a reliable guard for sends.
   bool _wsConnected = false;
   int _reconnectAttempts = 0;
 
@@ -54,7 +51,6 @@ class _ChatScreenState extends State<ChatScreen> {
   int _page = 1;
   bool _loadingMore = false;
 
-  // Scroll-to-bottom FAB
   bool _showScrollFab = false;
   int _unreadWhileScrolled = 0;
 
@@ -76,6 +72,11 @@ class _ChatScreenState extends State<ChatScreen> {
     _sub?.cancel();
     _reconnectTimer?.cancel();
     _channel?.sink.close();
+    // Refresh badge counts so the nav tab reflects read messages.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final api = context.read<ApiService>();
+      context.read<BadgeProvider>().refresh(api);
+    });
     super.dispose();
   }
 
@@ -101,7 +102,6 @@ class _ChatScreenState extends State<ChatScreen> {
         _loadingHistory = false;
       });
       if (refresh) _scrollToBottom();
-      // Mark conversation as read after loading; ignore failures.
       try {
         await context.read<ApiService>().markConversationRead(widget.convId);
       } catch (_) {}
@@ -112,7 +112,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _onScroll() {
-    // Load more when near the top of the reversed list (which is the bottom)
     if (_scrollCtrl.position.pixels >=
             _scrollCtrl.position.maxScrollExtent - 150 &&
         _hasMore &&
@@ -120,7 +119,6 @@ class _ChatScreenState extends State<ChatScreen> {
       _loadMore();
     }
 
-    // Show/hide scroll-to-bottom FAB
     final nearBottom = _scrollCtrl.position.pixels <= _nearBottomThreshold;
     if (nearBottom && _showScrollFab) {
       setState(() {
@@ -174,10 +172,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final token = await context.read<ApiService>().getToken();
     if (!mounted) return;
 
-    // Bug #4 fix: backend _ws_authenticate reads the Authorization header (or
-    // a cookie). It does NOT read ?token= query params. Using the Authorization
-    // header works on both iOS and Android because dart:io's WebSocket sends
-    // HTTP upgrade headers natively — unlike the browser WebSocket API.
+    // Backend _ws_authenticate reads the Authorization header for native
+    // mobile clients that cannot set cookies on WS connections.
     final uri = Uri.parse(_wsUrl);
     try {
       _channel = IOWebSocketChannel.connect(
@@ -202,17 +198,42 @@ class _ChatScreenState extends State<ChatScreen> {
   void _onWsMessage(dynamic raw) {
     try {
       final payload = jsonDecode(raw as String) as Map<String, dynamic>;
-      if (payload['event'] == 'new_message' &&
-          payload['conversation_id'].toString() == widget.convId.toString()) {
-        final msg = payload['message'] as Map<String, dynamic>;
-        if (!mounted) return;
-        final nearBottom = !_scrollCtrl.hasClients ||
-            _scrollCtrl.position.pixels <= _nearBottomThreshold;
-        setState(() {
+      if (payload['event'] != 'new_message') return;
+      if (payload['conversation_id'].toString() != widget.convId.toString()) return;
+
+      final msg = payload['message'] as Map<String, dynamic>;
+      final senderId = msg['sender_id']?.toString();
+      final isOwn = senderId == _myUserId;
+
+      if (!mounted) return;
+
+      final nearBottom = !_scrollCtrl.hasClients ||
+          _scrollCtrl.position.pixels <= _nearBottomThreshold;
+
+      setState(() {
+        if (isOwn) {
+          // WS echo of our own message — replace the optimistic pending entry.
+          final content = msg['content'] as String?;
+          final idx = _messages.indexWhere(
+            (m) => m['_pending'] == true && m['content'] == content,
+          );
+          if (idx != -1) {
+            _messages[idx] = msg;
+          } else {
+            // No matching pending — insert normally (e.g. sent from another device).
+            _messages.insert(0, msg);
+          }
+        } else {
           _messages.insert(0, msg);
           if (!nearBottom) _unreadWhileScrolled++;
-        });
-        if (nearBottom) _scrollToBottom();
+        }
+      });
+
+      if (nearBottom) _scrollToBottom();
+
+      // Mark conversation read since the user is actively viewing it.
+      if (!isOwn) {
+        context.read<ApiService>().markConversationRead(widget.convId).catchError((_) {});
       }
     } catch (_) {}
   }
@@ -235,8 +256,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _scheduleReconnect();
   }
 
-  // Bug #5 fix: exponential backoff with unlimited retries.
-  // Shows a one-time SnackBar with a tap-to-retry action on the first failure.
   void _scheduleReconnect() {
     _reconnectAttempts++;
     final delaySecs = _reconnectAttempts <= _backoffDelays.length
@@ -248,8 +267,6 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) _connectWs();
     });
 
-    // Show a SnackBar only on the first failure so the user can retry
-    // immediately instead of waiting for the backoff timer.
     if (_reconnectAttempts == 1 && mounted) {
       final lang = context.read<LanguageProvider>().lang;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -271,24 +288,73 @@ class _ChatScreenState extends State<ChatScreen> {
     _connectWs();
   }
 
-  // Bug #6 fix: guard send against the dead-channel-during-reconnect case.
-  // _channel may be non-null but stale when _wsConnected is false.
+  // ── Send ──────────────────────────────────────────────────────────────────
+
   void _sendMessage() {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
-    if (!_wsConnected) {
-      final lang = context.read<LanguageProvider>().lang;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(t('chat.sendDisabled', lang)),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
+
     HapticFeedback.lightImpact();
-    _channel!.sink.add(jsonEncode({'conversation_id': widget.convId, 'content': text}));
     _ctrl.clear();
+
+    // Optimistic insert — immediately visible, marked pending.
+    final tempId = 'tmp_${DateTime.now().microsecondsSinceEpoch}';
+    final optimistic = <String, dynamic>{
+      'id': tempId,
+      '_pending': true,
+      'conversation_id': widget.convId,
+      'sender_id': _myUserId,
+      'content': text,
+      'is_read': false,
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+    };
+    setState(() => _messages.insert(0, optimistic));
+    _scrollToBottom();
+
+    if (_wsConnected) {
+      _channel!.sink.add(
+        jsonEncode({'conversation_id': widget.convId, 'content': text}),
+      );
+    } else {
+      _sendMessageRest(text, tempId);
+    }
+  }
+
+  Future<void> _sendMessageRest(String text, String tempId) async {
+    try {
+      final msg = await context.read<ApiService>().sendMessage(widget.convId, text);
+      if (!mounted) return;
+      final idx = _messages.indexWhere((m) => m['id'] == tempId);
+      setState(() {
+        if (idx != -1) {
+          _messages[idx] = msg;
+        } else {
+          _messages.insert(0, msg);
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      final idx = _messages.indexWhere((m) => m['id'] == tempId);
+      if (idx != -1) {
+        setState(() => _messages[idx] = {
+          ..._messages[idx],
+          '_pending': false,
+          '_failed': true,
+        });
+      }
+    }
+  }
+
+  // Retry a failed message by resending via REST.
+  void _retryFailedMessage(Map<String, dynamic> msg) {
+    final content = msg['content'] as String? ?? '';
+    if (content.isEmpty) return;
+    final tempId = msg['id'] as String? ?? '';
+    final idx = _messages.indexWhere((m) => m['id'] == tempId);
+    if (idx != -1) {
+      setState(() => _messages[idx] = {...msg, '_failed': false, '_pending': true});
+    }
+    _sendMessageRest(content, tempId);
   }
 
   // ── Build ────────────────────────────────────────────────────────────────
@@ -309,10 +375,8 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: _buildAppBar(c, lang, brand, model, imageUrl, otherName),
       body: Column(
         children: [
-          // Thin connecting banner
           if (_wsStatus == _WsStatus.connecting)
             _ConnectingBanner(lang: lang, c: c),
-          // Messages
           Expanded(
             child: Stack(
               children: [
@@ -325,8 +389,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         c: c,
                         scrollCtrl: _scrollCtrl,
                         loadingMore: _loadingMore,
+                        onRetryFailed: _retryFailedMessage,
                       ),
-                // Scroll to bottom FAB
                 if (_showScrollFab)
                   Positioned(
                     bottom: 12,
@@ -346,7 +410,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-          // Input bar
           _InputBar(
             ctrl: _ctrl,
             lang: lang,
@@ -385,7 +448,6 @@ class _ChatScreenState extends State<ChatScreen> {
       titleSpacing: 0,
       title: Row(
         children: [
-          // Avatar with initials
           Container(
             width: 38,
             height: 38,
@@ -410,12 +472,10 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Text(
                   otherName.isNotEmpty ? otherName : '$brand $model',
-                  style: AppTextStyles.bodyLg(
-                      color: c.text, weight: FontWeight.w600),
+                  style: AppTextStyles.bodyLg(color: c.text, weight: FontWeight.w600),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                // Online status row
                 Row(
                   children: [
                     Container(
@@ -440,7 +500,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-          // Car thumbnail
           if (imageUrl.isNotEmpty || brand.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -453,9 +512,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? CachedNetworkImage(
                           imageUrl: imageUrl,
                           fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(color: c.border),
-                          errorWidget: (_, __, ___) =>
-                              Container(color: c.tagBg),
+                          placeholder: (_, _) => Container(color: c.border),
+                          errorWidget: (_, _, _) => Container(color: c.tagBg),
                         )
                       : Container(
                           color: c.tagBg,
@@ -569,6 +627,7 @@ class _MessageList extends StatelessWidget {
   final AppColors c;
   final ScrollController scrollCtrl;
   final bool loadingMore;
+  final void Function(Map<String, dynamic> msg) onRetryFailed;
 
   const _MessageList({
     required this.messages,
@@ -577,6 +636,7 @@ class _MessageList extends StatelessWidget {
     required this.c,
     required this.scrollCtrl,
     required this.loadingMore,
+    required this.onRetryFailed,
   });
 
   @override
@@ -603,7 +663,6 @@ class _MessageList extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemCount: messages.length + (loadingMore ? 1 : 0),
       itemBuilder: (context, i) {
-        // Load-more spinner at the bottom of the reversed list
         if (i == messages.length) {
           return Center(
             child: Padding(
@@ -616,15 +675,13 @@ class _MessageList extends StatelessWidget {
         final msg = messages[i];
         final isOwn = msg['sender_id'] == myUserId;
 
-        // Grouping: check if the previous message (i-1 in reversed list = next in
-        // time) is from the same sender and within 5 minutes.
         final prevMsg = i > 0 ? messages[i - 1] : null;
         final nextMsg = i < messages.length - 1 ? messages[i + 1] : null;
 
         final isFirstInGroup = _isFirstInGroup(msg, nextMsg);
         final isLastInGroup = _isLastInGroup(msg, prevMsg);
 
-        // Date separator between this message and the next one (older)
+        // Date separator between this message and the older one below it.
         Widget? separator;
         if (nextMsg != null) {
           final currDate = _dateOf(msg['created_at'] as String?);
@@ -645,6 +702,7 @@ class _MessageList extends StatelessWidget {
               c: c,
               lang: lang,
               myUserId: myUserId,
+              onRetryFailed: onRetryFailed,
             ),
           ],
         );
@@ -737,6 +795,7 @@ class _MessageBubble extends StatelessWidget {
   final AppColors c;
   final String lang;
   final String? myUserId;
+  final void Function(Map<String, dynamic> msg) onRetryFailed;
 
   const _MessageBubble({
     required this.msg,
@@ -746,6 +805,7 @@ class _MessageBubble extends StatelessWidget {
     required this.c,
     required this.lang,
     required this.myUserId,
+    required this.onRetryFailed,
   });
 
   @override
@@ -754,14 +814,15 @@ class _MessageBubble extends StatelessWidget {
     final content = msg['content'] as String? ?? '';
     final createdAt = msg['created_at'] as String?;
     final senderName = msg['sender_name'] as String?;
+    final isPending = msg['_pending'] as bool? ?? false;
+    final isFailed = msg['_failed'] as bool? ?? false;
+    final isRead = msg['is_read'] as bool? ?? false;
     final timeStr = _formatTime(createdAt);
 
-    // Avatar initials for received messages
     final initials = senderName != null && senderName.isNotEmpty
         ? senderName.trim().split(' ').take(2).map((w) => w[0].toUpperCase()).join()
         : '?';
 
-    // Tail corner logic: one sharp corner creates the Telegram "tail" effect
     final bubbleRadius = isOwn
         ? BorderRadius.only(
             topLeft: const Radius.circular(18),
@@ -776,57 +837,67 @@ class _MessageBubble extends StatelessWidget {
             bottomRight: const Radius.circular(18),
           );
 
-    // Top margin: less between grouped messages
     final topMargin = isFirstInGroup ? 6.0 : 2.0;
 
-    final bubble = Container(
-      constraints: BoxConstraints(maxWidth: screenWidth * 0.72),
-      padding: const EdgeInsets.fromLTRB(13, 9, 13, 9),
-      decoration: BoxDecoration(
-        color: isOwn ? c.accent : c.card,
-        borderRadius: bubbleRadius,
-        border: isOwn ? null : Border.all(color: c.border, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            content,
-            style: AppTextStyles.body(
-              color: isOwn ? Colors.white : c.text,
+    final bubble = GestureDetector(
+      onLongPress: () => _copyText(context, content),
+      onTap: isFailed ? () => onRetryFailed(msg) : null,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: screenWidth * 0.72),
+        padding: const EdgeInsets.fromLTRB(13, 9, 13, 9),
+        decoration: BoxDecoration(
+          color: isFailed
+              ? (isOwn ? c.accent.withValues(alpha: 0.6) : c.card)
+              : (isOwn ? c.accent : c.card),
+          borderRadius: bubbleRadius,
+          border: isOwn ? null : Border.all(color: c.border, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              content,
+              style: AppTextStyles.body(
+                color: isOwn ? Colors.white : c.text,
+              ),
             ),
-          ),
-          const SizedBox(height: 3),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (timeStr.isNotEmpty)
-                Text(
-                  timeStr,
-                  style: AppTextStyles.micro(
-                    color: isOwn
-                        ? Colors.white.withValues(alpha: 0.65)
-                        : c.textMuted,
+            const SizedBox(height: 3),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isFailed)
+                  Text(
+                    t('chat.msgFailed', lang),
+                    style: AppTextStyles.micro(
+                      color: isOwn
+                          ? Colors.white.withValues(alpha: 0.8)
+                          : c.textMuted,
+                    ),
+                  )
+                else if (timeStr.isNotEmpty)
+                  Text(
+                    timeStr,
+                    style: AppTextStyles.micro(
+                      color: isOwn
+                          ? Colors.white.withValues(alpha: 0.65)
+                          : c.textMuted,
+                    ),
                   ),
-                ),
-              if (isOwn) ...[
-                const SizedBox(width: 3),
-                Icon(
-                  Icons.done_all_rounded,
-                  size: 13,
-                  color: Colors.white.withValues(alpha: 0.65),
-                ),
+                if (isOwn) ...[
+                  const SizedBox(width: 3),
+                  _buildStatusIcon(isPending, isFailed, isRead),
+                ],
               ],
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
 
     if (isOwn) {
       return Padding(
-        padding: EdgeInsets.only(bottom: 0, top: topMargin),
+        padding: EdgeInsets.only(top: topMargin),
         child: Align(
           alignment: Alignment.centerRight,
           child: Padding(
@@ -837,14 +908,12 @@ class _MessageBubble extends StatelessWidget {
       );
     }
 
-    // Received message — show avatar only on last message in group
     return Padding(
       padding: EdgeInsets.only(top: topMargin),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           const SizedBox(width: 8),
-          // Avatar placeholder or actual avatar circle
           if (isLastInGroup)
             Container(
               width: 28,
@@ -869,7 +938,6 @@ class _MessageBubble extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Sender name above first in group
               if (isFirstInGroup && senderName != null && senderName.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(left: 2, bottom: 2),
@@ -885,6 +953,44 @@ class _MessageBubble extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusIcon(bool isPending, bool isFailed, bool isRead) {
+    if (isPending) {
+      return SizedBox(
+        width: 13,
+        height: 13,
+        child: CircularProgressIndicator(
+          strokeWidth: 1.5,
+          color: Colors.white.withValues(alpha: 0.65),
+        ),
+      );
+    }
+    if (isFailed) {
+      return Icon(Icons.error_outline_rounded,
+          size: 13, color: Colors.red[300]);
+    }
+    return Icon(
+      isRead ? Icons.done_all_rounded : Icons.done_rounded,
+      size: 13,
+      color: isRead
+          ? const Color(0xCC5BE7FF)   // light blue tint for read
+          : Colors.white.withValues(alpha: 0.65),
+    );
+  }
+
+  void _copyText(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(t('chat.copied', context.read<LanguageProvider>().lang)),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
     );
   }
@@ -952,14 +1058,12 @@ class _InputBarState extends State<_InputBar> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Paper-clip icon (future attachment — disabled)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Icon(Icons.attach_file_rounded,
                   size: 22, color: c.textMuted),
             ),
             const SizedBox(width: 6),
-            // Text field — pill shape
             Expanded(
               child: Container(
                 constraints: const BoxConstraints(maxHeight: 120),
@@ -988,7 +1092,6 @@ class _InputBarState extends State<_InputBar> {
               ),
             ),
             const SizedBox(width: 6),
-            // Send or Mic button
             GestureDetector(
               onTap: _hasText ? widget.onSend : null,
               child: AnimatedContainer(
