@@ -157,41 +157,27 @@ class _SupportScreenState extends State<SupportScreen> {
                 children: [
                   _FaqTile(
                     c: c,
-                    question: lang == 'ru'
-                        ? 'Как разместить объявление?'
-                        : 'Чӣ тавр эълон гузоштан мумкин аст?',
-                    answer: lang == 'ru'
-                        ? 'Нажмите "Продать" в меню внизу, заполните форму и нажмите "Разместить". Объявление появится после проверки модератором.'
-                        : 'Дар меню "Фурӯхтан"-ро пахш кунед, шаклро пур кунед ва "Гузоштан"-ро пахш кунед.',
+                    question: t('faq.postListing.q', lang),
+                    answer: t('faq.postListing.a', lang),
                     isFirst: true,
                   ),
                   Divider(color: c.border, height: 1),
                   _FaqTile(
                     c: c,
-                    question: lang == 'ru'
-                        ? 'Как связаться с продавцом?'
-                        : 'Чӣ тавр бо фурӯшанда тамос гирифтан мумкин аст?',
-                    answer: lang == 'ru'
-                        ? 'Откройте объявление и нажмите "Позвонить" или "WhatsApp". Также можно написать через встроенный чат.'
-                        : 'Эълонро кушоед ва "Занг задан" ё "WhatsApp"-ро пахш кунед.',
+                    question: t('faq.contactSeller.q', lang),
+                    answer: t('faq.contactSeller.a', lang),
                   ),
                   Divider(color: c.border, height: 1),
                   _FaqTile(
                     c: c,
-                    question: lang == 'ru'
-                        ? 'Безопасно ли покупать через TajCar?'
-                        : 'Харид кардан тавассути TajCar бехатар аст?',
-                    answer: lang == 'ru'
-                        ? 'Все объявления проходят проверку модераторами. Верифицированные дилеры отмечены специальным знаком.'
-                        : 'Ҳама эълонҳо аз тарафи модераторон тафтиш мешаванд.',
+                    question: t('faq.safety.q', lang),
+                    answer: t('faq.safety.a', lang),
                   ),
                   Divider(color: c.border, height: 1),
                   _FaqTile(
                     c: c,
-                    question: lang == 'ru' ? 'Как стать дилером?' : 'Чӣ тавр дилер шудан мумкин аст?',
-                    answer: lang == 'ru'
-                        ? 'Напишите нам через поддержку или свяжитесь по контактному телефону. Мы расскажем об условиях партнёрства.'
-                        : 'Ба мо тавассути дастгирӣ нависед ё бо телефони тамос занг занед.',
+                    question: t('faq.becomeDealer.q', lang),
+                    answer: t('faq.becomeDealer.a', lang),
                     isLast: true,
                   ),
                 ],
