@@ -96,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     // Title
                     Text(
-                      lang == 'ru' ? 'Войдите в аккаунт' : 'Ба аккаунт даромадан',
+                      t('auth.loginTitle', lang),
                       style: GoogleFonts.outfit(
                         color: c.text,
                         fontSize: 24,
@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      lang == 'ru' ? 'Введите номер — пришлём код' : 'Рақам ворид кунед — код мефиристем',
+                      t('auth.phoneSubtitle', lang),
                       style: GoogleFonts.outfit(color: c.textMuted, fontSize: 14),
                     ),
                     const SizedBox(height: 24),
@@ -239,25 +239,45 @@ class _HeroTop extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: SizedBox(
-          height: 200,
+          height: 210,
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  'assets/images/splash_logo.png',
-                  height: 80,
-                  width: 80,
-                  color: Colors.white,
+                RichText(
+                  text: const TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Taj',
+                        style: TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -1.5,
+                          height: 1,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'Car',
+                        style: TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFFFD0C0),
+                          letterSpacing: -1.5,
+                          height: 1,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 Text(
                   t('auth.subtitle', lang),
                   style: GoogleFonts.outfit(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: Colors.white.withValues(alpha: 0.75),
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
-                    letterSpacing: 0.3,
+                    letterSpacing: 1.5,
                   ),
                 ),
               ],
@@ -557,7 +577,7 @@ class _TelegramBottomSheetState extends State<_TelegramBottomSheet> {
                     color: c.text, fontSize: 18, fontWeight: FontWeight.w800,
                   )),
                   Text(
-                    lang == 'ru' ? 'Введите номер Telegram аккаунта' : 'Рақами Telegram аккаунтро ворид кунед',
+                    t('auth.telegramAccountPhone', lang),
                     style: GoogleFonts.outfit(color: c.textMuted, fontSize: 13),
                   ),
                 ],
@@ -594,7 +614,7 @@ class _TelegramBottomSheetState extends State<_TelegramBottomSheet> {
           ),
           const SizedBox(height: 16),
           _PrimaryBtn(
-            label: lang == 'ru' ? 'Отправить код' : 'Код фиристодан',
+            label: t('auth.sendCodeBtn', lang),
             loading: _loading,
             c: c,
             onTap: _send,
@@ -677,7 +697,7 @@ class _EmailBottomSheetState extends State<_EmailBottomSheet> {
                   children: [
                     Text('Email', style: GoogleFonts.outfit(color: c.text, fontSize: 18, fontWeight: FontWeight.w800)),
                     Text(
-                      lang == 'ru' ? 'Пришлём код на почту' : 'Коди тасдиқро ба email мефиристем',
+                      t('auth.emailSubtitle', lang),
                       style: GoogleFonts.outfit(color: c.textMuted, fontSize: 13),
                     ),
                   ],

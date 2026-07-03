@@ -162,4 +162,9 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  void updateUserFromJson(Map<String, dynamic> json) {
+    _user = AppUser.fromJson(json);
+    notifyListeners();
+  }
 }

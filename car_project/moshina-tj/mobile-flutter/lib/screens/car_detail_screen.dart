@@ -730,7 +730,7 @@ class _SellerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = listing.sellerName ?? (lang == 'ru' ? 'Продавец' : 'Фурӯшанда');
+    final name = listing.sellerName ?? t('common.seller', lang);
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
     return Container(

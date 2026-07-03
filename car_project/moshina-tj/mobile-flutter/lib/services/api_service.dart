@@ -160,6 +160,15 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> sendMessage(String convId, String content) async {
+    final data = await postRaw(
+      '/conversations/$convId/messages',
+      body: {'content': content},
+    );
+    if (data is Map<String, dynamic>) return data;
+    return {};
+  }
+
   Future<dynamic> putRaw(String path, {required Map<String, dynamic> body}) async {
     try {
       final response = await _dio.put(path, data: body);
@@ -205,11 +214,17 @@ class ApiService {
     return '';
   }
 
-  Future<dynamic> updateProfile({String? name, String? email, String? whatsapp}) async {
+  Future<dynamic> updateProfile({
+    String? name,
+    String? email,
+    String? whatsapp,
+    String? avatarUrl,
+  }) async {
     final body = <String, dynamic>{};
     if (name != null) body['full_name'] = name;
     if (email != null) body['email'] = email;
     if (whatsapp != null) body['whatsapp'] = whatsapp;
+    if (avatarUrl != null) body['avatar_url'] = avatarUrl;
     return putRaw('/auth/profile', body: body);
   }
 
@@ -346,5 +361,59 @@ class ApiService {
     final data = await getRaw('/dealers/$dealerId');
     if (data is Map<String, dynamic>) return data;
     return {};
+  }
+
+  // ── Brands / Models ───────────────────────────────────────────────────────
+
+  // ── AI ────────────────────────────────────────────────────────────────────
+
+  Future<String> refineDescription({
+    required String brand,
+    required String model,
+    required int year,
+    required String city,
+    required String type,
+    double? price,
+    String currency = 'USD',
+    int? mileage,
+    String? fuel,
+    String? transmission,
+    String? color,
+    String? description,
+    String language = 'ru',
+  }) async {
+    final body = <String, dynamic>{
+      'brand': brand,
+      'model': model,
+      'year': year,
+      'city': city,
+      'type': type,
+      'currency': currency,
+      'language': language,
+    };
+    if (price != null) body['price'] = price;
+    if (mileage != null) body['mileage'] = mileage;
+    if (fuel != null) body['fuel'] = fuel;
+    if (transmission != null) body['transmission'] = transmission;
+    if (color != null) body['color'] = color;
+    if (description != null && description.isNotEmpty) body['description'] = description;
+
+    final data = await postRaw('/ai/refine-description', body: body);
+    if (data is String) return data;
+    return '';
+  }
+
+  // ── Brands / Models ───────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> fetchBrands() async {
+    final data = await getRaw('/catalog/brands');
+    if (data is List) return data.cast<Map<String, dynamic>>();
+    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> fetchModels(String brandId) async {
+    final data = await getRaw('/catalog/brands/$brandId/models');
+    if (data is List) return data.cast<Map<String, dynamic>>();
+    return [];
   }
 }

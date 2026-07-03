@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -251,38 +252,7 @@ class _ProfileCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      c.accent,
-                      Color.lerp(c.accent, const Color(0xFF7A1A04), 0.4)!,
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: c.accent.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    user.initials,
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 24,
-                    ),
-                  ),
-                ),
-              ),
+              _Avatar(user: user, c: c, radius: 35),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -794,6 +764,80 @@ class _LangButton extends StatelessWidget {
             color: selected ? Colors.white : c.textSecondary,
             fontWeight: FontWeight.w600,
             fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Shared avatar widget: shows photo if available, initials gradient otherwise.
+class _Avatar extends StatelessWidget {
+  final dynamic user;
+  final AppColors c;
+  final double radius;
+
+  const _Avatar({required this.user, required this.c, required this.radius});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = user.avatarUrl as String?;
+    final size = radius * 2;
+
+    if (url != null && url.isNotEmpty) {
+      return ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: url,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => _InitialsCircle(user: user, c: c, size: size),
+          errorWidget: (_, __, ___) =>
+              _InitialsCircle(user: user, c: c, size: size),
+        ),
+      );
+    }
+    return _InitialsCircle(user: user, c: c, size: size);
+  }
+}
+
+class _InitialsCircle extends StatelessWidget {
+  final dynamic user;
+  final AppColors c;
+  final double size;
+
+  const _InitialsCircle({required this.user, required this.c, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            c.accent,
+            Color.lerp(c.accent, const Color(0xFF7A1A04), 0.4)!,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: c.accent.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          user.initials as String,
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: size * 0.34,
           ),
         ),
       ),

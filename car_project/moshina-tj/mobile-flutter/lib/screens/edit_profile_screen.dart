@@ -1,6 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
@@ -21,7 +23,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _emailCtrl;
   late TextEditingController _whatsappCtrl;
   bool _loading = false;
+  bool _avatarUploading = false;
   String? _error;
+  String? _pendingAvatarUrl; // new avatar URL after upload, before save
 
   @override
   void initState() {
@@ -40,6 +44,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _pickAvatar() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 800,
+    );
+    if (file == null || !mounted) return;
+
+    setState(() => _avatarUploading = true);
+    try {
+      final api = context.read<ApiService>();
+      final url = await api.uploadImage(file);
+      if (mounted) setState(() => _pendingAvatarUrl = url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _avatarUploading = false);
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -48,11 +80,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
     try {
       final api = context.read<ApiService>();
-      await api.updateProfile(
+      final result = await api.updateProfile(
         name: _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
         email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-        whatsapp: _whatsappCtrl.text.trim().isEmpty ? null : _whatsappCtrl.text.trim(),
+        whatsapp: _whatsappCtrl.text.trim().isEmpty
+            ? null
+            : _whatsappCtrl.text.trim(),
+        avatarUrl: _pendingAvatarUrl,
       );
+      // Refresh cached user in auth provider
+      if (mounted && result is Map<String, dynamic>) {
+        context.read<AuthProvider>().updateUserFromJson(result);
+      }
       if (mounted) {
         final lang = context.read<LanguageProvider>().lang;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,6 +115,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
+    final user = context.watch<AuthProvider>().user;
+    final avatarUrl = _pendingAvatarUrl ?? user?.avatarUrl;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -106,6 +147,74 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           key: _formKey,
           child: Column(
             children: [
+              // Avatar picker
+              GestureDetector(
+                onTap: _avatarUploading ? null : _pickAvatar,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: c.border,
+                          width: 2,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: _avatarUploading
+                            ? Container(
+                                color: c.surface,
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: c.accent),
+                                  ),
+                                ),
+                              )
+                            : avatarUrl != null && avatarUrl.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: avatarUrl,
+                                    fit: BoxFit.cover,
+                                    width: 90,
+                                    height: 90,
+                                    placeholder: (_, __) => Container(
+                                      color: c.surface,
+                                      child: Center(
+                                        child: Icon(Icons.person_rounded,
+                                            color: c.textMuted, size: 40),
+                                      ),
+                                    ),
+                                    errorWidget: (_, __, ___) =>
+                                        _InitialCircle(user: user, c: c),
+                                  )
+                                : _InitialCircle(user: user, c: c),
+                      ),
+                    ),
+                    // Camera badge
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: c.accent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: c.bg, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
               if (_error != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -116,10 +225,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                      const Icon(Icons.error_outline,
+                          color: Colors.red, size: 18),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 14)),
+                        child: Text(_error!,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 14)),
                       ),
                     ],
                   ),
@@ -132,7 +244,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 icon: Icons.badge_outlined,
                 c: c,
                 validator: (v) {
-                  if (v == null || v.trim().length < 2) return t('auth.nameMinLength', lang);
+                  if (v == null || v.trim().length < 2)
+                    return t('auth.nameMinLength', lang);
                   return null;
                 },
               ),
@@ -169,7 +282,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ? const SizedBox(
                           width: 22,
                           height: 22,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
                         )
                       : Text(
                           t('profile.save', lang),
@@ -226,7 +340,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
         filled: true,
         fillColor: c.card,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      ),
+    );
+  }
+}
+
+class _InitialCircle extends StatelessWidget {
+  final dynamic user;
+  final AppColors c;
+
+  const _InitialCircle({required this.user, required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    final initials =
+        user != null ? (user.initials as String) : 'U';
+    return Container(
+      color: c.accent,
+      child: Center(
+        child: Text(
+          initials,
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 30,
+          ),
+        ),
       ),
     );
   }

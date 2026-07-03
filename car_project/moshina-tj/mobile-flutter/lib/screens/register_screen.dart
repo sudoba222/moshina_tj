@@ -114,7 +114,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     // Title
                     Text(
-                      lang == 'ru' ? 'Создайте аккаунт' : 'Аккаунт созед',
+                      t('auth.createAccount', lang),
                       style: GoogleFonts.outfit(
                         color: c.text,
                         fontSize: 24,
@@ -124,7 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      lang == 'ru' ? 'Займёт меньше минуты' : 'Камтар аз як дақиқа мегирад',
+                      t('auth.registerSubtitle', lang),
                       style: GoogleFonts.outfit(color: c.textMuted, fontSize: 14),
                     ),
                     const SizedBox(height: 24),
@@ -132,7 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Name field
                     _InputField(
                       ctrl: _nameCtrl,
-                      hint: lang == 'ru' ? 'Ваше имя' : 'Номи шумо',
+                      hint: t('auth.yourName', lang),
                       icon: Icons.person_outline_rounded,
                       c: c,
                       hasError: _nameError != null,
@@ -174,7 +174,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     // Main CTA
                     _PrimaryBtn(
-                      label: lang == 'ru' ? 'Создать аккаунт' : 'Аккаунт созед',
+                      label: t('auth.createAccount', lang),
                       loading: _phoneLoading,
                       c: c,
                       onTap: _sendPhoneOtp,
@@ -598,7 +598,7 @@ class _EmailRegisterSheetState extends State<_EmailRegisterSheet> {
                   children: [
                     Text('Email', style: GoogleFonts.outfit(color: c.text, fontSize: 18, fontWeight: FontWeight.w800)),
                     Text(
-                      lang == 'ru' ? 'Пришлём код для подтверждения' : 'Коди тасдиқ мефиристем',
+                      t('auth.sendConfirmCode', lang),
                       style: GoogleFonts.outfit(color: c.textMuted, fontSize: 13),
                     ),
                   ],
