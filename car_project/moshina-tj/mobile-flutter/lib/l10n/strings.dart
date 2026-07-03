@@ -267,6 +267,7 @@ const Map<String, Map<String, String>> appStrings = {
   'auth.telegramAccountPhone': {'ru': 'Введите номер Telegram аккаунта', 'tj': 'Рақами Telegram аккаунтро ворид кунед'},
   'auth.emailSubtitle': {'ru': 'Пришлём код на почту', 'tj': 'Коди тасдиқро ба email мефиристем'},
   'common.seller': {'ru': 'Продавец', 'tj': 'Фурӯшанда'},
+  'common.copied': {'ru': 'Скопировано', 'tj': 'Нусха бардошта шуд'},
   'notifications.title': {'ru': 'Уведомления', 'tj': 'Огоҳиномаҳо'},
   'notifications.empty': {'ru': 'Нет уведомлений', 'tj': 'Огоҳиномае нест'},
   'notifications.markAllRead': {'ru': 'Прочитать все', 'tj': 'Ҳамаро хондан'},

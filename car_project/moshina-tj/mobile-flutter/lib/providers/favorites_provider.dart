@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../services/favorites_service.dart';
 
 class FavoritesProvider extends ChangeNotifier {
@@ -26,6 +27,7 @@ class FavoritesProvider extends ChangeNotifier {
       _favoriteIds = Set.from(_favoriteIds)..remove(id);
     } else {
       _favoriteIds = Set.from(_favoriteIds)..add(id);
+      HapticFeedback.lightImpact();
     }
     notifyListeners();
     // Persist asynchronously

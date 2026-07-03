@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -822,6 +823,28 @@ class _SellerCard extends StatelessWidget {
                         fontSize: 16,
                       ),
                     ),
+                    if (listing.sellerPhone != null) ...[
+                      const SizedBox(height: 3),
+                      GestureDetector(
+                        onLongPress: () {
+                          Clipboard.setData(
+                              ClipboardData(text: listing.sellerPhone!));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(t('common.copied', lang)),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          listing.sellerPhone!,
+                          style: TextStyle(
+                            color: c.textSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
                     if (listing.isDealerListing) ...[
                       const SizedBox(height: 2),
                       Container(
