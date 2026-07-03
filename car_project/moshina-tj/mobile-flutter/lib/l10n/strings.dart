@@ -36,6 +36,7 @@ const Map<String, Map<String, String>> appStrings = {
   'badges.installment': {'ru': 'Рассрочка', 'tj': 'Қарз'},
   'badges.featured': {'ru': 'Топ', 'tj': 'Топ'},
   'badges.dealer': {'ru': 'Дилер', 'tj': 'Дилер'},
+  'badges.onOrder': {'ru': 'На заказ', 'tj': 'Фармоишӣ'},
   'common.today': {'ru': 'Сегодня', 'tj': 'Имрӯз'},
   'common.yesterday': {'ru': 'Вчера', 'tj': 'Дирӯз'},
   'common.daysAgo': {'ru': 'дн. назад', 'tj': 'рӯз пеш'},
@@ -169,6 +170,11 @@ const Map<String, Map<String, String>> appStrings = {
   'chat.sendDisabled': {
     'ru': 'Нет соединения — отправка невозможна',
     'tj': 'Пайваст нест — фиристода намешавад'
+  },
+  'chat.copied': {'ru': 'Скопировано', 'tj': 'Нусха шуд'},
+  'chat.msgFailed': {
+    'ru': 'Не доставлено — нажмите для повтора',
+    'tj': 'Нарасид — барои такрор пахш кунед'
   },
   'edit.loadError': {
     'ru': 'Не удалось загрузить объявление',

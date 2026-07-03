@@ -18,8 +18,8 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static const _androidChannel = AndroidNotificationChannel(
-    'moshina_tj_high',
-    'Moshina.TJ Notifications',
+    'tajcar_tj_high',
+    'TajCar.tj Notifications',
     importance: Importance.high,
   );
 
@@ -72,6 +72,7 @@ class NotificationService {
 
     // --- Notification tapped while app was in background (not terminated) ---
     _onOpenedSub = FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      if (!context.mounted) return;
       final route = _routeForMessage(message);
       _handleTap(route, context);
     });

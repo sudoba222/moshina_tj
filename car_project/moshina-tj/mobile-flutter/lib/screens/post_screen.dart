@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../data/vehicle_data.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
@@ -30,6 +31,11 @@ class _PostScreenState extends State<PostScreen> {
   final _modelCtrl = TextEditingController();
   final _yearCtrl = TextEditingController();
 
+  // Brand/model picker state
+  List<Map<String, dynamic>> _brands = [];
+  List<Map<String, dynamic>> _models = [];
+  bool _brandsLoading = false;
+
   // Step 2
   final _priceCtrl = TextEditingController();
   String _currency = 'USD';
@@ -45,6 +51,9 @@ class _PostScreenState extends State<PostScreen> {
   final _colorCtrl = TextEditingController();
   final _engineCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+
+  // AI description
+  bool _aiLoading = false;
 
   // Step 3 — Photos
   final _picker = ImagePicker();
@@ -81,6 +90,141 @@ class _PostScreenState extends State<PostScreen> {
     super.initState();
     final user = context.read<AuthProvider>().user;
     _contactCtrl = TextEditingController(text: user?.phone ?? '');
+    _loadBrands();
+  }
+
+  // Brand names from vehicle_data.dart (used to detect static vs API brands)
+  static final Set<String> _staticBrandNames = kBrandModels.keys.toSet();
+
+  Future<void> _loadBrands() async {
+    setState(() => _brandsLoading = true);
+    try {
+      final api = context.read<ApiService>();
+      final apiBrands = await api.fetchBrands();
+      if (apiBrands.isNotEmpty) {
+        _brands = apiBrands;
+      } else {
+        _brands = kSortedBrands.map((b) => {'id': b.name, 'name': b.name, 'is_popular': false}).toList();
+      }
+    } catch (_) {
+      _brands = kSortedBrands.map((b) => {'id': b.name, 'name': b.name, 'is_popular': false}).toList();
+    }
+    if (mounted) setState(() => _brandsLoading = false);
+  }
+
+  Future<void> _loadModels(String brandId) async {
+    // Static brand (id == name) → use vehicle_data.dart directly
+    if (_staticBrandNames.contains(brandId)) {
+      final list = kBrandModels[brandId] ?? [];
+      _models = list.map((m) => {'id': m, 'name': m}).toList();
+      if (mounted) setState(() {});
+      return;
+    }
+    try {
+      final api = context.read<ApiService>();
+      final apiModels = await api.fetchModels(brandId);
+      if (apiModels.isNotEmpty) {
+        _models = apiModels;
+      } else {
+        final brandName = _brandCtrl.text;
+        final list = kBrandModels[brandName] ?? [];
+        _models = list.map((m) => {'id': m, 'name': m}).toList();
+      }
+    } catch (_) {
+      final brandName = _brandCtrl.text;
+      final list = kBrandModels[brandName] ?? [];
+      _models = list.map((m) => {'id': m, 'name': m}).toList();
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _generateAiDescription() async {
+    final brand = _brandCtrl.text.trim();
+    final model = _modelCtrl.text.trim();
+    final yearText = _yearCtrl.text.trim();
+    if (brand.isEmpty || model.isEmpty || yearText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Заполните марку, модель и год для генерации описания')),
+      );
+      return;
+    }
+    final year = int.tryParse(yearText);
+    if (year == null) return;
+
+    setState(() => _aiLoading = true);
+    try {
+      final api = context.read<ApiService>();
+      final city = _cityCtrl.text.trim();
+      final price = double.tryParse(_priceCtrl.text.replaceAll(' ', ''));
+      final mileage = int.tryParse(_mileageCtrl.text.replaceAll(' ', ''));
+      final result = await api.refineDescription(
+        brand: brand,
+        model: model,
+        year: year,
+        city: city.isNotEmpty ? city : 'Душанбе',
+        type: _type == 'sale' ? 'sale' : 'rent',
+        price: price,
+        currency: _currency,
+        mileage: mileage,
+        fuel: _fuel,
+        transmission: _transmission,
+        color: _colorCtrl.text.trim().isNotEmpty ? _colorCtrl.text.trim() : null,
+        description: _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
+      );
+      if (mounted && result.isNotEmpty) {
+        _descCtrl.text = result;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _aiLoading = false);
+    }
+  }
+
+  void _showBrandPicker(AppColors c, String lang) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: c.card,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => _BrandPickerSheet(
+        brands: _brands,
+        loading: _brandsLoading,
+        c: c,
+        onSelect: (brand) {
+          Navigator.pop(ctx);
+          setState(() {
+            _brandCtrl.text = brand['name'] as String;
+            _modelCtrl.clear();
+            _models = [];
+          });
+          _loadModels(brand['id'] as String);
+        },
+      ),
+    );
+  }
+
+  void _showModelPicker(AppColors c, String lang) {
+    if (_models.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: c.card,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => _ModelPickerSheet(
+        models: _models,
+        brandName: _brandCtrl.text,
+        c: c,
+        onSelect: (model) {
+          Navigator.pop(ctx);
+          setState(() => _modelCtrl.text = model['name'] as String);
+        },
+      ),
+    );
   }
 
   @override
@@ -355,13 +499,34 @@ class _PostScreenState extends State<PostScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _field(fieldKey: _brandFieldKey, focusNode: _brandFocus, controller: _brandCtrl, label: t('post.brand', lang), icon: Icons.directions_car_outlined, c: c,
-              isRequired: true,
-              validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.brand', lang) : null),
+          // Brand picker field
+          _PickerField(
+            key: _brandFieldKey,
+            focusNode: _brandFocus,
+            controller: _brandCtrl,
+            label: t('post.brand', lang),
+            icon: Icons.directions_car_outlined,
+            c: c,
+            isRequired: true,
+            loading: _brandsLoading,
+            hasPickerList: _brands.isNotEmpty,
+            onTap: _brands.isNotEmpty ? () => _showBrandPicker(c, lang) : null,
+            validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.brand', lang) : null,
+          ),
           const SizedBox(height: 14),
-          _field(fieldKey: _modelFieldKey, focusNode: _modelFocus, controller: _modelCtrl, label: t('post.model', lang), icon: Icons.drive_eta_outlined, c: c,
-              isRequired: true,
-              validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.model', lang) : null),
+          // Model picker field
+          _PickerField(
+            key: _modelFieldKey,
+            focusNode: _modelFocus,
+            controller: _modelCtrl,
+            label: t('post.model', lang),
+            icon: Icons.drive_eta_outlined,
+            c: c,
+            isRequired: true,
+            hasPickerList: _models.isNotEmpty,
+            onTap: _models.isNotEmpty ? () => _showModelPicker(c, lang) : null,
+            validator: (v) => (v == null || v.trim().isEmpty) ? t('post.required.model', lang) : null,
+          ),
           const SizedBox(height: 14),
           _field(
             fieldKey: _yearFieldKey,
@@ -681,11 +846,11 @@ class _PostScreenState extends State<PostScreen> {
           icon: Icons.local_gas_station_outlined,
           value: _fuel,
           items: const [
-            DropdownMenuItem(value: 'petrol', child: Text('Бензин')),
-            DropdownMenuItem(value: 'diesel', child: Text('Дизель')),
-            DropdownMenuItem(value: 'electric', child: Text('Электро')),
-            DropdownMenuItem(value: 'hybrid', child: Text('Гибрид')),
-            DropdownMenuItem(value: 'gas', child: Text('Газ')),
+            DropdownMenuItem(value: 'Бензин', child: Text('Бензин')),
+            DropdownMenuItem(value: 'Дизель', child: Text('Дизель')),
+            DropdownMenuItem(value: 'Электро', child: Text('Электро')),
+            DropdownMenuItem(value: 'Гибрид', child: Text('Гибрид')),
+            DropdownMenuItem(value: 'Газ', child: Text('Газ')),
           ],
           onChanged: (v) => setState(() => _fuel = v),
           c: c,
@@ -696,9 +861,9 @@ class _PostScreenState extends State<PostScreen> {
           icon: Icons.settings_outlined,
           value: _transmission,
           items: const [
-            DropdownMenuItem(value: 'automatic', child: Text('Автомат')),
-            DropdownMenuItem(value: 'manual', child: Text('Механика')),
-            DropdownMenuItem(value: 'cvt', child: Text('Вариатор')),
+            DropdownMenuItem(value: 'Автомат', child: Text('Автомат')),
+            DropdownMenuItem(value: 'Механика', child: Text('Механика')),
+            DropdownMenuItem(value: 'Вариатор', child: Text('Вариатор')),
           ],
           onChanged: (v) => setState(() => _transmission = v),
           c: c,
@@ -754,6 +919,30 @@ class _PostScreenState extends State<PostScreen> {
             filled: true,
             fillColor: c.card,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _aiLoading ? null : _generateAiDescription,
+            icon: _aiLoading
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: c.accent),
+                  )
+                : const Icon(Icons.auto_awesome_outlined, size: 18),
+            label: Text(
+              _aiLoading ? 'Генерирую...' : 'Сгенерировать описание с AI',
+              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: c.accent,
+              side: BorderSide(color: c.accent, width: 1.2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
           ),
         ),
       ],
@@ -1294,6 +1483,262 @@ class _DropdownField extends StatelessWidget {
         filled: true,
         fillColor: c.card,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      ),
+    );
+  }
+}
+
+class _PickerField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final AppColors c;
+  final bool isRequired;
+  final bool loading;
+  final bool hasPickerList;
+  final VoidCallback? onTap;
+  final String? Function(String?)? validator;
+  final FocusNode? focusNode;
+
+  const _PickerField({
+    super.key,
+    required this.controller,
+    required this.label,
+    required this.icon,
+    required this.c,
+    this.isRequired = false,
+    this.loading = false,
+    this.hasPickerList = false,
+    this.onTap,
+    this.validator,
+    this.focusNode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final labelWidget = isRequired
+        ? RichText(
+            text: TextSpan(
+              text: label,
+              style: TextStyle(color: c.textMuted, fontSize: 14),
+              children: const [TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))],
+            ),
+          )
+        : null;
+
+    final field = TextFormField(
+      focusNode: focusNode,
+      controller: controller,
+      readOnly: hasPickerList,
+      style: TextStyle(color: c.text),
+      validator: validator,
+      decoration: InputDecoration(
+        label: labelWidget,
+        labelText: isRequired ? null : label,
+        labelStyle: TextStyle(color: c.textMuted),
+        prefixIcon: loading
+            ? Padding(padding: const EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: c.textMuted)))
+            : Icon(icon, color: c.textMuted, size: 20),
+        suffixIcon: hasPickerList ? Icon(Icons.keyboard_arrow_down_rounded, color: c.textMuted) : null,
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.border, width: 1.2)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.accent, width: 1.8)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.red, width: 1.2)),
+        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.red, width: 1.8)),
+        filled: true,
+        fillColor: c.card,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      ),
+    );
+
+    if (hasPickerList && onTap != null) {
+      return GestureDetector(
+        onTap: onTap,
+        child: AbsorbPointer(child: field),
+      );
+    }
+    return field;
+  }
+}
+
+class _BrandPickerSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> brands;
+  final bool loading;
+  final AppColors c;
+  final ValueChanged<Map<String, dynamic>> onSelect;
+
+  const _BrandPickerSheet({required this.brands, required this.loading, required this.c, required this.onSelect});
+
+  @override
+  State<_BrandPickerSheet> createState() => _BrandPickerSheetState();
+}
+
+class _BrandPickerSheetState extends State<_BrandPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  List<Map<String, dynamic>> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.brands;
+    _searchCtrl.addListener(_filter);
+  }
+
+  void _filter() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() => _filtered = q.isEmpty
+        ? widget.brands
+        : widget.brands.where((b) => (b['name'] as String).toLowerCase().contains(q)).toList());
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.c;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (ctx, scroll) => Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: TextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              style: TextStyle(color: c.text),
+              decoration: InputDecoration(
+                hintText: 'Поиск марки...',
+                hintStyle: TextStyle(color: c.textMuted),
+                prefixIcon: Icon(Icons.search, color: c.textMuted, size: 20),
+                filled: true,
+                fillColor: c.surface,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              controller: scroll,
+              itemCount: _filtered.length,
+              itemBuilder: (_, i) {
+                final brand = _filtered[i];
+                final isPopular = brand['is_popular'] == true;
+                return ListTile(
+                  title: Text(brand['name'] as String, style: TextStyle(color: c.text, fontWeight: isPopular ? FontWeight.w600 : FontWeight.w400)),
+                  trailing: isPopular ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: c.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                    child: Text('Топ', style: TextStyle(color: c.accent, fontSize: 11, fontWeight: FontWeight.w600)),
+                  ) : null,
+                  onTap: () => widget.onSelect(brand),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModelPickerSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> models;
+  final String brandName;
+  final AppColors c;
+  final ValueChanged<Map<String, dynamic>> onSelect;
+
+  const _ModelPickerSheet({required this.models, required this.brandName, required this.c, required this.onSelect});
+
+  @override
+  State<_ModelPickerSheet> createState() => _ModelPickerSheetState();
+}
+
+class _ModelPickerSheetState extends State<_ModelPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  List<Map<String, dynamic>> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.models;
+    _searchCtrl.addListener(_filter);
+  }
+
+  void _filter() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() => _filtered = q.isEmpty
+        ? widget.models
+        : widget.models.where((m) => (m['name'] as String).toLowerCase().contains(q)).toList());
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.c;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      maxChildSize: 0.95,
+      minChildSize: 0.3,
+      expand: false,
+      builder: (ctx, scroll) => Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Text(widget.brandName, style: TextStyle(color: c.text, fontSize: 17, fontWeight: FontWeight.w700)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: TextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              style: TextStyle(color: c.text),
+              decoration: InputDecoration(
+                hintText: 'Поиск модели...',
+                hintStyle: TextStyle(color: c.textMuted),
+                prefixIcon: Icon(Icons.search, color: c.textMuted, size: 20),
+                filled: true,
+                fillColor: c.surface,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              controller: scroll,
+              itemCount: _filtered.length,
+              itemBuilder: (_, i) {
+                final model = _filtered[i];
+                return ListTile(
+                  title: Text(model['name'] as String, style: TextStyle(color: c.text)),
+                  onTap: () => widget.onSelect(model),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
