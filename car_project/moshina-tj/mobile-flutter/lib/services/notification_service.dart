@@ -14,6 +14,11 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 class NotificationService {
+  /// Set by main() only when Firebase.initializeApp succeeded. When false
+  /// (placeholder config or init failure) every FCM call is skipped so the
+  /// app runs normally without push notifications.
+  static bool firebaseAvailable = false;
+
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
@@ -31,6 +36,7 @@ class NotificationService {
   /// Call once after the user is authenticated and a valid [BuildContext] is available.
   /// Safe to call multiple times — cancels previous listeners before re-subscribing.
   static Future<void> initialize(ApiService api, BuildContext context) async {
+    if (!firebaseAvailable) return;
     final messaging = FirebaseMessaging.instance;
 
     // Bug #3 fix: cancel any existing subscriptions before re-subscribing.
