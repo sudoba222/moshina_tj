@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_theme.dart';
 import '../screens/home_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/car_detail_screen.dart';
@@ -233,65 +235,166 @@ class _BottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>().lang;
     final badges = context.watch<BadgeProvider>();
-    return BottomNavigationBar(
-      currentIndex: currentIndex,
-      onTap: (i) {
-        switch (i) {
-          case 0:
-            context.go('/');
-          case 1:
-            context.go('/catalog');
-          case 2:
-            context.go('/post');
-          case 3:
-            context.go('/chat');
-          case 4:
-            context.go('/profile');
-        }
-      },
-      items: [
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.home_outlined),
-          activeIcon: const Icon(Icons.home),
-          label: t('nav.home', lang),
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.grid_view_outlined),
-          activeIcon: const Icon(Icons.grid_view),
-          label: t('nav.catalog', lang),
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.add_circle_outline),
-          activeIcon: const Icon(Icons.add_circle),
-          label: t('nav.post', lang),
-        ),
-        BottomNavigationBarItem(
-          icon: Badge(
-            isLabelVisible: badges.unreadMessages > 0,
-            label: Text(badges.unreadMessages > 99 ? '99+' : '${badges.unreadMessages}'),
-            child: const Icon(Icons.chat_bubble_outline),
+    final c = context.colors;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.navBg,
+        border: Border(top: BorderSide(color: c.border, width: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
           ),
-          activeIcon: Badge(
-            isLabelVisible: badges.unreadMessages > 0,
-            label: Text(badges.unreadMessages > 99 ? '99+' : '${badges.unreadMessages}'),
-            child: const Icon(Icons.chat_bubble),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            children: [
+              _NavItem(
+                index: 0,
+                currentIndex: currentIndex,
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home_rounded,
+                label: t('nav.home', lang),
+                onTap: () => context.go('/'),
+                c: c,
+              ),
+              _NavItem(
+                index: 1,
+                currentIndex: currentIndex,
+                icon: Icons.search_outlined,
+                activeIcon: Icons.search_rounded,
+                label: t('nav.catalog', lang),
+                onTap: () => context.go('/catalog'),
+                c: c,
+              ),
+              // ── Center FAB "Продать" ────────────────────────────────────────
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => context.go('/post'),
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: c.accent,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: c.accent.withValues(alpha: 0.40),
+                              blurRadius: 14,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.add_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        t('nav.post', lang),
+                        style: GoogleFonts.outfit(
+                          color: c.accent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              _NavItem(
+                index: 3,
+                currentIndex: currentIndex,
+                icon: Icons.chat_bubble_outline_rounded,
+                activeIcon: Icons.chat_bubble_rounded,
+                label: t('nav.chat', lang),
+                onTap: () => context.go('/chat'),
+                c: c,
+                badge: badges.unreadMessages,
+              ),
+              _NavItem(
+                index: 4,
+                currentIndex: currentIndex,
+                icon: Icons.person_outline_rounded,
+                activeIcon: Icons.person_rounded,
+                label: t('nav.profile', lang),
+                onTap: () => context.go('/profile'),
+                c: c,
+                badge: badges.unreadNotifications,
+              ),
+            ],
           ),
-          label: t('nav.chat', lang),
         ),
-        BottomNavigationBarItem(
-          icon: Badge(
-            isLabelVisible: badges.unreadNotifications > 0,
-            label: Text(badges.unreadNotifications > 99 ? '99+' : '${badges.unreadNotifications}'),
-            child: const Icon(Icons.person_outline),
-          ),
-          activeIcon: Badge(
-            isLabelVisible: badges.unreadNotifications > 0,
-            label: Text(badges.unreadNotifications > 99 ? '99+' : '${badges.unreadNotifications}'),
-            child: const Icon(Icons.person),
-          ),
-          label: t('nav.profile', lang),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final int index;
+  final int currentIndex;
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final VoidCallback onTap;
+  final AppColors c;
+  final int badge;
+
+  const _NavItem({
+    required this.index,
+    required this.currentIndex,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.onTap,
+    required this.c,
+    this.badge = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = index == currentIndex;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Badge(
+              isLabelVisible: badge > 0,
+              label: Text(badge > 99 ? '99+' : '$badge'),
+              child: Icon(
+                isActive ? activeIcon : icon,
+                color: isActive ? c.accent : c.textMuted,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                color: isActive ? c.accent : c.textMuted,
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

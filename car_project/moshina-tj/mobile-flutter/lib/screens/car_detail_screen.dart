@@ -219,7 +219,10 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
                           : Icons.favorite_border_rounded,
                       color: isFav ? Colors.redAccent : c.text,
                     ),
-                    onPressed: () => favs.toggleFavorite(listing.id),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      favs.toggleFavorite(listing.id);
+                    },
                   );
                 },
               ),

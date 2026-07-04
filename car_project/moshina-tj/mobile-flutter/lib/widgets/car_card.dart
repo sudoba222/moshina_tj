@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +9,7 @@ import '../providers/favorites_provider.dart';
 import '../providers/language_provider.dart';
 import '../theme/app_theme.dart';
 import '../l10n/strings.dart';
+import 'pressable.dart';
 
 BoxShadow get _cardShadow => BoxShadow(
       color: Colors.black.withValues(alpha: 0.08),
@@ -40,7 +42,7 @@ class CarCard extends StatelessWidget {
       return _HorizontalCard(listing: listing, c: c, lang: lang, onTap: onTap);
     }
 
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
@@ -53,7 +55,8 @@ class CarCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            _VerticalImageSection(listing: listing, colors: c, compact: compact),
+            _VerticalImageSection(
+                listing: listing, colors: c, compact: compact, lang: lang),
             compact
                 ? _CompactContent(listing: listing, colors: c, lang: lang)
                 : _VerticalContent(listing: listing, colors: c, lang: lang),
@@ -229,12 +232,16 @@ class _HorizontalCardState extends State<_HorizontalCard> {
                               ),
                               const SizedBox(width: 4),
                               GestureDetector(
-                                onTap: () => context
-                                    .read<FavoritesProvider>()
-                                    .toggleFavorite(widget.listing.id),
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  context
+                                      .read<FavoritesProvider>()
+                                      .toggleFavorite(widget.listing.id);
+                                },
                                 behavior: HitTestBehavior.opaque,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(3),
+                                child: SizedBox(
+                                  width: 40,
+                                  height: 40,
                                   child: Icon(
                                     isFav
                                         ? Icons.favorite_rounded
@@ -342,11 +349,13 @@ class _VerticalImageSection extends StatelessWidget {
   final Listing listing;
   final AppColors colors;
   final bool compact;
+  final String lang;
 
   const _VerticalImageSection({
     required this.listing,
     required this.colors,
     required this.compact,
+    required this.lang,
   });
 
   @override
@@ -421,7 +430,7 @@ class _VerticalImageSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    listing.formattedPrice('ru'),
+                    listing.formattedPrice(lang),
                     style: GoogleFonts.outfit(
                       color: Colors.white,
                       fontSize: 17,
@@ -494,10 +503,14 @@ class _FavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isFav = context.watch<FavoritesProvider>().isFavorite(listingId);
     return GestureDetector(
-      onTap: () => context.read<FavoritesProvider>().toggleFavorite(listingId),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.read<FavoritesProvider>().toggleFavorite(listingId);
+      },
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        width: 38,
-        height: 38,
+        width: 40,
+        height: 40,
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.92),

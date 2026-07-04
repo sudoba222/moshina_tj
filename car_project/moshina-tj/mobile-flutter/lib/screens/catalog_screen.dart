@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../providers/favorites_provider.dart';
 import '../providers/listing_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
@@ -10,6 +12,7 @@ import '../l10n/strings.dart';
 import '../models/listing.dart';
 import '../widgets/car_card.dart';
 import '../widgets/filter_bottom_sheet.dart';
+import '../widgets/pressable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -33,6 +36,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Map<String, String> _filters = {};
   final _scrollCtrl = ScrollController();
   String _listingType = '';
+  String _sort = '';
   bool _gridMode = false;
 
   @override
@@ -75,9 +79,89 @@ class _CatalogScreenState extends State<CatalogScreen> {
     if (_listingType.isNotEmpty) {
       filters['type'] = _listingType;
     }
+    if (_sort.isNotEmpty) {
+      filters['sort'] = _sort;
+    }
     context
         .read<ListingProvider>()
         .loadCatalog(refresh: refresh, filters: filters);
+  }
+
+  void _resetAll() {
+    setState(() {
+      _searchCtrl.clear();
+      _filters = {};
+      _listingType = '';
+      _sort = '';
+    });
+    _load(refresh: true);
+  }
+
+  void _showSortSheet(String lang, AppColors c) {
+    final options = <(String, String, IconData)>[
+      ('', t('catalog.sortRecommended', lang), Icons.auto_awesome_outlined),
+      ('newest', t('catalog.sortNewest', lang), Icons.schedule_outlined),
+      ('price_asc', t('catalog.sortPriceAsc', lang), Icons.arrow_downward_rounded),
+      ('price_desc', t('catalog.sortPriceDesc', lang), Icons.arrow_upward_rounded),
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: c.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 10),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(
+                t('catalog.sort', lang),
+                style: AppTextStyles.headingLarge(ctx),
+              ),
+            ),
+            ...options.map((o) {
+              final selected = _sort == o.$1;
+              return ListTile(
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  if (_sort != o.$1) {
+                    setState(() => _sort = o.$1);
+                    _load(refresh: true);
+                  }
+                },
+                leading: Icon(o.$3,
+                    size: 20, color: selected ? c.accent : c.textSecondary),
+                title: Text(
+                  o.$2,
+                  style: AppTextStyles.body(
+                    color: selected ? c.accent : c.text,
+                    weight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+                trailing: selected
+                    ? Icon(Icons.check_rounded, color: c.accent, size: 20)
+                    : null,
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -91,6 +175,15 @@ class _CatalogScreenState extends State<CatalogScreen> {
         title: Text(t('nav.catalog', lang)),
         centerTitle: false,
         actions: [
+          // Sort
+          IconButton(
+            tooltip: t('catalog.sort', lang),
+            icon: Icon(
+              Icons.swap_vert_rounded,
+              color: _sort.isNotEmpty ? c.accent : c.text,
+            ),
+            onPressed: () => _showSortSheet(lang, c),
+          ),
           // Grid / List toggle
           IconButton(
             tooltip: _gridMode
@@ -177,16 +270,46 @@ class _CatalogScreenState extends State<CatalogScreen> {
         }
 
         if (provider.catalogItems.isEmpty) {
+          final hasActiveFilters = _filters.isNotEmpty ||
+              _listingType.isNotEmpty ||
+              _searchCtrl.text.trim().isNotEmpty;
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.search_off, size: 48, color: c.textMuted),
-                const SizedBox(height: 12),
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration:
+                      BoxDecoration(color: c.tagBg, shape: BoxShape.circle),
+                  child: Icon(Icons.search_off, size: 34, color: c.textMuted),
+                ),
+                const SizedBox(height: 16),
                 Text(
                   t('catalog.noResults', lang),
-                  style: AppTextStyles.body(color: c.textSecondary),
+                  style: AppTextStyles.body(
+                      color: c.text, weight: FontWeight.w600),
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  t('catalog.noResultsHint', lang),
+                  style: AppTextStyles.bodySm(color: c.textMuted),
+                  textAlign: TextAlign.center,
+                ),
+                if (hasActiveFilters) ...[
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _resetAll,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: c.accent,
+                      side: BorderSide(color: c.accent),
+                      minimumSize: const Size(0, 44),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(t('catalog.resetFilters', lang)),
+                  ),
+                ],
               ],
             ),
           );
@@ -204,7 +327,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Text(
-                    _resultsText(provider.catalogItems.length, lang),
+                    _resultsText(
+                      provider.catalogTotal > 0
+                          ? provider.catalogTotal
+                          : provider.catalogItems.length,
+                      lang,
+                    ),
                     style: AppTextStyles.bodySm(color: c.textSecondary),
                   ),
                 ),
@@ -687,8 +815,10 @@ class _CompactCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = listing.firstImageUrl;
+    final isFav =
+        context.watch<FavoritesProvider>().isFavorite(listing.id);
 
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
@@ -704,26 +834,75 @@ class _CompactCard extends StatelessWidget {
             SizedBox(
               height: 130,
               width: double.infinity,
-              child: imageUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) => Container(color: c.border),
-                      errorWidget: (_, _, _) => Container(
-                        color: c.tagBg,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (_, _) => Container(color: c.border),
+                          errorWidget: (_, _, _) => Container(
+                            color: c.tagBg,
+                            child: Center(
+                              child: Icon(Icons.directions_car_outlined,
+                                  size: 32, color: c.textMuted),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: c.tagBg,
+                          child: Center(
+                            child: Icon(Icons.directions_car_outlined,
+                                size: 32, color: c.textMuted),
+                          ),
+                        ),
+                  Positioned(
+                    top: 2,
+                    right: 2,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        context
+                            .read<FavoritesProvider>()
+                            .toggleFavorite(listing.id);
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
                         child: Center(
-                          child: Icon(Icons.directions_car_outlined,
-                              size: 32, color: c.textMuted),
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.92),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              isFav
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: isFav
+                                  ? const Color(0xFFEF4444)
+                                  : Colors.black54,
+                              size: 16,
+                            ),
+                          ),
                         ),
                       ),
-                    )
-                  : Container(
-                      color: c.tagBg,
-                      child: Center(
-                        child: Icon(Icons.directions_car_outlined,
-                            size: 32, color: c.textMuted),
-                      ),
                     ),
+                  ),
+                ],
+              ),
             ),
             // Price + title
             Padding(

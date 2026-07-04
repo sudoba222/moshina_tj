@@ -212,59 +212,104 @@ class _DealerCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: c.card,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: c.border),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildLogo(),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text(
-                dealer.name,
-                style: TextStyle(
-                  color: c.text,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            if (dealer.city != null) ...[
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+          ],
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Logo area with gradient bg
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    c.accent.withValues(alpha: 0.08),
+                    c.accent.withValues(alpha: 0.03),
+                  ],
+                ),
+              ),
+              child: Center(child: _buildLogo()),
+            ),
+            // Info section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.location_on_outlined, size: 12, color: c.textMuted),
-                  const SizedBox(width: 2),
-                  Flexible(
+                  // Name + verified
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          dealer.name,
+                          style: TextStyle(
+                            color: c.text,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            height: 1.2,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (dealer.isVerified) ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.verified_rounded, size: 15, color: c.accent),
+                      ],
+                    ],
+                  ),
+                  if (dealer.city != null) ...[
+                    const SizedBox(height: 5),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 11, color: c.textMuted),
+                        const SizedBox(width: 2),
+                        Flexible(
+                          child: Text(
+                            dealer.city!,
+                            style: TextStyle(color: c.textMuted, fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  // Listing count pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: c.tagBg,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: c.border, width: 0.5),
+                    ),
                     child: Text(
-                      dealer.city!,
-                      style: TextStyle(color: c.textMuted, fontSize: 12),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      '${dealer.listingCount} ${t('dealers.listings', lang)}',
+                      style: TextStyle(
+                        color: c.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ],
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${dealer.listingCount} ${t('dealers.listings', lang)}',
-                  style: TextStyle(color: c.textSecondary, fontSize: 12),
-                ),
-                if (dealer.isVerified) ...[
-                  const SizedBox(width: 4),
-                  Icon(Icons.verified, size: 14, color: c.accent),
-                ],
-              ],
             ),
           ],
         ),
@@ -275,11 +320,11 @@ class _DealerCard extends StatelessWidget {
   Widget _buildLogo() {
     if (dealer.logoUrl != null && dealer.logoUrl!.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: CachedNetworkImage(
           imageUrl: dealer.logoUrl!,
-          width: 64,
-          height: 64,
+          width: 72,
+          height: 72,
           fit: BoxFit.contain,
           errorWidget: (ctx, url, err) => _placeholder(),
         ),
@@ -290,13 +335,13 @@ class _DealerCard extends StatelessWidget {
 
   Widget _placeholder() {
     return Container(
-      width: 64,
-      height: 64,
+      width: 72,
+      height: 72,
       decoration: BoxDecoration(
         color: c.border,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(Icons.store, size: 32, color: c.textMuted),
+      child: Icon(Icons.store_rounded, size: 34, color: c.textMuted),
     );
   }
 }

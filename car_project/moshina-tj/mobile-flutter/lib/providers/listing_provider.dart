@@ -28,6 +28,7 @@ class ListingProvider extends ChangeNotifier {
   String? _catalogError;
   int _catalogPage = 1;
   int _catalogTotalPages = 1;
+  int _catalogTotal = 0;
   bool _catalogLoadingMore = false;
   Map<String, String> _catalogFilters = {};
 
@@ -48,6 +49,7 @@ class ListingProvider extends ChangeNotifier {
   bool get catalogLoading => _catalogLoading;
   String? get catalogError => _catalogError;
   bool get hasMoreCatalog => _catalogPage < _catalogTotalPages;
+  int get catalogTotal => _catalogTotal;
   bool get catalogLoadingMore => _catalogLoadingMore;
   Map<String, String> get catalogFilters => _catalogFilters;
 
@@ -191,6 +193,7 @@ class ListingProvider extends ChangeNotifier {
         _catalogItems.addAll(paginated.items);
       }
       if (q == null || q.isEmpty) _catalogTotalPages = paginated.pages;
+      _catalogTotal = paginated.total;
     } catch (e) {
       _catalogError = 'Ошибка загрузки каталога';
     } finally {

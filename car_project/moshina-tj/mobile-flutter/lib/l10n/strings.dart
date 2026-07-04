@@ -67,6 +67,16 @@ const Map<String, Map<String, String>> appStrings = {
   },
   'catalog.gridView': {'ru': 'Сетка', 'tj': 'Тор'},
   'catalog.listView': {'ru': 'Список', 'tj': 'Рӯйхат'},
+  'catalog.sort': {'ru': 'Сортировка', 'tj': 'Мураттабсозӣ'},
+  'catalog.sortRecommended': {'ru': 'По умолчанию', 'tj': 'Пешфарз'},
+  'catalog.sortNewest': {'ru': 'Сначала новые', 'tj': 'Аввал навҳо'},
+  'catalog.sortPriceAsc': {'ru': 'Сначала дешевле', 'tj': 'Аввал арзонтар'},
+  'catalog.sortPriceDesc': {'ru': 'Сначала дороже', 'tj': 'Аввал қиматтар'},
+  'catalog.resetFilters': {'ru': 'Сбросить фильтры', 'tj': 'Филтрҳоро тоза кунед'},
+  'catalog.noResultsHint': {
+    'ru': 'Попробуйте изменить параметры поиска',
+    'tj': 'Кӯшиш кунед, ки параметрҳои ҷустуҷӯро тағйир диҳед'
+  },
   'detail.call': {'ru': 'Позвонить', 'tj': 'Занг задан'},
   'detail.whatsapp': {'ru': 'WhatsApp', 'tj': 'WhatsApp'},
   'detail.description': {'ru': 'Описание', 'tj': 'Тавсиф'},

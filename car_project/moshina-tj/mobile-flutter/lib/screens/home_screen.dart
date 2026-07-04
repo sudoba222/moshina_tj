@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../l10n/strings.dart';
 import '../widgets/car_card.dart';
+import '../widgets/pressable.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -565,8 +566,9 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: () => context.go('/catalog?category=$slug'),
+      pressedScale: 0.94,
       child: SizedBox(
         width: 72,
         child: Column(
@@ -1275,7 +1277,7 @@ class _RecentCard extends StatelessWidget {
     final model = item['model'] as String? ?? '';
     final year = item['year']?.toString() ?? '';
 
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
       child: Container(
         width: 140,
