@@ -258,6 +258,11 @@ const Map<String, Map<String, String>> appStrings = {
   'auth.sendCode': {'ru': 'Отправить', 'tj': 'Фиристодан'},
   'auth.or': {'ru': 'или', 'tj': 'ё'},
   'auth.nameMinLength': {'ru': 'Минимум 2 символа', 'tj': 'Ҳадди ақал 2 аломат'},
+  'auth.passwordMin8': {'ru': 'Минимум 8 символов', 'tj': 'Ҳадди ақал 8 аломат'},
+  'auth.emailNotVerified': {
+    'ru': 'Email не подтверждён. Мы отправили вам новый код.',
+    'tj': 'Email тасдиқ нашудааст. Мо ба шумо рамзи нав фиристодем.'
+  },
   'auth.telegramHint': {'ru': '+992 900 000 000', 'tj': '+992 900 000 000'},
   'auth.emailOtpSent': {'ru': 'Код отправлен на email', 'tj': 'Код ба email фиристода шуд'},
   'auth.forgotPassword': {'ru': 'Забыли пароль?', 'tj': 'Паролро фаромӯш кардед?'},
@@ -275,7 +280,7 @@ const Map<String, Map<String, String>> appStrings = {
   'auth.sendConfirmCode': {'ru': 'Пришлём код для подтверждения', 'tj': 'Коди тасдиқ мефиристем'},
   'auth.phoneSubtitle': {'ru': 'Введите номер — пришлём код', 'tj': 'Рақам ворид кунед — код мефиристем'},
   'auth.telegramAccountPhone': {'ru': 'Введите номер Telegram аккаунта', 'tj': 'Рақами Telegram аккаунтро ворид кунед'},
-  'auth.emailSubtitle': {'ru': 'Пришлём код на почту', 'tj': 'Коди тасдиқро ба email мефиристем'},
+  'auth.emailSubtitle': {'ru': 'Вход по email и паролю', 'tj': 'Вуруд бо email ва рамз'},
   'common.seller': {'ru': 'Продавец', 'tj': 'Фурӯшанда'},
   'common.copied': {'ru': 'Скопировано', 'tj': 'Нусха бардошта шуд'},
   'notifications.title': {'ru': 'Уведомления', 'tj': 'Огоҳиномаҳо'},

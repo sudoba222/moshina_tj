@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -641,21 +642,52 @@ class _EmailBottomSheet extends StatefulWidget {
 
 class _EmailBottomSheetState extends State<_EmailBottomSheet> {
   final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
+  bool _obscure = true;
   String? _error;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
+    _passCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    // OTP screen handles sending the code on load — just navigate
-    Navigator.pop(context);
-    context.push('/otp', extra: {'email': _emailCtrl.text.trim(), 'mode': 'email'});
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final email = _emailCtrl.text.trim();
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.loginWithEmail(email, _passCtrl.text);
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (ok) {
+      Navigator.pop(context);
+      context.go('/');
+      return;
+    }
+    final err = auth.error ?? '';
+    // Account exists but email was never verified — send a fresh code and
+    // take the user to the OTP screen to finish verification.
+    if (err.toLowerCase().contains('not verified')) {
+      try {
+        await context.read<ApiService>().resendEmailOtp(email);
+      } catch (_) {
+        // Even if resend is rate-limited, the OTP screen has its own resend.
+      }
+      if (!mounted) return;
+      Navigator.pop(context);
+      context.push('/otp', extra: {'email': email, 'mode': 'email'});
+      return;
+    }
+    setState(() => _error = err.isNotEmpty
+        ? err
+        : t('error.generic', context.read<LanguageProvider>().lang));
   }
 
   @override
@@ -727,9 +759,56 @@ class _EmailBottomSheetState extends State<_EmailBottomSheet> {
               ),
               validator: (v) => (v == null || !v.contains('@')) ? t('error.invalidEmail', lang) : null,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _passCtrl,
+              obscureText: _obscure,
+              style: GoogleFonts.outfit(color: c.text, fontSize: 16, fontWeight: FontWeight.w500),
+              decoration: InputDecoration(
+                hintText: t('auth.password', lang),
+                hintStyle: GoogleFonts.outfit(color: c.textMuted),
+                prefixIcon: Icon(Icons.lock_outline_rounded, color: c.textMuted, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: c.textMuted,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+                filled: true,
+                fillColor: c.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.accent, width: 1.8)),
+              ),
+              validator: (v) => (v == null || v.isEmpty) ? t('auth.password', lang) : null,
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/forgot-password');
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    t('auth.forgotPassword', lang),
+                    style: GoogleFonts.outfit(
+                      color: c.accent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             _PrimaryBtn(
-              label: t('auth.getCode', lang),
+              label: t('auth.login', lang),
               loading: _loading,
               c: c,
               onTap: _submit,

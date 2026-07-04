@@ -112,7 +112,7 @@ class _OtpScreenState extends State<OtpScreen> {
     try {
       final api = context.read<ApiService>();
       if (widget.mode == 'email') {
-        await api.registerEmail(widget.email!, widget.name ?? '');
+        await api.resendEmailOtp(widget.email!);
       } else {
         await api.sendPhoneOtp(widget.phone!);
       }
@@ -122,7 +122,13 @@ class _OtpScreenState extends State<OtpScreen> {
       }
       _nodes[0].requestFocus();
       setState(() => _error = null);
-    } catch (_) {}
+    } catch (e) {
+      // Surface the failure — a silently ignored error looks like a dead button.
+      if (mounted) {
+        setState(
+            () => _error = e.toString().replaceFirst('Exception: ', ''));
+      }
+    }
   }
 
   Future<void> _submit() async {

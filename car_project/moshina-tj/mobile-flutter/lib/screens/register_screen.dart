@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -75,6 +76,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _openEmailSheet() {
     final c = context.colors;
     final lang = context.read<LanguageProvider>().lang;
+    // Backend requires a non-empty name — make sure it's filled first.
+    if (_nameCtrl.text.trim().length < 2) {
+      setState(() => _nameError = t('auth.nameMinLength', lang));
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -538,22 +544,38 @@ class _EmailRegisterSheet extends StatefulWidget {
 
 class _EmailRegisterSheetState extends State<_EmailRegisterSheet> {
   final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
+  bool _obscure = true;
   String? _error;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
+    _passCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    // OTP screen handles sending the code on load — just navigate
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final email = _emailCtrl.text.trim();
+    final auth = context.read<AuthProvider>();
+    // Backend requires email + name + password and sends the OTP itself.
+    final ok = await auth.registerWithEmail(email, widget.name, _passCtrl.text);
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (!ok) {
+      setState(() => _error = auth.error);
+      return;
+    }
     Navigator.pop(context);
     context.push('/otp', extra: {
-      'email': _emailCtrl.text.trim(),
+      'email': email,
       'mode': 'email',
       'name': widget.name,
     });
@@ -627,6 +649,32 @@ class _EmailRegisterSheetState extends State<_EmailRegisterSheet> {
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.accent, width: 1.8)),
               ),
               validator: (v) => (v == null || !v.contains('@')) ? t('error.invalidEmail', lang) : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _passCtrl,
+              obscureText: _obscure,
+              style: GoogleFonts.outfit(color: c.text, fontSize: 16, fontWeight: FontWeight.w500),
+              decoration: InputDecoration(
+                hintText: t('auth.password', lang),
+                hintStyle: GoogleFonts.outfit(color: c.textMuted),
+                prefixIcon: Icon(Icons.lock_outline_rounded, color: c.textMuted, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: c.textMuted,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+                filled: true,
+                fillColor: c.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: c.accent, width: 1.8)),
+              ),
+              validator: (v) => (v == null || v.length < 8) ? t('auth.passwordMin8', lang) : null,
             ),
             const SizedBox(height: 16),
             _PrimaryBtn(

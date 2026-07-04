@@ -200,8 +200,13 @@ class ApiService {
     return postRaw('/auth/login-email', body: {'email': email, 'password': password});
   }
 
-  Future<void> registerEmail(String email, String name) async {
-    await postRaw('/auth/register-email', body: {'email': email, 'name': name});
+  Future<void> registerEmail(String email, String name, String password) async {
+    await postRaw('/auth/register-email',
+        body: {'email': email, 'name': name, 'password': password});
+  }
+
+  Future<void> resendEmailOtp(String email) async {
+    await postRaw('/auth/resend-email-otp', body: {'email': email});
   }
 
   Future<dynamic> verifyEmailOtp(String email, String code) async {

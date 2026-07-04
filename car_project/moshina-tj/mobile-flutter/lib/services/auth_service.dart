@@ -147,8 +147,8 @@ class AuthService {
     throw Exception('Неверный email или пароль');
   }
 
-  Future<void> registerWithEmail(String email, String name) async {
-    await _api.registerEmail(email, name);
+  Future<void> registerWithEmail(String email, String name, String password) async {
+    await _api.registerEmail(email, name, password);
   }
 
   Future<AppUser> verifyEmailOtp(String email, String code) async {

@@ -121,11 +121,11 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> registerWithEmail(String email, String name) async {
+  Future<bool> registerWithEmail(String email, String name, String password) async {
     _error = null;
     notifyListeners();
     try {
-      await _authService.registerWithEmail(email, name);
+      await _authService.registerWithEmail(email, name, password);
       notifyListeners();
       return true;
     } catch (e) {
