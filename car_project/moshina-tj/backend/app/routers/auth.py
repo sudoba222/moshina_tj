@@ -418,11 +418,13 @@ def update_profile(
 ):
     if payload.name is not None:
         current_user.name = payload.name
-    if payload.email is not None:
+    if payload.email is not None and payload.email != current_user.email:
         existing = db.query(User).filter(User.email == payload.email, User.id != current_user.id).first()
         if existing:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use")
         current_user.email = payload.email
+        # Verified status belongs to the old address — the new one must re-verify
+        current_user.email_verified = False
     if payload.whatsapp_number is not None:
         current_user.whatsapp_number = payload.whatsapp_number
     db.commit()

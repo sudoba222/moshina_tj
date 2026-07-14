@@ -1,25 +1,26 @@
 """Integration test: end-to-end chat flow.
 
-Requires a running backend at BASE_URL and a reachable database.
+Requires a running backend at BASE_URL and a reachable database
+(DATABASE_URL from the backend .env — the server generates random OTP
+codes, so the test reads them from the otp_codes table).
 
 Run:
     BASE_URL=http://localhost:8000 python -m pytest tests/test_chat_flow.py -v
-
-The test relies on phone OTP auth.  In dev mode the OTP is printed to the
-server stdout; set TEST_OTP_OVERRIDE to bypass real OTP delivery (dev only).
 """
 import os
 import uuid
 
 import pytest
 import requests
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 API = f"{BASE_URL}/api/v1"
 
-# In dev mode the server logs the OTP — set this env var to the fixed OTP
-# your test seeds produce, or patch the OTP table directly.
-TEST_OTP_OVERRIDE = os.getenv("TEST_OTP_OVERRIDE", "123456")
+_engine = create_engine(os.environ["DATABASE_URL"])
 
 PHONE_A = f"+99200{uuid.uuid4().int % 10_000_000:07d}"
 PHONE_B = f"+99200{uuid.uuid4().int % 10_000_000:07d}"
@@ -29,16 +30,32 @@ PHONE_B = f"+99200{uuid.uuid4().int % 10_000_000:07d}"
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _latest_otp(phone: str) -> str | None:
+    """Read the most recent unused OTP for a phone straight from the DB."""
+    with _engine.connect() as conn:
+        row = conn.execute(
+            text(
+                "SELECT code FROM otp_codes "
+                "WHERE phone = :phone AND is_used = false "
+                "ORDER BY created_at DESC LIMIT 1"
+            ),
+            {"phone": phone},
+        ).fetchone()
+    return row[0] if row else None
+
+
 def _register_user(phone: str) -> str:
     """Register via OTP flow, return JWT token."""
     # Step 1: request OTP
     r = requests.post(f"{API}/auth/send-otp", json={"phone": phone})
     assert r.status_code == 200, f"send-otp failed: {r.text}"
 
-    # Step 2: verify OTP — in dev mode TEST_OTP_OVERRIDE is logged by server
+    # Step 2: fetch the generated code from the otp_codes table and verify
+    code = _latest_otp(phone)
+    assert code, f"no OTP row found in DB for {phone}"
     r = requests.post(
         f"{API}/auth/verify-otp",
-        json={"phone": phone, "code": TEST_OTP_OVERRIDE},
+        json={"phone": phone, "code": code},
     )
     assert r.status_code == 200, f"verify-otp failed: {r.text}"
     data = r.json()
@@ -68,7 +85,7 @@ def user_b_token():
 def user_b_id(user_b_token):
     r = requests.get(f"{API}/auth/me", headers=_headers(user_b_token))
     assert r.status_code == 200
-    return r.json()["data"]["id"]
+    return r.json()["data"]["user"]["id"]
 
 
 @pytest.fixture(scope="module")

@@ -46,16 +46,31 @@ class ConversationCreateBody(BaseModel):
 
 
 class SendMessageBody(BaseModel):
-    content: str
+    content: str = ""
+    message_type: str = "text"  # "text" | "voice"
+    attachment_url: Optional[str] = None
+    duration_seconds: Optional[int] = None
 
     @field_validator("content")
     @classmethod
-    def content_not_empty_and_max_length(cls, v: str) -> str:
+    def content_max_length(cls, v: str) -> str:
         v = v.strip()
-        if not v:
-            raise ValueError("Message content cannot be empty")
         if len(v) > 10_000:
             raise ValueError("Message too long (max 10 000 chars)")
+        return v
+
+    @field_validator("message_type")
+    @classmethod
+    def valid_type(cls, v: str) -> str:
+        if v not in ("text", "voice"):
+            raise ValueError("message_type must be 'text' or 'voice'")
+        return v
+
+    @field_validator("duration_seconds")
+    @classmethod
+    def valid_duration(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and not (0 < v <= 600):
+            raise ValueError("duration_seconds must be between 1 and 600")
         return v
 
 
@@ -68,6 +83,7 @@ class ParticipantOut(BaseModel):
 class LastMessageOut(BaseModel):
     id: _uuid.UUID
     content: str
+    message_type: str = "text"
     sender_id: _uuid.UUID
     is_read: bool
     created_at: str  # ISO-8601 string
@@ -96,6 +112,9 @@ class MessageOut(BaseModel):
     conversation_id: _uuid.UUID
     sender_id: _uuid.UUID
     content: str
+    message_type: str = "text"
+    attachment_url: Optional[str] = None
+    duration_seconds: Optional[int] = None
     is_read: bool
     created_at: str
 
@@ -139,6 +158,7 @@ def _build_conversation_out(
         last_msg = LastMessageOut(
             id=last_message.id,
             content=last_message.content,
+            message_type=last_message.message_type or "text",
             sender_id=last_message.sender_id,
             is_read=last_message.is_read,
             created_at=last_message.created_at.isoformat(),
@@ -257,6 +277,36 @@ def list_conversations(
     current_user_id = current_user.id
     data = [_build_conversation_out(c, current_user_id, last_msgs.get(c.id)) for c in convs]
     return ApiResponse(success=True, data=data, message="Conversations fetched")
+
+
+# ---------------------------------------------------------------------------
+# REST: total unread message count (for the navbar badge)
+# NOTE: registered before the /{conv_id} routes so the literal path wins.
+# ---------------------------------------------------------------------------
+
+@router.get("/unread-count", response_model=ApiResponse[dict])
+@limiter.limit("120/minute")
+def unread_count(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from sqlalchemy import or_ as _or
+
+    count = (
+        db.query(Message)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .filter(
+            _or(
+                Conversation.participant1_id == current_user.id,
+                Conversation.participant2_id == current_user.id,
+            ),
+            Message.sender_id != current_user.id,
+            Message.is_read == False,  # noqa: E712
+        )
+        .count()
+    )
+    return ApiResponse(success=True, data={"count": count}, message="Unread count")
 
 
 # ---------------------------------------------------------------------------
@@ -411,6 +461,9 @@ def list_messages(
             conversation_id=m.conversation_id,
             sender_id=m.sender_id,
             content=m.content,
+            message_type=m.message_type or "text",
+            attachment_url=m.attachment_url,
+            duration_seconds=m.duration_seconds,
             is_read=m.is_read,
             created_at=m.created_at.isoformat(),
         )
@@ -545,10 +598,14 @@ def send_message(
     db: Session = Depends(get_db),
 ):
     content = body.content.strip()
-    if not content:
+    if body.message_type == "voice":
+        if not body.attachment_url:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Voice message requires attachment_url")
+        # Only accept URLs produced by our own upload endpoints
+        if not (body.attachment_url.startswith("/uploads/") or body.attachment_url.startswith("https://res.cloudinary.com/")):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid attachment URL")
+    elif not content:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message content cannot be empty")
-    if len(content) > 10000:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message too long (max 10 000 chars)")
 
     conv = _get_conversation_or_403(conv_id, current_user, db)
 
@@ -556,6 +613,9 @@ def send_message(
         conversation_id=conv.id,
         sender_id=current_user.id,
         content=content,
+        message_type=body.message_type,
+        attachment_url=body.attachment_url if body.message_type == "voice" else None,
+        duration_seconds=body.duration_seconds if body.message_type == "voice" else None,
     )
     db.add(msg)
 
@@ -571,6 +631,9 @@ def send_message(
     msg_conv_id = msg.conversation_id
     msg_sender_id = msg.sender_id
     msg_content = msg.content
+    msg_type = msg.message_type
+    msg_attachment_url = msg.attachment_url
+    msg_duration = msg.duration_seconds
     msg_is_read = msg.is_read
     msg_created_at = msg.created_at.isoformat()
 
@@ -594,8 +657,12 @@ def send_message(
         "conversation_id": str(msg_conv_id),
         "message": {
             "id": str(msg_id),
+            "conversation_id": str(msg_conv_id),
             "sender_id": str(msg_sender_id),
             "content": msg_content,
+            "message_type": msg_type,
+            "attachment_url": msg_attachment_url,
+            "duration_seconds": msg_duration,
             "is_read": msg_is_read,
             "created_at": msg_created_at,
         },
@@ -616,6 +683,8 @@ def send_message(
         if manager.is_online(recipient_id_str):
             background_tasks.add_task(manager.send_to_user, recipient_id_str, ws_payload)
         else:
+            # Voice messages have empty text content — use a readable preview
+            preview_text = msg_content if msg_type == "text" else "Голосовое сообщение"
             background_tasks.add_task(_notify_offline_recipient, recipient_email, sender_name)
             background_tasks.add_task(
                 send_telegram_notification,
@@ -623,7 +692,7 @@ def send_message(
                 "new_message",
                 {
                     "sender_name": sender_name or "",
-                    "preview": msg_content,
+                    "preview": preview_text,
                     "conversation_id": str(msg_conv_id),
                 },
             )
@@ -632,7 +701,7 @@ def send_message(
                 _create_message_notification,
                 recipient_id_str,
                 sender_name,
-                msg_content,
+                preview_text,
                 str(msg_conv_id),
             )
             # FCM push notification for mobile
@@ -640,7 +709,7 @@ def send_message(
                 _send_new_message_push,
                 recipient_id_str,
                 sender_name,
-                msg_content,
+                preview_text,
                 str(msg_conv_id),
             )
 
@@ -649,6 +718,9 @@ def send_message(
         conversation_id=msg_conv_id,
         sender_id=msg_sender_id,
         content=msg_content,
+        message_type=msg_type,
+        attachment_url=msg_attachment_url,
+        duration_seconds=msg_duration,
         is_read=msg_is_read,
         created_at=msg_created_at,
     )
@@ -664,17 +736,33 @@ def send_message(
 def mark_conversation_read(
     request: Request,
     conv_id: str,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _get_conversation_or_403(conv_id, current_user, db)
+    conv = _get_conversation_or_403(conv_id, current_user, db)
 
-    db.query(Message).filter(
+    updated = db.query(Message).filter(
         Message.conversation_id == conv_id,
         Message.sender_id != current_user.id,
         Message.is_read == False,  # noqa: E712
     ).update({"is_read": True}, synchronize_session=False)
     db.commit()
+
+    # Tell the other participant their messages were read (live ✓✓ receipts)
+    if updated:
+        other_id = (
+            conv.participant2_id
+            if conv.participant1_id == current_user.id
+            else conv.participant1_id
+        )
+        other_id_str = str(other_id) if other_id else None
+        if other_id_str and manager.is_online(other_id_str):
+            background_tasks.add_task(
+                manager.send_to_user,
+                other_id_str,
+                {"event": "messages_read", "conversation_id": str(conv.id)},
+            )
     return ApiResponse(success=True, data=None, message="Conversation marked as read")
 
 
@@ -813,6 +901,7 @@ async def websocket_chat(websocket: WebSocket):
                 "conversation_id": conversation_id,
                 "message": {
                     "id": msg_id,
+                    "conversation_id": conversation_id,
                     "sender_id": user_id,
                     "content": content,
                     "is_read": False,

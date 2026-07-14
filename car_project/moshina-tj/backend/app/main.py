@@ -155,7 +155,20 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # CORS origins — defined here so the security headers middleware below can
 # reference it before the CORSMiddleware is added further down.
 # ---------------------------------------------------------------------------
-origins = [origin.strip() for origin in settings.allowed_origins.split(",")]
+origins = [origin.strip() for origin in settings.allowed_origins.split(",") if origin.strip()]
+
+# A wildcard origin combined with allow_credentials=True below makes the CORS
+# middleware mirror EVERY Origin header back — any website could then make
+# credentialed requests against the API. Never honor "*": drop it and fall
+# back to the frontend URL. (Native mobile apps send no Origin header, so
+# they are unaffected by CORS and never needed the wildcard.)
+if "*" in origins:
+    _log.warning(
+        "ALLOWED_ORIGINS contains '*' — wildcard is ignored because credentialed "
+        "CORS must use an explicit origin list; falling back to %s",
+        settings.frontend_url,
+    )
+    origins = [o for o in origins if o != "*"] or [settings.frontend_url]
 
 # ---------------------------------------------------------------------------
 # Security headers middleware

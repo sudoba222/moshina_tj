@@ -15,6 +15,12 @@ logger = logging.getLogger(__name__)
 
 UPLOADS_DIR = Path(__file__).resolve().parents[2] / "uploads"
 _EXTENSIONS = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+_AUDIO_EXTENSIONS = {
+    "audio/webm": ".webm",
+    "audio/ogg": ".ogg",
+    "audio/mp4": ".m4a",
+    "audio/mpeg": ".mp3",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +96,27 @@ def upload_image(contents: bytes, content_type: str) -> ImageUploadResult:
     return _upload_to_local(contents, content_type)
 
 
+def upload_audio(contents: bytes, content_type: str) -> ImageUploadResult:
+    """Upload a voice-message audio clip; same backend strategy as images.
+
+    Cloudinary stores audio under resource_type="video" (their API treats
+    audio as video without frames).
+    """
+    if settings.environment == "production":
+        if not _cloudinary_configured():
+            raise RuntimeError(
+                "Cloudinary is not configured but ENVIRONMENT=production. "
+                "Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and "
+                "CLOUDINARY_API_SECRET before uploading audio."
+            )
+        return _upload_audio_to_cloudinary(contents)
+
+    if _cloudinary_configured():
+        return _upload_audio_to_cloudinary(contents)
+
+    return _upload_audio_to_local(contents, content_type)
+
+
 def delete_image(public_id: str) -> None:
     """Delete an image by its public_id / local filename.
 
@@ -127,6 +154,31 @@ def _upload_to_cloudinary(contents: bytes, content_type: str) -> ImageUploadResu
 def _upload_to_local(contents: bytes, content_type: str) -> ImageUploadResult:
     UPLOADS_DIR.mkdir(exist_ok=True)
     ext = _EXTENSIONS[content_type]
+    filename = f"{uuid.uuid4().hex}{ext}"
+    dest = UPLOADS_DIR / filename
+    dest.write_bytes(contents)
+    return ImageUploadResult(
+        url=f"/uploads/{filename}",
+        public_id=filename,
+    )
+
+
+def _upload_audio_to_cloudinary(contents: bytes) -> ImageUploadResult:
+    cl = _get_cloudinary()
+    result = cl.uploader.upload(
+        io.BytesIO(contents),
+        folder="tajcar/voice",
+        resource_type="video",
+    )
+    return ImageUploadResult(
+        url=result["secure_url"],
+        public_id=result["public_id"],
+    )
+
+
+def _upload_audio_to_local(contents: bytes, content_type: str) -> ImageUploadResult:
+    UPLOADS_DIR.mkdir(exist_ok=True)
+    ext = _AUDIO_EXTENSIONS[content_type]
     filename = f"{uuid.uuid4().hex}{ext}"
     dest = UPLOADS_DIR / filename
     dest.write_bytes(contents)

@@ -676,6 +676,10 @@ class Message(Base):
         nullable=False,
     )
     content = Column(Text, nullable=False)
+    # "text" | "voice" — voice messages carry an attachment_url + duration
+    message_type = Column(String(10), nullable=False, default="text", server_default="text")
+    attachment_url = Column(String(500), nullable=True)
+    duration_seconds = Column(Integer, nullable=True)
     is_read = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(
         TIMESTAMP(timezone=True),
@@ -687,7 +691,7 @@ class Message(Base):
     conversation = relationship("Conversation", back_populates="messages")
     sender = relationship("User", foreign_keys=[sender_id])
 
-
+ 
 class DealerSubscription(Base):
     __tablename__ = "dealer_subscriptions"
 

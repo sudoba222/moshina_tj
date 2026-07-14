@@ -362,12 +362,50 @@ async def featured_listings(request: Request, db: Session = Depends(get_db)):
     return ApiResponse(success=True, data=data, message="Featured listings fetched")
 
 
+def _increment_view_count(listing_id: str) -> None:
+    """Best-effort view increment in its own short-lived session.
+
+    Runs as a BackgroundTask AFTER the response is sent, so a hot listing's
+    view-count writes never block the reader's request (they previously
+    serialized every concurrent viewer on the row lock). Failures are
+    swallowed — a lost view count must never surface as a request error.
+    """
+    db = SessionLocal()
+    try:
+        db.execute(
+            update(Listing)
+            .where(Listing.id == listing_id)
+            .values(views=Listing.views + 1)
+        )
+        db.commit()
+    except Exception:  # noqa: BLE001 — view counting is non-critical
+        db.rollback()
+    finally:
+        db.close()
+
+
+_DETAIL_CACHE_PREFIX = "listing:detail:"
+_DETAIL_CACHE_TTL = 60  # seconds — short, since view count changes
+
+
 @router.get("/{listing_id}", response_model=ApiResponse[ListingResponse])
-def get_listing(
+async def get_listing(
     listing_id: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_optional),
 ):
+    # Fast path: serve the public payload of an active listing straight from
+    # Redis. This is the hottest deep-link route (shared links, feed taps), so
+    # caching it keeps the joined SELECT off the DB for the vast majority of
+    # views. The view count is still recorded on every hit via a background
+    # task. Owners/staff and non-active listings always take the DB path.
+    cache_key = _DETAIL_CACHE_PREFIX + listing_id
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        background_tasks.add_task(_increment_view_count, listing_id)
+        return ApiResponse(success=True, data=cached, message="Listing fetched")
+
     listing = _get_listing_or_404(listing_id, db)
 
     # Non-active or owner-deactivated listings are only visible to their owner or staff
@@ -379,19 +417,17 @@ def get_listing(
         if not (is_owner or is_staff):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
 
-    # Atomic view increment — avoids a read-modify-write race condition
-    # Only count views for publicly active listings
-    if listing.status == ListingStatus.active:
-        db.execute(
-            update(Listing)
-            .where(Listing.id == listing_id)
-            .values(views=Listing.views + 1)
-        )
-        db.commit()
-        db.refresh(listing)
-
     data = ListingResponse.model_validate(listing)
     data.moderator_note = None  # internal field — strip from public response
+
+    # Count the view off the response path (only for publicly active listings).
+    # Reflect it optimistically in the returned payload so the UI still shows +1.
+    if listing.status == ListingStatus.active:
+        data.views = (listing.views or 0) + 1
+        background_tasks.add_task(_increment_view_count, listing_id)
+        # Cache only the public payload of active listings
+        await cache_set(cache_key, data.model_dump(), _DETAIL_CACHE_TTL)
+
     return ApiResponse(success=True, data=data, message="Listing fetched")
 
 
@@ -686,6 +722,7 @@ def update_listing(
     db.refresh(listing)
 
     background_tasks.add_task(cache_delete_pattern, _LIST_CACHE_PREFIX + "*")
+    background_tasks.add_task(cache_delete, _DETAIL_CACHE_PREFIX + str(listing.id))
     return ApiResponse(
         success=True,
         data=ListingResponse.model_validate(listing),
@@ -713,6 +750,7 @@ async def activate_listing(
     await cache_delete(_FEATURED_REDIS_KEY)
     await cache_delete("stats:marketplace")
     await cache_delete_pattern(_LIST_CACHE_PREFIX + "*")
+    await cache_delete(_DETAIL_CACHE_PREFIX + str(listing.id))
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing activated")
 
@@ -737,6 +775,7 @@ async def deactivate_listing(
     await cache_delete(_FEATURED_REDIS_KEY)
     await cache_delete("stats:marketplace")
     await cache_delete_pattern(_LIST_CACHE_PREFIX + "*")
+    await cache_delete(_DETAIL_CACHE_PREFIX + str(listing.id))
     db.refresh(listing)
     return ApiResponse(success=True, data=ListingResponse.model_validate(listing), message="Listing deactivated")
 
@@ -775,6 +814,7 @@ async def delete_listing(
     await cache_delete(_FEATURED_REDIS_KEY)
     await cache_delete("stats:marketplace")
     await cache_delete_pattern(_LIST_CACHE_PREFIX + "*")
+    await cache_delete(_DETAIL_CACHE_PREFIX + str(listing.id))
 
     # Delete images from storage in the background — don't block the response
     if cloudinary_ids:
