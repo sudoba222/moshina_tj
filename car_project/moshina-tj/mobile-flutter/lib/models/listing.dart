@@ -159,7 +159,7 @@ class Listing {
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (m) => '${m[1]} ',
     );
-    final unit = lang == 'tj' ? 'сомонӣ' : 'сом';
+    final unit = 'с.';
     return '$s $unit';
   }
 

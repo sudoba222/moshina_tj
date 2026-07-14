@@ -38,6 +38,9 @@ class _C {
   static const colorInfo = Color(0xFF2563EB);
   static const colorWarning = Color(0xFFF59E0B);
   static const colorOnline = Color(0xFF22C55E);
+  // Encar-style price red (dark variant brightened for contrast on dark cards)
+  static const lPrice = Color(0xFFE60023);
+  static const dPrice = Color(0xFFFF5A64);
   static const whatsapp = Color(0xFF25D366);
 }
 
@@ -53,6 +56,7 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color accent;
   final Color accentHover;
   final Color accentDim;
+  final Color price;
   final Color tagBg;
   final Color navBg;
   final Color footerBg;
@@ -77,6 +81,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.accent,
     required this.accentHover,
     required this.accentDim,
+    required this.price,
     required this.tagBg,
     required this.navBg,
     required this.footerBg,
@@ -94,6 +99,7 @@ class AppColors extends ThemeExtension<AppColors> {
     accent: _C.lAccent,
     accentHover: _C.lAccentHover,
     accentDim: Color(0x14C83808),
+    price: _C.lPrice,
     tagBg: _C.lTagBg,
     navBg: _C.lNavBg,
     footerBg: _C.lFooterBg,
@@ -111,6 +117,7 @@ class AppColors extends ThemeExtension<AppColors> {
     accent: _C.dAccent,
     accentHover: _C.dAccentHover,
     accentDim: Color(0x24D94020),
+    price: _C.dPrice,
     tagBg: _C.dTagBg,
     navBg: _C.dNavBg,
     footerBg: _C.dBg,
@@ -129,6 +136,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? accent,
     Color? accentHover,
     Color? accentDim,
+    Color? price,
     Color? tagBg,
     Color? navBg,
     Color? footerBg,
@@ -145,6 +153,7 @@ class AppColors extends ThemeExtension<AppColors> {
       accent: accent ?? this.accent,
       accentHover: accentHover ?? this.accentHover,
       accentDim: accentDim ?? this.accentDim,
+      price: price ?? this.price,
       tagBg: tagBg ?? this.tagBg,
       navBg: navBg ?? this.navBg,
       footerBg: footerBg ?? this.footerBg,
@@ -166,6 +175,7 @@ class AppColors extends ThemeExtension<AppColors> {
       accent: Color.lerp(accent, other.accent, t)!,
       accentHover: Color.lerp(accentHover, other.accentHover, t)!,
       accentDim: Color.lerp(accentDim, other.accentDim, t)!,
+      price: Color.lerp(price, other.price, t)!,
       tagBg: Color.lerp(tagBg, other.tagBg, t)!,
       navBg: Color.lerp(navBg, other.navBg, t)!,
       footerBg: Color.lerp(footerBg, other.footerBg, t)!,

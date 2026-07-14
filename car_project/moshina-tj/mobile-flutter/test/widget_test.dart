@@ -1,30 +1,25 @@
-// This is a basic Flutter widget test.
+// Smoke test: the app widget builds and renders a frame without crashing.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// TajcarApp wires its own providers and router; we inject a plain ApiService
+// (no network calls are awaited during the first frame).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tajcar/main.dart';
+import 'package:tajcar/services/api_service.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App builds and renders first frame', (WidgetTester tester) async {
+    await tester.pumpWidget(TajcarApp(apiService: ApiService()));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // The root app widget must be in the tree.
+    expect(find.byType(TajcarApp), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Drain the splash screen's staged delays (150 + 450 + 1600 ms) so no
+    // timers are pending when the framework tears the tree down.
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 2));
   });
 }

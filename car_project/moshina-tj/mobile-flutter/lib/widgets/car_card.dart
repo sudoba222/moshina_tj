@@ -18,6 +18,159 @@ BoxShadow get _cardShadow => BoxShadow(
       offset: const Offset(0, 6),
     );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CARD PHOTO PAGER — swipe + arrow buttons, browse photos without opening
+// the listing. Counter as chip (n/N) or dots. Used by both card layouts.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum _CounterStyle { chip, dots }
+
+class _CardPhotoPager extends StatefulWidget {
+  final List<ListingImage> images;
+  final AppColors colors;
+  final _CounterStyle counter;
+  final double arrowSize;
+
+  const _CardPhotoPager({
+    required this.images,
+    required this.colors,
+    this.counter = _CounterStyle.chip,
+    this.arrowSize = 26,
+  });
+
+  @override
+  State<_CardPhotoPager> createState() => _CardPhotoPagerState();
+}
+
+class _CardPhotoPagerState extends State<_CardPhotoPager> {
+  final PageController _ctrl = PageController();
+  int _idx = 0;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _go(int delta) {
+    HapticFeedback.selectionClick();
+    _ctrl.animateToPage(
+      (_idx + delta).clamp(0, widget.images.length - 1),
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget _photo(String url) => CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        placeholder: (ctx, u) => Shimmer.fromColors(
+          baseColor: widget.colors.border,
+          highlightColor: widget.colors.surface,
+          child: Container(color: widget.colors.card),
+        ),
+        errorWidget: (ctx, u, e) => _NoImage(colors: widget.colors),
+      );
+
+  Widget _arrow({required bool left}) {
+    final s = widget.arrowSize;
+    return Positioned(
+      left: left ? 4 : null,
+      right: left ? null : 4,
+      top: 0,
+      bottom: 0,
+      child: Center(
+        child: GestureDetector(
+          onTap: () => _go(left ? -1 : 1),
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: s,
+            height: s,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.45),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              left ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+              color: Colors.white,
+              size: s * 0.72,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final images = widget.images;
+    if (images.isEmpty) return _NoImage(colors: widget.colors);
+    if (images.length == 1) return _photo(images[0].url);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          controller: _ctrl,
+          onPageChanged: (i) => setState(() => _idx = i),
+          itemCount: images.length,
+          itemBuilder: (_, i) => _photo(images[i].url),
+        ),
+        if (_idx > 0) _arrow(left: true),
+        if (_idx < images.length - 1) _arrow(left: false),
+        if (widget.counter == _CounterStyle.chip)
+          Positioned(
+            bottom: 5,
+            right: 5,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.60),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${_idx + 1}/${images.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (widget.counter == _CounterStyle.dots)
+          Positioned(
+            bottom: 8,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(images.length.clamp(0, 8), (i) {
+                  final active = i == _idx.clamp(0, 7);
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: active ? 14 : 5,
+                    height: 5,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(
+                      color: active
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class CarCard extends StatelessWidget {
   final Listing listing;
   final VoidCallback? onTap;
@@ -90,29 +243,10 @@ class _HorizontalCard extends StatefulWidget {
 }
 
 class _HorizontalCardState extends State<_HorizontalCard> {
-  int _photoIdx = 0;
-  PageController? _pageCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.listing.images.length > 1) {
-      _pageCtrl = PageController();
-    }
-  }
-
-  @override
-  void dispose() {
-    _pageCtrl?.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final isFav = context.watch<FavoritesProvider>().isFavorite(widget.listing.id);
     const double imgSize = 130;
-    final images = widget.listing.images;
-    final hasMany = images.length > 1;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -127,7 +261,7 @@ class _HorizontalCardState extends State<_HorizontalCard> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Square photo (swipeable) ──────────────────────────────
+                  // ── Square photo: swipe or tap the arrows to browse ───────
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: SizedBox(
@@ -136,67 +270,19 @@ class _HorizontalCardState extends State<_HorizontalCard> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          // Photo view — PageView when multiple images
-                          images.isEmpty
-                              ? _NoImage(colors: widget.c)
-                              : hasMany
-                                  ? PageView.builder(
-                                      controller: _pageCtrl,
-                                      onPageChanged: (i) =>
-                                          setState(() => _photoIdx = i),
-                                      itemCount: images.length,
-                                      itemBuilder: (_, i) => CachedNetworkImage(
-                                        imageUrl: images[i].url,
-                                        fit: BoxFit.cover,
-                                        placeholder: (ctx, url) =>
-                                            Shimmer.fromColors(
-                                          baseColor: widget.c.border,
-                                          highlightColor: widget.c.surface,
-                                          child: Container(color: widget.c.card),
-                                        ),
-                                        errorWidget: (ctx, url, err) =>
-                                            _NoImage(colors: widget.c),
-                                      ),
-                                    )
-                                  : CachedNetworkImage(
-                                      imageUrl: images[0].url,
-                                      fit: BoxFit.cover,
-                                      placeholder: (ctx, url) =>
-                                          Shimmer.fromColors(
-                                        baseColor: widget.c.border,
-                                        highlightColor: widget.c.surface,
-                                        child: Container(color: widget.c.card),
-                                      ),
-                                      errorWidget: (ctx, url, err) =>
-                                          _NoImage(colors: widget.c),
-                                    ),
+                          _CardPhotoPager(
+                            images: widget.listing.images,
+                            colors: widget.c,
+                            counter: _CounterStyle.chip,
+                            arrowSize: 24,
+                          ),
                           // Badges
                           if (_hasBadge)
                             Positioned(
                               top: 5,
                               left: 5,
-                              child: _BadgeRow(listing: widget.listing),
-                            ),
-                          // Photo counter (x/total)
-                          if (hasMany)
-                            Positioned(
-                              bottom: 5,
-                              right: 5,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 5, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.60),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${_photoIdx + 1}/${images.length}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
+                              child: IgnorePointer(
+                                child: _BadgeRow(listing: widget.listing),
                               ),
                             ),
                         ],
@@ -280,7 +366,7 @@ class _HorizontalCardState extends State<_HorizontalCard> {
                           Text(
                             widget.listing.formattedPrice(widget.lang),
                             style: GoogleFonts.outfit(
-                              color: widget.c.accent,
+                              color: widget.c.price,
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.5,
@@ -292,7 +378,7 @@ class _HorizontalCardState extends State<_HorizontalCard> {
                             Text(
                               t('common.negotiable', widget.lang),
                               style: GoogleFonts.outfit(
-                                color: const Color(0xFF888888),
+                                color: widget.c.textMuted,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w400,
                               ),
@@ -360,7 +446,6 @@ class _VerticalImageSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = listing.firstImageUrl;
     final imageHeight = compact ? 130.0 : 210.0;
 
     return Stack(
@@ -368,31 +453,28 @@ class _VerticalImageSection extends StatelessWidget {
         SizedBox(
           height: imageHeight,
           width: double.infinity,
-          child: imageUrl.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (ctx, url) => Shimmer.fromColors(
-                    baseColor: colors.border,
-                    highlightColor: colors.surface,
-                    child: Container(color: colors.card),
-                  ),
-                  errorWidget: (ctx, url, err) => _NoImage(colors: colors),
-                )
-              : _NoImage(colors: colors),
+          child: _CardPhotoPager(
+            images: listing.images,
+            colors: colors,
+            counter: compact ? _CounterStyle.chip : _CounterStyle.dots,
+            arrowSize: compact ? 22 : 28,
+          ),
         ),
-        // Bottom gradient
+        // Subtle bottom gradient so the white pager dots stay readable —
+        // must not block the pager arrows
         Positioned(
           bottom: 0,
           left: 0,
           right: 0,
-          child: Container(
-            height: imageHeight * 0.5,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black54],
+          child: IgnorePointer(
+            child: Container(
+              height: imageHeight * 0.22,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black38],
+                ),
               ),
             ),
           ),
@@ -401,7 +483,7 @@ class _VerticalImageSection extends StatelessWidget {
         Positioned(
           top: 10,
           left: 10,
-          child: _BadgeRow(listing: listing),
+          child: IgnorePointer(child: _BadgeRow(listing: listing)),
         ),
         // Fav button
         if (!compact)
@@ -410,68 +492,11 @@ class _VerticalImageSection extends StatelessWidget {
             right: 6,
             child: _FavButton(colors: colors, listingId: listing.id),
           ),
-        // Bottom-left: price pinned on image (only for vertical non-compact)
-        if (!compact)
-          Positioned(
-            bottom: 10,
-            left: 10,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (listing.isNegotiable) ...[
-                  _NegotiableBadge(),
-                  const SizedBox(height: 4),
-                ],
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    listing.formattedPrice(lang),
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.4,
-                      height: 1,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         if (listing.isDealerListing)
           Positioned(
             bottom: 10,
             right: 10,
-            child: _DealerBadge(),
-          ),
-        // Photo count
-        if (listing.images.length > 1 && !compact)
-          Positioned(
-            bottom: 10,
-            right: listing.isDealerListing ? 70 : 10,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.photo_library_outlined, color: Colors.white, size: 11),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${listing.images.length}',
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-            ),
+            child: IgnorePointer(child: _DealerBadge()),
           ),
       ],
     );
@@ -525,27 +550,9 @@ class _FavButton extends StatelessWidget {
         ),
         child: Icon(
           isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          color: isFav ? const Color(0xFFEF4444) : Colors.black54,
+          color: isFav ? AppColors.colorError : Colors.black54,
           size: 18,
         ),
-      ),
-    );
-  }
-}
-
-class _NegotiableBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final lang = context.watch<LanguageProvider>().lang;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.50),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        t('common.negotiable', lang),
-        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -636,17 +643,25 @@ class _VerticalContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Encar-style content: title, muted spec line, big price, location row
+    final specParts = <String>[
+      listing.year.toString(),
+      if (listing.mileage != null) listing.formattedMileage,
+      if (listing.fuel != null) listing.fuel!,
+      if (listing.transmission != null) listing.transmission!,
+    ];
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title + year
+          // Title
           Text(
             '${listing.brand} ${listing.model}',
             style: GoogleFonts.outfit(
               color: colors.text,
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
               height: 1.2,
               letterSpacing: -0.4,
@@ -654,22 +669,63 @@ class _VerticalContent extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
+
+          // Spec line: year · mileage · fuel · transmission
           Text(
-            listing.year.toString(),
+            specParts.join(' · '),
             style: GoogleFonts.outfit(
               color: colors.textMuted,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 10),
 
-          // Spec chips
-          if (_hasChips) ...[
-            _ChipRow(listing: listing, colors: colors),
-            const SizedBox(height: 10),
-          ],
+          // Price + negotiable badge
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  listing.formattedPrice(lang),
+                  style: GoogleFonts.outfit(
+                    color: colors.price,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    height: 1,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (listing.isNegotiable) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: colors.tagBg,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: colors.border, width: 0.5),
+                  ),
+                  child: Text(
+                    t('common.negotiable', lang),
+                    style: GoogleFonts.outfit(
+                      color: colors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(height: 1, thickness: 0.5, color: colors.border),
+          const SizedBox(height: 9),
 
           // City + date
           Row(
@@ -684,11 +740,6 @@ class _VerticalContent extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Container(
-                width: 3, height: 3,
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                decoration: BoxDecoration(color: colors.textMuted, shape: BoxShape.circle),
-              ),
               Text(
                 listing.formattedDate(lang),
                 style: GoogleFonts.outfit(color: colors.textMuted, fontSize: 12),
@@ -699,9 +750,6 @@ class _VerticalContent extends StatelessWidget {
       ),
     );
   }
-
-  bool get _hasChips =>
-      listing.transmission != null || listing.mileage != null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -731,7 +779,7 @@ class _CompactContent extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             listing.formattedPrice(lang),
-            style: GoogleFonts.outfit(color: colors.accent, fontSize: 15, fontWeight: FontWeight.w800),
+            style: GoogleFonts.outfit(color: colors.price, fontSize: 15, fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -742,53 +790,6 @@ class _CompactContent extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Chip row (vertical card)
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _ChipRow extends StatelessWidget {
-  final Listing listing;
-  final AppColors colors;
-
-  const _ChipRow({required this.listing, required this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 5,
-      runSpacing: 4,
-      children: [
-        if (listing.mileage != null) _SpecChip(label: listing.formattedMileage, colors: colors),
-        if (listing.transmission != null) _SpecChip(label: listing.transmission!, colors: colors),
-        if (listing.fuel != null) _SpecChip(label: listing.fuel!, colors: colors),
-      ],
-    );
-  }
-}
-
-class _SpecChip extends StatelessWidget {
-  final String label;
-  final AppColors colors;
-
-  const _SpecChip({required this.label, required this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: colors.tagBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colors.border, width: 0.5),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.outfit(
-          color: colors.textSecondary,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shimmer skeleton

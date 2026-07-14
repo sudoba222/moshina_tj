@@ -15,6 +15,10 @@ import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/pressable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+/// Catalog view modes: big full-width cards (Encar style, default),
+/// compact horizontal rows, or a 2-column grid.
+enum _CatalogView { big, list, grid }
+
 class CatalogScreen extends StatefulWidget {
   final String? initialQuery;
   final String? initialType;
@@ -37,7 +41,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   final _scrollCtrl = ScrollController();
   String _listingType = '';
   String _sort = '';
-  bool _gridMode = false;
+  _CatalogView _viewMode = _CatalogView.big;
 
   @override
   void initState() {
@@ -184,16 +188,28 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
             onPressed: () => _showSortSheet(lang, c),
           ),
-          // Grid / List toggle
+          // View toggle cycles: big cards → horizontal list → 2-col grid
           IconButton(
-            tooltip: _gridMode
-                ? t('catalog.listView', lang)
-                : t('catalog.gridView', lang),
+            tooltip: switch (_viewMode) {
+              _CatalogView.big => t('catalog.listView', lang),
+              _CatalogView.list => t('catalog.gridView', lang),
+              _CatalogView.grid => t('catalog.bigView', lang),
+            },
             icon: Icon(
-              _gridMode ? Icons.view_list_outlined : Icons.grid_view_outlined,
+              switch (_viewMode) {
+                _CatalogView.big => Icons.view_list_outlined,
+                _CatalogView.list => Icons.grid_view_outlined,
+                _CatalogView.grid => Icons.view_agenda_outlined,
+              },
               color: c.text,
             ),
-            onPressed: () => setState(() => _gridMode = !_gridMode),
+            onPressed: () => setState(() {
+              _viewMode = switch (_viewMode) {
+                _CatalogView.big => _CatalogView.list,
+                _CatalogView.list => _CatalogView.grid,
+                _CatalogView.grid => _CatalogView.big,
+              };
+            }),
           ),
         ],
       ),
@@ -236,13 +252,22 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return Consumer<ListingProvider>(
       builder: (ctx, provider, _) {
         if (provider.catalogLoading) {
-          return _gridMode
-              ? _GridShimmer(c: c)
-              : ListView.builder(
-                  padding: EdgeInsets.zero,
-                  itemCount: 6,
-                  itemBuilder: (_, _) => const CarCardShimmer(horizontal: true),
-                );
+          return switch (_viewMode) {
+            _CatalogView.grid => _GridShimmer(c: c),
+            _CatalogView.list => ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: 6,
+                itemBuilder: (_, _) => const CarCardShimmer(horizontal: true),
+              ),
+            _CatalogView.big => ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                itemCount: 4,
+                itemBuilder: (_, _) => const Padding(
+                  padding: EdgeInsets.only(bottom: 14),
+                  child: SizedBox(height: 330, child: CarCardShimmer()),
+                ),
+              ),
+          };
         }
 
         if (provider.catalogError != null) {
@@ -337,8 +362,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ),
                 ),
               ),
-              // List or Grid
-              if (_gridMode)
+              // Big cards / horizontal list / 2-col grid
+              if (_viewMode == _CatalogView.grid)
                 _GridView(
                   items: provider.catalogItems,
                   c: c,
@@ -347,7 +372,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: _viewMode == _CatalogView.big
+                      ? const EdgeInsets.fromLTRB(16, 4, 16, 16)
+                      : const EdgeInsets.only(bottom: 16),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (ctx2, i) {
@@ -364,10 +391,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           return const SizedBox.shrink();
                         }
                         final listing = provider.catalogItems[i];
-                        return CarCard(
-                          listing: listing,
-                          horizontal: true,
-                          onTap: () => ctx2.push('/car/${listing.id}'),
+                        if (_viewMode == _CatalogView.list) {
+                          // Compact horizontal row (Avito/OLX style)
+                          return CarCard(
+                            listing: listing,
+                            horizontal: true,
+                            onTap: () => ctx2.push('/car/${listing.id}'),
+                          );
+                        }
+                        // Encar-style: one big full-width card per row
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: CarCard(
+                            listing: listing,
+                            onTap: () => ctx2.push('/car/${listing.id}'),
+                          ),
                         );
                       },
                       childCount: provider.catalogItems.length +
@@ -892,7 +930,7 @@ class _CompactCard extends StatelessWidget {
                                   ? Icons.favorite_rounded
                                   : Icons.favorite_border_rounded,
                               color: isFav
-                                  ? const Color(0xFFEF4444)
+                                  ? AppColors.colorError
                                   : Colors.black54,
                               size: 16,
                             ),

@@ -35,17 +35,63 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
   bool _descExpanded = false;
   late PageController _galleryCtrl;
 
+  // Endless recommendations feed at the bottom of the page
+  final ScrollController _scrollCtrl = ScrollController();
+  final List<Listing> _feed = [];
+  final Set<String> _feedSeen = {};
+  int _feedPage = 1;
+  bool _feedHasMore = true;
+  bool _feedLoading = false;
+
   @override
   void initState() {
     super.initState();
     _galleryCtrl = PageController();
+    _scrollCtrl.addListener(_onScroll);
     _loadListing();
+    _loadFeed();
   }
 
   @override
   void dispose() {
+    _scrollCtrl.removeListener(_onScroll);
+    _scrollCtrl.dispose();
     _galleryCtrl.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    // Load the next page ~800px before the end so it feels seamless
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 800) {
+      _loadFeed();
+    }
+  }
+
+  Future<void> _loadFeed() async {
+    if (_feedLoading || !_feedHasMore) return;
+    _feedLoading = true;
+    _feedSeen.add(widget.listingId); // never recommend the current car
+    try {
+      final data = await ApiService().getListingsPage(page: _feedPage);
+      final items = (data['items'] as List<dynamic>? ?? [])
+          .map((j) => Listing.fromJson(j as Map<String, dynamic>))
+          .where((l) => _feedSeen.add(l.id))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _feed.addAll(items);
+        _feedPage += 1;
+        final page = (data['page'] as num?)?.toInt() ?? _feedPage;
+        final pages = (data['pages'] as num?)?.toInt() ?? page;
+        _feedHasMore = page < pages;
+      });
+    } catch (_) {
+      _feedHasMore = false;
+    } finally {
+      _feedLoading = false;
+      if (mounted) setState(() {});
+    }
   }
 
   Future<void> _loadListing() async {
@@ -182,6 +228,7 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
         onCall: _callSeller,
       ),
       body: CustomScrollView(
+        controller: _scrollCtrl,
         slivers: [
           // Pinned app bar that shows title after scroll
           SliverAppBar(
@@ -250,8 +297,12 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildTitleAndPrice(listing, c, lang),
-                  const SizedBox(height: 16),
-                  _buildSpecsGrid(listing, c, lang),
+                  const SizedBox(height: 14),
+                  _buildKeySpecsStrip(listing, c, lang),
+                  const SizedBox(height: 20),
+                  _SectionTitle(title: t('detail.specs', lang), c: c),
+                  const SizedBox(height: 8),
+                  _buildSpecsTable(listing, c, lang),
                   if (listing.description != null &&
                       listing.description!.isNotEmpty) ...[
                     const SizedBox(height: 20),
@@ -285,12 +336,49 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
                     _RelatedListings(
                         related: _related, c: c, lang: lang),
                   ],
-                  // Space for sticky bottom bar
-                  const SizedBox(height: 24),
+                  // Heading for the endless recommendations feed
+                  if (_feed.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _SectionTitle(
+                        title: t('detail.moreToExplore', lang), c: c),
+                  ],
                 ],
               ),
             ),
           ),
+
+          // Endless recommendations feed — big Encar-style cards
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) {
+                  if (i >= _feed.length) {
+                    return _feedHasMore
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: CircularProgressIndicator(color: c.accent),
+                            ),
+                          )
+                        : const SizedBox.shrink();
+                  }
+                  final listing = _feed[i];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: CarCard(
+                      listing: listing,
+                      onTap: () => ctx.push('/car/${listing.id}'),
+                    ),
+                  );
+                },
+                childCount: _feed.length + (_feedHasMore ? 1 : 0),
+              ),
+            ),
+          ),
+
+          // Space for sticky bottom bar
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
     );
@@ -400,8 +488,10 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
     );
   }
 
-  Widget _buildSpecsGrid(Listing listing, AppColors c, String lang) {
-    final specs = <(IconData, String, String?)>[
+  /// Quick-glance strip under the price — the 4 facts every buyer scans
+  /// first (Encar / Auto.ru pattern): year, mileage, fuel, transmission.
+  Widget _buildKeySpecsStrip(Listing listing, AppColors c, String lang) {
+    final items = <(IconData, String, String)>[
       (Icons.calendar_today_outlined, t('detail.year', lang),
           listing.year.toString()),
       if (listing.mileage != null)
@@ -409,80 +499,107 @@ class _CarDetailScreenState extends State<CarDetailScreen> {
             listing.formattedMileage),
       if (listing.fuel != null)
         (Icons.local_gas_station_outlined, t('detail.fuel', lang),
-            listing.fuel),
+            listing.fuel!),
       if (listing.transmission != null)
         (Icons.settings_outlined, t('detail.transmission', lang),
-            listing.transmission),
-      if (listing.engineVolume != null)
-        (Icons.engineering_outlined, t('detail.engine', lang),
-            '${listing.engineVolume} л'),
-      if (listing.driveType != null)
-        (Icons.four_k_plus_outlined, t('detail.drive', lang),
-            listing.driveType),
-      if (listing.bodyType != null)
-        (Icons.directions_car_outlined, t('detail.body', lang),
-            listing.bodyType),
-      if (listing.color != null)
-        (Icons.palette_outlined, t('detail.color', lang), listing.color),
-      (Icons.location_on_outlined, t('detail.city', lang), listing.city),
-      if (listing.customsCleared != null)
-        (Icons.fact_check_outlined, t('detail.customs', lang),
-            listing.customsCleared! ? t('common.yes', lang) : t('common.no', lang)),
-      if (listing.viewsCount > 0)
-        (Icons.visibility_outlined, t('detail.views', lang),
-            listing.viewsCount.toString()),
+            listing.transmission!),
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 3.0,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: c.tagBg,
+        borderRadius: BorderRadius.circular(14),
       ),
-      itemCount: specs.length,
-      itemBuilder: (_, i) {
-        final (icon, label, value) = specs[i];
-        if (value == null) return const SizedBox.shrink();
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: c.accentDim,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 18, color: c.accent),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(color: c.textMuted, fontSize: 10),
-                      maxLines: 1,
+      child: Row(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0)
+              Container(width: 0.5, height: 34, color: c.border),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(items[i].$1, size: 18, color: c.textSecondary),
+                  const SizedBox(height: 5),
+                  Text(
+                    items[i].$3,
+                    style: TextStyle(
+                      color: c.text,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        color: c.text,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    items[i].$2,
+                    style: TextStyle(color: c.textMuted, fontSize: 10.5),
+                    maxLines: 1,
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Full spec sheet as label→value rows with dividers — the standard
+  /// "Характеристики" table used by Encar, Mobile.de and Auto.ru.
+  Widget _buildSpecsTable(Listing listing, AppColors c, String lang) {
+    final rows = <(String, String)>[
+      if (listing.bodyType != null)
+        (t('detail.body', lang), listing.bodyType!),
+      if (listing.engineVolume != null)
+        (t('detail.engine', lang), '${listing.engineVolume} л'),
+      if (listing.driveType != null)
+        (t('detail.drive', lang), listing.driveType!),
+      if (listing.color != null)
+        (t('detail.color', lang), listing.color!),
+      if (listing.customsCleared != null)
+        (t('detail.customs', lang),
+            listing.customsCleared! ? t('common.yes', lang) : t('common.no', lang)),
+      (t('detail.city', lang), listing.city),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.border),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0)
+              Divider(height: 1, thickness: 0.5, color: c.border, indent: 14, endIndent: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      rows[i].$1,
+                      style: TextStyle(color: c.textMuted, fontSize: 13.5),
+                    ),
+                  ),
+                  Text(
+                    rows[i].$2,
+                    style: TextStyle(
+                      color: c.text,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -787,118 +904,230 @@ class _SellerCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: c.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Column(
         children: [
-          Row(
+          // Tap the seller header to open their public profile
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: listing.userId != null
+                ? () => context.push('/seller/${listing.userId}')
+                : null,
+            child: Row(
             children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: c.accentDim,
-                child: Text(
-                  initials,
-                  style: TextStyle(
-                    color: c.accent,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+              // Gradient avatar with soft ring
+              Container(
+                padding: const EdgeInsets.all(2.5),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: c.accentDim, width: 2),
+                ),
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [c.accent, c.accentHover],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 13),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      name,
-                      style: TextStyle(
-                        color: c.text,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            name,
+                            style: TextStyle(
+                              color: c.text,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16.5,
+                              letterSpacing: -0.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (listing.isDealerListing) ...[
+                          const SizedBox(width: 5),
+                          Icon(Icons.verified_rounded,
+                              size: 17, color: AppColors.colorInfo),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    // Seller type badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: listing.isDealerListing
+                            ? c.accentDim
+                            : c.tagBg,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            listing.isDealerListing
+                                ? Icons.store_rounded
+                                : Icons.person_outline_rounded,
+                            size: 12,
+                            color: listing.isDealerListing
+                                ? c.accent
+                                : c.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            listing.isDealerListing
+                                ? t('badges.dealer', lang)
+                                : t('detail.privateSeller', lang),
+                            style: TextStyle(
+                              color: listing.isDealerListing
+                                  ? c.accent
+                                  : c.textSecondary,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    if (listing.sellerPhone != null) ...[
-                      const SizedBox(height: 3),
-                      GestureDetector(
-                        onLongPress: () {
-                          Clipboard.setData(
-                              ClipboardData(text: listing.sellerPhone!));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(t('common.copied', lang)),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          listing.sellerPhone!,
-                          style: TextStyle(
-                            color: c.textSecondary,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (listing.isDealerListing) ...[
-                      const SizedBox(height: 2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: c.accentDim,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          t('badges.dealer', lang),
-                          style: TextStyle(
-                            color: c.accent,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
+                ),
+              ),
+              // Tap-to-copy phone chip
+              if (listing.sellerPhone != null)
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Clipboard.setData(
+                        ClipboardData(text: listing.sellerPhone!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(t('common.copied', lang)),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: c.tagBg,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: c.border, width: 0.5),
+                    ),
+                    child: Icon(Icons.copy_rounded,
+                        size: 16, color: c.textSecondary),
+                  ),
+                ),
+            ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Divider(height: 1, thickness: 0.5, color: c.border),
+          const SizedBox(height: 14),
+          // Primary call button — gradient, soft glow
+          GestureDetector(
+            onTap: onCall,
+            child: Container(
+              width: double.infinity,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF22B85B), AppColors.colorSuccess],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.colorSuccess.withValues(alpha: 0.30),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.phone_rounded,
+                      size: 20, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    t('detail.call', lang),
+                    style: AppTextStyles.bodyLg(
+                        color: Colors.white, weight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 9),
+          // Secondary row: soft-filled WhatsApp + Chat
+          Row(
+            children: [
+              Expanded(
+                child: _SoftContactBtn(
+                  label: 'WhatsApp',
+                  icon: Icons.chat_rounded,
+                  color: AppColors.whatsapp,
+                  c: c,
+                  onTap: onWhatsApp,
+                ),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: _SoftContactBtn(
+                  label: t('chat.openChat', lang),
+                  icon: Icons.forum_outlined,
+                  color: c.accent,
+                  c: c,
+                  onTap: onChat,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Primary call button — full width, prominent
-          _LargeContactBtn(
-            label: t('detail.call', lang),
-            icon: Icons.phone_rounded,
-            color: AppColors.colorSuccess,
-            onTap: onCall,
-          ),
-          const SizedBox(height: 8),
-          // Secondary row: WhatsApp + Chat
+          const SizedBox(height: 13),
+          // Safety tip
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: _OutlineContactBtn(
-                  label: 'WhatsApp',
-                  icon: Icons.chat_rounded,
-                  color: AppColors.whatsapp,
-                  onTap: onWhatsApp,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _OutlineContactBtn(
-                  label: t('chat.openChat', lang),
-                  icon: Icons.message_outlined,
-                  color: c.accent,
-                  onTap: onChat,
+              Icon(Icons.shield_outlined, size: 13, color: c.textMuted),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  t('detail.safetyTip', lang),
+                  style: TextStyle(color: c.textMuted, fontSize: 11.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -909,64 +1138,19 @@ class _SellerCard extends StatelessWidget {
   }
 }
 
-class _LargeContactBtn extends StatelessWidget {
+/// Soft-filled secondary contact button (tinted background, colored label)
+class _SoftContactBtn extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
+  final AppColors c;
   final VoidCallback onTap;
 
-  const _LargeContactBtn({
+  const _SoftContactBtn({
     required this.label,
     required this.icon,
     required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        height: 52,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.28),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 20, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: AppTextStyles.bodyLg(
-                  color: Colors.white, weight: FontWeight.w700),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OutlineContactBtn extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _OutlineContactBtn({
-    required this.label,
-    required this.icon,
-    required this.color,
+    required this.c,
     required this.onTap,
   });
 
@@ -977,20 +1161,23 @@ class _OutlineContactBtn extends StatelessWidget {
       child: Container(
         height: 46,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.5)),
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
+            Icon(icon, size: 17, color: color),
+            const SizedBox(width: 7),
             Flexible(
               child: Text(
                 label,
-                style: AppTextStyles.bodySm(
-                    color: color, weight: FontWeight.w600),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_theme.dart';
 
 /// Central typography scale for the TAJCAR app.
 /// Always use these instead of raw TextStyle font sizes.
@@ -67,7 +68,8 @@ class AppTextStyles {
       GoogleFonts.outfit(
         fontSize: 28,
         fontWeight: FontWeight.w900,
-        color: color ?? Theme.of(context).colorScheme.primary,
+        // Encar-style price red from the theme extension
+        color: color ?? Theme.of(context).extension<AppColors>()!.price,
         letterSpacing: -0.5,
       );
 

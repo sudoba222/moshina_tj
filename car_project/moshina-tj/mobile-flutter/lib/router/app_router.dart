@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../screens/home_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/car_detail_screen.dart';
+import '../screens/seller_profile_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/dashboard_screen.dart';
@@ -118,6 +119,14 @@ GoRouter makeAppRouter(AuthProvider auth) => GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id'] ?? '';
         return CarDetailScreen(listingId: id);
+      },
+    ),
+    GoRoute(
+      path: '/seller/:id',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final id = state.pathParameters['id'] ?? '';
+        return SellerProfileScreen(userId: id);
       },
     ),
     GoRoute(

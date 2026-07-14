@@ -253,6 +253,32 @@ class ApiService {
     return [];
   }
 
+  /// Paginated public listings feed — used by the endless recommendations
+  /// scroll at the bottom of a listing. Returns {items, page, pages}.
+  Future<Map<String, dynamic>> getListingsPage({int page = 1, String sort = 'newest'}) async {
+    final data = await getRaw('/listings',
+        queryParams: {'page': page, 'limit': 12, 'sort': sort});
+    if (data is Map<String, dynamic>) return data;
+    return {'items': <dynamic>[], 'page': page, 'pages': page};
+  }
+
+  // ── Public seller profile ─────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    final data = await getRaw('/users/$userId/profile');
+    return data is Map<String, dynamic> ? data : null;
+  }
+
+  Future<List<dynamic>> getUserListings(String userId, {int page = 1}) async {
+    final data = await getRaw('/users/$userId/listings',
+        queryParams: {'page': page, 'limit': 20});
+    if (data is Map<String, dynamic> && data.containsKey('items')) {
+      return data['items'] as List<dynamic>? ?? [];
+    }
+    if (data is List<dynamic>) return data;
+    return [];
+  }
+
   Future<dynamic> createListing(Map<String, dynamic> data) async {
     return postRaw('/listings', body: data);
   }

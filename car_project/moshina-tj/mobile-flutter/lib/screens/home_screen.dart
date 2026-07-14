@@ -658,7 +658,8 @@ class _FeaturedSection extends StatelessWidget {
               Stack(
                 children: [
                   SizedBox(
-                    height: 350,
+                    // Encar-style card: 210px photo + content block + safety margin
+                    height: 372,
                     child: PageView.builder(
                       controller: pageCtrl,
                       padEnds: false,
