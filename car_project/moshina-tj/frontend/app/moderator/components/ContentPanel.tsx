@@ -405,7 +405,7 @@ export default function ContentPanel({
           <div style={{
             background: listing.vin_verified ? 'var(--color-success-dim)' : 'var(--surface)',
             border: `1px solid ${listing.vin_verified ? 'var(--color-success)' : 'var(--border)'}`,
-            borderRadius: '10px',
+            borderRadius: '12px',
             padding: '10px 14px',
             display: 'flex',
             alignItems: 'center',
@@ -427,7 +427,7 @@ export default function ContentPanel({
           <div style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
-            borderRadius: '10px',
+            borderRadius: '12px',
             padding: '10px 14px',
             display: 'flex',
             flexWrap: 'wrap',
@@ -453,9 +453,9 @@ export default function ContentPanel({
             fontWeight: 600,
             padding: '4px 10px',
             borderRadius: '8px',
-            background: listing.availability === 'in_stock' ? 'var(--color-success-dim)' : listing.availability === 'on_order' ? 'rgba(234,179,8,0.12)' : 'var(--surface)',
-            color: listing.availability === 'in_stock' ? 'var(--color-success)' : listing.availability === 'on_order' ? '#ca8a04' : 'var(--text-muted)',
-            border: `1px solid ${listing.availability === 'in_stock' ? 'var(--color-success)' : listing.availability === 'on_order' ? '#ca8a04' : 'var(--border)'}`,
+            background: listing.availability === 'in_stock' ? 'var(--color-success-dim)' : listing.availability === 'on_order' ? 'var(--color-warning-dim)' : 'var(--surface)',
+            color: listing.availability === 'in_stock' ? 'var(--color-success)' : listing.availability === 'on_order' ? 'var(--color-warning)' : 'var(--text-muted)',
+            border: `1px solid ${listing.availability === 'in_stock' ? 'var(--color-success)' : listing.availability === 'on_order' ? 'var(--color-warning)' : 'var(--border)'}`,
           }}>
             {listing.availability === 'in_stock' ? t('availability.inStock', lang) : listing.availability === 'on_order' ? t('availability.onOrder', lang) : t('availability.abroad', lang)}
           </span>
@@ -485,7 +485,7 @@ export default function ContentPanel({
               fontWeight: 700,
               color: 'var(--color-error)',
               background: 'var(--color-error-dim)',
-              borderRadius: '6px',
+              borderRadius: '8px',
               padding: '2px 6px',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -515,7 +515,7 @@ export default function ContentPanel({
                   style={{
                     background: 'var(--color-error-dim)',
                     color: 'var(--color-error)',
-                    borderRadius: '3px',
+                    borderRadius: '4px',
                     padding: '0 2px',
                   }}
                 >
@@ -545,7 +545,7 @@ export default function ContentPanel({
           marginBottom: '16px',
           background: 'var(--color-warning-dim)',
           border: '1px solid var(--color-warning)',
-          borderRadius: '10px',
+          borderRadius: '12px',
           padding: '12px',
         }}
           role="alert"
@@ -593,7 +593,7 @@ export default function ContentPanel({
       {/* Moderator note */}
       <div style={{
         background: 'var(--surface)',
-        borderRadius: '10px',
+        borderRadius: '12px',
         border: '1px solid var(--border)',
         padding: '12px',
       }}>

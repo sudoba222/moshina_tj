@@ -91,7 +91,7 @@ export default function FirstVisitModal() {
 
         {/* Icon */}
         <div style={{
-          width: '64px', height: '64px', borderRadius: '18px',
+          width: '64px', height: '64px', borderRadius: '20px',
           background: 'var(--accent-dim)', color: 'var(--accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 20px',

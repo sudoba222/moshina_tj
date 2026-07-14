@@ -148,7 +148,7 @@ export default function FeaturedPage() {
               style={{
                 width: '72px',
                 height: '72px',
-                borderRadius: '18px',
+                borderRadius: '20px',
                 background: 'var(--accent-dim)',
                 border: '2px solid var(--accent)',
                 display: 'flex',
@@ -174,7 +174,7 @@ export default function FeaturedPage() {
                 padding: '4px 16px',
                 fontSize: '11px',
                 fontWeight: 800,
-                color: 'var(--color-warning, #ca8a04)',
+                color: 'var(--color-warning)',
                 marginBottom: '16px',
                 letterSpacing: '0.08em',
               }}
@@ -184,7 +184,7 @@ export default function FeaturedPage() {
                   width: '6px',
                   height: '6px',
                   borderRadius: '50%',
-                  background: 'var(--color-warning, #ca8a04)',
+                  background: 'var(--color-warning)',
                   display: 'inline-block',
                 }}
               />
@@ -406,7 +406,7 @@ export default function FeaturedPage() {
                   fontWeight: 700,
                   fontSize: '14px',
                   padding: '10px 24px',
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   textDecoration: 'none',
                   transition: 'opacity 0.15s ease',
                 }}
@@ -439,7 +439,7 @@ export default function FeaturedPage() {
             <div
               style={{
                 marginTop: 'clamp(40px, 6vw, 72px)',
-                background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-hover, #b83208) 100%)',
+                background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%)',
                 borderRadius: 'clamp(12px, 2vw, 20px)',
                 padding: 'clamp(28px, 5vw, 48px) clamp(24px, 4vw, 48px)',
                 display: 'flex',
@@ -483,7 +483,7 @@ export default function FeaturedPage() {
                 style={{
                   width: '52px',
                   height: '52px',
-                  borderRadius: '14px',
+                  borderRadius: '16px',
                   background: 'rgba(255,255,255,0.18)',
                   display: 'flex',
                   alignItems: 'center',

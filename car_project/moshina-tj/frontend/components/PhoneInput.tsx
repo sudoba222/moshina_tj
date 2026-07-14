@@ -152,7 +152,7 @@ export default function PhoneInput({
           display: 'flex',
           alignItems: 'center',
           border: `1px solid ${borderColor}`,
-          borderRadius: '10px',
+          borderRadius: '12px',
           overflow: 'hidden',
           background: 'var(--bg)',
           transition: 'border-color 0.15s',

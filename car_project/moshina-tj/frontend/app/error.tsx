@@ -95,7 +95,7 @@ export default function Error({ error, reset }: ErrorProps) {
               fontFamily: 'monospace',
               background: 'var(--surface)',
               border: '1px solid var(--border)',
-              borderRadius: '6px',
+              borderRadius: '8px',
               padding: '6px 10px',
               margin: 0,
             }}

@@ -68,7 +68,7 @@ export default function Toast({ message, variant, duration = 2000, onDismiss }: 
         zIndex: 9999,
         background: styles.bg,
         border: `1px solid ${styles.border}`,
-        borderRadius: '10px',
+        borderRadius: '12px',
         padding: '10px 18px',
         display: 'flex',
         alignItems: 'center',

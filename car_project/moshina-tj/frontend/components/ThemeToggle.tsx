@@ -45,7 +45,7 @@ export default function ThemeToggle() {
         style={{
           background: 'none',
           border: '1px solid var(--border)',
-          borderRadius: '6px',
+          borderRadius: '8px',
           padding: '6px 8px',
           cursor: 'pointer',
           color: 'var(--text)',
@@ -68,7 +68,7 @@ export default function ThemeToggle() {
       style={{
         background: 'none',
         border: '1px solid var(--border)',
-        borderRadius: '6px',
+        borderRadius: '8px',
         padding: '6px 8px',
         cursor: 'pointer',
         color: 'var(--text)',

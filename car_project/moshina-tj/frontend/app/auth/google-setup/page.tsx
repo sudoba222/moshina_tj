@@ -112,7 +112,7 @@ function GoogleSetupInner() {
               autoFocus
               style={{
                 padding: '12px 14px',
-                borderRadius: '10px',
+                borderRadius: '12px',
                 border: '1.5px solid var(--border)',
                 background: 'var(--bg)',
                 color: 'var(--text)',
@@ -137,7 +137,7 @@ function GoogleSetupInner() {
             disabled={loading}
             style={{
               padding: '13px',
-              borderRadius: '10px',
+              borderRadius: '12px',
               background: 'var(--accent)',
               color: 'var(--color-white)',
               border: 'none',

@@ -89,7 +89,7 @@ export default function RentPage() {
               {RENTAL_CONDITIONS.map((cond) => (
                 <div
                   key={cond.textKey}
-                  style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}
                 >
                   <span style={{ color: 'var(--accent)', flexShrink: 0 }}>{cond.icon}</span>
                   <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>
@@ -129,9 +129,9 @@ function RentSkeleton() {
     <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
       <div style={{ height: '190px' }} className="skeleton" />
       <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ height: '18px', borderRadius: '6px', width: '70%' }} className="skeleton" />
-        <div style={{ height: '13px', borderRadius: '6px', width: '90%' }} className="skeleton" />
-        <div style={{ height: '22px', borderRadius: '6px', width: '45%' }} className="skeleton" />
+        <div style={{ height: '18px', borderRadius: '8px', width: '70%' }} className="skeleton" />
+        <div style={{ height: '13px', borderRadius: '8px', width: '90%' }} className="skeleton" />
+        <div style={{ height: '22px', borderRadius: '8px', width: '45%' }} className="skeleton" />
       </div>
     </div>
   )

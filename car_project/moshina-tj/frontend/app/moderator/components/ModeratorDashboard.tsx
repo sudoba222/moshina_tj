@@ -187,7 +187,7 @@ export default function ModeratorDashboard({ lang, onSessionStart }: ModeratorDa
               style={{
                 background: 'var(--card)',
                 border: '1px solid var(--border)',
-                borderRadius: '14px',
+                borderRadius: '16px',
                 padding: '18px 16px',
               }}
             >
@@ -348,7 +348,7 @@ export default function ModeratorDashboard({ lang, onSessionStart }: ModeratorDa
         <div style={{
           background: 'var(--card)',
           border: '1px solid var(--border)',
-          borderRadius: '14px',
+          borderRadius: '16px',
           overflow: 'hidden',
           marginBottom: '40px',
         }}>

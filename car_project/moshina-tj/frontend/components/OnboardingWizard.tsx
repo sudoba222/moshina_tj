@@ -358,7 +358,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         gap: '8px', padding: '12px 8px',
                         border: `2px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
-                        borderRadius: '14px',
+                        borderRadius: '16px',
                         background: selected ? 'var(--accent-dim)' : 'var(--bg)',
                         cursor: 'pointer',
                         fontFamily: 'var(--font)',

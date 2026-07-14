@@ -217,12 +217,12 @@ export default function AdminBannersPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {banners.length === 0 && (
-            <div style={{ background: 'var(--card)', borderRadius: '14px', border: '1px solid var(--border)', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+            <div style={{ background: 'var(--card)', borderRadius: '16px', border: '1px solid var(--border)', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
               {lang === 'ru' ? 'Нет баннеров. Добавьте первый.' : 'Банер нест. Аввалинро илова кунед.'}
             </div>
           )}
           {banners.map((b) => (
-            <div key={b.id} style={{ background: 'var(--card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
+            <div key={b.id} style={{ background: 'var(--card)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
               <div style={{ flexShrink: 0, width: '120px', height: '72px', position: 'relative', background: 'var(--surface)' }}>
                 {b.image_url ? (
                   <Image src={b.image_url} alt={b.title_ru} fill style={{ objectFit: 'cover' }} />

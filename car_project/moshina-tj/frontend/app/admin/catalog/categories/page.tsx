@@ -199,7 +199,7 @@ function CategoriesPageInner() {
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--card)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '560px' }}>
             <thead>
@@ -254,13 +254,13 @@ function CategoriesPageInner() {
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <button
                           onClick={() => openEdit(c)}
-                          style={{ padding: '4px 10px', background: 'var(--tag-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          style={{ padding: '4px 10px', background: 'var(--tag-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
                           <IconEdit /> {lang === 'ru' ? 'Изм.' : 'Таҳ.'}
                         </button>
                         <button
                           onClick={() => setDeleteId(c.id)}
-                          style={{ padding: '4px 8px', background: 'var(--color-error-dim)', color: 'var(--color-error)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center' }}
+                          style={{ padding: '4px 8px', background: 'var(--color-error-dim)', color: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center' }}
                         >
                           <IconX />
                         </button>

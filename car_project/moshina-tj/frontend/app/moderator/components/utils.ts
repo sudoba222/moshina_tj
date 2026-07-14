@@ -3,7 +3,7 @@
 export function formatPrice(price: number, currency: string): string {
   return currency === 'USD'
     ? `$${price.toLocaleString('en-US')}`
-    : `${price.toLocaleString()} сом.`
+    : `${price.toLocaleString()} с.`
 }
 
 export function formatDate(iso: string): string {

@@ -12,7 +12,7 @@ export default function LanguageToggle() {
         display: 'inline-flex',
         alignItems: 'center',
         border: '1px solid var(--border)',
-        borderRadius: '7px',
+        borderRadius: '8px',
         overflow: 'hidden',
         flexShrink: 0,
       }}

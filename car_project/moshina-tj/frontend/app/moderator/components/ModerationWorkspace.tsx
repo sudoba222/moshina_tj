@@ -361,7 +361,7 @@ export default function ModerationWorkspace({
           style={{
             display: 'flex', alignItems: 'center', gap: '6px',
             background: 'none', border: 'none', color: 'var(--text-secondary)',
-            cursor: 'pointer', fontSize: '13px', padding: '4px 8px', borderRadius: '6px',
+            cursor: 'pointer', fontSize: '13px', padding: '4px 8px', borderRadius: '8px',
           }}
           aria-label="Back to dashboard"
         >
@@ -508,7 +508,7 @@ export default function ModerationWorkspace({
                 style={{
                   padding: '11px 32px',
                   background: 'var(--accent)', color: 'var(--color-white)',
-                  border: 'none', borderRadius: '10px', cursor: 'pointer',
+                  border: 'none', borderRadius: '12px', cursor: 'pointer',
                   fontSize: '14px', fontWeight: 600,
                 }}
               >

@@ -64,7 +64,7 @@ export default function CookieBanner() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '6px',
+          borderRadius: '8px',
           transition: 'color 0.13s, background 0.13s',
         }}
         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.background = 'var(--surface)' }}
@@ -127,7 +127,7 @@ export default function CookieBanner() {
               fontWeight: 700,
               fontSize: '14px',
               padding: '9px 20px',
-              borderRadius: '10px',
+              borderRadius: '12px',
               border: 'none',
               cursor: 'pointer',
               whiteSpace: 'nowrap',

@@ -143,7 +143,7 @@ export default function AdBannerSection() {
               padding: '8px 16px',
               background: 'var(--accent)',
               color: 'var(--color-white)',
-              borderRadius: '6px',
+              borderRadius: '8px',
               fontSize: '13px',
               fontWeight: 700,
             }}
@@ -175,7 +175,7 @@ export default function AdBannerSection() {
               style={{
                 width: i === index ? '18px' : '6px',
                 height: '6px',
-                borderRadius: '3px',
+                borderRadius: '4px',
                 background: i === index ? 'var(--color-white)' : 'rgba(255,255,255,0.4)',
                 border: 'none',
                 cursor: 'pointer',

@@ -75,8 +75,8 @@ function OtpInput({ value, onChange, hasError }: OtpInputProps) {
           onFocus={(e) => {
             e.currentTarget.style.borderColor = hasError ? 'var(--color-error)' : 'var(--accent)'
             e.currentTarget.style.boxShadow = hasError
-              ? '0 0 0 3px var(--color-error-dim, rgba(239,68,68,0.18))'
-              : '0 0 0 3px var(--accent-dim,rgba(220,38,38,0.12))'
+              ? '0 0 0 3px var(--color-error-dim)'
+              : '0 0 0 3px var(--accent-dim)'
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = hasError ? 'var(--color-error)' : 'var(--border)'
@@ -96,7 +96,7 @@ function OtpInput({ value, onChange, hasError }: OtpInputProps) {
 // ─── Shared styles ────────────────────────────────────────────────────────────
 const baseInput: React.CSSProperties = {
   width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
-  borderRadius: '10px', padding: '12px 14px', fontSize: '15px', color: 'var(--text)',
+  borderRadius: '12px', padding: '12px 14px', fontSize: '15px', color: 'var(--text)',
   outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box',
 }
 const submitBtn = (loading: boolean): React.CSSProperties => ({
@@ -287,7 +287,7 @@ function PhoneTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
           style={baseInput} />
       </div>
       {/* Dealer toggle */}
-      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: isDealer ? 'var(--accent-dim, rgba(220,38,38,0.07))' : 'transparent' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)', background: isDealer ? 'var(--accent-dim)' : 'transparent' }}>
         <input type="checkbox" checked={isDealer} onChange={(e) => setIsDealer(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', cursor: 'pointer' }} />
         <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{t('register.isDealer', lang)}</span>
       </label>
@@ -499,7 +499,7 @@ function EmailTab({ lang, onSuccess }: { lang: Lang; onSuccess: (user: User) => 
           style={baseInput} />
       </div>
       {/* Dealer toggle */}
-      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: isDealer ? 'var(--accent-dim, rgba(220,38,38,0.07))' : 'transparent' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)', background: isDealer ? 'var(--accent-dim)' : 'transparent' }}>
         <input type="checkbox" checked={isDealer} onChange={(e) => setIsDealer(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', cursor: 'pointer' }} />
         <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{t('register.isDealer', lang)}</span>
       </label>
@@ -642,7 +642,7 @@ export default function RegisterPage() {
         </h1>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', background: 'var(--surface)', borderRadius: '10px', padding: '4px', marginBottom: '24px', gap: '4px' }}>
+        <div style={{ display: 'flex', background: 'var(--surface)', borderRadius: '12px', padding: '4px', marginBottom: '24px', gap: '4px' }}>
           <button onClick={() => setTab('phone')} style={tabBtn(tab === 'phone')}>
             {t('auth.loginByPhone', lang)}
           </button>

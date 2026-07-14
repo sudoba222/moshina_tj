@@ -244,7 +244,7 @@ export default function ActionPanel({
         <div style={{
           background: 'var(--surface)',
           border: '1px solid var(--border)',
-          borderRadius: '10px',
+          borderRadius: '12px',
           padding: '12px',
           marginTop: '16px',
         }}>
@@ -276,7 +276,7 @@ export default function ActionPanel({
           marginTop: '16px',
           background: 'var(--surface)',
           border: '1px solid var(--border)',
-          borderRadius: '10px',
+          borderRadius: '12px',
           padding: '10px 12px',
           fontSize: '11px',
           color: 'var(--text-muted)',
@@ -313,7 +313,7 @@ export default function ActionPanel({
             background: canReject ? 'var(--color-error)' : 'var(--surface)',
             color: canReject ? 'var(--color-white)' : 'var(--text-muted)',
             border: `1px solid ${canReject ? 'var(--color-error)' : 'var(--border)'}`,
-            borderRadius: '10px',
+            borderRadius: '12px',
             fontSize: '13px',
             fontWeight: 600,
             cursor: canReject ? 'pointer' : 'not-allowed',
@@ -364,7 +364,7 @@ export default function ActionPanel({
           <div style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
-            borderRadius: '10px',
+            borderRadius: '12px',
             padding: '10px',
           }}>
             <button
@@ -416,7 +416,7 @@ export default function ActionPanel({
           <div style={{
             background: 'var(--surface)',
             border: '1px solid var(--color-error)',
-            borderRadius: '10px',
+            borderRadius: '12px',
             padding: '10px',
           }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textAlign: 'center' }}>

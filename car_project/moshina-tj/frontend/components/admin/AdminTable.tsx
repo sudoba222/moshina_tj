@@ -88,7 +88,7 @@ export default function AdminTable<T extends { id: string }>({
     <div
       style={{
         background: 'var(--card)',
-        borderRadius: '14px',
+        borderRadius: '16px',
         border: '1px solid var(--border)',
         overflow: 'hidden',
       }}
@@ -227,7 +227,7 @@ function PageButton({
       style={{
         width: '30px',
         height: '30px',
-        borderRadius: '7px',
+        borderRadius: '8px',
         border: '1px solid var(--border)',
         background: 'var(--surface)',
         color: 'var(--text)',

@@ -104,7 +104,7 @@ export default function UserListingsPage() {
               {(profile.name ?? 'U').charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text)' }}>
+              <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>
                 {profile.name ?? t('userProfile.anonymousUser', lang)}
               </h1>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
@@ -113,7 +113,7 @@ export default function UserListingsPage() {
             </div>
           </div>
 
-          <h2 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '16px' }}>
             {t('userProfile.allListings', lang)} — {total}
           </h2>
 

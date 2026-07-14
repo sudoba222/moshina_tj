@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { t } from '@/lib/i18n'
 import ThemeToggle from './ThemeToggle'
 import LanguageToggle from './LanguageToggle'
-import { searchApi, type SuggestionItem } from '@/lib/api'
+import { searchApi, chatApi, type SuggestionItem } from '@/lib/api'
 import { SORTED_BRANDS } from '@/lib/vehicleData'
 import type { UserRole } from '@/types'
 
@@ -207,6 +207,7 @@ export default function Navbar() {
   const [showSugg, setShowSugg] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
+  const [unreadMsgs, setUnreadMsgs] = useState(0)
 
   useEffect(() => {
     function outside(e: MouseEvent) {
@@ -216,6 +217,19 @@ export default function Navbar() {
     document.addEventListener('mousedown', outside)
     return () => document.removeEventListener('mousedown', outside)
   }, [])
+
+  // Unread messages badge — refresh on route change + every 30s
+  useEffect(() => {
+    if (!user) { setUnreadMsgs(0); return }
+    let cancelled = false
+    const load = () =>
+      chatApi.unreadCount()
+        .then((res) => { if (!cancelled) setUnreadMsgs(res.data.data.count) })
+        .catch(() => {})
+    load()
+    const id = setInterval(load, 30_000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [user, pathname])
 
   const fetchSuggestions = useCallback((q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -309,7 +323,7 @@ export default function Navbar() {
           {/* Desktop search */}
           <div ref={searchRef} className="hidden md:flex" style={{ flex: 1, maxWidth: '420px', position: 'relative' }}>
             <form onSubmit={onSearch} role="search" style={{ width: '100%' }}>
-              <div style={{ display: 'flex', width: '100%', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid var(--border)', background: 'var(--surface)', transition: 'border-color 0.15s' }}>
+              <div style={{ display: 'flex', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1.5px solid var(--border)', background: 'var(--surface)', transition: 'border-color 0.15s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '0 10px', color: 'var(--text-muted)', flexShrink: 0 }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -354,6 +368,39 @@ export default function Navbar() {
 
           {/* Right side */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            {/* Messages icon with unread badge */}
+            {user && (
+              <Link
+                href="/messages"
+                aria-label={t('chat.messages', lang)}
+                style={{
+                  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '38px', height: '38px', borderRadius: '12px',
+                  background: pathname === '/messages' ? 'var(--accent-dim)' : 'transparent',
+                  color: pathname === '/messages' ? 'var(--accent)' : 'var(--text2)',
+                  transition: 'background 0.13s, color 0.13s', textDecoration: 'none',
+                }}
+                onMouseEnter={(e) => { if (pathname !== '/messages') e.currentTarget.style.background = 'var(--tag-bg)' }}
+                onMouseLeave={(e) => { if (pathname !== '/messages') e.currentTarget.style.background = 'transparent' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
+                </svg>
+                {unreadMsgs > 0 && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute', top: '3px', right: '3px', minWidth: '16px', height: '16px',
+                      borderRadius: '8px', background: 'var(--accent)', color: 'var(--color-white)',
+                      fontSize: '10px', fontWeight: 800, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', padding: '0 4px', border: '2px solid var(--nav-bg)',
+                    }}
+                  >
+                    {unreadMsgs > 99 ? '99+' : unreadMsgs}
+                  </span>
+                )}
+              </Link>
+            )}
             <div className="hidden md:flex items-center gap-1">
               <LanguageToggle />
               <ThemeToggle />
@@ -366,11 +413,11 @@ export default function Navbar() {
                   aria-expanded={dropOpen}
                   aria-haspopup="true"
                   aria-label={t('nav.dashboard', lang)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '5px 10px 5px 5px', cursor: 'pointer', transition: 'border-color 0.13s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '5px 10px 5px 5px', cursor: 'pointer', transition: 'border-color 0.13s' }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
                 >
-                  <div style={{ width: '28px', height: '28px', borderRadius: '7px', background: 'var(--accent)', color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 800, flexShrink: 0 }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--accent)', color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 800, flexShrink: 0 }}>
                     {initial}
                   </div>
                   <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', maxWidth: '88px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -411,7 +458,7 @@ export default function Navbar() {
               </div>
             ) : (
               <Link href="/auth/login" className="hidden md:inline-flex items-center"
-                style={{ height: '36px', padding: '0 14px', border: '1.5px solid var(--border)', borderRadius: '9px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', transition: 'border-color 0.13s' }}
+                style={{ height: '36px', padding: '0 14px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', transition: 'border-color 0.13s' }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
                 {t('nav.login', lang)}
@@ -420,7 +467,7 @@ export default function Navbar() {
 
             {/* Post CTA */}
             <Link href="/post" className="hidden md:inline-flex items-center"
-              style={{ height: '38px', padding: '0 18px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', borderRadius: '10px', gap: '7px', whiteSpace: 'nowrap', transition: 'opacity 0.13s', letterSpacing: '0.01em' }}
+              style={{ height: '38px', padding: '0 18px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', borderRadius: '12px', gap: '7px', whiteSpace: 'nowrap', transition: 'opacity 0.13s', letterSpacing: '0.01em' }}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88' }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
@@ -429,7 +476,7 @@ export default function Navbar() {
 
             {/* Hamburger */}
             <button onClick={() => setMobileOpen((v) => !v)} aria-label={mobileOpen ? t('admin.navClose', lang) : t('admin.navOpen', lang)} className="flex md:hidden items-center justify-center"
-              style={{ width: '44px', height: '44px', background: 'none', border: '1.5px solid var(--border)', borderRadius: '9px', cursor: 'pointer', color: 'var(--text)', flexShrink: 0 }}>
+              style={{ width: '44px', height: '44px', background: 'none', border: '1.5px solid var(--border)', borderRadius: '12px', cursor: 'pointer', color: 'var(--text)', flexShrink: 0 }}>
               {mobileOpen ? (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/></svg>
               ) : (
@@ -466,7 +513,7 @@ export default function Navbar() {
 
           {/* Mobile search */}
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', position: 'relative' }}>
-            <form onSubmit={(e) => { onSearch(e); setMobileOpen(false) }} role="search" style={{ display: 'flex', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid var(--border)' }}>
+            <form onSubmit={(e) => { onSearch(e); setMobileOpen(false) }} role="search" style={{ display: 'flex', borderRadius: '12px', overflow: 'hidden', border: '1.5px solid var(--border)' }}>
               <input type="search" value={query}
                 onChange={(e) => { setQuery(e.target.value); fetchSuggestions(e.target.value) }}
                 onFocus={() => { if (suggestions.length > 0) setShowSugg(true) }}
@@ -500,7 +547,7 @@ export default function Navbar() {
           {/* Post CTA — prominent at the top of the drawer nav */}
           <div style={{ padding: '12px 16px 4px' }}>
             <Link href="/post" onClick={() => setMobileOpen(false)}
-              style={{ height: '48px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '15px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
+              style={{ height: '48px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '15px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><line x1="6.5" y1="1" x2="6.5" y2="12"/><line x1="1" y1="6.5" x2="12" y2="6.5"/></svg>
               {t('nav.addListing', lang)}
             </Link>

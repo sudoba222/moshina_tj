@@ -259,7 +259,9 @@ function PostPage() {
     }
     const local = getBrandsForCategory(form.category_slug).find((b) => b.name === form.brand)?.models ?? []
     setModelsList(local.length ? local : ['Другое'])
-  }, [form.brand])
+    // model must reset both when the brand changes and when the category
+    // changes (the same brand can carry a different model list per category)
+  }, [form.brand, form.category_slug])
 
   // Load draft (new mode only)
   useEffect(() => {
@@ -539,7 +541,7 @@ function PostPage() {
   }
   const card: React.CSSProperties = {
     background: 'var(--card)', border: '1px solid var(--border)',
-    borderRadius: '18px', padding: 'clamp(16px, 4vw, 28px)',
+    borderRadius: '20px', padding: 'clamp(16px, 4vw, 28px)',
     marginBottom: '16px',
   }
 
@@ -635,7 +637,7 @@ function PostPage() {
                   <button key={v} type="button"
                     onClick={() => setField('type', v)}
                     style={{
-                      padding: '16px', borderRadius: '14px', fontWeight: 700, fontSize: '15px',
+                      padding: '16px', borderRadius: '16px', fontWeight: 700, fontSize: '15px',
                       cursor: 'pointer', border: '2px solid',
                       borderColor: form.type === v ? 'var(--accent)' : 'var(--border)',
                       background: form.type === v ? 'var(--accent)' : 'var(--surface)',
@@ -678,7 +680,7 @@ function PostPage() {
               </div>
                 {/* Subcategories for Parts */}
                 {form.category_slug === 'parts' && (
-                  <div style={{ marginTop: '20px', padding: '16px', background: 'var(--surface)', borderRadius: '14px', border: '1px dashed var(--border)' }}>
+                  <div style={{ marginTop: '20px', padding: '16px', background: 'var(--surface)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
                     <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '12px' }}>
                       {t('postForm.selectSubcategory', lang)}
                     </p>
@@ -689,7 +691,7 @@ function PostPage() {
                           <button key={sub.id} type="button"
                             onClick={() => setField('subcategory_slug', subSelected ? '' : sub.id)}
                             style={{
-                              padding: '8px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 600,
+                              padding: '8px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 600,
                               cursor: 'pointer', border: '1.5px solid',
                               borderColor: subSelected ? 'var(--accent)' : 'var(--border)',
                               background: subSelected ? 'var(--accent)' : 'var(--card)',
@@ -1304,7 +1306,7 @@ function PostPage() {
                 <label htmlFor="photo-input" style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   gap: '8px', background: 'var(--surface)', border: '2px dashed var(--border)',
-                  borderRadius: '14px', padding: '28px 16px', cursor: 'pointer',
+                  borderRadius: '16px', padding: '28px 16px', cursor: 'pointer',
                   color: 'var(--text-muted)', marginBottom: totalImages > 0 ? '14px' : 0,
                 }}>
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1322,9 +1324,9 @@ function PostPage() {
               {(existingUrls.length > 0 || imagePreviews.length > 0) && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '8px' }}>
                   {existingUrls.map((src, i) => (
-                    <div key={`ex-${i}`} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                    <div key={`ex-${i}`} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                       <Image src={src} alt="" fill sizes="120px" style={{ objectFit: 'cover' }} />
-                      {i === 0 && <div style={{ position: 'absolute', bottom: 4, left: 4, background: 'var(--accent)', color: 'var(--color-white)', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>1</div>}
+                      {i === 0 && <div style={{ position: 'absolute', bottom: 4, left: 4, background: 'var(--accent)', color: 'var(--color-white)', fontSize: '10px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>1</div>}
                       <button type="button" onClick={() => setExistingUrls((p) => p.filter((_, idx) => idx !== i))}
                         style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="1" y1="1" x2="8" y2="8"/><line x1="8" y1="1" x2="1" y2="8"/></svg>
@@ -1332,7 +1334,7 @@ function PostPage() {
                     </div>
                   ))}
                   {imagePreviews.map((src, i) => (
-                    <div key={`new-${i}`} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '10px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
+                    <div key={`new-${i}`} style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '12px', overflow: 'hidden', border: '2px solid var(--accent)' }}>
                       <Image src={src} alt="" fill sizes="120px" style={{ objectFit: 'cover' }} />
                       <button type="button" onClick={() => removeNew(i)}
                         style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: 'var(--color-white)', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1494,7 +1496,7 @@ function PostPage() {
                 <button
                   type="submit"
                   disabled={submitting || uploading}
-                  style={{ flex: 1, padding: '16px', borderRadius: '14px', background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 800, fontSize: '16px', border: 'none', cursor: submitting || uploading ? 'not-allowed' : 'pointer', transition: 'background 0.15s', minHeight: '54px' }}
+                  style={{ flex: 1, padding: '16px', borderRadius: '16px', background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 800, fontSize: '16px', border: 'none', cursor: submitting || uploading ? 'not-allowed' : 'pointer', transition: 'background 0.15s', minHeight: '54px' }}
                 >
                   {uploading ? t('postForm.uploading', lang) : submitting ? t('postForm.sending', lang) : t('postForm.submitListing', lang)}
                 </button>
@@ -1506,7 +1508,7 @@ function PostPage() {
               <button
                 type="submit"
                 disabled={submitting || uploading}
-                style={{ width: '100%', padding: '16px', borderRadius: '14px', background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 800, fontSize: '16px', border: 'none', cursor: submitting || uploading ? 'not-allowed' : 'pointer', transition: 'background 0.15s', minHeight: '54px' }}
+                style={{ width: '100%', padding: '16px', borderRadius: '16px', background: submitting || uploading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 800, fontSize: '16px', border: 'none', cursor: submitting || uploading ? 'not-allowed' : 'pointer', transition: 'background 0.15s', minHeight: '54px' }}
               >
                 {uploading ? t('postForm.uploading', lang) : submitting ? t('postForm.sending', lang) : t('postForm.saveChanges', lang)}
               </button>

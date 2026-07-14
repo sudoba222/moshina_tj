@@ -269,7 +269,7 @@ export default function DashboardPage() {
     width: '100%',
     background: 'var(--bg)',
     border: '1px solid var(--border)',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '11px 14px',
     fontSize: '15px',
     color: 'var(--text)',
@@ -368,7 +368,7 @@ export default function DashboardPage() {
                   width: '84px', height: '84px', borderRadius: '50%',
                   background: 'var(--accent)', color: 'var(--color-white)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '34px', fontWeight: 800, flexShrink: 0,
+                  fontSize: '32px', fontWeight: 800, flexShrink: 0,
                   boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                 }}>
                   {(user.name ?? user.phone ?? '?').charAt(0).toUpperCase()}
@@ -419,11 +419,11 @@ export default function DashboardPage() {
                   {profileSuccess && <p style={{ color: 'var(--color-success)', fontSize: '13px', fontWeight: 600 }}>{t('dashboard.savedSuccess', lang)}</p>}
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button onClick={saveProfile} disabled={profileSaving}
-                      style={{ flex: 1, background: profileSaving ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: profileSaving ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
+                      style={{ flex: 1, background: profileSaving ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '12px', border: 'none', cursor: profileSaving ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
                       {profileSaving ? t('common.loading', lang) : t('dashboard.save', lang)}
                     </button>
                     <button onClick={() => { setEditMode(false); setProfileError('') }}
-                      style={{ padding: '11px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '10px', fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer', fontSize: '14px' }}>
+                      style={{ padding: '11px 16px', background: 'none', border: '1px solid var(--border)', borderRadius: '12px', fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer', fontSize: '14px' }}>
                       {t('dashboard.cancel', lang)}
                     </button>
                   </div>
@@ -592,7 +592,7 @@ export default function DashboardPage() {
                     <button
                       onClick={() => setListingsPage((p) => p + 1)}
                       disabled={listingsLoading}
-                      style={{ marginTop: '8px', padding: '11px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', fontWeight: 700, fontSize: '14px', color: 'var(--text)', cursor: listingsLoading ? 'not-allowed' : 'pointer' }}
+                      style={{ marginTop: '8px', padding: '11px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', fontWeight: 700, fontSize: '14px', color: 'var(--text)', cursor: listingsLoading ? 'not-allowed' : 'pointer' }}
                     >
                       {listingsLoading ? t('common.loading', lang) : t('dashboard.loadMore', lang)}
                     </button>
@@ -667,7 +667,7 @@ export default function DashboardPage() {
                     <button
                       onClick={changePassword}
                       disabled={pwdLoading}
-                      style={{ background: pwdLoading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: pwdLoading ? 'not-allowed' : 'pointer' }}
+                      style={{ background: pwdLoading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '12px', border: 'none', cursor: pwdLoading ? 'not-allowed' : 'pointer' }}
                     >
                       {pwdLoading ? t('common.loading', lang) : t('dashboard.save', lang)}
                     </button>
@@ -740,7 +740,7 @@ export default function DashboardPage() {
                             position: 'relative',
                             width: '100%',
                             height: '160px',
-                            borderRadius: '14px',
+                            borderRadius: '16px',
                             overflow: 'hidden',
                             background: 'var(--surface)',
                             border: '1.5px dashed var(--border)',
@@ -875,7 +875,7 @@ export default function DashboardPage() {
                             type={type}
                             value={dealerForm[key]}
                             onChange={(e) => setDealerForm((prev) => ({ ...prev, [key]: e.target.value }))}
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '14px', fontWeight: 500, outline: 'none', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '14px', fontWeight: 500, outline: 'none', boxSizing: 'border-box' }}
                           />
                         </div>
                       ))}
@@ -885,7 +885,7 @@ export default function DashboardPage() {
                           value={dealerForm.description}
                           onChange={(e) => setDealerForm((prev) => ({ ...prev, description: e.target.value }))}
                           rows={4}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '14px', fontWeight: 500, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '14px', fontWeight: 500, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
                         />
                       </div>
                       {dealerError && <p style={{ color: 'var(--color-error)', fontSize: '13px', fontWeight: 600 }}>{dealerError}</p>}
@@ -893,7 +893,7 @@ export default function DashboardPage() {
                       <button
                         onClick={saveDealer}
                         disabled={dealerSaving}
-                        style={{ background: dealerSaving ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '10px', border: 'none', cursor: dealerSaving ? 'not-allowed' : 'pointer' }}
+                        style={{ background: dealerSaving ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, padding: '11px', borderRadius: '12px', border: 'none', cursor: dealerSaving ? 'not-allowed' : 'pointer' }}
                       >
                         {dealerSaving ? t('common.loading', lang) : t('dashboard.save', lang)}
                       </button>
@@ -987,7 +987,7 @@ function DashboardListingRow({
   onDelete: () => void
 }) {
   const primaryImage = listing.images.find((img) => img.is_primary) ?? listing.images[0]
-  const formatPrice = (p: number, c: string) => c === 'USD' ? `$${p.toLocaleString('en-US')}` : `${p.toLocaleString()} сом.`
+  const formatPrice = (p: number, c: string) => c === 'USD' ? `$${p.toLocaleString('en-US')}` : `${p.toLocaleString()} с.`
 
   return (
     <div style={{
@@ -1047,7 +1047,7 @@ function DashboardListingRow({
           )}
         </div>
         {listing.status === 'rejected' && listing.rejection_reason && (
-          <p style={{ fontSize: '11px', color: 'var(--color-error)', marginTop: '4px', marginBottom: '2px', background: 'var(--color-error-dim)', padding: '4px 8px', borderRadius: '6px', display: 'inline-block' }}>
+          <p style={{ fontSize: '11px', color: 'var(--color-error)', marginTop: '4px', marginBottom: '2px', background: 'var(--color-error-dim)', padding: '4px 8px', borderRadius: '8px', display: 'inline-block' }}>
             {t('dashboard.rejectionReason', lang)}: {listing.rejection_reason}
           </p>
         )}

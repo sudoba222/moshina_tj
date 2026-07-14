@@ -28,7 +28,7 @@ function RoleBadge({ role }: { role: string }) {
   }
   const c = colors[role] ?? colors.user
   return (
-    <span style={{ background: c.bg, color: c.text, fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+    <span style={{ background: c.bg, color: c.text, fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
       {role}
     </span>
   )
@@ -184,7 +184,7 @@ export default function UserProfilePage() {
           </div>
 
           {/* Listings */}
-          <h2 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', marginBottom: '16px' }}>
             {t('userProfile.allListings', lang)} — {total}
           </h2>
 

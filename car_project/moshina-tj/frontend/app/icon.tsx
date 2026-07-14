@@ -14,7 +14,7 @@ export default function Icon() {
           background: C_ACCENT,
           width: 32,
           height: 32,
-          borderRadius: 6,
+          borderRadius: 8,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

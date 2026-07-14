@@ -250,7 +250,7 @@ export default function ManagerPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
-                      <div style={{ height: '32px', width: '60%', borderRadius: '6px', marginBottom: '8px' }} className="skeleton" />
+                      <div style={{ height: '32px', width: '60%', borderRadius: '8px', marginBottom: '8px' }} className="skeleton" />
                       <div style={{ height: '12px', width: '80%', borderRadius: '4px' }} className="skeleton" />
                     </div>
                   ))}

@@ -197,7 +197,7 @@ function BrandsPageInner() {
         </div>
       </div>
 
-      <div style={{ background: 'var(--card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--card)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
             <thead>
@@ -265,20 +265,20 @@ function BrandsPageInner() {
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <Link
                             href={`/admin/catalog/brands/${b.id}/models`}
-                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
                           >
                             {t('admin.viewModels', lang)} <IconChevronRight />
                           </Link>
                           <button
                             onClick={() => { setEditBrandData({ ...b }); setBrandActionError('') }}
-                            style={{ padding: '4px 10px', background: 'var(--tag-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            style={{ padding: '4px 10px', background: 'var(--tag-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
                             aria-label={t('admin.editBrand', lang)}
                           >
                             <IconEdit />
                           </button>
                           <button
                             onClick={() => setDeleteBrandId(b.id)}
-                            style={{ padding: '4px 8px', background: 'var(--color-error-dim)', color: 'var(--color-error)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center' }}
+                            style={{ padding: '4px 8px', background: 'var(--color-error-dim)', color: 'var(--color-error)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center' }}
                             aria-label={t('admin.deleteBrand', lang)}
                           >
                             <IconX />
@@ -328,13 +328,13 @@ function BrandsPageInner() {
                                 />
                                 <button
                                   onClick={() => handleAddModel(b.id)}
-                                  style={{ padding: '6px 12px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
+                                  style={{ padding: '6px 12px', background: 'var(--accent)', color: 'var(--color-white)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
                                 >
                                   {lang === 'ru' ? 'Добавить' : 'Илова'}
                                 </button>
                                 <button
                                   onClick={() => { setAddModelBrandId(null); setNewModelName('') }}
-                                  style={{ padding: '6px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: 'var(--text)' }}
+                                  style={{ padding: '6px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text)' }}
                                 >
                                   {t('dashboard.cancel', lang)}
                                 </button>
@@ -342,7 +342,7 @@ function BrandsPageInner() {
                             ) : (
                               <button
                                 onClick={() => { setAddModelBrandId(b.id); setNewModelName('') }}
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 12px', background: 'var(--card)', border: '1px dashed var(--border)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: 'var(--text-secondary)' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 12px', background: 'var(--card)', border: '1px dashed var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text-secondary)' }}
                               >
                                 <IconPlus /> {lang === 'ru' ? 'Добавить модель' : 'Модел илова'}
                               </button>

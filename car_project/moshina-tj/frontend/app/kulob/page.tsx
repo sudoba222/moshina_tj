@@ -87,7 +87,7 @@ export default function KulobPage() {
               background: 'var(--accent)',
               color: 'var(--color-white)',
               padding: '12px 24px',
-              borderRadius: 10,
+              borderRadius: 12,
               fontWeight: 700,
               fontSize: 15,
               textDecoration: 'none',

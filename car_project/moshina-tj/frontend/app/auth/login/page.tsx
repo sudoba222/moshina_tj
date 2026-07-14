@@ -36,7 +36,7 @@ const baseInput: React.CSSProperties = {
   width: '100%',
   background: 'var(--bg)',
   border: '1px solid var(--border)',
-  borderRadius: '10px',
+  borderRadius: '12px',
   padding: '12px 14px',
   fontSize: '15px',
   color: 'var(--text)',
@@ -265,7 +265,7 @@ function LoginPageInner() {
         >
 
           {/* Phone / Email / OTP toggle */}
-          <div style={{ display: 'flex', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '3px', gap: '3px' }}>
+          <div style={{ display: 'flex', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '3px', gap: '3px' }}>
             {(['phone', 'email', 'otp'] as const).map((mode) => (
               <button
                 key={mode}
@@ -274,7 +274,7 @@ function LoginPageInner() {
                 style={{
                   flex: 1,
                   padding: '8px',
-                  borderRadius: '7px',
+                  borderRadius: '8px',
                   border: 'none',
                   fontSize: '13px',
                   fontWeight: 600,
@@ -386,7 +386,7 @@ function LoginPageInner() {
               <label htmlFor="remember-me" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: '18px', height: '18px', borderRadius: '5px', flexShrink: 0,
+                  width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0,
                   border: `2px solid ${rememberMe ? 'var(--accent)' : 'var(--border)'}`,
                   background: rememberMe ? 'var(--accent)' : 'var(--bg)',
                   transition: 'all 0.15s',
@@ -423,7 +423,7 @@ function LoginPageInner() {
               </p>
               {/* Email not verified — offer to resend code */}
               {emailUnverified && (
-                <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px' }}>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 8px' }}>
                     {t('authForm.resendCodePrompt', lang)}
                   </p>

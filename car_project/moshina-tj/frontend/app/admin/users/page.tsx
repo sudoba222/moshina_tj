@@ -249,7 +249,7 @@ function UsersPageInner() {
                         style={{
                           background: 'none',
                           border: '1px solid var(--border)',
-                          borderRadius: '6px',
+                          borderRadius: '8px',
                           padding: '3px 7px',
                           cursor: 'pointer',
                           display: 'flex',

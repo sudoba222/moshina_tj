@@ -32,7 +32,7 @@ export default function StatCard({ label, value, accentColor, icon, trend, onCli
       onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.() } : undefined}
       style={{
         background: 'var(--card)',
-        borderRadius: '14px',
+        borderRadius: '16px',
         border: '1px solid var(--border)',
         padding: '20px',
         display: 'flex',
@@ -58,7 +58,7 @@ export default function StatCard({ label, value, accentColor, icon, trend, onCli
             style={{
               position: 'absolute',
               inset: 0,
-              borderRadius: '10px',
+              borderRadius: '12px',
               background: color,
               opacity: 0.12,
             }}

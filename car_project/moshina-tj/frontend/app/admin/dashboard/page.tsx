@@ -25,7 +25,7 @@ function DashboardSkeleton() {
       <div className="grid gap-[14px] mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="rounded-[14px] p-5 h-[110px] border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-            <div style={{ ...s, width: '40px', height: '40px', borderRadius: '10px', marginBottom: '16px' }} />
+            <div style={{ ...s, width: '40px', height: '40px', borderRadius: '12px', marginBottom: '16px' }} />
             <div style={{ ...s, width: '60%', height: '20px', marginBottom: '8px' }} />
             <div style={{ ...s, width: '40%', height: '12px' }} />
           </div>
@@ -448,7 +448,7 @@ function NewUsersPanel({ onClose }: { onClose: () => void }) {
           zIndex: 50,
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: 'var(--shadow-xl, -8px 0 40px rgba(0,0,0,0.18))',
+          boxShadow: 'var(--shadow-xl)',
         }}
       >
         {/* Header */}
@@ -620,11 +620,11 @@ function NewUsersPanel({ onClose }: { onClose: () => void }) {
                       {/* Status */}
                       <td style={tdStyle}>
                         {u.is_banned ? (
-                          <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'var(--color-error-dim)', color: 'var(--color-error)' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: 'var(--color-error-dim)', color: 'var(--color-error)' }}>
                             Заблокирован
                           </span>
                         ) : (
-                          <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'var(--color-success-dim)', color: 'var(--color-success)' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: 'var(--color-success-dim)', color: 'var(--color-success)' }}>
                             Активен
                           </span>
                         )}
@@ -982,7 +982,7 @@ export default function AdminDashboardPage() {
                                   width: `${pct}%`,
                                   height: '100%',
                                   background: 'var(--accent)',
-                                  borderRadius: '3px',
+                                  borderRadius: '4px',
                                   transition: 'width 0.3s ease',
                                 }}
                               />

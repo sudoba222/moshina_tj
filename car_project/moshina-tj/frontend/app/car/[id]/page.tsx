@@ -60,7 +60,7 @@ export async function generateMetadata(
   const priceStr =
     listing.currency === 'USD'
       ? `$${Number(listing.price).toLocaleString('en-US')}`
-      : `${Number(listing.price).toLocaleString('ru-RU')} сом.`
+      : `${Number(listing.price).toLocaleString('ru-RU')} с.`
 
   const title = `${listing.brand} ${listing.model} ${listing.year} — ${priceStr}`
   const description = listing.description

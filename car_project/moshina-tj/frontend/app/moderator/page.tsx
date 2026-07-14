@@ -107,7 +107,7 @@ function SummaryScreen({
             background: 'var(--accent)',
             color: 'var(--color-white)',
             border: 'none',
-            borderRadius: '10px',
+            borderRadius: '12px',
             fontSize: '14px',
             fontWeight: 600,
             cursor: 'pointer',

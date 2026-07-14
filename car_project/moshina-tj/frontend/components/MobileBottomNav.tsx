@@ -190,7 +190,7 @@ export default function MobileBottomNav() {
               justifyContent: 'center',
               transform: 'translateY(-10px)',
               flexShrink: 0,
-              boxShadow: '0 4px 20px rgba(200,56,8,.35)',
+              boxShadow: '0 4px 20px var(--accent-glow)',
               transition: 'opacity 0.15s ease',
               WebkitTapHighlightColor: 'transparent',
             }}

@@ -334,7 +334,7 @@ export default function SupportPage() {
                         </div>
                         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>{u.phone}</div>
                         {u.ban_reason && (
-                          <div style={{ fontSize: '13px', color: 'var(--color-error)', background: 'var(--color-error-dim)', borderRadius: '6px', padding: '4px 8px', display: 'inline-block' }}>
+                          <div style={{ fontSize: '13px', color: 'var(--color-error)', background: 'var(--color-error-dim)', borderRadius: '8px', padding: '4px 8px', display: 'inline-block' }}>
                             {t('support.banReason', lang)}: {u.ban_reason}
                           </div>
                         )}
@@ -450,7 +450,7 @@ export default function SupportPage() {
                                 <span style={{
                                   minWidth: '18px', height: '18px', padding: '0 4px',
                                   background: 'var(--color-error)', color: 'var(--color-white)',
-                                  fontSize: '10px', fontWeight: 800, borderRadius: '9px',
+                                  fontSize: '10px', fontWeight: 800, borderRadius: '12px',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                                 }}>
                                   {tk.unread_count}
@@ -469,7 +469,7 @@ export default function SupportPage() {
                                 <span style={{
                                   fontSize: '11px', fontWeight: 600, padding: '1px 7px',
                                   background: 'var(--border)', color: 'var(--text-muted)',
-                                  borderRadius: '6px',
+                                  borderRadius: '8px',
                                 }}>
                                   {t('support.unassigned', lang)}
                                 </span>
@@ -486,7 +486,7 @@ export default function SupportPage() {
                                 <span style={{
                                   fontSize: '11px', fontWeight: 600, padding: '1px 7px',
                                   background: 'var(--color-success-dim)', color: 'var(--color-success)',
-                                  borderRadius: '6px',
+                                  borderRadius: '8px',
                                 }}>
                                   {t('support.closed', lang)}
                                 </span>
@@ -687,7 +687,7 @@ export default function SupportPage() {
                           {l.price.toLocaleString()} {l.currency}
                         </div>
                         {l.rejection_reason && (
-                          <div style={{ fontSize: '13px', color: 'var(--color-error)', background: 'var(--color-error-dim)', borderRadius: '6px', padding: '4px 8px', display: 'inline-block' }}>
+                          <div style={{ fontSize: '13px', color: 'var(--color-error)', background: 'var(--color-error-dim)', borderRadius: '8px', padding: '4px 8px', display: 'inline-block' }}>
                             {t('support.rejectionReason', lang)}: {l.rejection_reason}
                           </div>
                         )}

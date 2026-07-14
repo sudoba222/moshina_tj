@@ -66,7 +66,7 @@ export default function AdminSystemPage() {
       </h1>
 
       {/* NHTSA vehicle database import */}
-      <div style={{ background: 'var(--card)', borderRadius: '14px', padding: '20px', border: '1px solid var(--border)', marginBottom: '28px' }}>
+      <div style={{ background: 'var(--card)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border)', marginBottom: '28px' }}>
         <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)', marginBottom: '6px' }}>
           {lang === 'ru' ? 'База автомобилей (NHTSA)' : 'Пойгоҳи мошинаҳо (NHTSA)'}
         </div>
@@ -125,7 +125,7 @@ export default function AdminSystemPage() {
       </div>
 
       {/* Full audit log */}
-      <div style={{ background: 'var(--card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--card)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
           <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>{t('admin.auditLog', lang)}</span>
         </div>
@@ -153,7 +153,7 @@ export default function AdminSystemPage() {
                     <tr key={log.id}>
                       <td style={tdStyle}>{log.actor_name ?? log.actor_id ?? '—'}</td>
                       <td style={tdStyle}>
-                        <span style={{ background: 'var(--tag-bg)', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontFamily: 'monospace' }}>{log.action}</span>
+                        <span style={{ background: 'var(--tag-bg)', padding: '2px 8px', borderRadius: '8px', fontSize: '12px', fontFamily: 'monospace' }}>{log.action}</span>
                       </td>
                       <td style={tdStyle}>{log.target_type ?? '—'} {log.target_id ? `#${log.target_id.slice(0, 6)}` : ''}</td>
                       <td style={tdStyle}>{new Date(log.created_at).toLocaleString('ru-RU')}</td>

@@ -197,7 +197,7 @@ function Lightbox({ images, startIndex, onClose }: {
                 width: '52px',
                 height: '38px',
                 flexShrink: 0,
-                borderRadius: '6px',
+                borderRadius: '8px',
                 overflow: 'hidden',
                 border: `2px solid ${i === idx ? 'var(--accent)' : 'rgba(255,255,255,0.25)'}`,
                 cursor: 'pointer',

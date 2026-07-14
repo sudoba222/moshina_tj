@@ -72,7 +72,7 @@ export default function InstallmentPage() {
 
   function fmt(val: number) {
     if (currency === 'TJS') {
-      return (val * TJS_RATE).toLocaleString('ru-RU') + ' сом.'
+      return (val * TJS_RATE).toLocaleString('ru-RU') + ' с.'
     }
     return '$' + val.toLocaleString('ru-RU')
   }
@@ -328,11 +328,11 @@ export default function InstallmentPage() {
                       </div>
                       <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                          <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--accent)', flexShrink: 0, display: 'inline-block' }} />
+                          <span style={{ width: '10px', height: '10px', borderRadius: '4px', background: 'var(--accent)', flexShrink: 0, display: 'inline-block' }} />
                           {t('installment.labelDown', lang)} {principalPct}%
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                          <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--color-warning)', flexShrink: 0, display: 'inline-block' }} />
+                          <span style={{ width: '10px', height: '10px', borderRadius: '4px', background: 'var(--color-warning)', flexShrink: 0, display: 'inline-block' }} />
                           {t('installment.labelInterest', lang)} {interestPct}%
                         </div>
                       </div>
@@ -368,7 +368,7 @@ export default function InstallmentPage() {
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px' }}>
                 {t('installment.amortization', lang)}
               </h3>
-              <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+              <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                   <thead>
                     <tr style={{ background: 'var(--surface)' }}>
@@ -452,9 +452,9 @@ function InstallmentSkeleton() {
     <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
       <div style={{ height: '190px' }} className="skeleton" />
       <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ height: '18px', borderRadius: '6px', width: '70%' }} className="skeleton" />
-        <div style={{ height: '13px', borderRadius: '6px', width: '90%' }} className="skeleton" />
-        <div style={{ height: '22px', borderRadius: '6px', width: '45%' }} className="skeleton" />
+        <div style={{ height: '18px', borderRadius: '8px', width: '70%' }} className="skeleton" />
+        <div style={{ height: '13px', borderRadius: '8px', width: '90%' }} className="skeleton" />
+        <div style={{ height: '22px', borderRadius: '8px', width: '45%' }} className="skeleton" />
       </div>
     </div>
   )

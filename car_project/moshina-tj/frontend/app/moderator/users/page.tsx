@@ -127,7 +127,7 @@ export default function ModeratorUsersPage() {
   const inp: React.CSSProperties = {
     background: 'var(--surface)',
     border: '1.5px solid var(--border)',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '10px 14px',
     fontSize: '14px',
     color: 'var(--text)',
@@ -186,7 +186,7 @@ export default function ModeratorUsersPage() {
               onClick={() => handleBannedFilter(val)}
               style={{
                 padding: '10px 16px',
-                borderRadius: '10px',
+                borderRadius: '12px',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -293,7 +293,7 @@ export default function ModeratorUsersPage() {
                           <Link
                             href={`/admin/users/${u.id}`}
                             style={{
-                              padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600,
+                              padding: '5px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
                               background: 'var(--surface)', border: '1px solid var(--border)',
                               color: 'var(--text)', textDecoration: 'none', whiteSpace: 'nowrap',
                             }}
@@ -303,7 +303,7 @@ export default function ModeratorUsersPage() {
                           {u.is_banned ? (
                             <button
                               onClick={() => doUnban(u.id)}
-                              style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--color-success-dim)', border: '1px solid var(--color-success)', color: 'var(--color-success)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                              style={{ padding: '5px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, background: 'var(--color-success-dim)', border: '1px solid var(--color-success)', color: 'var(--color-success)', cursor: 'pointer', whiteSpace: 'nowrap' }}
                             >
                               {lang === 'ru' ? 'Разбанить' : 'Фаъол кунед'}
                             </button>
@@ -311,7 +311,7 @@ export default function ModeratorUsersPage() {
                             u.role === 'user' || u.role === 'dealer' ? (
                               <button
                                 onClick={() => { setBanTarget(u); setBanReason('') }}
-                                style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--color-error-dim)', border: '1px solid var(--color-error)', color: 'var(--color-error)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                style={{ padding: '5px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, background: 'var(--color-error-dim)', border: '1px solid var(--color-error)', color: 'var(--color-error)', cursor: 'pointer', whiteSpace: 'nowrap' }}
                               >
                                 {lang === 'ru' ? 'Забанить' : 'Бан'}
                               </button>
@@ -372,14 +372,14 @@ export default function ModeratorUsersPage() {
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={() => setBanTarget(null)}
-                style={{ flex: 1, padding: '11px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+                style={{ flex: 1, padding: '11px', borderRadius: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
               >
                 {t('common.cancel', lang)}
               </button>
               <button
                 onClick={doBan}
                 disabled={banLoading}
-                style={{ flex: 1, padding: '11px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: banLoading ? 'not-allowed' : 'pointer', border: 'none', background: 'var(--color-error)', color: 'var(--color-white)', opacity: banLoading ? 0.7 : 1 }}
+                style={{ flex: 1, padding: '11px', borderRadius: '12px', fontSize: '14px', fontWeight: 600, cursor: banLoading ? 'not-allowed' : 'pointer', border: 'none', background: 'var(--color-error)', color: 'var(--color-white)', opacity: banLoading ? 0.7 : 1 }}
               >
                 {banLoading ? '...' : (lang === 'ru' ? 'Забанить' : 'Бан кунед')}
               </button>

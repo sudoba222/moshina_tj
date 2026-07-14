@@ -47,7 +47,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const price = listing
     ? listing.currency === 'USD'
       ? `$${Number(listing.price).toLocaleString('en-US')}`
-      : `${Number(listing.price).toLocaleString('ru-RU')} сом.`
+      : `${Number(listing.price).toLocaleString('ru-RU')} с.`
     : null
 
   const city = listing?.city ?? null

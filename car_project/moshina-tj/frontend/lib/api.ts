@@ -109,7 +109,11 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Redirect to login on 401 (expired / revoked token)
+// On 401 (expired / revoked / missing token) clear the session state.
+// Only redirect to login inside protected areas — anonymous visitors on
+// public pages (homepage, catalog, car details, ...) must keep browsing.
+// The /auth/me bootstrap probe returns 401 for every logged-out visitor,
+// so a global redirect here would kick new users off the site.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -117,17 +121,17 @@ api.interceptors.response.use(
       const path = window.location.pathname
       setInMemoryToken(null)
       localStorage.removeItem('user')
-      // Staff panels redirect to their own login; everyone else to the public login
       if (
-        path.startsWith('/admin/') ||
-        path.startsWith('/moderator/') ||
-        path.startsWith('/manager/') ||
-        path.startsWith('/support/')
+        path.startsWith('/admin') ||
+        path.startsWith('/moderator') ||
+        path.startsWith('/manager') ||
+        path.startsWith('/support')
       ) {
-        window.location.href = '/admin/login'
-      } else if (!path.startsWith('/auth/')) {
+        if (path !== '/admin/login') window.location.href = '/admin/login'
+      } else if (path.startsWith('/dashboard') || path.startsWith('/post')) {
         window.location.href = '/auth/login'
       }
+      // All other paths: stay on the page as a logged-out visitor.
     }
     return Promise.reject(error)
   }
@@ -273,6 +277,13 @@ export const uploadApi = {
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     )
+  },
+  audio: (blob: Blob, filename: string) => {
+    const form = new FormData()
+    form.append('file', blob, filename)
+    return api.post<ApiResponse<{ url: string; public_id: string }>>('/upload/audio', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
   },
 }
 
@@ -498,8 +509,16 @@ export const chatApi = {
     api.get<ApiResponse<PaginatedResponse<ChatMessage>>>(`/conversations/${convId}/messages`, { params: { page, limit: 30 } }),
   sendMessage: (convId: string, content: string) =>
     api.post<ApiResponse<ChatMessage>>(`/conversations/${convId}/messages`, { content }),
+  sendVoiceMessage: (convId: string, attachmentUrl: string, durationSeconds: number) =>
+    api.post<ApiResponse<ChatMessage>>(`/conversations/${convId}/messages`, {
+      message_type: 'voice',
+      attachment_url: attachmentUrl,
+      duration_seconds: durationSeconds,
+    }),
   markRead: (convId: string) =>
     api.put<ApiResponse<null>>(`/conversations/${convId}/read`),
+  unreadCount: () =>
+    api.get<ApiResponse<{ count: number }>>('/conversations/unread-count'),
 }
 
 export const notificationsApi = {

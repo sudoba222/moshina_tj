@@ -8,6 +8,7 @@ import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
 import ImageLightbox from '@/components/ImageLightbox'
 import { listingsApi, usersApi, searchApi, favoritesApi, adminApi, chatApi } from '@/lib/api'
+import InfiniteListingsFeed from '@/components/InfiniteListingsFeed'
 import { useLang } from '@/lib/LanguageContext'
 import { useAuth } from '@/lib/AuthContext'
 import { t } from '@/lib/i18n'
@@ -29,7 +30,7 @@ function SpecRow({ icon, label, value }: SpecRowProps) {
       gap: '6px',
       background: 'var(--surface)',
       border: '1px solid var(--border)',
-      borderRadius: '14px',
+      borderRadius: '16px',
       padding: '14px 16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -219,7 +220,7 @@ function StaffToolbar({ listing, onReject, onBanUser }: StaffToolbarProps) {
           href={`/admin/listings?id=${listing.id}`}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 10,
+            padding: '8px 14px', borderRadius: 12,
             background: 'var(--surface)', border: '1px solid var(--border)',
             color: 'var(--text)', fontSize: 13, fontWeight: 600,
             textDecoration: 'none', cursor: 'pointer',
@@ -233,7 +234,7 @@ function StaffToolbar({ listing, onReject, onBanUser }: StaffToolbarProps) {
             onClick={onReject}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 10,
+              padding: '8px 14px', borderRadius: 12,
               background: 'var(--color-error-dim)', border: '1px solid var(--color-error-border, rgba(239,68,68,0.3))',
               color: 'var(--color-error)', fontSize: 13, fontWeight: 600,
               cursor: 'pointer',
@@ -247,7 +248,7 @@ function StaffToolbar({ listing, onReject, onBanUser }: StaffToolbarProps) {
           onClick={onBanUser}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 10,
+            padding: '8px 14px', borderRadius: 12,
             background: 'var(--color-error-dim)', border: '1px solid var(--color-error-border, rgba(239,68,68,0.2))',
             color: 'var(--color-error)', fontSize: 13, fontWeight: 600,
             cursor: 'pointer',
@@ -789,7 +790,7 @@ export default function CarDetailClient() {
             <div style={{ flex: '1 1 60%', minWidth: 0 }}>
               {/* Main image — supports swipe on mobile */}
               <div
-                style={{ position: 'relative', height: 'clamp(240px, 52vw, 440px)', borderRadius: '18px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)', cursor: images ? 'zoom-in' : 'default', touchAction: 'pan-y', boxShadow: 'var(--shadow-sm)' }}
+                style={{ position: 'relative', height: 'clamp(240px, 52vw, 440px)', borderRadius: '20px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)', cursor: images ? 'zoom-in' : 'default', touchAction: 'pan-y', boxShadow: 'var(--shadow-sm)' }}
                 onClick={() => {
                   if (images) {
                     setLightboxIndex(activeImage)
@@ -855,7 +856,7 @@ export default function CarDetailClient() {
                         style={{
                           width: i === activeImage ? '16px' : '6px',
                           height: '6px',
-                          borderRadius: '3px',
+                          borderRadius: '4px',
                           background: i === activeImage ? 'var(--color-white)' : 'rgba(255,255,255,0.45)',
                           transition: 'width 0.2s ease, background 0.2s ease',
                         }}
@@ -863,6 +864,49 @@ export default function CarDetailClient() {
                     ))}
                   </div>
                 )}
+
+                {/* Prev / next arrows — flip photos without the lightbox or thumbnails */}
+                {images && images.length > 1 && (['left', 'right'] as const).map((side) => (
+                  <button
+                    key={side}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setActiveImage((prev) =>
+                        side === 'left'
+                          ? (prev - 1 + images.length) % images.length
+                          : (prev + 1) % images.length
+                      )
+                    }}
+                    aria-label={t(side === 'left' ? 'carousel.prevPhoto' : 'carousel.nextPhoto', lang)}
+                    style={{
+                      position: 'absolute',
+                      [side]: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.45)',
+                      backdropFilter: 'blur(4px)',
+                      WebkitBackdropFilter: 'blur(4px)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--color-white)',
+                      zIndex: 2,
+                      padding: 0,
+                      transition: 'background 0.18s ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.65)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)' }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      {side === 'left' ? <path d="M10 3L5 8l5 5" /> : <path d="M6 3l5 5-5 5" />}
+                    </svg>
+                  </button>
+                ))}
               </div>
 
               {/* Thumbnails */}
@@ -888,12 +932,42 @@ export default function CarDetailClient() {
                 </div>
               )}
 
-              {/* Specs grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" style={{ marginTop: '28px' }}>
-                {specs.map((spec) => (
-                  <SpecRow key={spec.label} {...spec} />
+              {/* Key specs strip — the 4 facts every buyer scans first (Encar pattern) */}
+              <div style={{ display: 'flex', background: 'var(--tag-bg)', borderRadius: '14px', padding: '13px 0', marginTop: '28px' }}>
+                {specs.slice(0, 4).map((spec, i) => (
+                  <div
+                    key={spec.label}
+                    style={{
+                      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
+                      borderLeft: i > 0 ? '1px solid var(--border)' : 'none', padding: '0 6px', minWidth: 0,
+                    }}
+                  >
+                    <span style={{ color: 'var(--text2)', display: 'flex' }}>{spec.icon}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+                      {spec.value}
+                    </span>
+                    <span style={{ fontSize: '10.5px', color: 'var(--muted)' }}>{spec.label}</span>
+                  </div>
                 ))}
               </div>
+
+              {/* Full spec sheet — label→value rows (Encar / Auto.ru pattern) */}
+              {specs.length > 4 && (
+                <div style={{ marginTop: '12px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
+                  {specs.slice(4).map((spec, i) => (
+                    <div
+                      key={spec.label}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                        padding: '11px 14px', borderTop: i > 0 ? '1px solid var(--border)' : 'none',
+                      }}
+                    >
+                      <span style={{ fontSize: '13.5px', color: 'var(--muted)' }}>{spec.label}</span>
+                      <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)', textAlign: 'right' }}>{spec.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* VIN badge */}
               {listing.vin && (
@@ -955,7 +1029,7 @@ export default function CarDetailClient() {
                   <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em', marginBottom: '12px' }}>
                     {t('carDetail.description', lang)}
                   </h3>
-                  <div style={{ position: 'relative', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px 20px' }}>
+                  <div style={{ position: 'relative', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '18px 20px' }}>
                     <p style={{
                       fontSize: '15px',
                       color: 'var(--text-muted)',
@@ -1013,8 +1087,8 @@ export default function CarDetailClient() {
                     {listing.youtube_link && (
                       <a href={listing.youtube_link} target="_blank" rel="noopener noreferrer" style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '10px 16px', borderRadius: '10px',
-                        background: 'var(--color-youtube, #FF0000)', color: 'var(--color-white)',
+                        padding: '10px 16px', borderRadius: '12px',
+                        background: 'var(--color-youtube)', color: 'var(--color-white)',
                         fontSize: '14px', fontWeight: 700, textDecoration: 'none',
                       }}>
                         YouTube
@@ -1023,8 +1097,9 @@ export default function CarDetailClient() {
                     {listing.tiktok_link && (
                       <a href={listing.tiktok_link} target="_blank" rel="noopener noreferrer" style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '10px 16px', borderRadius: '10px',
-                        background: 'var(--color-tiktok, #000000)', color: 'var(--color-white)',
+                        padding: '10px 16px', borderRadius: '12px',
+                        background: 'var(--color-tiktok)', color: 'var(--color-white)',
+                        border: '1px solid var(--border)',
                         fontSize: '14px', fontWeight: 700, textDecoration: 'none',
                       }}>
                         TikTok
@@ -1102,7 +1177,7 @@ export default function CarDetailClient() {
                   {listing.city && <><span style={{ color: 'var(--border-strong)' }}>&middot;</span><span>{listing.city}</span></>}
                 </p>
 
-                <p style={{ fontSize: 'clamp(28px, 4vw, 34px)', fontWeight: 900, color: 'var(--accent)', letterSpacing: '-0.03em', lineHeight: 1, marginBottom: listing.prepayment_amount ? '6px' : '24px' }}>
+                <p style={{ fontSize: 'clamp(28px, 4vw, 34px)', fontWeight: 900, color: 'var(--price)', letterSpacing: '-0.03em', lineHeight: 1, marginBottom: listing.prepayment_amount ? '6px' : '20px' }}>
                   {formatPrice(listing.price, listing.currency)}
                 </p>
 
@@ -1112,59 +1187,91 @@ export default function CarDetailClient() {
                   </p>
                 )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {/* Contact seller */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <button
-                      onClick={() => setContactOpen(true)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        background: 'var(--accent)',
-                        color: 'var(--color-white)',
-                        fontWeight: 700,
-                        fontSize: '15px',
-                        padding: '13px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'background 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-hover)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent)' }}
-                    >
-                      <PhoneIcon />
-                      {t('carDetail.contact', lang)}
-                    </button>
-
-                    <button
-                      onClick={handleChat}
-                      disabled={chatLoading}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        background: 'var(--accent-dim)',
-                        color: 'var(--accent)',
-                        fontWeight: 700,
-                        fontSize: '15px',
-                        padding: '13px',
-                        borderRadius: '12px',
-                        border: '1px solid var(--accent)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        opacity: chatLoading ? 0.7 : 1,
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                      </svg>
-                      {chatLoading ? '...' : t('chat.writeMessage', lang)}
-                    </button>
+                {/* Seller identity — gradient avatar + type badge, links to the seller's profile */}
+                <Link
+                  href={`/users/${listing.user_id}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', marginBottom: '14px', textDecoration: 'none', transition: 'border-color 0.15s ease' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
+                >
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent), var(--accent-h))', color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '19px', flexShrink: 0 }}>
+                    {(listing.contact_name || sellerProfile?.name || '?').charAt(0).toUpperCase()}
                   </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
+                      <p style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {listing.contact_name || sellerProfile?.name || t('carDetailForm.seller', lang)}
+                      </p>
+                      {listing.is_dealer_listing && (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--color-info)" style={{ flexShrink: 0 }} aria-hidden="true">
+                          <path d="M12 2l2.4 2.4 3.4-.5 1.1 3.2 3.1 1.5-1 3.4 1 3.4-3.1 1.5-1.1 3.2-3.4-.5L12 22l-2.4-2.4-3.4.5-1.1-3.2L2 15.4l1-3.4-1-3.4 3.1-1.5 1.1-3.2 3.4.5z" />
+                          <path d="M9 12l2 2 4-4" stroke="var(--color-white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                        </svg>
+                      )}
+                    </div>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: 600, padding: '3px 9px', borderRadius: '20px', background: listing.is_dealer_listing ? 'var(--accent-dim)' : 'var(--tag-bg)', color: listing.is_dealer_listing ? 'var(--accent)' : 'var(--text-secondary)' }}>
+                      {listing.is_dealer_listing ? t('badges.dealer', lang) : t('carDetail.privateSeller', lang)}
+                    </span>
+                  </div>
+                  {/* Chevron — signals the block is tappable */}
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+                    <path d="M6 3l5 5-5 5" />
+                  </svg>
+                </Link>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* Primary contact — green, glowing (matches the mobile app) */}
+                  <button
+                    onClick={() => setContactOpen(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      background: 'linear-gradient(180deg, #22b85b, var(--color-success))',
+                      color: 'var(--color-white)',
+                      fontWeight: 700,
+                      fontSize: '15px',
+                      padding: '14px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 5px 14px var(--color-success-dim)',
+                      transition: 'filter 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.06)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'none' }}
+                  >
+                    <PhoneIcon />
+                    {t('carDetail.contact', lang)}
+                  </button>
+
+                  {/* Chat — soft accent fill */}
+                  <button
+                    onClick={handleChat}
+                    disabled={chatLoading}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      background: 'var(--accent-dim)',
+                      color: 'var(--accent)',
+                      fontWeight: 700,
+                      fontSize: '15px',
+                      padding: '13px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(var(--accent-rgb), 0.25)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      opacity: chatLoading ? 0.7 : 1,
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
+                    {chatLoading ? '...' : t('chat.writeMessage', lang)}
+                  </button>
 
                   {/* Favorite */}
                   <button
@@ -1249,6 +1356,16 @@ export default function CarDetailClient() {
                       {t('carDetail.installment', lang)}
                     </Link>
                   )}
+
+                  {/* Safety tip */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', paddingTop: '4px' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                      {t('carDetail.safetyTip', lang)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1292,6 +1409,9 @@ export default function CarDetailClient() {
               </div>
             </section>
           )}
+
+          {/* Endless recommendations feed — keep scrolling for more cars */}
+          {listing && <InfiniteListingsFeed excludeId={listing.id} />}
         </div>
       </main>
 
@@ -1461,7 +1581,7 @@ export default function CarDetailClient() {
               rows={3}
               style={{
                 background: 'var(--surface)', border: '1px solid var(--border)',
-                borderRadius: 10, padding: '10px 14px',
+                borderRadius: 12, padding: '10px 14px',
                 color: 'var(--text)', fontSize: 14, resize: 'vertical',
                 width: '100%',
               }}

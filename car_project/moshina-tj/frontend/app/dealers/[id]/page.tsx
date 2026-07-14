@@ -185,7 +185,7 @@ export default function DealerDetailPage() {
                       {dealer.business_name}
                     </h1>
                     {dealer.verified && (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '3px 10px', borderRadius: '6px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '3px 10px', borderRadius: '8px' }}>
                         <CheckIcon />
                         {t('dealers.verified', lang)}
                       </span>
@@ -203,7 +203,7 @@ export default function DealerDetailPage() {
                           padding: '5px 12px',
                           borderRadius: '8px',
                           border: subscribed ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
-                          background: subscribed ? 'var(--accent-dim, rgba(37,99,235,0.08))' : 'var(--surface)',
+                          background: subscribed ? 'var(--accent-dim)' : 'var(--surface)',
                           color: subscribed ? 'var(--accent)' : 'var(--text-secondary)',
                           cursor: subLoading ? 'not-allowed' : 'pointer',
                           opacity: subLoading ? 0.6 : 1,

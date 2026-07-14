@@ -6,6 +6,7 @@
   --bg: #f0f2f5;
   --surface: #fff;
   --card: #fff;
+  --surface-rgb: 255, 255, 255;
   --nav-bg: rgba(255,255,255,0.95);
   --footer-bg: #0f1623;
   --tag-bg: #edf0f4;
@@ -16,25 +17,34 @@
   --muted: #8494aa;
   --accent: #c83808;
   --accent-h: #a82e06;
-  --accent-dim: rgba(200,56,8,0.09);
+  --accent-rgb: 200, 56, 8;
+  --accent-h-rgb: 168, 46, 6;
+  --accent-dim: rgba(var(--accent-rgb), 0.09);
+  --accent-deep: #8b1a00;
+  --accent-glow: rgba(var(--accent-rgb), 0.30);
   /* shadow tokens */
   --sh-sm: 0 1px 3px rgba(0,0,0,.05),0 1px 8px rgba(0,0,0,.04);
   --sh-md: 0 4px 16px rgba(0,0,0,.09),0 1px 4px rgba(0,0,0,.05);
   --sh-lg: 0 12px 40px rgba(0,0,0,.13),0 4px 12px rgba(0,0,0,.07);
   --sh-card: 0 2px 8px rgba(0,0,0,.06);
+  --sh-xl: -8px 0 40px rgba(0,0,0,.18);
   /* legacy shadow aliases (keep for backward compat) */
   --shadow-sm: var(--sh-sm);
   --shadow-md: var(--sh-md);
   --shadow-lg: var(--sh-lg);
+  --shadow-xl: var(--sh-xl);
   --nav-h: 58px;
   --mobnav-h: 64px;
-  /* radius tokens */
-  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 18px; --r-2xl: 22px;
-  /* legacy radius aliases */
+  /* radius tokens — single modular scale: 4 / 8 / 12 / 16 / 20 / 24 */
+  --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
+  --radius-2xl: 24px;
+  /* legacy aliases — same scale, do not diverge */
+  --r-sm: var(--radius-sm); --r-md: var(--radius-md); --r-lg: var(--radius-lg);
+  --r-xl: var(--radius-xl); --r-2xl: var(--radius-2xl);
   /* backward compat aliases */
   --nav-bg-rgb: 255, 255, 255;
   --text-secondary: var(--text2);
@@ -57,39 +67,77 @@
   --color-warning-alt: #f59e0b;
   --color-warning-dim: rgba(202, 138, 4, 0.12);
   --color-online: #22c55e;
+  --color-youtube: #FF0000;
+  --color-tiktok: #000000;
+  /* Encar-style price red — reserved exclusively for prices */
+  --price: #e60023;
   /* Convenience aliases used in inline styles */
   --font: inherit;
   --danger: var(--color-error);
 }
 
+/*
+ * Dark theme — "comfortable dark": lifted slate surfaces instead of
+ * near-black, off-white text instead of pure white, and a desaturated
+ * accent — all tuned to cut eye strain while keeping WCAG AA.
+ *
+ * Why not near-black + white? #f5f5f6 on #0b0b0d was ~18:1 — far past the
+ * comfort zone; extreme contrast on dark causes halation (text "glow").
+ * Target band is ~7–15:1 for body text on dark surfaces.
+ *
+ *   --bg      #111318  (page background — lifted, slightly cool)
+ *   --surface #181b21  (section backgrounds)
+ *   --card    #1f232a  (raised cards / modals — brightest surface)
+ *   --text    #e6e8ec  ≈12.9:1 against --card (soft off-white, no halation)
+ *   --text2   #b6bcc8  ≈8.3:1 against --card
+ *   --muted   #8f96a3  ≈5.3:1 against --card (AA body-text)
+ *   --accent  #f5592e  ≈4.8:1 as text on --card, 3.3:1 under white button
+ *                      text (AA-large) — less neon than the old #ff5a2e
+ */
 html.dark {
-  --bg: #18181b;
-  --surface: #232327;
-  --card: #28282c;
-  --nav-bg: rgba(35,35,39,0.96);
-  --footer-bg: #0d0d10;
-  --tag-bg: #2e2e33;
-  --border: #363640;
-  --border-strong: #46464f;
-  --text: #f2ede8;
-  --text2: #a8a098;
-  --muted: #6e6860;
-  --accent: #d94020;
-  --accent-h: #f05030;
-  --accent-dim: rgba(217,64,32,0.15);
-  /* dark shadow tokens */
-  --sh-sm: 0 1px 4px rgba(0,0,0,.4);
-  --sh-md: 0 4px 20px rgba(0,0,0,.5);
-  --sh-lg: 0 10px 40px rgba(0,0,0,.6);
-  --sh-card: 0 2px 8px rgba(0,0,0,.3);
+  --bg: #111318;
+  --surface: #181b21;
+  --card: #1f232a;
+  --surface-rgb: 24, 27, 33;
+  --nav-bg: rgba(var(--surface-rgb), 0.92);
+  --footer-bg: #0c0e12;
+  --tag-bg: #262b33;
+  --border: #2d323b;
+  --border-strong: #444b57;
+  --text: #e6e8ec;
+  --text2: #b6bcc8;
+  --muted: #8f96a3;
+  --accent: #f5592e;
+  --accent-h: #ff7a52;
+  --accent-rgb: 245, 89, 46;
+  --accent-h-rgb: 255, 122, 82;
+  --accent-dim: rgba(var(--accent-rgb), 0.14);
+  --accent-deep: #7a2410;
+  --accent-glow: rgba(var(--accent-rgb), 0.25);
+  /* dark shadows: subtle — elevation now comes from surface lightness steps */
+  --sh-sm: 0 1px 2px rgba(0,0,0,.30);
+  --sh-md: 0 2px 10px rgba(0,0,0,.35);
+  --sh-lg: 0 8px 28px rgba(0,0,0,.42);
+  --sh-card: 0 1px 4px rgba(0,0,0,.28);
+  --sh-xl: -8px 0 32px rgba(0,0,0,.45);
   /* legacy aliases in dark */
   --shadow-sm: var(--sh-sm);
   --shadow-md: var(--sh-md);
   --shadow-lg: var(--sh-lg);
-  --nav-bg-rgb: 35, 35, 39;
+  --shadow-xl: var(--sh-xl);
+  --nav-bg-rgb: 24, 27, 33;
   --text-secondary: var(--text2);
   --text-muted: var(--muted);
   --accent-hover: var(--accent-h);
+  /* price red brightened for contrast on dark cards */
+  --price: #ff5a64;
+  /* status "-dim" overlays get more alpha in dark so chips stay legible on near-black surfaces */
+  --color-error-dim: rgba(239, 68, 68, 0.18);
+  --color-success-dim: rgba(22, 163, 74, 0.20);
+  --color-info-dim: rgba(37, 99, 235, 0.20);
+  --color-warning-dim: rgba(202, 138, 4, 0.20);
+  --color-warning-bg: rgba(234,179,8,0.14);
+  --color-warning-border: rgba(234,179,8,0.5);
 }
 
 *,
@@ -111,7 +159,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
@@ -124,6 +172,13 @@ body {
 @media (max-width: 767px) {
   body {
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  /* iOS Safari zooms the page when a focused input has font-size < 16px.
+     Inline styles set 14-15px, so !important is required here. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
   }
   /* Push cookie banner above the bottom nav */
   :root {
@@ -150,6 +205,28 @@ textarea::placeholder {
   opacity: 1;
 }
 
+/* Modern focus ring on all form fields — accent border + soft halo.
+   Inline error borderColor still wins (inline styles beat stylesheets),
+   and the halo applies on top in both cases. */
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Tactile press feedback on every button; components with their own inline
+   transform (e.g. the favorite heart) keep it — inline styles win. */
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--color-white);
+}
+
 input[type='search']::-webkit-search-cancel-button {
   display: none;
 }
@@ -163,6 +240,7 @@ input[type='search']::-webkit-search-cancel-button {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 /* ─── Animations ─── */
 @keyframes fadeInUp {
@@ -186,6 +264,68 @@ input[type='search']::-webkit-search-cancel-button {
 .animate-fade-in     { animation: fadeIn 0.3s ease both; }
 .animate-scale-in    { animation: scaleIn 0.3s ease both; }
 .animate-slide-right { animation: slideInRight 0.4s ease both; }
+
+/* ── Hero entrance stagger + car scene animation ─────────────────────── */
+.hero-stagger-1 { animation: fadeInUp 0.55s ease both; }
+.hero-stagger-2 { animation: fadeInUp 0.55s ease 0.08s both; }
+.hero-stagger-3 { animation: fadeInUp 0.55s ease 0.16s both; }
+.hero-stagger-4 { animation: fadeInUp 0.55s ease 0.24s both; }
+
+.hero-layout {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(24px, 4vw, 56px);
+}
+.hero-copy { flex: 1 1 auto; min-width: 0; max-width: 700px; }
+.hero-car-art {
+  flex: 0 0 clamp(280px, 32vw, 400px);
+  animation: fadeIn 0.8s ease 0.2s both;
+}
+@media (max-width: 899px) {
+  .hero-layout { flex-direction: column; }
+  .hero-copy { max-width: 700px; width: 100%; }
+  .hero-car-art { flex: none; width: min(320px, 76vw); margin: 4px auto 0; }
+}
+
+@keyframes carFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+@keyframes wheelSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes roadMove {
+  to { stroke-dashoffset: -100; }
+}
+@keyframes speedDash {
+  to { stroke-dashoffset: -300; }
+}
+@keyframes blobPulse {
+  0%, 100% { opacity: 0.75; }
+  50%      { opacity: 1; }
+}
+.hero-car-body { animation: carFloat 3.2s ease-in-out infinite; }
+.hero-wheel    { animation: wheelSpin 1.6s linear infinite; }
+.hero-road     { animation: roadMove 2.2s linear infinite; }
+.hero-blob     { animation: blobPulse 5s ease-in-out infinite; }
+.speed-dash-1  { animation: speedDash 1.9s linear infinite; }
+.speed-dash-2  { animation: speedDash 1.9s linear 0.5s infinite; }
+.speed-dash-3  { animation: speedDash 1.9s linear 1s infinite; }
+
+/* Respect the user's motion preferences — collapse all animation/transition
+   to near-zero so state changes still fire (e.g. animationend handlers). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* Contact modal — responsive bottom sheet on mobile */
 .contact-modal {
@@ -399,9 +539,9 @@ img { transition: opacity 0.3s ease; }
 
 /* ── FAB pulse animation ────────────────────────────────────────────── */
 @keyframes fabPulse {
-  0%   { box-shadow: 0 4px 14px rgba(0,0,0,0.25), 0 0 0 0 rgba(200,56,8,0.35); }
-  70%  { box-shadow: 0 4px 14px rgba(0,0,0,0.25), 0 0 0 10px rgba(200,56,8,0); }
-  100% { box-shadow: 0 4px 14px rgba(0,0,0,0.25), 0 0 0 0 rgba(200,56,8,0); }
+  0%   { box-shadow: 0 4px 14px rgba(0,0,0,0.25), 0 0 0 0 var(--accent-glow); }
+  70%  { box-shadow: 0 4px 14px rgba(0,0,0,0.25), 0 0 0 10px rgba(var(--accent-rgb), 0); }
+  100% { box-shadow: 0 4px 14px rgba(0,0,0,0.25), 0 0 0 0 rgba(var(--accent-rgb), 0); }
 }
 .fab-pulse {
   animation: fabPulse 2.5s infinite;
@@ -457,6 +597,23 @@ img { transition: opacity 0.3s ease; }
 @media (min-width: 1024px) {
   .card-image-wrap {
     aspect-ratio: 16 / 10;
+  }
+}
+
+/* ── Card photo carousel arrows ─────────────────────────────────────
+   Desktop (pointer hover): hidden until the card image area is hovered.
+   Touch devices: always visible — there is no hover to reveal them. */
+.card-nav-btn {
+  opacity: 0;
+  transition: opacity 0.18s ease, background 0.18s ease;
+}
+.card-image-wrap:hover .card-nav-btn,
+.card-nav-btn:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .card-nav-btn {
+    opacity: 1;
   }
 }
 
@@ -601,7 +758,7 @@ img { transition: opacity 0.3s ease; }
   gap: 24px;
   padding: 28px 32px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--accent) 0%, #8b1a00 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
   min-height: 140px;
   overflow: hidden;
   position: relative;

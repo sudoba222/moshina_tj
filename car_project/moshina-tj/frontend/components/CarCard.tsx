@@ -83,6 +83,24 @@ function StarIcon() {
   )
 }
 
+function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {direction === 'left' ? <path d="M10 3L5 8l5 5" /> : <path d="M6 3l5 5-5 5" />}
+    </svg>
+  )
+}
+
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
     <svg
@@ -109,7 +127,12 @@ export default function CarCard({
   initialFavorited,
   priority = false,
 }: CarCardProps) {
-  const primaryImage = listing.images.find((img) => img.is_primary) ?? listing.images[0]
+  // Primary image first, the rest in upload order — so index 0 matches the old cover
+  const images = [...listing.images].sort(
+    (a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0) || a.order_index - b.order_index
+  )
+  const [imageIndex, setImageIndex] = useState(0)
+  const primaryImage = images[imageIndex] ?? images[0]
   const stripeColor = moderatorMode ? (STATUS_STRIPE[listing.status] ?? 'var(--text-muted)') : null
   const statusI18nKey = moderatorMode ? (STATUS_I18N_KEY[listing.status] ?? null) : null
   const statusLabel = statusI18nKey
@@ -129,6 +152,18 @@ export default function CarCard({
   )
   const [favLoading, setFavLoading] = useState(false)
   const [hovered, setHovered] = useState(false)
+
+  function handlePrevImage(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setImageIndex((i) => (i - 1 + images.length) % images.length)
+  }
+
+  function handleNextImage(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setImageIndex((i) => (i + 1) % images.length)
+  }
 
   async function handleFavoriteClick(e: React.MouseEvent) {
     e.preventDefault()
@@ -389,6 +424,60 @@ export default function CarCard({
               </div>
             )}
 
+            {/* Photo carousel arrows — browse photos without opening the ad */}
+            {images.length > 1 && (
+              <>
+                {(['left', 'right'] as const).map((side) => (
+                  <button
+                    key={side}
+                    className="card-nav-btn"
+                    onClick={side === 'left' ? handlePrevImage : handleNextImage}
+                    aria-label={t(side === 'left' ? 'carousel.prevPhoto' : 'carousel.nextPhoto', lang)}
+                    style={{
+                      position: 'absolute',
+                      [side]: '6px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: '30px',
+                      height: '30px',
+                      borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.45)',
+                      backdropFilter: 'blur(4px)',
+                      WebkitBackdropFilter: 'blur(4px)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--color-white)',
+                      zIndex: 2,
+                      padding: 0,
+                    }}
+                  >
+                    <ChevronIcon direction={side} />
+                  </button>
+                ))}
+                {/* Photo counter */}
+                <span
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    right: '8px',
+                    background: 'rgba(0,0,0,0.55)',
+                    color: 'var(--color-white)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '2px 7px',
+                    borderRadius: '20px',
+                    zIndex: 1,
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {imageIndex + 1}/{images.length}
+                </span>
+              </>
+            )}
+
             {/* Staff status ribbon */}
             {isStaff && !moderatorMode && <StaffStatusRibbon listing={listing} />}
           </div>
@@ -426,13 +515,13 @@ export default function CarCard({
             </p>
           </div>
 
-          {/* Price — large, bold, accent */}
+          {/* Price — large, bold, Encar price red */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '9px', flexWrap: 'wrap' }}>
             <p
               style={{
                 fontSize: 'clamp(16px,2vw,19px)',
                 fontWeight: 900,
-                color: 'var(--accent)',
+                color: 'var(--price)',
                 letterSpacing: '-0.03em',
                 lineHeight: 1.1,
                 margin: 0,
@@ -441,37 +530,34 @@ export default function CarCard({
               {formatPrice(Number(listing.price), listing.currency, lang)}
             </p>
             {listing.is_negotiable && (
-              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '2px 6px', borderRadius: '6px', letterSpacing: '0.02em' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '2px 6px', borderRadius: '8px', letterSpacing: '0.02em' }}>
                 {t('common.negotiable', lang)}
               </span>
             )}
           </div>
 
-          {/* Spec chips */}
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '4px',
-              marginBottom: '9px',
-            }}
-          >
-            {listing.transmission && (
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text2)', background: 'var(--tag-bg)', border: '1px solid var(--border)', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
-                {listing.transmission}
-              </span>
-            )}
-            {listing.fuel && (
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text2)', background: 'var(--tag-bg)', border: '1px solid var(--border)', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
-                {listing.fuel}
-              </span>
-            )}
-            {listing.mileage != null && (
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text2)', background: 'var(--tag-bg)', border: '1px solid var(--border)', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
-                {formatMileage(listing.mileage, lang)}
-              </span>
-            )}
-          </div>
+          {/* Spec line — Encar style: mileage · fuel · transmission */}
+          {(listing.mileage != null || listing.fuel || listing.transmission) && (
+            <p
+              style={{
+                fontSize: '12.5px',
+                fontWeight: 500,
+                color: 'var(--muted)',
+                margin: '0 0 9px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {[
+                listing.mileage != null ? formatMileage(listing.mileage, lang) : null,
+                listing.fuel,
+                listing.transmission,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          )}
 
           {/* Location + date row */}
           <div

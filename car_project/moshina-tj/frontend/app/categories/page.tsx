@@ -170,7 +170,7 @@ export default function CategoriesPage() {
                 style={{
                   background: 'var(--card)',
                   border: '1px solid var(--border)',
-                  borderRadius: '18px',
+                  borderRadius: '20px',
                   padding: '24px',
                   display: 'flex',
                   flexDirection: 'column',
@@ -197,7 +197,7 @@ export default function CategoriesPage() {
 
                 {/* Title + description */}
                 <div>
-                  <h2 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text)', marginBottom: '4px' }}>
+                  <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', marginBottom: '4px' }}>
                     {t(`categories.${cat.id}` as Parameters<typeof t>[0], lang)}
                   </h2>
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
@@ -211,7 +211,7 @@ export default function CategoriesPage() {
                     href={`/catalog?category=${cat.id}`}
                     style={{
                       flex: 1, textAlign: 'center', padding: '10px 0',
-                      borderRadius: '10px', fontSize: '13px', fontWeight: 700,
+                      borderRadius: '12px', fontSize: '13px', fontWeight: 700,
                       background: 'var(--accent)', color: 'var(--color-white)',
                       textDecoration: 'none', transition: 'opacity 0.13s',
                     }}
@@ -222,7 +222,7 @@ export default function CategoriesPage() {
                     href={`/post?category=${cat.id}`}
                     aria-label={t('categories.postInCategory', lang)}
                     style={{
-                      padding: '10px 14px', borderRadius: '10px', fontSize: '13px',
+                      padding: '10px 14px', borderRadius: '12px', fontSize: '13px',
                       fontWeight: 700, border: '1.5px solid var(--border)',
                       background: 'var(--surface)', color: 'var(--text)',
                       textDecoration: 'none', whiteSpace: 'nowrap',

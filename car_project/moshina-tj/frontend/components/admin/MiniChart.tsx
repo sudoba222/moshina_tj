@@ -248,7 +248,7 @@ export function DonutChart({ data, size = 100, title }: DonutChartProps) {
               style={{
                 width: '8px',
                 height: '8px',
-                borderRadius: '2px',
+                borderRadius: '4px',
                 background: d.color,
                 flexShrink: 0,
               }}

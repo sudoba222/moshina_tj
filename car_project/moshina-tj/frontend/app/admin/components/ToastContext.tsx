@@ -63,7 +63,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   background: c.bg,
                   color: c.color,
                   border: `1px solid ${c.border}`,
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   padding: '12px 16px',
                   fontSize: '13px',
                   fontWeight: 500,

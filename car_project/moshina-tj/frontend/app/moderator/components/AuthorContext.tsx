@@ -136,7 +136,7 @@ export default function AuthorContext({ lang, listing }: AuthorContextProps) {
           </div>
           <div style={{
             background: isHighRisk ? 'var(--color-error-dim)' : 'var(--surface)',
-            borderRadius: '10px',
+            borderRadius: '12px',
             padding: '12px',
             border: `1px solid ${isHighRisk ? 'var(--color-error)' : 'var(--border)'}`,
           }}>
@@ -286,7 +286,7 @@ export default function AuthorContext({ lang, listing }: AuthorContextProps) {
                   {l.images?.[0] && (
                     <div style={{
                       position: 'relative', width: '34px', height: '34px',
-                      borderRadius: '6px', overflow: 'hidden', flexShrink: 0,
+                      borderRadius: '8px', overflow: 'hidden', flexShrink: 0,
                     }}>
                       <Image src={l.images[0].url} alt="" fill style={{ objectFit: 'cover' }} />
                     </div>

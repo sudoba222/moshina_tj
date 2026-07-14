@@ -181,7 +181,7 @@ function MobileCatalogSearch({ initialQuery, lang, onSearch }: MobileCatalogSear
         padding: '0 14px',
         gap: '10px',
         transition: 'border-color 0.15s',
-        boxShadow: focused ? '0 0 0 3px var(--accent-dim, rgba(200,56,8,0.08))' : 'none',
+        boxShadow: focused ? '0 0 0 3px var(--accent-dim)' : 'none',
       }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
           <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
@@ -469,7 +469,7 @@ function CatalogContent() {
     width: '100%',
     background: 'var(--surface)',
     border: '1px solid var(--border)',
-    borderRadius: '6px',
+    borderRadius: '8px',
     padding: '8px 10px',
     fontSize: '13px',
     color: 'var(--text)',
@@ -532,7 +532,7 @@ function CatalogContent() {
                 style={{
                   flex: 1,
                   padding: '6px 4px',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -830,7 +830,7 @@ function CatalogContent() {
               fontWeight: 700,
               fontSize: '13px',
               padding: '9px',
-              borderRadius: '6px',
+              borderRadius: '8px',
               border: 'none',
               cursor: 'pointer',
             }}
@@ -846,7 +846,7 @@ function CatalogContent() {
                 fontWeight: 600,
                 fontSize: '13px',
                 padding: '9px 12px',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 border: '1px solid var(--border)',
                 cursor: 'pointer',
               }}
@@ -884,7 +884,7 @@ function CatalogContent() {
               style={{
                 background: activeFilterCount > 0 ? 'var(--accent-dim)' : 'var(--card)',
                 border: activeFilterCount > 0 ? '1px solid var(--accent)' : '1px solid var(--border)',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 padding: '7px 12px',
                 fontSize: '13px',
                 fontWeight: 600,
@@ -905,7 +905,7 @@ function CatalogContent() {
                 <span style={{
                   background: 'var(--accent)',
                   color: 'var(--color-white)',
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   padding: '0 6px',
                   fontSize: '11px',
                   fontWeight: 800,
@@ -953,7 +953,7 @@ function CatalogContent() {
               >
                 {/* Drag handle */}
                 <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '4px' }}>
-                  <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'var(--border-strong)' }} />
+                  <div style={{ width: '40px', height: '4px', borderRadius: '4px', background: 'var(--border-strong)' }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px 12px' }}>
                   <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>

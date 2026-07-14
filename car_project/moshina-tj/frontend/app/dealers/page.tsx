@@ -117,7 +117,7 @@ function DealerCard({ dealer, lang, delay }: { dealer: Dealer; lang: 'ru' | 'tj'
       </div>
 
       {dealer.verified && (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '4px 10px', borderRadius: '6px', alignSelf: 'flex-start' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-dim)', padding: '4px 10px', borderRadius: '8px', alignSelf: 'flex-start' }}>
           <CheckIcon />
           {t('dealers.verified', lang)}
         </span>
@@ -131,7 +131,7 @@ function DealerCard({ dealer, lang, delay }: { dealer: Dealer; lang: 'ru' | 'tj'
 
       <Link
         href={`/dealers/${dealer.id}`}
-        style={{ display: 'block', textAlign: 'center', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '14px', padding: '10px', borderRadius: '10px', marginTop: 'auto', transition: 'background 0.15s ease', textDecoration: 'none' }}
+        style={{ display: 'block', textAlign: 'center', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '14px', padding: '10px', borderRadius: '12px', marginTop: 'auto', transition: 'background 0.15s ease', textDecoration: 'none' }}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-hover)' }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent)' }}
       >
@@ -147,11 +147,11 @@ function DealerSkeleton() {
       <div className="flex items-center gap-4">
         <div style={{ width: '64px', height: '64px', borderRadius: '12px', flexShrink: 0 }} className="skeleton" />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ height: '16px', borderRadius: '6px', width: '70%' }} className="skeleton" />
-          <div style={{ height: '13px', borderRadius: '6px', width: '50%' }} className="skeleton" />
+          <div style={{ height: '16px', borderRadius: '8px', width: '70%' }} className="skeleton" />
+          <div style={{ height: '13px', borderRadius: '8px', width: '50%' }} className="skeleton" />
         </div>
       </div>
-      <div style={{ height: '36px', borderRadius: '10px' }} className="skeleton" />
+      <div style={{ height: '36px', borderRadius: '12px' }} className="skeleton" />
     </div>
   )
 }

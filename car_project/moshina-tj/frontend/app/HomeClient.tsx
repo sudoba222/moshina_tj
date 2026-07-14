@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CarCard from '@/components/CarCard'
+import HeroCarArt from '@/components/HeroCarArt'
 import AdBannerSection from '@/components/AdBanner'
 import FirstVisitModal from '@/components/FirstVisitModal'
 import CarBrandLogo from '@/components/CarBrandLogo'
@@ -218,19 +219,20 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
       <main style={{ flex: 1, paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} className="pb-mobile">
 
         {/* ── HERO SECTION ──────────────────────────────────────────────────── */}
-        <section className="hero-section" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: 'clamp(28px,5vw,52px) clamp(16px,3vw,32px) clamp(28px,4vw,48px)' }}>
-          <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+        <section className="hero-section" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: 'clamp(28px,5vw,52px) clamp(16px,3vw,32px) clamp(28px,4vw,48px)', overflow: 'hidden' }}>
+          <div className="hero-layout">
+          <div className="hero-copy">
 
             {/* H1 */}
-            <h1 style={{ fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.04em', lineHeight: 1.05, marginBottom: '12px' }}>
+            <h1 className="hero-stagger-1" style={{ fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.04em', lineHeight: 1.05, marginBottom: '12px' }}>
               {t('hero.title', lang)}
             </h1>
-            <p style={{ fontSize: 'clamp(14px, 1.8vw, 15px)', color: 'var(--muted)', marginBottom: '24px', lineHeight: 1.65, maxWidth: '540px' }}>
+            <p className="hero-stagger-2" style={{ fontSize: 'clamp(14px, 1.8vw, 15px)', color: 'var(--muted)', marginBottom: '24px', lineHeight: 1.65, maxWidth: '540px' }}>
               {t('hero.sub', lang)}
             </p>
 
             {/* Search bar: vertical on mobile, single horizontal bar on sm+ */}
-            <div className="hero-search-bar">
+            <div className="hero-search-bar hero-stagger-3">
               {/* Input field */}
               <div className="hero-search-input-wrap">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
@@ -305,8 +307,31 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
               </button>
             </div>
 
+            {/* All listings button */}
+            <div className="hero-stagger-3" style={{ marginTop: '12px' }}>
+              <Link
+                href="/catalog"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  background: 'var(--accent-dim)', color: 'var(--accent)',
+                  fontWeight: 700, fontSize: '14px', padding: '11px 18px',
+                  borderRadius: '12px', border: '1px solid rgba(var(--accent-rgb), 0.25)',
+                  textDecoration: 'none', transition: 'background 0.15s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--accent-rgb), 0.16)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent-dim)' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
+                </svg>
+                {t('hero.allListings', lang)}
+              </Link>
+            </div>
+
             {/* Stats row */}
             <div
+              className="hero-stagger-4"
               style={{
                 display: 'flex',
                 justifyContent: 'center',
@@ -332,13 +357,17 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
               ))}
             </div>
           </div>
+
+          {/* Animated car scene — right column on desktop, below on mobile */}
+          <HeroCarArt />
+          </div>
         </section>
 
         {/* ── CATEGORIES GRID ───────────────────────────────────────────────── */}
         <section style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: 'clamp(28px, 4vw, 44px) 16px' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             {/* Section header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <h2 style={{ fontSize: 'clamp(17px, 2.5vw, 22px)', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>
                 {t('nav.categories', lang)}
               </h2>
@@ -630,7 +659,7 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
         }
         .category-card:hover {
           border-color: var(--accent);
-          box-shadow: 0 4px 16px rgba(200,56,8,0.12);
+          box-shadow: 0 4px 16px rgba(var(--accent-rgb),0.12);
           transform: translateY(-3px);
         }
         .category-card:active {
@@ -648,7 +677,7 @@ export default function HomeClient({ initialFeatured, initialStats }: HomeClient
           transition: background 0.18s, transform 0.18s;
         }
         .category-card:hover .category-icon-wrap {
-          background: rgba(200,56,8,0.14);
+          background: rgba(var(--accent-rgb),0.14);
           transform: scale(1.08);
         }
         .category-label {

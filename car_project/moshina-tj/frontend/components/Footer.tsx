@@ -6,7 +6,7 @@ import { t } from '@/lib/i18n'
 function FooterLogo() {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 0, userSelect: 'none' }}>
-      <span style={{ display: 'inline-block', width: '4px', height: '22px', borderRadius: '2px', background: 'var(--accent)', marginRight: '7px', flexShrink: 0 }} />
+      <span style={{ display: 'inline-block', width: '4px', height: '22px', borderRadius: '4px', background: 'var(--accent)', marginRight: '7px', flexShrink: 0 }} />
       <span style={{ fontWeight: 900, fontSize: '20px', letterSpacing: '-0.04em', color: 'var(--color-white)', lineHeight: 1 }}>
         TAJ<span style={{ color: 'var(--accent)' }}>CAR</span>
       </span>
@@ -125,7 +125,7 @@ export default function Footer() {
               {t('footer.sellerPitch', lang)}
             </p>
             <Link href="/post"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', height: '40px', padding: '0 18px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', borderRadius: '9px', textDecoration: 'none', transition: 'opacity 0.13s' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', height: '40px', padding: '0 18px', background: 'var(--accent)', color: 'var(--color-white)', fontWeight: 700, fontSize: '13px', borderRadius: '12px', textDecoration: 'none', transition: 'opacity 0.13s' }}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85' }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>

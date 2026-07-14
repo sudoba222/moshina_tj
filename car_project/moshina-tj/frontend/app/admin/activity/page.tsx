@@ -80,7 +80,7 @@ function LogTimeline({ entries, lang }: { entries: ListingLogEntry[]; lang: Lang
             <div style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
-              borderRadius: '10px',
+              borderRadius: '12px',
               padding: '10px 14px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
@@ -134,7 +134,7 @@ function LogTimeline({ entries, lang }: { entries: ListingLogEntry[]; lang: Lang
                   padding: '6px 10px',
                   background: 'var(--card)',
                   border: '1px solid var(--border)',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   fontSize: '12px',
                   color: 'var(--text)',
                   fontStyle: 'italic',
@@ -383,10 +383,10 @@ export default function ActivityPage() {
                             <img
                               src={item.primary_image_url}
                               alt=""
-                              style={{ width: '44px', height: '34px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }}
+                              style={{ width: '44px', height: '34px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
                             />
                           ) : (
-                            <div style={{ width: '44px', height: '34px', borderRadius: '6px', background: 'var(--surface)', flexShrink: 0 }} />
+                            <div style={{ width: '44px', height: '34px', borderRadius: '8px', background: 'var(--surface)', flexShrink: 0 }} />
                           )}
                           <div>
                             <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text)' }}>
@@ -448,7 +448,7 @@ export default function ActivityPage() {
                             background: 'var(--accent-dim)',
                             color: 'var(--accent)',
                             border: 'none',
-                            borderRadius: '6px',
+                            borderRadius: '8px',
                             cursor: 'pointer',
                           }}
                         >

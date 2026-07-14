@@ -230,6 +230,7 @@ export interface ConversationItem {
   } | null
   last_message: {
     content: string
+    message_type?: 'text' | 'voice'
     created_at: string
     is_mine: boolean
   } | null
@@ -243,6 +244,9 @@ export interface ChatMessage {
   sender_id: string
   sender_name: string | null
   content: string
+  message_type?: 'text' | 'voice'
+  attachment_url?: string | null
+  duration_seconds?: number | null
   is_read: boolean
   created_at: string
 }

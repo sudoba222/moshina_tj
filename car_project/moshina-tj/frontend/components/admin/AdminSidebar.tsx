@@ -220,7 +220,7 @@ export default function AdminSidebar({ tab, setTab, stats, user, lang }: AdminSi
               height: '28px',
               color: 'var(--text-secondary)',
               background: 'var(--surface)',
-              borderRadius: '6px',
+              borderRadius: '8px',
               border: '1px solid var(--border)',
               flexShrink: 0,
             }}

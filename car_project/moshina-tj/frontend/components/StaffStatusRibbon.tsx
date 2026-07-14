@@ -119,9 +119,9 @@ export default function StaffStatusRibbon({ listing, moderatorName, size = 'sm' 
         <div style={{
           background: 'rgba(0,0,0,0.55)',
           color: 'var(--color-white)',
-          borderRadius: 3,
+          borderRadius: 4,
           padding: '2px 6px',
-          fontSize: '9px',
+          fontSize: '10px',
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
         }}>
@@ -135,9 +135,9 @@ export default function StaffStatusRibbon({ listing, moderatorName, size = 'sm' 
           style={{
             background: 'rgba(0,0,0,0.55)',
             color: 'var(--color-white)',
-            borderRadius: 3,
+            borderRadius: 4,
             padding: '2px 6px',
-            fontSize: '9px',
+            fontSize: '10px',
             maxWidth: 140,
             textAlign: 'right',
             backdropFilter: 'blur(4px)',

@@ -70,8 +70,8 @@ function OtpInput({ value, onChange, hasError }: OtpInputProps) {
           onFocus={(e) => {
             e.currentTarget.style.borderColor = hasError ? 'var(--color-error)' : 'var(--accent)'
             e.currentTarget.style.boxShadow = hasError
-              ? '0 0 0 3px rgba(239,68,68,0.18)'
-              : '0 0 0 3px var(--accent-dim,rgba(220,38,38,0.12))'
+              ? '0 0 0 3px var(--color-error-dim)'
+              : '0 0 0 3px var(--accent-dim)'
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = hasError ? 'var(--color-error)' : 'var(--border)'
@@ -91,7 +91,7 @@ function OtpInput({ value, onChange, hasError }: OtpInputProps) {
 // ─── Shared styles ────────────────────────────────────────────────────────────
 const baseInput: React.CSSProperties = {
   width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
-  borderRadius: '10px', padding: '12px 14px', fontSize: '15px', color: 'var(--text)',
+  borderRadius: '12px', padding: '12px 14px', fontSize: '15px', color: 'var(--text)',
   outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box',
 }
 
