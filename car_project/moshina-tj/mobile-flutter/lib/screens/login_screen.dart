@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../l10n/strings.dart';
 import '../widgets/country_picker.dart';
+import '../widgets/tajcar_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -71,30 +72,25 @@ class _LoginScreenState extends State<LoginScreen> {
     final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: c.accent,
+      backgroundColor: c.bg,
       resizeToAvoidBottomInset: true,
       body: Column(
         children: [
-          // ── HERO TOP ────────────────────────────────────────────────────────
-          _HeroTop(c: c, lang: lang),
+          // ── HERO TOP — brand logo lockup ────────────────────────────────────
+          _HeroTop(c: c, lang: lang, onDark: isDark),
 
-          // ── FORM CARD ───────────────────────────────────────────────────────
+          // ── FORM ────────────────────────────────────────────────────────────
           Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: c.bg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                24, 4, 24,
+                MediaQuery.of(context).viewInsets.bottom + 32,
               ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  24, 28, 24,
-                  MediaQuery.of(context).viewInsets.bottom + 32,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                     // Title
                     Text(
                       t('auth.loginTitle', lang),
@@ -146,13 +142,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       c: c,
                       onTap: _sendPhoneOtp,
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 14),
+
+                    // Email + password — prominent secondary sign-in method
+                    _OutlineBtn(
+                      icon: Icons.mail_outline_rounded,
+                      label: t('auth.emailLogin', lang),
+                      c: c,
+                      onTap: _openEmailSheet,
+                    ),
+                    const SizedBox(height: 26),
 
                     // Divider
                     _OrDivider(c: c, lang: lang),
                     const SizedBox(height: 20),
 
-                    // Social buttons
+                    // Social buttons — Google + Telegram
                     Row(
                       children: [
                         Expanded(
@@ -173,15 +178,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             label: 'Telegram',
                             c: c,
                             onTap: _openTelegramSheet,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _SocialBtn(
-                            icon: Icons.mail_outline_rounded,
-                            label: 'Email',
-                            c: c,
-                            onTap: _openEmailSheet,
                           ),
                         ),
                       ],
@@ -216,7 +212,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -224,66 +219,87 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HERO — orange top section with logo
+// HERO — clean top section with the TajCar.tj brand logo lockup
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _HeroTop extends StatelessWidget {
   final AppColors c;
   final String lang;
+  final bool onDark;
 
-  const _HeroTop({required this.c, required this.lang});
+  const _HeroTop({required this.c, required this.lang, this.onDark = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: c.accent,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: onDark
+              ? [c.surface, c.bg]
+              : [const Color(0xFFF6F8FC), c.bg],
+        ),
+      ),
       child: SafeArea(
         bottom: false,
-        child: SizedBox(
-          height: 210,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
           child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                RichText(
-                  text: const TextSpan(
-                    children: [
-                      TextSpan(
-                        text: 'Taj',
-                        style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: -1.5,
-                          height: 1,
-                        ),
-                      ),
-                      TextSpan(
-                        text: 'Car',
-                        style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFFFFD0C0),
-                          letterSpacing: -1.5,
-                          height: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  t('auth.subtitle', lang),
-                  style: GoogleFonts.outfit(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-              ],
+            child: TajCarLogo(
+              carWidth: 168,
+              wordSize: 44,
+              onDark: onDark,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Outline button — prominent secondary action (email login)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _OutlineBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final AppColors c;
+  final VoidCallback onTap;
+
+  const _OutlineBtn({
+    required this.icon,
+    required this.label,
+    required this.c,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: c.border, width: 1.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20, color: c.text),
+            const SizedBox(width: 9),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                color: c.text,
+                fontSize: 15.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
       ),
     );

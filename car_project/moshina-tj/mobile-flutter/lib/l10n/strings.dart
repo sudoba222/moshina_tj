@@ -276,6 +276,7 @@ const Map<String, Map<String, String>> appStrings = {
   'auth.otpSent': {'ru': 'Код отправлен', 'tj': 'Рамз фиристода шуд'},
   'auth.checkPhone': {'ru': 'Проверьте ваш телефон', 'tj': 'Телефони худро тафтиш кунед'},
   'auth.backToLogin': {'ru': 'Вернуться к входу', 'tj': 'Ба вуруд баргаштан'},
+  'auth.emailLogin': {'ru': 'Войти по Email', 'tj': 'Ворид бо Email'},
   'auth.createAccount': {'ru': 'Создайте аккаунт', 'tj': 'Аккаунт созед'},
   'auth.registerSubtitle': {'ru': 'Займёт меньше минуты', 'tj': 'Камтар аз як дақиқа мегирад'},
   'auth.yourName': {'ru': 'Ваше имя', 'tj': 'Номи шумо'},

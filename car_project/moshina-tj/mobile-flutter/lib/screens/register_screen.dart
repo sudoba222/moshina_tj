@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../l10n/strings.dart';
 import '../widgets/country_picker.dart';
+import '../widgets/tajcar_logo.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -94,30 +95,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final c = context.colors;
     final lang = context.watch<LanguageProvider>().lang;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: c.accent,
+      backgroundColor: c.bg,
       resizeToAvoidBottomInset: true,
       body: Column(
         children: [
-          // ── HERO TOP ──────────────────────────────────────────────────────
-          _RegisterHeroTop(c: c, lang: lang),
+          // ── HERO TOP — brand logo lockup ──────────────────────────────────
+          _RegisterHeroTop(c: c, lang: lang, onDark: isDark),
 
-          // ── FORM CARD ─────────────────────────────────────────────────────
+          // ── FORM ──────────────────────────────────────────────────────────
           Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: c.bg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                24, 8, 24,
+                MediaQuery.of(context).viewInsets.bottom + 32,
               ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  24, 28, 24,
-                  MediaQuery.of(context).viewInsets.bottom + 32,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                     // Title
                     Text(
                       t('auth.createAccount', lang),
@@ -243,7 +239,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -257,48 +252,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
 class _RegisterHeroTop extends StatelessWidget {
   final AppColors c;
   final String lang;
+  final bool onDark;
 
-  const _RegisterHeroTop({required this.c, required this.lang});
+  const _RegisterHeroTop({required this.c, required this.lang, this.onDark = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: c.accent,
+      // Soft brand-navy tinted gradient wash behind the logo
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: onDark
+              ? [c.surface, c.bg]
+              : [const Color(0xFFF6F8FC), c.bg],
+        ),
+      ),
       child: SafeArea(
         bottom: false,
-        child: SizedBox(
-          height: 180,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 20),
           child: Stack(
             children: [
               // Back button
               Positioned(
-                top: 12,
+                top: 8,
                 left: 16,
                 child: GestureDetector(
                   onTap: () => context.pop(),
                   child: Container(
-                    width: 38,
-                    height: 38,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: c.card,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: c.border),
                     ),
-                    child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                    child: Icon(Icons.arrow_back_rounded, color: c.text, size: 20),
                   ),
                 ),
               ),
-              // Logo centered
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      'assets/images/splash_logo.png',
-                      height: 70,
-                      width: 70,
-                      color: Colors.white,
-                    ),
-                  ],
+              // Brand logo lockup
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 40, 24, 0),
+                child: Center(
+                  child: TajCarLogo(
+                    carWidth: 158,
+                    wordSize: 42,
+                    onDark: onDark,
+                  ),
                 ),
               ),
             ],
