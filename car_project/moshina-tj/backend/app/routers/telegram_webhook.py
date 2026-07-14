@@ -158,11 +158,11 @@ async def _send_message(
 # ---------------------------------------------------------------------------
 
 def _main_menu_text(name: str | None = None) -> str:
-    greeting = f"Привет, <b>{name}</b>!" if name else "Привет!"
+    greeting = f"👋 Привет, <b>{name}</b>!" if name else "👋 Привет!"
     return (
         f"{greeting}\n\n"
-        f"🚗 <b>TajCar.tj</b> — авторынок Таджикистана\n\n"
-        f"Выберите действие:"
+        f"🚗 <b>TajCar.tj</b> — покупка и продажа авто по всему Таджикистану.\n\n"
+        f"Чем помочь? Выберите действие ниже 👇"
     )
 
 

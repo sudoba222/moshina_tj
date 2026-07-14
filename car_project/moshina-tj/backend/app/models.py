@@ -691,7 +691,7 @@ class Message(Base):
     conversation = relationship("Conversation", back_populates="messages")
     sender = relationship("User", foreign_keys=[sender_id])
 
- 
+
 class DealerSubscription(Base):
     __tablename__ = "dealer_subscriptions"
 
