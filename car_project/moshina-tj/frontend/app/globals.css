@@ -603,18 +603,49 @@ img { transition: opacity 0.3s ease; }
 /* ── Card photo carousel arrows ─────────────────────────────────────
    Desktop (pointer hover): hidden until the card image area is hovered.
    Touch devices: always visible — there is no hover to reveal them. */
+/* Arrows are always discoverable (subtle), and pop on hover/focus. */
 .card-nav-btn {
-  opacity: 0;
-  transition: opacity 0.18s ease, background 0.18s ease;
+  opacity: 0.55;
+  transform: translateY(-50%) scale(0.9);
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
 }
 .card-image-wrap:hover .card-nav-btn,
 .card-nav-btn:focus-visible {
   opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+.card-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.72) !important;
 }
 @media (hover: none) {
   .card-nav-btn {
-    opacity: 1;
+    opacity: 0.9;
+    transform: translateY(-50%) scale(1);
   }
+}
+/* Photo dots — pagination indicator, always visible when >1 image */
+.card-dots {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+.card-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+  transition: width 0.2s ease, background 0.2s ease;
+}
+.card-dot.active {
+  width: 16px;
+  border-radius: 3px;
+  background: #fff;
 }
 
 /* ── 2-column card grid on mobile ──────────────────────────────────── */

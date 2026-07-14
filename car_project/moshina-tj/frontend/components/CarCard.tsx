@@ -437,11 +437,10 @@ export default function CarCard({
                       position: 'absolute',
                       [side]: '6px',
                       top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: '30px',
-                      height: '30px',
+                      width: '32px',
+                      height: '32px',
                       borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.45)',
+                      background: 'rgba(0,0,0,0.5)',
                       backdropFilter: 'blur(4px)',
                       WebkitBackdropFilter: 'blur(4px)',
                       border: 'none',
@@ -452,29 +451,38 @@ export default function CarCard({
                       color: 'var(--color-white)',
                       zIndex: 2,
                       padding: 0,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
                     }}
                   >
                     <ChevronIcon direction={side} />
                   </button>
                 ))}
-                {/* Photo counter */}
-                <span
-                  style={{
-                    position: 'absolute',
-                    bottom: '8px',
-                    right: '8px',
-                    background: 'rgba(0,0,0,0.55)',
-                    color: 'var(--color-white)',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    padding: '2px 7px',
-                    borderRadius: '20px',
-                    zIndex: 1,
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  {imageIndex + 1}/{images.length}
-                </span>
+                {/* Dot indicators (≤7 photos) or numeric counter (more) */}
+                {images.length <= 7 ? (
+                  <div className="card-dots">
+                    {images.map((_, i) => (
+                      <span key={i} className={`card-dot${i === imageIndex ? ' active' : ''}`} />
+                    ))}
+                  </div>
+                ) : (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      right: '8px',
+                      background: 'rgba(0,0,0,0.6)',
+                      color: 'var(--color-white)',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '2px 7px',
+                      borderRadius: '20px',
+                      zIndex: 2,
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {imageIndex + 1}/{images.length}
+                  </span>
+                )}
               </>
             )}
 
